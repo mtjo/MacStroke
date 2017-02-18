@@ -11,7 +11,7 @@ MacStroke
 <p style="text-align:right">this description was copied from easyStroke</p>
 
 ###Download
-[MacStroke-1.0.0.zip](https://github.com/mtjo/MacStroke/raw/release/releases/download/MacStroke-1.0.0.zip)
+[MacStroke-1.0.0.zip](https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.0.zip)
 
 
 ###About

@@ -10,7 +10,7 @@ MacStroke
 
 
 ###下载
-[MacStroke-1.0.0.zip](https://github.com/mtjo/MacStroke/raw/release/releases/download/MacStroke-1.0.0.zip)
+[MacStroke-1.0.0.zip](https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.0.zip)
 ###相关
 
 [MacGesture项目地址](https://github.com/MacGesture/MacGesture)
