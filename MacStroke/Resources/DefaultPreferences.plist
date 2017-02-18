@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>mergeConsecutiveIdenticalGestures</key>
+	<false/>
+	<key>showIconInStatusBar</key>
+	<true/>
+	<key>defaultLineColor</key>
+	<string>#0000ff</string>
+	<key>defaultNoteColor</key>
+	<string>#000000</string>
+	<key>showUIInWhateverApp</key>
+	<false/>
+	<key>showGestureNote</key>
+	<true/>
+	<key>minScore</key>
+	<integer>85</integer>
+	<key>noteFontSize</key>
+	<integer>88</integer>
+	<key>noteFontName</key>
+	<string>Monaco</string>
+	<key>openPrefOnStartup</key>
+	<true/>
+	<key>enableGestureMinScore</key>
+	<true/>
+	<key>noteRetetionTime</key>
+	<string>0.1</string>
+	<key>noteBackgroundAlpha</key>
+	<string>0.1</string>
+</dict>
+</plist>

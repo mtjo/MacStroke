@@ -1,0 +1,29 @@
+/* 
+  Localizable.strings
+  MacStroke
+
+  Created by iMac on 3/25/16.
+  Copyright © 2016 Codefalling. All rights reserved.
+*/
+
+"Go bigger" = "放大窗口";
+"Reset size" = "重置大小";
+"General" = "常规";
+"Rules" = "规则";
+"Filters" = "过滤";
+"AppleScript" = "AppleScript";
+"About" = "关于";
+"Loading.." = "正在加载。。";
+"Stop" = "停止";
+"Cancel" = "取消";
+"Ok" = "确认";
+"Edit in External Editor" = "在外部编辑器编辑";
+"Select a AppleScript first!" = "请先选择一个AppleScript！";
+"Draw Gesture" = "绘制手势";
+"Draw Gesture!" = "绘制手势!";
+"Select a filter first!" = "请先选择一个规则！";
+"Restart MacStroke to take effect" = "重启MacStroke后生效";
+"Export succeeded" = "导出成功";
+"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!" = "你可以在屏幕上信任何地方绘制手势,如果要取消，请点击取消按钮！";
+"Gesture draw complete!" = "手势绘制完成!";
+
