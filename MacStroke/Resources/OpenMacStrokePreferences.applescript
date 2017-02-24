@@ -1,3 +1,3 @@
 tell application "MacStroke"
-    activate
+    openPreferences
 end tell

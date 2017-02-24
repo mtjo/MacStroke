@@ -88,6 +88,12 @@ static NSInteger actionRuleIndex;
     lastMouseWheelEventTime = 0;
 }
 
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag
+{
+    [self showPreferences];
+    return NO;
+}
+
 - (void)updateStatusBarItem {
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"showIconInStatusBar"]) {
         [self setStatusItem:[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength]];

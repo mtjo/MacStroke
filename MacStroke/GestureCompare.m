@@ -259,7 +259,7 @@ CGFloat const stroke_infinity = 0.2;
 {
     NSInteger n = A.count>B.count?B.count:A.count;
     
-    if(n<20){
+    if(n<10){
         return 0.000000;
     }
     Stroke *strokeA = [[Stroke alloc] initWithPointMutableArray:A];

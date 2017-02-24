@@ -35,6 +35,8 @@
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
+		4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */; };
+		4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */; };
 		581E41284C4ED34BF9DBC158 /* libPods-MacStroke.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3EE6C0D6897D25A6144EF2D /* libPods-MacStroke.a */; };
 		880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7591CA5738A006E7A74 /* Preferences.xib */; };
 		880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75D1CA5745D006E7A74 /* AppPickerWindowController.xib */; };
@@ -47,8 +49,8 @@
 		88331A3B1C9D22290064ADD5 /* AppleScriptsList.m in Sources */ = {isa = PBXBuildFile; fileRef = 88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */; };
 		887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */ = {isa = PBXBuildFile; fileRef = 887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */; };
 		88DCBC641C9D354F000727C2 /* ChromeCloseTabsToTheRight.applescript in Resources */ = {isa = PBXBuildFile; fileRef = 8815F63A1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript */; };
-		88EB641C1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript */; };
-		88EB641D1CCA33E50018A8BE /* OpenMacGesturePreferences.applescript in Resources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript */; };
+		88EB641C1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */; };
+		88EB641D1CCA33E50018A8BE /* OpenMacStrokePreferences.applescript in Resources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */; };
 		B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */; };
 		B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */; };
 		C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C610961B1DED98C700FCC263 /* CoreImage.framework */; };
@@ -119,6 +121,9 @@
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
+		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
+		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
+		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
 		880AA76A1CA575D5006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		880AA76D1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = "zh-Hans"; path = "zh-Hans.lproj/Credits.rtf"; sourceTree = "<group>"; };
 		880AA76E1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
@@ -136,7 +141,7 @@
 		88331A391C9D22290064ADD5 /* AppleScriptsList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptsList.h; sourceTree = "<group>"; };
 		88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptsList.m; sourceTree = "<group>"; };
 		887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = DefaultPreferences.plist; sourceTree = "<group>"; };
-		88EB641B1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.applescript; path = OpenMacGesturePreferences.applescript; sourceTree = "<group>"; };
+		88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.applescript; path = OpenMacStrokePreferences.applescript; sourceTree = "<group>"; };
 		92638C4FD7797D4076B34FDA /* Pods-MacStroke.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MacStroke.release.xcconfig"; path = "Pods/Target Support Files/Pods-MacStroke/Pods-MacStroke.release.xcconfig"; sourceTree = "<group>"; };
 		B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dsa_pub.pem; sourceTree = "<group>"; };
 		B6F75AE01BD65BDD00A8CF63 /* AppPickerWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppPickerWindowController.h; sourceTree = "<group>"; };
@@ -216,6 +221,9 @@
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
 			isa = PBXGroup;
 			children = (
+				4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */,
+				4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */,
+				4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */,
 				4DBB074B1E41B205006D1739 /* Stroke.h */,
 				4DBB074C1E41B206006D1739 /* Stroke.m */,
 				B6F75AE01BD65BDD00A8CF63 /* AppPickerWindowController.h */,
@@ -305,7 +313,7 @@
 				264180FCC355082AC7EDFD74 /* left.png */,
 				26418331BA0AD1E0D42A4E53 /* down.png */,
 				887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */,
-				88EB641B1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript */,
+				88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */,
 				26418D5612632F8BDA1AE8CA /* CanvasWindow.h */,
 			);
 			path = Resources;
@@ -415,7 +423,7 @@
 			files = (
 				D09FDBF51E06CDB50085FC36 /* README.html in Resources */,
 				D065A3CA1D18155E0062900A /* SearchInWeb.applescript in Resources */,
-				88EB641D1CCA33E50018A8BE /* OpenMacGesturePreferences.applescript in Resources */,
+				88EB641D1CCA33E50018A8BE /* OpenMacStrokePreferences.applescript in Resources */,
 				88DCBC641C9D354F000727C2 /* ChromeCloseTabsToTheRight.applescript in Resources */,
 				880AA7661CA5745D006E7A74 /* InfoPlist.strings in Resources */,
 				1381E4C41824E7E800E815F5 /* Images.xcassets in Resources */,
@@ -426,6 +434,7 @@
 				880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */,
 				880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */,
 				264182480FA70DFC89B87842 /* Updates.tiff in Resources */,
+				4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */,
 				264185813821B17A6CF8761E /* Rules.png in Resources */,
 				B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */,
 				887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */,
@@ -521,7 +530,8 @@
 				264183DA0542C17E1932F696 /* SRRecorderControlWithTagid.m in Sources */,
 				2641813EC194C60DC1B1806D /* utils.m in Sources */,
 				3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */,
-				88EB641C1CCA328C0018A8BE /* OpenMacGesturePreferences.applescript in Sources */,
+				4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */,
+				88EB641C1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript in Sources */,
 				3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
