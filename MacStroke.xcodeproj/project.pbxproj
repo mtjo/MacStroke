@@ -35,6 +35,7 @@
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
+		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
 		4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */; };
 		4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */; };
 		581E41284C4ED34BF9DBC158 /* libPods-MacStroke.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3EE6C0D6897D25A6144EF2D /* libPods-MacStroke.a */; };
@@ -121,6 +122,8 @@
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
+		4DD3CBFC1E615C6200AFC850 /* PreGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreGesture.h; sourceTree = "<group>"; };
+		4DD3CBFD1E615C6200AFC850 /* PreGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreGesture.m; sourceTree = "<group>"; };
 		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
 		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
 		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
@@ -253,6 +256,8 @@
 				4D74C6831E3CD99300F6A289 /* GestureCompare.m */,
 				4D03F1411E3F335C007AA1B1 /* DrawGesture.h */,
 				4D03F1421E3F335C007AA1B1 /* DrawGesture.m */,
+				4DD3CBFC1E615C6200AFC850 /* PreGesture.h */,
+				4DD3CBFD1E615C6200AFC850 /* PreGesture.m */,
 			);
 			path = MacStroke;
 			sourceTree = "<group>";
@@ -514,6 +519,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1381E4B81824E7E800E815F5 /* main.m in Sources */,
+				4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */,
 				1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */,
 				8815F63B1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript in Sources */,
 				4DBB074F1E41B206006D1739 /* Stroke.m in Sources */,

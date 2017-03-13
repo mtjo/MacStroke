@@ -14,6 +14,7 @@
 #import "AppDelegate.h"
 #import "CanvasView.h"
 #import "DrawGesture.h"
+#import "PreGesture.h"
 
 @interface AppPrefsWindowController ()
 @property AppPickerWindowController *pickerWindowController;
@@ -469,7 +470,59 @@ static NSString *currentScriptId = nil;
     
     [alert setInformativeText:informativetext];
     
+    
+    
     [alert setAlertStyle:NSWarningAlertStyle];
+    
+
+    NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(110 , 17, 100, 25)];
+    [comboBox setEditable:NO];
+
+    NSArray *preArray=[[NSArray alloc]initWithObjects:
+                       @"↙",@"↗",@"↘",@"↖",
+                       @"┏",@"┏ Revered",
+                       @"┓",@"┓ Revered",
+                       @"┗",@"┗ Revered",
+                       @"┛",@"┛ Revered",
+                       @"A",@"A Revered",
+                       @"B",@"B Revered",
+                       @"C",@"C Revered",
+                       @"D",@"D Revered",
+                       @"E",@"E Revered",
+                       @"F",@"F Revered",
+                       @"G",@"G Revered",
+                       @"H",@"H Revered",
+                       @"I",@"I Revered",
+                       @"J",@"J Revered",
+                       @"K",@"K Revered",
+                       @"L",@"L Revered",
+                       @"M",@"M Revered",
+                       @"N",@"N Revered",
+                       @"O",@"O Revered",
+                       @"P",@"P Revered",
+                       @"Q",@"Q Revered",
+                       @"R",@"R Revered",
+                       @"S",@"S Revered",
+                       @"T",@"T Revered",
+                       @"U",@"U Revered",
+                       @"V",@"V Revered",
+                       @"W",@"W Revered",
+                       @"X",@"X Revered",
+                       @"Y",@"Y Revered",
+                       @"Z",@"Z Revered", nil];
+    [comboBox addItemsWithObjectValues:preArray];
+    comboBox.stringValue=@"Plase Select";
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(preGestureSelectionChanged:)
+                                                 name:NSComboBoxSelectionDidChangeNotification
+                                               object:comboBox];
+    [comboBox setTranslatesAutoresizingMaskIntoConstraints:YES];
+
+    
+    [[[alert window] contentView] addSubview:comboBox];
+    
+    [[[alert window] contentView] autoresizesSubviews];
     
     NSUInteger action = [alert runModal];
     
@@ -482,6 +535,32 @@ static NSString *currentScriptId = nil;
     else if(action == NSAlertSecondButtonReturn )
     {
         [RulesList setRuleIdex:-1];
+    }
+}
+
+- (IBAction)preGestureSelectionChanged:(NSNotification *)notification {
+    NSComboBox *comboBox = (NSComboBox *)[notification object];
+    //NSInteger row = [comboBox tag];
+    //NSLog(@"%ld",(long)row);
+    
+    NSInteger index_for_combox = [comboBox indexOfSelectedItem];
+    NSString *m_text_combobox;
+    m_text_combobox = [comboBox itemObjectValueAtIndex:index_for_combox];
+    NSArray *array = [m_text_combobox componentsSeparatedByString:@" "];
+    
+    NSMutableArray* Gesture =[PreGesture getGestureByLetter:array[0] IsRevered:(array.count>1?YES:NO)];
+    NSInteger ruleIndex = [RulesList getRuleIdex];
+    if(ruleIndex>-1){
+        [[RulesList sharedRulesList] setGestureData:Gesture atIndex:ruleIndex];
+        NSUserNotification *notification = [[NSUserNotification alloc] init];
+        notification.title = @"MacStroke";
+        notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
+        notification.soundName = NSUserNotificationDefaultSoundName;
+        [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
+        [RulesList setRuleIdex:-1];
+        [_rulesTableView reloadData];
+        [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
+
     }
 }
 
@@ -756,7 +835,7 @@ static NSString *currentScriptId = nil;
     }else if ([tableColumn.identifier isEqualToString:@"Gesture_Image"]) {
         
         NSMutableArray *ruleGestureData= [[ruleListArr objectAtIndex:row] objectForKey:@"data"];
-        if (ruleGestureData!=nil) {
+        if (ruleGestureData!=nil&& ruleGestureData.count>5) {
             DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame];
             [drawGesture setPoints:ruleGestureData];
             result = drawGesture;

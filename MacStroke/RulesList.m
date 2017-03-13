@@ -8,6 +8,7 @@
 #import "AppleScriptsList.h"
 #import <Carbon/Carbon.h>
 #import "utils.h"
+#import "PreGesture.h"
 
 @implementation RulesList {
 
@@ -88,36 +89,40 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
 
 - (void)reInit {
     [self clear];
-    int x,y;
-    //ur
-    NSMutableArray *UR = [[NSMutableArray alloc] init];
-
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [UR addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-    }
-    for (int i=0; i<30; i++) {
-        [UR addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x+i;
-    }
+    NSMutableArray *Gesture;
     
-    addWildcardShortcutRule(self, @"NextTab", UR, kVK_ANSI_RightBracket, NSShiftKeyMask|NSCommandKeyMask, @"Next Tab");
-    //uL
-    NSMutableArray *UL = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [UL addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-    }
-    for (int i=0; i<30; i++) {
-        [UL addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x-i;
-    }
-    addWildcardShortcutRule(self, @"PrevTab", UL, kVK_ANSI_LeftBracket, NSShiftKeyMask|NSCommandKeyMask, @"Prev Tab");
+    //F Revered
+    Gesture=[PreGesture getGestureByLetter:@"F" IsRevered:YES];
+    addWildcardShortcutRule(self, @"NextTab", Gesture, kVK_ANSI_RightBracket, NSShiftKeyMask|NSCommandKeyMask, @"Next Tab");
+    //T Revered
+    Gesture=[PreGesture getGestureByLetter:@"T" IsRevered:NO];
+    addWildcardShortcutRule(self, @"PrevTab", Gesture, kVK_ANSI_LeftBracket, NSShiftKeyMask|NSCommandKeyMask, @"Prev Tab");
+    //I
+    Gesture = [PreGesture getGestureByLetter:@"I" IsRevered:NO];
+    addWildcardShortcutRule(self, @"PageDown",Gesture, kVK_PageDown,kVK_PageDown, @"PageDown");
+    
+    //I Reversed
+    Gesture = [PreGesture getGestureByLetter:@"I" IsRevered:YES];
+    addWildcardShortcutRule(self, @"PageUp",Gesture, kVK_PageUp, kVK_PageUp, @"PageUp");
+    
+    //A
+    Gesture = [PreGesture getGestureByLetter:@"A" IsRevered:NO];
+    addWildcardShortcutRule(self, @"SelectAll",Gesture, kVK_ANSI_A,NSCommandKeyMask, @"SelectALL");
+    
+    //V
+    Gesture = [PreGesture getGestureByLetter:@"V" IsRevered:NO];
+    addWildcardShortcutRule(self, @"Paste",Gesture, kVK_ANSI_V,NSCommandKeyMask, @"Paste");
+    
+    //L
+    Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:NO];
+    addWildcardShortcutRule(self, @"CloseTab", Gesture, kVK_ANSI_W, NSCommandKeyMask, @"Close Tab");
+    
+    //L Reversed
+    Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:YES];
+    addWildcardShortcutRule(self, @"Exit", Gesture, kVK_ANSI_Q, NSCommandKeyMask, @"Exit App");
+    
     //top right corner
+    int x,y;
     NSMutableArray *top_right_corner = [[NSMutableArray alloc] init];
     x=200;
     y=200;
@@ -126,8 +131,8 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
         x=y=y+i;
         
     }
-
     addWildcardShortcutRule(self, @"FullScreen", top_right_corner, kVK_ANSI_F, NSCommandKeyMask|NSControlKeyMask, @"Full screen");
+    
     
     //bottom left corner
     NSMutableArray *bottom_left_corner = [[NSMutableArray alloc] init];
@@ -138,7 +143,6 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
         x=y=y-i;
         
     }
-    
     addWildcardShortcutRule(self, @"MinSize", bottom_left_corner, kVK_ANSI_M, NSCommandKeyMask, @"Min Size Windows");
     
     //bottom left corner
@@ -153,37 +157,7 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
     }
     
     addWildcardShortcutRule(self, @"MinSizeAll", bottom_right_corner, kVK_ANSI_M, NSCommandKeyMask|NSAlternateKeyMask, @"Min Size All Windows");
-
-    //DR
-    NSMutableArray *DR = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [DR addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y-i;
-    }
-    for (int i=0; i<30; i++) {
-        [DR addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x+i;
-    }
-    addWildcardShortcutRule(self, @"CloseTab", DR, kVK_ANSI_W, NSCommandKeyMask, @"Close Tab");
     
-    
-    
-    //LU
-    NSMutableArray *LU = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [LU addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x-i;
-    }
-    for (int i=0; i<30; i++) {
-        [LU addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-    }
-
-    addWildcardShortcutRule(self, @"Exit", LU, kVK_ANSI_Q, NSCommandKeyMask, @"Exit App");
     
     
     //R
@@ -194,7 +168,7 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
         [R addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
         x=x+i;
     }
-
+    
     addWildcardShortcutRule(self, @"Next",R,kVK_RightArrow, NSCommandKeyMask, @"Next");
     
     //L
@@ -207,61 +181,8 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
     }
     addWildcardShortcutRule(self, @"Back",L, kVK_LeftArrow, NSCommandKeyMask, @"Back");
     
-    //U
-    NSMutableArray *U = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [U addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-    }
-    addWildcardShortcutRule(self, @"PageUp",U, kVK_PageUp, kVK_PageUp, @"PageUp");
-    
-    //D
-    NSMutableArray *D = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [D addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y-i;
-    }
-    addWildcardShortcutRule(self, @"PageDown",D, kVK_PageDown,kVK_PageDown, @"PageDown");
-    
-    
-    //D
-    NSMutableArray *All = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [All addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-        x=x+0.5*i;
-    }
-    for (int i=0; i<30; i++) {
-        [All addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y-i;
-        x=x+0.5*i;
-    }
-    addWildcardShortcutRule(self, @"SelectAll",All, kVK_ANSI_A,NSCommandKeyMask, @"SelectALL");
-    
-    
-    
-    //V
-    NSMutableArray *V = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [V addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y-i;
-        x=x+0.5*i;
-    }
-    for (int i=0; i<30; i++) {
-        [V addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        y=y+i;
-        x=x+0.5*i;
-    }
-    addWildcardShortcutRule(self, @"Paste",V, kVK_ANSI_V,NSCommandKeyMask, @"Paste");
-    
+
+
 }
 
 + (RulesList *)sharedRulesList {
