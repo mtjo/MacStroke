@@ -130,7 +130,7 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction) addShortcutRule:(id)sender {
-    [[RulesList sharedRulesList] addRuleWithDirection:@"" gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil note:@"note"];
+    [[RulesList sharedRulesList] addRuleWithDirection:@"" gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_STRING shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil note:@"note"];
     [_rulesTableView reloadData];
 }
 
@@ -564,6 +564,20 @@ static NSString *currentScriptId = nil;
     }
 }
 
+
+- (IBAction)changeActionType:(NSNotification *)notification
+{
+    
+    NSComboBox *comboBox = (NSComboBox *)[notification object];
+    
+    NSInteger index_for_combox = [comboBox indexOfSelectedItem];
+    
+    NSLog(@"%ld",(long)[comboBox tag]);
+    
+    NSLog(@"%ld",(long)index_for_combox);
+}
+
+
 - (void)tableViewSelectionChanged:(NSNotification* )notification
 {
     NSInteger selectedRow = [[self appleScriptTableView] selectedRow];
@@ -854,6 +868,45 @@ static NSString *currentScriptId = nil;
         [cloumn addSubview:addButton];
         //view set
         result = cloumn;
+    }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
+        cloumn = [[NSView alloc] initWithFrame:self.window.frame];
+        
+        NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 27, 90, 30)];
+        [comboBox setEditable:NO];
+        [comboBox setTag:row];
+        
+        NSArray *preArray=[[NSArray alloc]initWithObjects:
+                           @"Hot Key",
+                           @"Apple Script",
+                           @"String",
+                           @"Password",
+                           nil];
+        [comboBox addItemsWithObjectValues:preArray];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(changeActionType:)
+                                                     name:NSComboBoxSelectionDidChangeNotification
+                                                   object:comboBox];
+
+        switch ([rulesList actionTypeAtIndex:row]) {
+            case ACTION_TYPE_SHORTCUT:
+                comboBox.stringValue=@"Hot Key";
+                break;
+            case ACTION_TYPE_APPLE_SCRIPT:
+                comboBox.stringValue=@"Apple Script";
+                break;
+            case ACTION_TYPE_STRING:
+                comboBox.stringValue=@"String";
+                break;
+            case ACTION_TYPE_PASSWORD:
+                comboBox.stringValue=@"Password";
+                break;
+            default:
+                break;
+        }
+        [cloumn addSubview:comboBox];
+        result = cloumn;
+
     }
     return result;
 }

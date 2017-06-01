@@ -242,6 +242,9 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
                 [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:userNotification];
             }
             break;
+        case ACTION_TYPE_STRING:
+            typeSting(@"aaa");
+            break;
         default:
             break;
     }
@@ -342,6 +345,12 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
     [self save];
 }
 
+-(void)setActionTypeWithActionType:(ActionType)actonType atIndex:(NSUInteger)index
+{
+    _rulesList[index][@"actionType"] = @(actonType);
+    [self save];
+}
+
 - (void)removeRuleAtIndex:(NSInteger)index {
     [_rulesList removeObjectAtIndex:index];
     [self save];
@@ -409,6 +418,22 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
     }
 
     return self;
+}
+static inline void typeSting(NSString *string) {
+    UniCharCount stringLength = string.length;
+    UniChar *unicodeString = (UniChar *)malloc(sizeof(UniChar) * stringLength);
+    [string getCharacters:unicodeString range:NSMakeRange(0, stringLength)];
+    
+    CGEventRef event = CGEventCreateKeyboardEvent(NULL, 0, true);
+    CGEventKeyboardSetUnicodeString(event, stringLength, unicodeString);
+    CGEventPost(kCGSessionEventTap, event);
+    CFRelease(event);
+    
+    event = CGEventCreateKeyboardEvent(NULL, 0, false); // not sure whether it's needed
+    CGEventKeyboardSetUnicodeString(event, stringLength, unicodeString);
+    CGEventPost(kCGSessionEventTap, event);
+    CFRelease(event);
+    free(unicodeString);
 }
 
 @end

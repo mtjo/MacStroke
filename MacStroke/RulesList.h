@@ -15,7 +15,9 @@ typedef enum {
 
 typedef enum {
     ACTION_TYPE_SHORTCUT,
-    ACTION_TYPE_APPLE_SCRIPT
+    ACTION_TYPE_APPLE_SCRIPT,
+    ACTION_TYPE_STRING,
+    ACTION_TYPE_PASSWORD
 } ActionType;
 
 
@@ -28,6 +30,9 @@ typedef enum {
                 shortcutFlag:(NSUInteger)shortcutFlag // when actionType == ACTION_TYPE_SHORTCUT required,or 0
                  appleScriptId:(NSString *)appleScriptId // when actionType == ACTION_TYPE_APPLE_SCRIPT required,or nil
                         note:(NSString *)note;
+
+- (void)setActionTypeWithActionType:(ActionType)actonType
+                            atIndex:(NSUInteger)index;
 
 - (void)removeRuleAtIndex:(NSInteger)index;
 

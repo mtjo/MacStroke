@@ -58,20 +58,6 @@ static NSInteger actionRuleIndex;
         [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
     [[NSUserDefaults standardUserDefaults] registerDefaults:defaultPrefs];
 
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"hasRunBefore"]) {
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"hasRunBefore"];
-    }
-
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"hasRun_2.0.4_Before"]) {
-        [[NSBundle mainBundle] addToLoginItems];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"hasRun_2.0.4_Before"];
-    }
-
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"hasRun_2.0.5_Before"]) {
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"showGestureNote"];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"hasRun_2.0.5_Before"];
-    }
-
     [BWFilter compatibleProcedureWithPreviousVersionBlockRules];
 
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"openPrefOnStartup"]) {
