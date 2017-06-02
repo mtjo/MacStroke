@@ -130,7 +130,7 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction) addShortcutRule:(id)sender {
-    [[RulesList sharedRulesList] addRuleWithDirection:@"" gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_STRING shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil note:@"note"];
+    [[RulesList sharedRulesList] addRuleWithDirection:@"" gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil note:@"note"];
     [_rulesTableView reloadData];
 }
 
@@ -458,6 +458,8 @@ static NSString *currentScriptId = nil;
     
 }
 
+
+
 -(void)alertModalFirstBtnTitle:(NSString *)firstname SecondBtnTitle:(NSString *)secondname MessageText:(NSString *)messagetext InformativeText:(NSString *)informativetext{
     
     NSAlert *alert = [[NSAlert alloc] init];
@@ -572,9 +574,16 @@ static NSString *currentScriptId = nil;
     
     NSInteger index_for_combox = [comboBox indexOfSelectedItem];
     
+    NSInteger index = [comboBox tag];
+    
     NSLog(@"%ld",(long)[comboBox tag]);
     
     NSLog(@"%ld",(long)index_for_combox);
+    
+    ActionType actiontype = (ActionType)index_for_combox;
+    
+    [[RulesList sharedRulesList]  setActionTypeWithActionType:actiontype atIndex:index];
+    [_rulesTableView reloadData];
 }
 
 
@@ -735,6 +744,11 @@ static NSString *currentScriptId = nil;
         [[AppleScriptsList sharedAppleScriptsList] setScriptAtIndex:[[self appleScriptTableView] selectedRow] script:control.stringValue];
     } else if ([control.identifier isEqualToString:@"Title"]) {  // edit title
         [[AppleScriptsList sharedAppleScriptsList] setTitleAtIndex:[[self appleScriptTableView] selectedRow] title:control.stringValue];
+    } else if ([control.identifier isEqualToString:@"Text"]) {  // edit title
+        [[RulesList sharedRulesList] setText:control.stringValue atIndex:control.tag];
+    }
+    else if ([control.identifier isEqualToString:@"Password"]) {  // edit title
+        [[RulesList sharedRulesList] setPassword:control.stringValue atIndex:control.tag];
     }
     [[RulesList sharedRulesList] save];
     [[AppleScriptsList sharedAppleScriptsList] save];
@@ -835,6 +849,48 @@ static NSString *currentScriptId = nil;
             [comboBox setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:comboBox];
             result = cloumn;
+        }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_TEXT){
+            cloumn = [[NSView alloc] initWithFrame:self.window.frame];
+            NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
+            
+            [textField.cell setWraps:NO];
+            [textField.cell setScrollable:YES];
+            [textField setEditable:YES];
+            [textField setBezeled:NO];
+            [textField setDrawsBackground:NO];
+            [textField setBezelStyle:NSTextFieldSquareBezel];
+            [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+
+            textField.stringValue = [rulesList textAtIndex:row];
+            textField.identifier = @"Text";
+            textField.delegate = self;
+            textField.tag = row;
+            [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
+            [cloumn addSubview:textField];
+            result = cloumn;
+
+            
+        }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_PASSWORD){
+            cloumn = [[NSView alloc] initWithFrame:self.window.frame];
+            NSSecureTextField *textField = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
+            
+            [textField.cell setWraps:NO];
+            [textField.cell setScrollable:YES];
+            [textField setEditable:YES];
+            [textField setBezeled:NO];
+            [textField setDrawsBackground:NO];
+            [textField setBezelStyle:NSTextFieldSquareBezel];
+            [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+            
+            textField.stringValue = [rulesList passwordAtIndex:row];
+            textField.identifier = @"Password";
+            textField.delegate = self;
+            textField.tag = row;
+            
+            [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
+            [cloumn addSubview:textField];
+            result = cloumn;
+   
         }
     } else if ([tableColumn.identifier isEqualToString:@"TriggerOnEveryMatch"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
@@ -847,13 +903,11 @@ static NSString *currentScriptId = nil;
         
         result = checkButton;
     }else if ([tableColumn.identifier isEqualToString:@"Gesture_Image"]) {
-        
         NSMutableArray *ruleGestureData= [[ruleListArr objectAtIndex:row] objectForKey:@"data"];
-        if (ruleGestureData!=nil&& ruleGestureData.count>5) {
-            DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame];
-            [drawGesture setPoints:ruleGestureData];
-            result = drawGesture;
-        }
+        DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame atRow:row];
+        [drawGesture setPoints:ruleGestureData];
+        result = drawGesture;
+
 
     }else if ([tableColumn.identifier isEqualToString:@"Edit_Gesture"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
@@ -866,7 +920,7 @@ static NSString *currentScriptId = nil;
         [addButton setTitle:NSLocalizedString(@"Draw Gesture", nil)];
         [addButton setTranslatesAutoresizingMaskIntoConstraints:YES];
         [cloumn addSubview:addButton];
-        //view set
+
         result = cloumn;
     }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
@@ -895,8 +949,8 @@ static NSString *currentScriptId = nil;
             case ACTION_TYPE_APPLE_SCRIPT:
                 comboBox.stringValue=@"Apple Script";
                 break;
-            case ACTION_TYPE_STRING:
-                comboBox.stringValue=@"String";
+            case ACTION_TYPE_TEXT:
+                comboBox.stringValue=@"Text";
                 break;
             case ACTION_TYPE_PASSWORD:
                 comboBox.stringValue=@"Password";

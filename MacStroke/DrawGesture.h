@@ -11,11 +11,12 @@
 @interface DrawGesture : NSView{
 
     NSMutableArray *points;
+    NSInteger ruleIndex;
 
 }
 
 
-- (id)initWithFrame:(NSRect)frameRect;
+- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row;
 
 - (void) setPoints:(NSMutableArray *)ruleDataPoints;
 

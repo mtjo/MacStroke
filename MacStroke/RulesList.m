@@ -48,7 +48,15 @@ NSMutableArray<NSMutableDictionary *> *_rulesList;  // private
 
 - (NSString *)dataAtIndex:(NSUInteger)index {
     return _rulesList[index][@"data"];
-} 
+}
+
+- (NSString *)textAtIndex:(NSUInteger)index {
+    return _rulesList[index][@"text"];
+}
+
+- (NSString *)passwordAtIndex:(NSUInteger)index {
+    return _rulesList[index][@"password"];
+}
 
 - (NSInteger)count {
     return [_rulesList count];
@@ -242,8 +250,11 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
                 [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:userNotification];
             }
             break;
-        case ACTION_TYPE_STRING:
-            typeSting(@"aaa");
+        case ACTION_TYPE_TEXT:
+            typeSting([self textAtIndex:index]);
+            break;
+        case ACTION_TYPE_PASSWORD:
+            typeSting([self passwordAtIndex:index]);
             break;
         default:
             break;
@@ -313,6 +324,16 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
     [self save];
 }
 
+- (void)setText:(NSString *)text atIndex:(NSUInteger)index {
+    _rulesList[index][@"text"] = text;
+    [self save];
+}
+
+- (void)setPassword:(NSString *)password atIndex:(NSUInteger)index {
+    _rulesList[index][@"password"] = password;
+    [self save];
+}
+
 - (void)setAppleScriptId:(NSString *)id atIndex:(NSUInteger)index {
     _rulesList[index][@"apple_script_id"] = id;
     [self save];
@@ -333,6 +354,8 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
     rule[@"filter"] = filter;
     rule[@"filterType"] = @(filterType);
     rule[@"actionType"] = @(actionType);
+    rule[@"text"] = @"";
+    rule[@"password"]=@"";
     if (actionType == ACTION_TYPE_SHORTCUT) {
         rule[@"shortcut_code"] = @(shortcutKeyCode);
         rule[@"shortcut_flag"] = @(shortcutFlag);

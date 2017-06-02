@@ -8,12 +8,15 @@
 
 #import "DrawGesture.h"
 #import <CoreImage/CoreImage.h>
+#import "RulesList.h"
 
 @implementation DrawGesture
-- (id)initWithFrame:(NSRect)frameRect;
+- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row;
 {
     self = [super initWithFrame:frameRect];
+    ruleIndex = row;
     points = [[NSMutableArray alloc] init];
+    
     return self;
 }
 
@@ -68,13 +71,24 @@
     NSBezierPath *path = [NSBezierPath bezierPath];
     path.lineWidth =  2;
     NSColor *color = [NSColor colorWithRed:1 green:0.1 blue:0 alpha:1];
-    for (int i = 0; i < points.count-1; i++) {
-        color = [NSColor colorWithRed:0.5*i/(1.00*points.count) green:0.47+0.53*i/(1.00*points.count) blue:0.9 alpha:1];
-        [color setStroke];
-        [path moveToPoint:[points[i] pointValue]];
-        [path lineToPoint:[points[i+1] pointValue]];
-        [path stroke];
-        [path removeAllPoints];
+    if ([points count]){
+        for (int i = 0; i < points.count-1; i++) {
+            color = [NSColor colorWithRed:0.5*i/(1.00*points.count) green:0.47+0.53*i/(1.00*points.count) blue:0.9 alpha:1];
+            [color setStroke];
+            [path moveToPoint:[points[i] pointValue]];
+            [path lineToPoint:[points[i+1] pointValue]];
+            [path stroke];
+            [path removeAllPoints];
+        }
+    }
+}
+- (void)mouseDown:(NSEvent *)theEvent;{
+    if (theEvent.clickCount == 2) {
+        NSLog(@"双击");
+        NSLog(@"indexId:%ld",(long) ruleIndex);
+        [RulesList setRuleIdex:ruleIndex];
+        
+        
     }
 }
 @end

@@ -16,9 +16,9 @@
 - (void)reinitWindow {
     NSRect frame = NSScreen.mainScreen.frame;
     //NSLog(@"%@",NSScreen.screens.firstObject.frame);
-    NSPoint mouseLoc;
-    mouseLoc = [NSEvent mouseLocation]; //get current mouse position
-    NSLog(@"Mouse location: %f %f", mouseLoc.x, mouseLoc.y);
+    //NSPoint mouseLoc;
+    //mouseLoc = [NSEvent mouseLocation]; //get current mouse position
+    //NSLog(@"Mouse location: %f %f", mouseLoc.x, mouseLoc.y);
     NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
     NSView *view = [[CanvasView alloc] initWithFrame:frame];
     window.contentView = view;

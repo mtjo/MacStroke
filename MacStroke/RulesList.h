@@ -7,7 +7,10 @@
 
 @class MASShortcut;
 
-@interface RulesList : NSObject
+@interface RulesList : NSObject{
+    //NSMutableArray *points;
+    NSInteger ruleIndex;
+}
 typedef enum {
     FILTER_TYPE_WILDCARD, // for example *chrome
     FILTER_TYPE_REGEX
@@ -16,8 +19,8 @@ typedef enum {
 typedef enum {
     ACTION_TYPE_SHORTCUT,
     ACTION_TYPE_APPLE_SCRIPT,
-    ACTION_TYPE_STRING,
-    ACTION_TYPE_PASSWORD
+    ACTION_TYPE_TEXT,
+    ACTION_TYPE_PASSWORD,
 } ActionType;
 
 
@@ -67,6 +70,14 @@ typedef enum {
 - (void)setAppleScriptId:(NSString *)id atIndex:(NSUInteger)index;
 
 - (void)setNote:(NSString *)note atIndex:(NSUInteger)index;
+
+- (NSString *)textAtIndex:(NSUInteger)index;
+
+- (NSString *)passwordAtIndex:(NSUInteger)index;
+
+- (void)setPassword:(NSString *)password atIndex:(NSUInteger)index;
+
+- (void)setText:(NSString *)text atIndex:(NSUInteger)index;
 
 - (void)setTriggerOnEveryMatch:(BOOL)match atIndex:(NSUInteger)index;
 
