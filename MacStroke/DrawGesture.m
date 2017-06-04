@@ -8,14 +8,16 @@
 
 #import "DrawGesture.h"
 #import <CoreImage/CoreImage.h>
-#import "RulesList.h"
+#import "AppPrefsWindowController.h"
+#import "AppDelegate.h"
 
 @implementation DrawGesture
-- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row;
+- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row atAppPrefsWindowController:(AppPrefsWindowController*)appPrefsWindowController;
 {
     self = [super initWithFrame:frameRect];
     ruleIndex = row;
     points = [[NSMutableArray alloc] init];
+    _appPrefsWindowController = appPrefsWindowController;
     
     return self;
 }
@@ -84,11 +86,9 @@
 }
 - (void)mouseDown:(NSEvent *)theEvent;{
     if (theEvent.clickCount == 2) {
-        NSLog(@"双击");
-        NSLog(@"indexId:%ld",(long) ruleIndex);
-        [RulesList setRuleIdex:ruleIndex];
-        
-        
+        //NSLog(@"双击");
+        //NSLog(@"indexId:%ld",(long) ruleIndex);
+        [_appPrefsWindowController preSetRuleGestureAtIndex:ruleIndex];
     }
 }
 @end

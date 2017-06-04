@@ -80,17 +80,6 @@ NSMutableArray<NSMutableDictionary *> *_rulesList;  // private
     return result;
 }
 
-+ (void)setRuleIdex:(NSInteger) index;{
-    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    [userDefaults setInteger:index forKey:@"rule_index"];
-    [userDefaults synchronize];
-}
-
-+ (NSInteger)getRuleIdex;{
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    return  [defaults integerForKey:@"rule_index"];
-}
-
 static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gesture, NSMutableArray *gestureData, NSInteger keycode, NSInteger flag, NSString *note) {
     [rulesList addRuleWithDirection:gesture gestureData:gestureData filter:@"*" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:keycode shortcutFlag: flag appleScriptId:nil note:note];
 }

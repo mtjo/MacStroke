@@ -101,9 +101,6 @@ typedef enum {
 
 + (RulesList *)sharedRulesList;
 
-+ (void)setRuleIdex:(NSInteger) index;
-
-+ (NSInteger)getRuleIdex;
 
 +(void)pressKeyWithFlags:(CGEventFlags)flags virtualKey:(CGKeyCode)virtualKey;
 

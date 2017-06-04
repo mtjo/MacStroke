@@ -12,6 +12,9 @@
 @class LaunchAtLoginController;
 
 @interface AppPrefsWindowController : DBPrefsWindowController <NSTableViewDelegate, NSTableViewDataSource, SRRecorderControlDelegate, NSTextFieldDelegate, AppPickerCallback, NSComboBoxDataSource, NSWindowDelegate>
+{
+    NSInteger settingRuleIndex;
+}
 
 @property(strong, nonatomic) IBOutlet NSView *generalPreferenceView;
 @property(strong, nonatomic) IBOutlet NSView *rulesPreferenceView;
@@ -51,4 +54,10 @@
 @property(assign) IBOutlet WebView *webView;
 
 - (void)rulePickCallback:(NSString *)rulesStringSplitedByStick atIndex:(NSInteger)index;
+
+- (void) preSetRuleGestureAtIndex:(NSInteger)index;
+
+- (void) setSettingRuleIndex:(NSInteger)index;
+
+- (NSInteger) getSettingRuleIndex;
 @end

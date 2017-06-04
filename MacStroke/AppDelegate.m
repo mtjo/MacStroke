@@ -21,6 +21,7 @@ static NSTimeInterval lastMouseWheelEventTime;
 static NSMutableArray *GestureB;
 static NSInteger actionRuleIndex;
 
+
 + (AppDelegate *)appDelegate {
     return (AppDelegate *) [[NSApplication sharedApplication] delegate];
 }
@@ -194,7 +195,7 @@ void resetGestureB() {
     actionRuleIndex =-1;
 }
 bool setRuleData(){
-    NSInteger ruleIndex = [RulesList getRuleIdex];
+    NSInteger ruleIndex = [_preferencesWindowController getSettingRuleIndex];
     if(ruleIndex>-1){
         [[RulesList sharedRulesList] setGestureData:GestureB atIndex:ruleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
@@ -202,7 +203,7 @@ bool setRuleData(){
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
         notification.soundName = NSUserNotificationDefaultSoundName;        
         [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
-        [RulesList setRuleIdex:-1];
+        [_preferencesWindowController setSettingRuleIndex:-1];
         [_preferencesWindowController.rulesTableView reloadData];
 
         NSString *appname =frontBundleName();

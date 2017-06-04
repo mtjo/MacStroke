@@ -34,6 +34,7 @@ static NSInteger const PREF_WINDOW_SIZECOUNT = 3;
 static NSInteger currentRulesWindowSizeIndex = 0;
 static NSInteger currentFiltersWindowSizeIndex = 0;
 
+
 static NSArray *exampleAppleScripts;
 
 + (void)initialize {
@@ -78,7 +79,7 @@ static NSArray *exampleAppleScripts;
     self.whiteListTextView.string = BWFilter.whiteListText;
     self.blackListTextView.font = [NSFont systemFontOfSize:14];
     self.whiteListTextView.font = [NSFont systemFontOfSize:14];
-    
+    settingRuleIndex = -1;
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(tableViewSelectionChanged:)
                                                  name:NSTableViewSelectionDidChangeNotification
@@ -438,12 +439,11 @@ static NSString *currentScriptId = nil;
     NSInteger index = [button tag];
     [[RulesList sharedRulesList] setTriggerOnEveryMatch:[button state] atIndex:index];
 }
-- (IBAction)onSetGestureData:(id)sender {
-    NSButton *button = sender;
-    
-    NSInteger index = [button tag];
-    
-    [RulesList setRuleIdex:index];
+
+
+-(void) preSetRuleGestureAtIndex:(NSInteger)index;
+{
+    [self setSettingRuleIndex: index];
     
     NSString *title1 =NSLocalizedString(@"Ok", nil);
     
@@ -454,8 +454,8 @@ static NSString *currentScriptId = nil;
     NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!", nil);
     
     [self alertModalFirstBtnTitle:title1 SecondBtnTitle:title2 MessageText:messagetext InformativeText:informativetext];
-    
-    
+
+
 }
 
 
@@ -536,14 +536,14 @@ static NSString *currentScriptId = nil;
     }
     else if(action == NSAlertSecondButtonReturn )
     {
-        [RulesList setRuleIdex:-1];
+        settingRuleIndex = -1;
     }
 }
 
 - (IBAction)preGestureSelectionChanged:(NSNotification *)notification {
     NSComboBox *comboBox = (NSComboBox *)[notification object];
-    //NSInteger row = [comboBox tag];
-    //NSLog(@"%ld",(long)row);
+    NSInteger row = [comboBox tag];
+    NSLog(@"%ld",(long)row);
     
     NSInteger index_for_combox = [comboBox indexOfSelectedItem];
     NSString *m_text_combobox;
@@ -551,15 +551,15 @@ static NSString *currentScriptId = nil;
     NSArray *array = [m_text_combobox componentsSeparatedByString:@" "];
     
     NSMutableArray* Gesture =[PreGesture getGestureByLetter:array[0] IsRevered:(array.count>1?YES:NO)];
-    NSInteger ruleIndex = [RulesList getRuleIdex];
-    if(ruleIndex>-1){
-        [[RulesList sharedRulesList] setGestureData:Gesture atIndex:ruleIndex];
+    
+    if(settingRuleIndex>-1){
+        [[RulesList sharedRulesList] setGestureData:Gesture atIndex:settingRuleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
         notification.title = @"MacStroke";
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
         notification.soundName = NSUserNotificationDefaultSoundName;
         [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
-        [RulesList setRuleIdex:-1];
+        settingRuleIndex = -1;
         [_rulesTableView reloadData];
         [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
 
@@ -575,10 +575,6 @@ static NSString *currentScriptId = nil;
     NSInteger index_for_combox = [comboBox indexOfSelectedItem];
     
     NSInteger index = [comboBox tag];
-    
-    NSLog(@"%ld",(long)[comboBox tag]);
-    
-    NSLog(@"%ld",(long)index_for_combox);
     
     ActionType actiontype = (ActionType)index_for_combox;
     
@@ -793,13 +789,13 @@ static NSString *currentScriptId = nil;
     NSMutableArray *ruleListArr= [NSKeyedUnarchiver unarchiveObjectWithData:[rulesList nsData]];
     if ([tableColumn.identifier isEqualToString:@"Gesture"] || [tableColumn.identifier isEqualToString:@"Filter"] || [tableColumn.identifier isEqualToString:@"Note"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-        NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
+        NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
         
-        [textField.cell setWraps:NO];
+        [textField.cell setWraps:YES];
         [textField.cell setScrollable:YES];
         [textField setEditable:YES];
         [textField setBezeled:NO];
-        [textField setDrawsBackground:NO];
+        [textField setDrawsBackground:YES];
         [textField setBezelStyle:NSTextFieldSquareBezel];
         [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
         if ([tableColumn.identifier isEqualToString:@"Gesture"]) {
@@ -820,7 +816,7 @@ static NSString *currentScriptId = nil;
     } else if ([tableColumn.identifier isEqualToString:@"Action"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
         if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_SHORTCUT) {
-            SRRecorderControlWithTagid *recordView = [[SRRecorderControlWithTagid alloc] initWithFrame:NSMakeRect(0 , 27, 100, 30)];
+            SRRecorderControlWithTagid *recordView = [[SRRecorderControlWithTagid alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
             
             recordView.delegate = self;
             [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
@@ -853,7 +849,8 @@ static NSString *currentScriptId = nil;
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
             NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
             
-            [textField.cell setWraps:NO];
+            [textField.cell setWraps:YES];
+            
             [textField.cell setScrollable:YES];
             [textField setEditable:YES];
             [textField setBezeled:NO];
@@ -865,7 +862,7 @@ static NSString *currentScriptId = nil;
             textField.identifier = @"Text";
             textField.delegate = self;
             textField.tag = row;
-            [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
+            //[textField setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:textField];
             result = cloumn;
 
@@ -904,24 +901,11 @@ static NSString *currentScriptId = nil;
         result = checkButton;
     }else if ([tableColumn.identifier isEqualToString:@"Gesture_Image"]) {
         NSMutableArray *ruleGestureData= [[ruleListArr objectAtIndex:row] objectForKey:@"data"];
-        DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame atRow:row];
+        DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame atRow:row atAppPrefsWindowController:self];
         [drawGesture setPoints:ruleGestureData];
         result = drawGesture;
 
 
-    }else if ([tableColumn.identifier isEqualToString:@"Edit_Gesture"]) {
-        cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-        
-        NSButton *addButton = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 27, 90, 30)] ;
-        [addButton setTag:row];
-        [addButton setBezelStyle:NSTexturedSquareBezelStyle];
-
-        [addButton setAction:@selector(onSetGestureData:)];
-        [addButton setTitle:NSLocalizedString(@"Draw Gesture", nil)];
-        [addButton setTranslatesAutoresizingMaskIntoConstraints:YES];
-        [cloumn addSubview:addButton];
-
-        result = cloumn;
     }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
         
@@ -959,6 +943,7 @@ static NSString *currentScriptId = nil;
                 break;
         }
         [cloumn addSubview:comboBox];
+        //[comboBox ];
         result = cloumn;
 
     }
@@ -987,5 +972,13 @@ static NSString *currentScriptId = nil;
         return [self tableViewForAppleScripts:tableColumn row:row];
     }
     return nil;
+}
+-(void) setSettingRuleIndex:(NSInteger)index;
+{
+    settingRuleIndex = index;
+}
+- (NSInteger) getSettingRuleIndex;
+{
+    return settingRuleIndex;
 }
 @end

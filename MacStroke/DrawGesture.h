@@ -7,16 +7,17 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "AppPrefsWindowController.h"
 
 @interface DrawGesture : NSView{
 
     NSMutableArray *points;
     NSInteger ruleIndex;
-
+    AppPrefsWindowController * _appPrefsWindowController;
 }
 
 
-- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row;
+- (id)initWithFrame:(NSRect)frameRect atRow:(NSInteger)row atAppPrefsWindowController:(AppPrefsWindowController *)appPrefsWindowController;
 
 - (void) setPoints:(NSMutableArray *)ruleDataPoints;
 
