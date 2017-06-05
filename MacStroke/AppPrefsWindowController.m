@@ -789,7 +789,7 @@ static NSString *currentScriptId = nil;
     NSMutableArray *ruleListArr= [NSKeyedUnarchiver unarchiveObjectWithData:[rulesList nsData]];
     if ([tableColumn.identifier isEqualToString:@"Gesture"] || [tableColumn.identifier isEqualToString:@"Filter"] || [tableColumn.identifier isEqualToString:@"Note"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-        NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
+        NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 1000, 25)];
         
         [textField.cell setWraps:YES];
         [textField.cell setScrollable:YES];
@@ -846,15 +846,15 @@ static NSString *currentScriptId = nil;
             [cloumn addSubview:comboBox];
             result = cloumn;
         }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_TEXT){
+
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-            NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
+            NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 1000, 25)];
             
             [textField.cell setWraps:YES];
-            
             [textField.cell setScrollable:YES];
             [textField setEditable:YES];
             [textField setBezeled:NO];
-            [textField setDrawsBackground:NO];
+            [textField setDrawsBackground:YES];
             [textField setBezelStyle:NSTextFieldSquareBezel];
             [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
 
@@ -862,7 +862,7 @@ static NSString *currentScriptId = nil;
             textField.identifier = @"Text";
             textField.delegate = self;
             textField.tag = row;
-            //[textField setTranslatesAutoresizingMaskIntoConstraints:YES];
+            [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:textField];
             result = cloumn;
 
@@ -871,11 +871,11 @@ static NSString *currentScriptId = nil;
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
             NSSecureTextField *textField = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
             
-            [textField.cell setWraps:NO];
+            [textField.cell setWraps:YES];
             [textField.cell setScrollable:YES];
             [textField setEditable:YES];
             [textField setBezeled:NO];
-            [textField setDrawsBackground:NO];
+            [textField setDrawsBackground:YES];
             [textField setBezelStyle:NSTextFieldSquareBezel];
             [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
             
@@ -883,7 +883,6 @@ static NSString *currentScriptId = nil;
             textField.identifier = @"Password";
             textField.delegate = self;
             textField.tag = row;
-            
             [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:textField];
             result = cloumn;
@@ -909,7 +908,7 @@ static NSString *currentScriptId = nil;
     }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
         
-        NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 27, 90, 30)];
+        NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 25, 90, 30)];
         [comboBox setEditable:NO];
         [comboBox setTag:row];
         
