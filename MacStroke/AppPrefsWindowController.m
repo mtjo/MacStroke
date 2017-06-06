@@ -131,7 +131,7 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction) addShortcutRule:(id)sender {
-    [[RulesList sharedRulesList] addRuleWithDirection:@"" gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil text:@"Double click Modify" password:@"Double click Modify" note:@"Double click Modify"];
+    [[RulesList sharedRulesList] addRuleWithDirection:NSLocalizedString(@"Double click Modify", nil) gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil text:NSLocalizedString(@"Double click Modify", nil) password:NSLocalizedString(@"Double click Modify", nil) note:NSLocalizedString(@"Double click Modify", nil)];
     [_rulesTableView reloadData];
 }
 
@@ -434,7 +434,14 @@ static NSString *currentScriptId = nil;
     NSInteger index = [button tag];
     [[RulesList sharedRulesList] setTriggerOnEveryMatch:[button state] atIndex:index];
 }
-
+- (IBAction)onSetGestureData:(id)sender {
+    NSButton *button = sender;
+    
+    NSInteger index = [button tag];
+    [self preSetRuleGestureAtIndex:index];
+    
+    
+}
 
 -(void) preSetRuleGestureAtIndex:(NSInteger)index;
 {

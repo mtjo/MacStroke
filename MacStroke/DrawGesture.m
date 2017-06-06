@@ -82,6 +82,18 @@
             [path stroke];
             [path removeAllPoints];
         }
+    }else{
+        
+        NSButton *addButton = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 27, 90, 30)] ;
+        [addButton setTag:ruleIndex];
+        [addButton setBezelStyle:NSTexturedSquareBezelStyle];
+        
+        [addButton setAction:@selector(onSetGestureData:)];
+        [addButton setTitle:NSLocalizedString(@"Draw Gesture", nil)];
+        [addButton setTranslatesAutoresizingMaskIntoConstraints:YES];
+        [self addSubview:addButton];
+
+        
     }
 }
 - (void)mouseDown:(NSEvent *)theEvent;{
