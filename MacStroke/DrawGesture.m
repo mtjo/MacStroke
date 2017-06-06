@@ -84,7 +84,7 @@
         }
     }else{
         
-        NSButton *addButton = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 27, 90, 30)] ;
+        NSButton *addButton = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 28, 80, 25)] ;
         [addButton setTag:ruleIndex];
         [addButton setBezelStyle:NSTexturedSquareBezelStyle];
         

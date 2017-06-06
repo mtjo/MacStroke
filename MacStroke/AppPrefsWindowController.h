@@ -12,9 +12,6 @@
 @class LaunchAtLoginController;
 
 @interface AppPrefsWindowController : DBPrefsWindowController <NSTableViewDelegate, NSTableViewDataSource, SRRecorderControlDelegate, NSTextFieldDelegate, AppPickerCallback, NSComboBoxDataSource, NSWindowDelegate>
-{
-    NSInteger settingRuleIndex;
-}
 
 @property(strong, nonatomic) IBOutlet NSView *generalPreferenceView;
 @property(strong, nonatomic) IBOutlet NSView *rulesPreferenceView;
@@ -57,7 +54,6 @@
 
 - (void) preSetRuleGestureAtIndex:(NSInteger)index;
 
-- (void) setSettingRuleIndex:(NSInteger)index;
+- (IBAction)onSetGestureData:(id)sender;
 
-- (NSInteger) getSettingRuleIndex;
 @end

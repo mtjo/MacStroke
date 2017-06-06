@@ -16,4 +16,8 @@
 - (void)setEnabled:(BOOL)enabled;
 - (void)showPreferences;
 
+- (void) setSettingRuleIndex:(NSInteger)index;
+
+- (NSInteger) getSettingRuleIndex;
+
 @end

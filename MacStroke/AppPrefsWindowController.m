@@ -79,7 +79,6 @@ static NSArray *exampleAppleScripts;
     self.whiteListTextView.string = BWFilter.whiteListText;
     self.blackListTextView.font = [NSFont systemFontOfSize:14];
     self.whiteListTextView.font = [NSFont systemFontOfSize:14];
-    settingRuleIndex = -1;
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(tableViewSelectionChanged:)
                                                  name:NSTableViewSelectionDidChangeNotification
@@ -445,7 +444,7 @@ static NSString *currentScriptId = nil;
 
 -(void) preSetRuleGestureAtIndex:(NSInteger)index;
 {
-    [self setSettingRuleIndex: index];
+    [[AppDelegate appDelegate] setSettingRuleIndex: index];
     
     NSString *title1 =NSLocalizedString(@"Ok", nil);
     
@@ -539,14 +538,14 @@ static NSString *currentScriptId = nil;
     }
     else if(action == NSAlertSecondButtonReturn )
     {
-        settingRuleIndex = -1;
+        //settingRuleIndex = -1;
     }
 }
 
 - (IBAction)preGestureSelectionChanged:(NSNotification *)notification {
     NSComboBox *comboBox = (NSComboBox *)[notification object];
-    NSInteger row = [comboBox tag];
-    NSLog(@"%ld",(long)row);
+    //NSInteger row = [comboBox tag];
+    //NSLog(@"%ld",(long)row);
     
     NSInteger index_for_combox = [comboBox indexOfSelectedItem];
     NSString *m_text_combobox;
@@ -554,7 +553,7 @@ static NSString *currentScriptId = nil;
     NSArray *array = [m_text_combobox componentsSeparatedByString:@" "];
     
     NSMutableArray* Gesture =[PreGesture getGestureByLetter:array[0] IsRevered:(array.count>1?YES:NO)];
-    
+    NSInteger settingRuleIndex = [[AppDelegate appDelegate] getSettingRuleIndex];
     if(settingRuleIndex>-1){
         [[RulesList sharedRulesList] setGestureData:Gesture atIndex:settingRuleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
@@ -987,12 +986,5 @@ static NSString *currentScriptId = nil;
     }
     return nil;
 }
--(void) setSettingRuleIndex:(NSInteger)index;
-{
-    settingRuleIndex = index;
-}
-- (NSInteger) getSettingRuleIndex;
-{
-    return settingRuleIndex;
-}
+
 @end
