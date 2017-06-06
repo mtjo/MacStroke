@@ -561,7 +561,8 @@ static NSString *currentScriptId = nil;
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
         notification.soundName = NSUserNotificationDefaultSoundName;
         [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
-        settingRuleIndex = -1;
+        [[AppDelegate appDelegate] setSettingRuleIndex:-1];
+        
         [_rulesTableView reloadData];
         [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
 

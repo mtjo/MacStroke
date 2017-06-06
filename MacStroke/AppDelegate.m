@@ -198,15 +198,17 @@ void resetGestureB() {
     actionRuleIndex =-1;
 }
 bool setRuleData(){
-    NSInteger ruleIndex = settingRuleIndex;
-    if(ruleIndex>-1){
-        [[RulesList sharedRulesList] setGestureData:GestureB atIndex:ruleIndex];
+    
+    if(settingRuleIndex>-1){
+        [[RulesList sharedRulesList] setGestureData:GestureB atIndex:settingRuleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
         notification.title = @"MacStroke";
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
         notification.soundName = NSUserNotificationDefaultSoundName;        
         [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
         [_preferencesWindowController.rulesTableView reloadData];
+        
+        settingRuleIndex = -1;
 
         NSString *appname =frontBundleName();
         if ([appname isEqualToString:@"com.codefalling.MacStroke"]) {

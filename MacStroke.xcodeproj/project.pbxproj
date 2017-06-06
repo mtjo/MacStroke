@@ -728,7 +728,8 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.codefalling.$(PRODUCT_NAME:rfc1034identifier)";
+				PODS_BUILD_DIR = $BUILD_DIR;
+				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -744,7 +745,9 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.codefalling.$(PRODUCT_NAME:rfc1034identifier)";
+				PODS_BUILD_DIR = $BUILD_DIR;
+				PODS_CONFIGURATION_BUILD_DIR = "$PODS_BUILD_DIR/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
