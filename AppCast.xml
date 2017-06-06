@@ -71,7 +71,7 @@
         https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.0.4.html
       </sparkle:releaseNotesLink>
       <pubDate>2017-06-06 23:15:44 +8</pubDate>
-      <enclosure url="https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.4.zip" sparkle:version="1.0.4" length="1677925" type="application/octet-stream" sparkle:dsaSignature="MC0CFGtm5/PrQA7vvnX5XsV0uTFwKfo1AhUAkr5KKvFtEX2NJDSz83lVFM4vNF4=" />
+      <enclosure url="https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.4.zip" sparkle:version="1.0.4" length="1677983" type="application/octet-stream" sparkle:dsaSignature="MC0CFQCMymfliNTHsLwf7lH7c4zux1s2LgIUPmoFhOZuqzKtJAK1uTZ6u0WBYyw=" />
       <sparkle:minimumSystemVersion>10.9</sparkle:minimumSystemVersion>
     </item>
   </channel>

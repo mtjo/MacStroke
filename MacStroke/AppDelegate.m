@@ -211,7 +211,7 @@ bool setRuleData(){
         settingRuleIndex = -1;
 
         NSString *appname =frontBundleName();
-        if ([appname isEqualToString:@"com.codefalling.MacStroke"]) {
+        if ([appname isEqualToString:@"net.mtjo.MacStroke"]) {
             [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
         }
         return YES;
