@@ -80,8 +80,16 @@ NSMutableArray<NSMutableDictionary *> *_rulesList;  // private
     return result;
 }
 
-static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gesture, NSMutableArray *gestureData, NSInteger keycode, NSInteger flag, NSString *note) {
-    [rulesList addRuleWithDirection:gesture gestureData:gestureData filter:@"*" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:keycode shortcutFlag: flag appleScriptId:nil note:note];
+static inline void addWildcardShortcutRule(RulesList *rulesList,
+                                           NSString *gesture,
+                                           NSMutableArray *gestureData,
+                                           ActionType actiontype,
+                                           NSInteger keycode,
+                                           NSInteger flag,
+                                           NSString *text,
+                                           NSString *password,
+                                           NSString *note) {
+    [rulesList addRuleWithDirection:gesture gestureData:gestureData filter:@"*" filterType:FILTER_TYPE_WILDCARD actionType:actiontype shortcutKeyCode:keycode shortcutFlag: flag appleScriptId:nil text:text password:password note:note];
 }
 
 - (void)reInit {
@@ -90,95 +98,68 @@ static inline void addWildcardShortcutRule(RulesList *rulesList, NSString *gestu
     
     //F Revered
     Gesture=[PreGesture getGestureByLetter:@"F" IsRevered:YES];
-    addWildcardShortcutRule(self, @"NextTab", Gesture, kVK_ANSI_RightBracket, NSShiftKeyMask|NSCommandKeyMask, @"Next Tab");
+    addWildcardShortcutRule(self, @"NextTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_RightBracket, NSShiftKeyMask|NSCommandKeyMask, @"",@"", @"Next Tab");
     //T Revered
     Gesture=[PreGesture getGestureByLetter:@"T" IsRevered:NO];
-    addWildcardShortcutRule(self, @"PrevTab", Gesture, kVK_ANSI_LeftBracket, NSShiftKeyMask|NSCommandKeyMask, @"Prev Tab");
+    addWildcardShortcutRule(self, @"PrevTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_LeftBracket, NSShiftKeyMask|NSCommandKeyMask, @"",@"", @"Prev Tab");
     //I
     Gesture = [PreGesture getGestureByLetter:@"I" IsRevered:NO];
-    addWildcardShortcutRule(self, @"PageDown",Gesture, kVK_PageDown,kVK_PageDown, @"PageDown");
+    addWildcardShortcutRule(self, @"PageDown",Gesture,ACTION_TYPE_SHORTCUT, kVK_PageDown,kVK_PageDown, @"",@"", @"PageDown");
     
     //I Reversed
     Gesture = [PreGesture getGestureByLetter:@"I" IsRevered:YES];
-    addWildcardShortcutRule(self, @"PageUp",Gesture, kVK_PageUp, kVK_PageUp, @"PageUp");
+    addWildcardShortcutRule(self, @"PageUp",Gesture,ACTION_TYPE_SHORTCUT, kVK_PageUp, kVK_PageUp, @"",@"", @"PageUp");
     
     //A
     Gesture = [PreGesture getGestureByLetter:@"A" IsRevered:NO];
-    addWildcardShortcutRule(self, @"SelectAll",Gesture, kVK_ANSI_A,NSCommandKeyMask, @"SelectALL");
+    addWildcardShortcutRule(self, @"SelectAll",Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_A,NSCommandKeyMask, @"",@"", @"SelectALL");
     
     //V
     Gesture = [PreGesture getGestureByLetter:@"V" IsRevered:NO];
-    addWildcardShortcutRule(self, @"Paste",Gesture, kVK_ANSI_V,NSCommandKeyMask, @"Paste");
+    addWildcardShortcutRule(self, @"Paste",Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_V,NSCommandKeyMask, @"",@"", @"Paste");
     
     //L
     Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:NO];
-    addWildcardShortcutRule(self, @"CloseTab", Gesture, kVK_ANSI_W, NSCommandKeyMask, @"Close Tab");
+    addWildcardShortcutRule(self, @"CloseTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_W, NSCommandKeyMask, @"",@"", @"Close Tab");
     
     //L Reversed
     Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:YES];
-    addWildcardShortcutRule(self, @"Exit", Gesture, kVK_ANSI_Q, NSCommandKeyMask, @"Exit App");
+    addWildcardShortcutRule(self, @"Exit", Gesture, ACTION_TYPE_SHORTCUT, kVK_ANSI_Q, NSCommandKeyMask, @"",@"", @"Exit App");
     
-    //top right corner
-    int x,y;
-    NSMutableArray *top_right_corner = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<60; i++) {
-        [top_right_corner addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=y=y+i;
-        
-    }
-    addWildcardShortcutRule(self, @"FullScreen", top_right_corner, kVK_ANSI_F, NSCommandKeyMask|NSControlKeyMask, @"Full screen");
+    //@"↙",@"↗",@"↘",@"↖"
+    //@"↗"
+    Gesture=[PreGesture getGestureByLetter:@"↗" IsRevered:NO];
+    addWildcardShortcutRule(self, @"FullScreen", Gesture, ACTION_TYPE_SHORTCUT, kVK_ANSI_F, NSCommandKeyMask|NSControlKeyMask, @"",@"", @"Full screen");
     
     
-    //bottom left corner
-    NSMutableArray *bottom_left_corner = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<60; i++) {
-        [bottom_left_corner addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=y=y-i;
-        
-    }
-    addWildcardShortcutRule(self, @"MinSize", bottom_left_corner, kVK_ANSI_M, NSCommandKeyMask, @"Min Size Windows");
+    //@"↙"
+    Gesture=[PreGesture getGestureByLetter:@"↙" IsRevered:NO];
+    addWildcardShortcutRule(self, @"MinSize", Gesture, ACTION_TYPE_SHORTCUT, kVK_ANSI_M, NSCommandKeyMask, @"",@"", @"Min Size Windows");
     
-    //bottom left corner
-    NSMutableArray *bottom_right_corner = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<60; i++) {
-        [bottom_right_corner addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x+i;
-        y=y-i;
-        
-    }
-    
-    addWildcardShortcutRule(self, @"MinSizeAll", bottom_right_corner, kVK_ANSI_M, NSCommandKeyMask|NSAlternateKeyMask, @"Min Size All Windows");
+    //@"↘"
+    Gesture=[PreGesture getGestureByLetter:@"↘" IsRevered:NO];
+    addWildcardShortcutRule(self, @"MinSizeAll", Gesture, ACTION_TYPE_SHORTCUT, kVK_ANSI_M, NSCommandKeyMask|NSAlternateKeyMask, @"",@"", @"Min Size All Windows");
     
     
     
-    //R
-    NSMutableArray *R = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [R addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x+i;
-    }
+    //@"←",@"↑",@"→",@"↓",
+    //@"→"
+    Gesture=[PreGesture getGestureByLetter:@"→" IsRevered:NO];
+    addWildcardShortcutRule(self, @"Next",Gesture,ACTION_TYPE_SHORTCUT,kVK_RightArrow, NSCommandKeyMask, @"",@"", @"Next");
     
-    addWildcardShortcutRule(self, @"Next",R,kVK_RightArrow, NSCommandKeyMask, @"Next");
+    //@"←"
+    Gesture=[PreGesture getGestureByLetter:@"←" IsRevered:NO];
+    addWildcardShortcutRule(self, @"Back",Gesture, ACTION_TYPE_SHORTCUT, kVK_LeftArrow, NSCommandKeyMask, @"",@"", @"Back");
     
-    //L
-    NSMutableArray *L = [[NSMutableArray alloc] init];
-    x=200;
-    y=200;
-    for (int i=0; i<30; i++) {
-        [L addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-        x=x-i;
-    }
-    addWildcardShortcutRule(self, @"Back",L, kVK_LeftArrow, NSCommandKeyMask, @"Back");
+    //M
+    Gesture=[PreGesture getGestureByLetter:@"M" IsRevered:NO];
+    addWildcardShortcutRule(self, @"Email", Gesture, ACTION_TYPE_TEXT, kVK_ANSI_W, NSCommandKeyMask, @"mtjo.net@gmail.com",@"", @"input e-mail");
     
-
+    //P Revered
+    Gesture=[PreGesture getGestureByLetter:@"P" IsRevered:YES];
+    addWildcardShortcutRule(self, @"password", Gesture, ACTION_TYPE_PASSWORD, kVK_ANSI_W, NSCommandKeyMask, @"",@"12345678", @"input password");
+    
+    
 
 }
 
@@ -335,7 +316,9 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
                   actionType:(ActionType)actionType
              shortcutKeyCode:(NSUInteger)shortcutKeyCode
                 shortcutFlag:(NSUInteger)shortcutFlag
-                 appleScriptId:(NSString *)appleScriptId
+               appleScriptId:(NSString *)appleScriptId
+                        text:(NSString *)text
+                    password:(NSString*)password
                         note:(NSString *)note; {
     NSMutableDictionary *rule = [[NSMutableDictionary alloc] init];
     rule[@"direction"] = direction;
@@ -343,8 +326,8 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
     rule[@"filter"] = filter;
     rule[@"filterType"] = @(filterType);
     rule[@"actionType"] = @(actionType);
-    rule[@"text"] = @"";
-    rule[@"password"]=@"";
+    rule[@"text"] = text;
+    rule[@"password"] = password;
     if (actionType == ACTION_TYPE_SHORTCUT) {
         rule[@"shortcut_code"] = @(shortcutKeyCode);
         rule[@"shortcut_flag"] = @(shortcutFlag);

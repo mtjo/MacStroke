@@ -12,7 +12,7 @@
 
 + (NSMutableArray*)getGestureByLetter:(NSString*)Letter IsRevered:(BOOL)Revered;
 {
-    NSArray *Letters = [NSArray arrayWithObjects:@"A",@"B",@"C",@"D",@"E",@"F",@"G",@"H",@"I",@"J",@"K",@"L",@"M",@"N",@"O",@"P",@"Q",@"R",@"S",@"T",@"U",@"V",@"W",@"X",@"Y",@"Z",@"↙",@"↘",@"↖",@"↗",@"┏",@"┓",@"┗",@"┛",nil];
+    NSArray *Letters = [NSArray arrayWithObjects:@"A",@"B",@"C",@"D",@"E",@"F",@"G",@"H",@"I",@"J",@"K",@"L",@"M",@"N",@"O",@"P",@"Q",@"R",@"S",@"T",@"U",@"V",@"W",@"X",@"Y",@"Z",@"↙",@"↘",@"↖",@"↗",@"┏",@"┓",@"┗",@"┛",@"←",@"↑",@"→",@"↓",nil];
 
     long index = [Letters indexOfObject:Letter];
     NSMutableArray *GestureData = [[NSMutableArray alloc]init];
@@ -569,6 +569,35 @@
             }
             for (int i=0; i<15; i++) {
                 x--;
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+            }
+            break;
+            
+        case 34://@"←"
+            x=200;y=200;
+            for (int i=0; i<35; i++) {
+                x--;
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+            }
+            break;
+        case 35://@"↑",
+            x=200;y=200;
+            for (int i=0; i<35; i++) {
+                y++;
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+            }
+            break;
+        case 36://@"→",
+            x=200;y=200;
+            for (int i=0; i<35; i++) {
+                x++;
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+            }
+            break;
+        case 37://@"↓",
+            x=200;y=200;
+            for (int i=0; i<35; i++) {
+                y--;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
             break;
