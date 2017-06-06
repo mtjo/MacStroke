@@ -785,7 +785,15 @@ static NSString *currentScriptId = nil;
     NSMutableArray *ruleListArr= [NSKeyedUnarchiver unarchiveObjectWithData:[rulesList nsData]];
     if ([tableColumn.identifier isEqualToString:@"Gesture"] || [tableColumn.identifier isEqualToString:@"Filter"] || [tableColumn.identifier isEqualToString:@"Note"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-        NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 1000, 25)];
+        NSTextField *textField ;
+        if ([tableColumn.identifier isEqualToString:@"Gesture"]) {
+            textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 100, 20)];
+        }else if([tableColumn.identifier isEqualToString:@"Filter"] ){
+            textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 160, 20)];
+        }else{
+            textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 235, 20)];
+        }
+       
         
         [textField.cell setWraps:YES];
         [textField.cell setScrollable:YES];
@@ -793,7 +801,8 @@ static NSString *currentScriptId = nil;
         [textField setBezeled:NO];
         [textField setDrawsBackground:YES];
         [textField setBezelStyle:NSTextFieldSquareBezel];
-        [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+        //[textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+        [textField setLineBreakMode:NSLineBreakByTruncatingTail];
         if ([tableColumn.identifier isEqualToString:@"Gesture"]) {
             textField.stringValue = [rulesList directionAtIndex:row];
             textField.identifier = @"Gesture";
@@ -844,7 +853,7 @@ static NSString *currentScriptId = nil;
         }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_TEXT){
 
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-            NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 27, 1000, 25)];
+            NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 100, 20)];
             
             [textField.cell setWraps:YES];
             [textField.cell setScrollable:YES];
@@ -852,7 +861,9 @@ static NSString *currentScriptId = nil;
             [textField setBezeled:NO];
             [textField setDrawsBackground:YES];
             [textField setBezelStyle:NSTextFieldSquareBezel];
-            [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+            
+            //[textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+            [textField setLineBreakMode:NSLineBreakByTruncatingTail];
 
             textField.stringValue = [rulesList textAtIndex:row];
             textField.identifier = @"Text";
@@ -865,7 +876,7 @@ static NSString *currentScriptId = nil;
             
         }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_PASSWORD){
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
-            NSSecureTextField *textField = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0 , 27, 300, 25)];
+            NSSecureTextField *textField = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0 , 30, 100, 20)];
             
             [textField.cell setWraps:YES];
             [textField.cell setScrollable:YES];
@@ -873,7 +884,8 @@ static NSString *currentScriptId = nil;
             [textField setBezeled:NO];
             [textField setDrawsBackground:YES];
             [textField setBezelStyle:NSTextFieldSquareBezel];
-            [textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+            //[textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
+            [textField setLineBreakMode:NSLineBreakByTruncatingTail];
             
             textField.stringValue = [rulesList passwordAtIndex:row];
             textField.identifier = @"Password";
@@ -904,15 +916,15 @@ static NSString *currentScriptId = nil;
     }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
         
-        NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 25, 90, 30)];
+        NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 25, 90, 27)];
         [comboBox setEditable:NO];
         [comboBox setTag:row];
         
         NSArray *preArray=[[NSArray alloc]initWithObjects:
-                           @"Hot Key",
-                           @"Apple Script",
-                           @"String",
-                           @"Password",
+                           NSLocalizedString(@"Hot Key", nil),
+                           NSLocalizedString(@"Apple Script", nil),
+                           NSLocalizedString(@"Text", nil),
+                           NSLocalizedString(@"Password", nil),
                            nil];
         [comboBox addItemsWithObjectValues:preArray];
         
@@ -923,16 +935,16 @@ static NSString *currentScriptId = nil;
 
         switch ([rulesList actionTypeAtIndex:row]) {
             case ACTION_TYPE_SHORTCUT:
-                comboBox.stringValue=@"Hot Key";
+                comboBox.stringValue=NSLocalizedString(@"Hot Key", nil);
                 break;
             case ACTION_TYPE_APPLE_SCRIPT:
-                comboBox.stringValue=@"Apple Script";
+                comboBox.stringValue=NSLocalizedString(@"Apple Script", nil);
                 break;
             case ACTION_TYPE_TEXT:
-                comboBox.stringValue=@"Text";
+                comboBox.stringValue=NSLocalizedString(@"Text", nil);
                 break;
             case ACTION_TYPE_PASSWORD:
-                comboBox.stringValue=@"Password";
+                comboBox.stringValue=NSLocalizedString(@"Password", nil);
                 break;
             default:
                 break;

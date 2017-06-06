@@ -26,4 +26,7 @@
 "Export succeeded" = "导出成功";
 "You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!" = "你可以在屏幕上信任何地方绘制手势,如果要取消，请点击取消按钮！";
 "Gesture draw complete!" = "手势绘制完成!";
-
+"Hot Key" = "热键";
+"Apple Script" = "AppleScript脚本";
+"Text" = "文本";
+"Password" = "密码";

@@ -140,6 +140,9 @@
 /* Class = "NSTextFieldCell"; title = "Line color:"; ObjectID = "eIp-tq-2xl"; */
 "eIp-tq-2xl.title" = "鼠标路经颜色：";
 
+/* Class = "NSTableColumn"; headerCell.title = "Type"; ObjectID = "f42-hH-rDD"; */
+"f42-hH-rDD.headerCell.title" = "类型";
+
 /* Class = "NSTextFieldCell"; title = "FontName"; ObjectID = "fEL-3U-jlH"; */
 "fEL-3U-jlH.title" = "FontName";
 

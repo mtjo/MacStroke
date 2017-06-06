@@ -41,20 +41,17 @@
 /* Class = "NSButtonCell"; title = "Auto Start at Login"; ObjectID = "403"; */
 "403.title" = "Auto Start at Login";
 
+/* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "1ks-xH-EZh"; */
+"1ks-xH-EZh.ibShadowedDisplayPattern" = "%{value1}@";
+
 /* Class = "NSTextFieldCell"; title = "FontName"; ObjectID = "3Bx-Ex-Id5"; */
 "3Bx-Ex-Id5.title" = "FontName";
-
-/* Class = "NSTextFieldCell"; title = "jiegec@qq.com"; ObjectID = "3XA-Af-eIC"; */
-"3XA-Af-eIC.title" = "jiegec@qq.com";
 
 /* Class = "NSBox"; title = "Gesture"; ObjectID = "4xM-Ya-MxN"; */
 "4xM-Ya-MxN.title" = "Gesture";
 
 /* Class = "NSTextFieldCell"; title = "Language:"; ObjectID = "5rs-3N-RX4"; */
 "5rs-3N-RX4.title" = "Language:";
-
-/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "6xn-3V-cW9"; */
-"6xn-3V-cW9.title" = "Text Cell";
 
 /* Class = "NSTextFieldCell"; title = "FontScale"; ObjectID = "7fQ-uo-GWm"; */
 "7fQ-uo-GWm.title" = "FontScale";
@@ -68,17 +65,11 @@
 /* Class = "NSButtonCell"; title = "Reset Defaults"; ObjectID = "9qA-nt-g9l"; */
 "9qA-nt-g9l.title" = "Reset Defaults";
 
-/* Class = "NSTableColumn"; headerCell.title = "Edit_Gesture"; ObjectID = "Awl-cu-DKF"; */
-"Awl-cu-DKF.headerCell.title" = "Edit_Gesture";
-
 /* Class = "NSTextFieldCell"; title = "Retention Time:"; ObjectID = "BAQ-QG-BiC"; */
 "BAQ-QG-BiC.title" = "Retention Time:";
 
 /* Class = "NSButtonCell"; title = "Black list mode"; ObjectID = "BDA-RK-czZ"; */
 "BDA-RK-czZ.title" = "Black list mode";
-
-/* Class = "NSMenuItem"; title = "+"; ObjectID = "BT0-6L-6TA"; */
-"BT0-6L-6TA.title" = "+";
 
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "DIk-ah-Bo4"; */
 "DIk-ah-Bo4.title" = "Table View Cell";
@@ -92,11 +83,11 @@
 /* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "Jme-ae-6kh"; */
 "Jme-ae-6kh.ibShadowedDisplayPattern" = "%{value1}@";
 
-/* Class = "NSTextFieldCell"; title = "Co-developer: @zhangciwu in github"; ObjectID = "MJR-m4-m46"; */
-"MJR-m4-m46.title" = "Co-developer: @zhangciwu in github";
-
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Mkk-zs-5mz"; */
 "Mkk-zs-5mz.title" = "Table View Cell";
+
+/* Class = "NSMenuItem"; title = "Item 3"; ObjectID = "N0i-5K-XPM"; */
+"N0i-5K-XPM.title" = "Item 3";
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "PQ5-fb-DKg"; */
 "PQ5-fb-DKg.title" = "add..";
@@ -143,6 +134,9 @@
 /* Class = "NSTextFieldCell"; title = "Version:"; ObjectID = "b8r-Ju-Lat"; */
 "b8r-Ju-Lat.title" = "Version:";
 
+/* Class = "NSButtonCell"; title = "+"; ObjectID = "c4y-2v-rkX"; */
+"c4y-2v-rkX.title" = "+";
+
 /* Class = "NSTextFieldCell"; title = "Min Score:"; ObjectID = "c53-qo-yp4"; */
 "c53-qo-yp4.title" = "Min Score:";
 
@@ -152,11 +146,14 @@
 /* Class = "NSButtonCell"; title = "Edit in External Editor"; ObjectID = "cl6-Yg-6iY"; */
 "cl6-Yg-6iY.title" = "Edit in External Editor";
 
-/* Class = "NSButtonCell"; title = "Button"; ObjectID = "eEG-Lt-lJN"; */
-"eEG-Lt-lJN.title" = "Button";
-
 /* Class = "NSTextFieldCell"; title = "Line color:"; ObjectID = "eIp-tq-2xl"; */
 "eIp-tq-2xl.title" = "Line color:";
+
+/* Class = "NSTableColumn"; headerCell.title = "Type"; ObjectID = "f42-hH-rDD"; */
+"f42-hH-rDD.headerCell.title" = "Type";
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "fFw-3C-iig"; */
+"fFw-3C-iig.title" = "Text Cell";
 
 /* Class = "NSTextFieldCell"; title = "FontSize"; ObjectID = "ffg-PP-JsW"; */
 "ffg-PP-JsW.title" = "FontSize";
@@ -164,17 +161,11 @@
 /* Class = "NSButtonCell"; title = "+"; ObjectID = "fo8-ZY-CtD"; */
 "fo8-ZY-CtD.title" = "+";
 
-/* Class = "NSButtonCell"; title = "Check"; ObjectID = "gPX-Pa-jb5"; */
-"gPX-Pa-jb5.title" = "Check";
-
 /* Class = "NSTextFieldCell"; placeholderString = "Enter AppleScript here"; ObjectID = "gTD-R3-oZl"; */
 "gTD-R3-oZl.placeholderString" = "Enter AppleScript here";
 
 /* Class = "NSButtonCell"; title = "Enable MacStroke"; ObjectID = "gbg-RG-zrR"; */
 "gbg-RG-zrR.title" = "Enable MacStroke";
-
-/* Class = "NSTableColumn"; headerCell.title = "Trigger on every match"; ObjectID = "gla-Uy-MuL"; */
-"gla-Uy-MuL.headerCell.title" = "Trigger on every match";
 
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "hFe-TH-zPF"; */
 "hFe-TH-zPF.title" = "-";
@@ -182,17 +173,17 @@
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "ib9-4l-w4P"; */
 "ib9-4l-w4P.title" = "Text Cell";
 
+/* Class = "NSMenuItem"; title = "Item 1"; ObjectID = "igL-9q-xhF"; */
+"igL-9q-xhF.title" = "Item 1";
+
 /* Class = "NSTextFieldCell"; title = "Font:"; ObjectID = "mP7-1C-3nv"; */
 "mP7-1C-3nv.title" = "Font:";
-
-/* Class = "NSMenuItem"; title = "Add a Shortcut Rule"; ObjectID = "mVL-bN-Qa5"; */
-"mVL-bN-Qa5.title" = "Add a Shortcut Rule";
 
 /* Class = "NSTextFieldCell"; title = "code"; ObjectID = "mgw-z2-mZe"; */
 "mgw-z2-mZe.title" = "code";
 
-/* Class = "NSMenuItem"; title = "Add a AppleScript Rule"; ObjectID = "pqG-Ck-V2g"; */
-"pqG-Ck-V2g.title" = "Add a AppleScript Rule";
+/* Class = "NSMenuItem"; title = "Item 2"; ObjectID = "n3s-v8-d8G"; */
+"n3s-v8-d8G.title" = "Item 2";
 
 /* Class = "NSButtonCell"; title = "Automatically Download Updates"; ObjectID = "rOi-wV-Iez"; */
 "rOi-wV-Iez.title" = "Automatically Download Updates";
@@ -205,12 +196,6 @@
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "seb-qO-V3w"; */
 "seb-qO-V3w.title" = "add..";
-
-/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "tu7-27-fRV"; */
-"tu7-27-fRV.title" = "Table View Cell";
-
-/* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "vrw-R4-SMx"; */
-"vrw-R4-SMx.ibShadowedDisplayPattern" = "%{value1}@";
 
 /* Class = "NSButtonCell"; title = "Choose"; ObjectID = "yCw-Ch-TOF"; */
 "yCw-Ch-TOF.title" = "Choose";
