@@ -11,18 +11,14 @@ MacStroke
 <p style="text-align:right">this description was copied from easyStroke</p>
 
 ###Download
-[MacStroke-1.0.0.zip](https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.0.zip)
+[MacStroke-1.0.4.zip](https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.4.zip)
 
 
 ###About
 
 [MacGesture Github](https://github.com/MacGesture/MacGesture)
 
-[EasyStroke Github](https://github.com/thjaeger/easystroke)
-
-
-[the program  was Modified from MacGesture, the relevant settings can refer to MacGesture](https://github.com/MacGesture/MacGesture/wiki)
 
 [Feedback BUG & Construction](mailto:mtjo.net@gmail.com?subject=Feedback BUG %26 Construction&cc=mtjo_00@163.com&body=Feedback BUG Please describe in detail, it is best to attach BUG screenshots and system version screenshots)
 
-Power by [MTJO](http://mtjo.net)![mtjo](https://github.com/mtjo/MacStroke/raw/release/logo-mtjo.png)
+Power by [![mtjo](https://github.com/mtjo/MacStroke/raw/release/logo-mtjo.png)](http://mtjo.net)
