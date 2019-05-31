@@ -6,6 +6,8 @@ NSString *frontBundleName() {
     if (!runningApp.bundleIdentifier) {
         return @"";
     }
+    NSLog(@"%@",runningApp);
+    NSLog(@"%@",runningApp.objectSpecifier);
     return runningApp.bundleIdentifier;
 }
 
