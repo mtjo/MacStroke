@@ -33,6 +33,8 @@
 		3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */; };
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
+		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
+		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
@@ -114,6 +116,9 @@
 		3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MGOptionsDefine.m; sourceTree = "<group>"; };
 		4D03F1411E3F335C007AA1B1 /* DrawGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawGesture.h; sourceTree = "<group>"; };
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
+		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
+		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
+		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
@@ -162,6 +167,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */,
 				C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */,
 				1381E4AC1824E7E800E815F5 /* Cocoa.framework in Frameworks */,
 				F2C464A8F086B9812C917A5E /* Pods_MacStroke.framework in Frameworks */,
@@ -200,6 +206,7 @@
 		1381E4AA1824E7E800E815F5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4D42B20022A7578400FC3699 /* IOBluetooth.framework */,
 				C610961B1DED98C700FCC263 /* CoreImage.framework */,
 				1381E4AB1824E7E800E815F5 /* Cocoa.framework */,
 				1381E4AD1824E7E800E815F5 /* Other Frameworks */,
@@ -221,6 +228,8 @@
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
 			isa = PBXGroup;
 			children = (
+				4D42B1FA22A753D000FC3699 /* BtDelegate.h */,
+				4D42B1FB22A753D100FC3699 /* BtDelegate.m */,
 				4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */,
 				4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */,
 				4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */,
@@ -530,6 +539,7 @@
 				B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */,
 				264183DA0542C17E1932F696 /* SRRecorderControlWithTagid.m in Sources */,
 				2641813EC194C60DC1B1806D /* utils.m in Sources */,
+				4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */,
 				3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */,
 				4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */,
 				3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */,

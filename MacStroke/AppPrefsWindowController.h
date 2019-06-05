@@ -8,7 +8,7 @@
 #import "SRRecorderControl.h"
 #import "AppPickerWindowController.h"
 #import <Sparkle/Sparkle.h>
-
+#import "BtDelegate.h"
 @class LaunchAtLoginController;
 
 @interface AppPrefsWindowController : DBPrefsWindowController <NSTableViewDelegate, NSTableViewDataSource, SRRecorderControlDelegate, NSTextFieldDelegate, AppPickerCallback, NSComboBoxDataSource, NSWindowDelegate>
