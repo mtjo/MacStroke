@@ -42,7 +42,7 @@ static NSInteger settingRuleIndex;
     }
     
     windowController = [[CanvasWindowController alloc] init];
-
+    
     CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
     mouseEventTap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, eventMask, mouseEventCallback, NULL);
     
@@ -72,20 +72,20 @@ static NSInteger settingRuleIndex;
         [alert runModal];
         
     }
-
+    
     direction = [NSMutableString string];
-
+    
     GestureB = [[NSMutableArray alloc] init];
     isEnabled = YES;
     
     NSURL *defaultPrefsFile = [[NSBundle mainBundle]
                                URLForResource:@"DefaultPreferences" withExtension:@"plist"];
     NSDictionary *defaultPrefs =
-        [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
+    [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
     [[NSUserDefaults standardUserDefaults] registerDefaults:defaultPrefs];
-
+    
     [BWFilter compatibleProcedureWithPreviousVersionBlockRules];
-
+    
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"openPrefOnStartup"]) {
         [self openPreferences:self];
     }
@@ -139,7 +139,7 @@ static NSInteger settingRuleIndex;
         _preferencesWindowController = [[AppPrefsWindowController alloc] initWithWindowNibName:@"Preferences"];
         [_preferencesWindowController showWindow:self];
     } else {
-       [[_preferencesWindowController window] orderFront:self];
+        [[_preferencesWindowController window] orderFront:self];
     }
 }
 
@@ -177,7 +177,7 @@ static void setGestureB(NSEvent *event){
 static void setActionIndex(){
     
     RulesList *rulesList = [RulesList sharedRulesList];
-   
+    
     NSInteger count = [rulesList count];
     //NSLog(@"%ld",(long)count);
     NSArray *ruleListArr=[NSKeyedUnarchiver unarchiveObjectWithData:[rulesList nsData]];
@@ -189,26 +189,26 @@ static void setActionIndex(){
     NSString *frontApp = frontBundleName();
     for (int i=0; i<count; i++) {
         if([rulesList matchFilter:frontApp atIndex:i]/*||[rulesList triggerOnEveryMatchAtIndex:i]*/){
-        //}
-        NSArray *Ruledata=[[ruleListArr objectAtIndex:i] objectForKey:@"data"];
-        if(Ruledata!=nil){
-            NSMutableArray *GestureA = [[NSMutableArray alloc] initWithArray:Ruledata];
-            double score = [GestureCompare compareByGestureA:GestureA GestureB:GestureB];
-            //NSLog(@"%d:%f",i,score);
-            if(enableGestureMinScore){
-                if(score>0 && score>tmp_score && score >minscore){
-                    tmp_Index=i;
-                    tmp_score=score;
-                }
-            }else {
-                if(score>0 && score>tmp_score){
-                    tmp_Index=i;
-                    tmp_score=score;
+            //}
+            NSArray *Ruledata=[[ruleListArr objectAtIndex:i] objectForKey:@"data"];
+            if(Ruledata!=nil){
+                NSMutableArray *GestureA = [[NSMutableArray alloc] initWithArray:Ruledata];
+                double score = [GestureCompare compareByGestureA:GestureA GestureB:GestureB];
+                //NSLog(@"%d:%f",i,score);
+                if(enableGestureMinScore){
+                    if(score>0 && score>tmp_score && score >minscore){
+                        tmp_Index=i;
+                        tmp_score=score;
+                    }
+                }else {
+                    if(score>0 && score>tmp_score){
+                        tmp_Index=i;
+                        tmp_score=score;
+                    }
+                    
                 }
                 
             }
-            
-        }
         }
         
     }
@@ -227,12 +227,12 @@ bool setRuleData(){
         NSUserNotification *notification = [[NSUserNotification alloc] init];
         notification.title = @"MacStroke";
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);
-        notification.soundName = NSUserNotificationDefaultSoundName;        
+        notification.soundName = NSUserNotificationDefaultSoundName;
         [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
         [_preferencesWindowController.rulesTableView reloadData];
         
         settingRuleIndex = -1;
-
+        
         NSString *appname =frontBundleName();
         if ([appname isEqualToString:@"net.mtjo.MacStroke"]) {
             [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
@@ -259,11 +259,11 @@ void resetDirection() {
 // See https://developer.apple.com/library/mac/documentation/Carbon/Reference/QuartzEventServicesRef/#//apple_ref/c/tdef/CGEventTapCallBack
 static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
     static BOOL shouldShow;
+    static BOOL mouseDragged =NO;
     
     if (!isEnabled) {
         return event;
     }
-    
     NSEvent *mouseEvent;
     switch (type) {
         case kCGEventRightMouseDown:
@@ -274,10 +274,10 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             {
                 NSString *frontBundle = frontBundleName();
                 if (![BWFilter shouldHookMouseEventForApp:frontBundle] || !([[NSUserDefaults standardUserDefaults] boolForKey:@"showUIInWhateverApp"] || [[RulesList sharedRulesList] appSuitedRule:frontBundle])) {
-                //        CGEventPost(kCGSessionEventTap, mouseDownEvent);
-                //        if (mouseDraggedEvent) {
-                //            CGEventPost(kCGSessionEventTap, mouseDraggedEvent);
-                //        }
+                    //        CGEventPost(kCGSessionEventTap, mouseDownEvent);
+                    //        if (mouseDraggedEvent) {
+                    //            CGEventPost(kCGSessionEventTap, mouseDraggedEvent);
+                    //        }
                     shouldShow = NO;
                     return event;
                 }
@@ -287,7 +287,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             if (mouseDownEvent) { // mouseDownEvent may not release when kCGEventTapDisabledByTimeout
                 //resetDirection();
                 resetGestureB();
-
+                
                 CGPoint location = CGEventGetLocation(mouseDownEvent);
                 CGEventPost(kCGSessionEventTap, mouseDownEvent);
                 CFRelease(mouseDownEvent);
@@ -304,16 +304,17 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             mouseEvent = [NSEvent eventWithCGEvent:event];
             mouseDownEvent = event;
             CFRetain(mouseDownEvent);
-
+            
             [windowController reinitWindow];
             [windowController handleMouseEvent:mouseEvent];
             lastLocation = mouseEvent.locationInWindow;
+            
             break;
         case kCGEventRightMouseDragged:
             if (!shouldShow){
                 return event;
             }
-            
+            mouseDragged = YES;
             if (mouseDownEvent) {
                 mouseEvent = [NSEvent eventWithCGEvent:event];
                 
@@ -360,7 +361,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             if (!shouldShow){
                 return event;
             }
-            
             if (mouseDownEvent) {
                 mouseEvent = [NSEvent eventWithCGEvent:event];
                 [windowController handleMouseEvent:mouseEvent];
@@ -371,6 +371,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                     //    CGEventPost(kCGSessionEventTap, mouseDraggedEvent);
                     //}
                     CGEventPost(kCGSessionEventTap, event);
+                    return event;
                 }else {
                     double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
                     //NSLog(@"%f",noteRetetionTime);
@@ -386,7 +387,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             mouseDownEvent = mouseDraggedEvent = NULL;
             shouldShow = NO;
             
-            //resetDirection();
             resetGestureB();
             break;
         }
@@ -395,7 +395,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                 return event;
             }
             double delta = CGEventGetDoubleValueField(event, kCGScrollWheelEventDeltaAxis1);
-
+            
             NSTimeInterval current = [NSDate timeIntervalSinceReferenceDate];
             if (current - lastMouseWheelEventTime > 0.3) {
                 if (delta > 0) {
@@ -423,11 +423,46 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             break;
         }
         default:
-            return event;
-    }
-
+        return event;    }
+    
+    NSString *appname =frontBundleName();
+//    if ([appname isEqualToString:@"com.jetbrains.PhpStorm"]&&!mouseDraggedEvent) {
+//        return event;
+//    }
     return NULL;
 }
+
+void callRightMenu(const CGPoint point)
+{
+    //    CGEventRef event = CGEventCreateKeyboardEvent(NULL, kVK_Control, true);
+    //    CGEventPost(kCGSessionEventTap, event);
+    //    CFRelease(event);
+    
+    NSLog(@"callRightMenu");
+    CGMouseButton button =kCGMouseButtonRight;
+    
+    CGEventType type = kCGEventRightMouseDown;
+    CGEventRef theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
+    //CGEventSetFlags(theEvent, kCGEventFlagMaskControl);
+    CGEventSetType(theEvent, type);
+    CGEventPost(kCGSessionEventTap, theEvent);
+    CFRelease(theEvent);
+    
+    
+    type = kCGEventRightMouseUp;
+    theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
+    //CGEventSetFlags(theEvent, kCGEventFlagMaskControl);
+    CGEventSetType(theEvent, type);
+    CGEventPost(kCGSessionEventTap, theEvent);
+    CFRelease(theEvent);
+    
+    
+    //    event = CGEventCreateKeyboardEvent(NULL, kVK_Control, false);
+    //    CGEventPost(kCGSessionEventTap, event);
+    //    CFRelease(event);
+    
+}
+
 
 -(void) setSettingRuleIndex:(NSInteger)index;
 {
