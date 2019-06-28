@@ -10,6 +10,7 @@
 #import "CanvasWindow.h"
 #import "CanvasView.h"
 #import "RulesList.h"
+#import "Events.h"
 
 @implementation CanvasWindowController
 
@@ -83,6 +84,27 @@
     [self.window.contentView writeActionRuleIndex:actionRuleIndex];
 }
 
-
+- (void)aaa: (CGPoint) point {
+    NSLog(@"do something.");
+    CGEventRef e = CGEventCreateKeyboardEvent(NULL, kVK_Control, true);
+    CGEventPost(kCGSessionEventTap, e);
+    CFRelease(e);
+    
+    CGEventRef leftDown = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseDown, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
+    CGEventPost(kCGHIDEventTap, leftDown);
+    CFRelease(leftDown);
+    
+    usleep(15000); // Improve reliability
+    
+    // Left button up
+    CGEventRef leftUp = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseUp, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
+    CGEventPost(kCGHIDEventTap, leftUp);
+    CGEventCreateKeyboardEvent(NULL, , true);
+    e = CGEventCreateKeyboardEvent(NULL, kVK_Control, false);
+    CGEventPost(kCGSessionEventTap, e);
+    CFRelease(e);
+    
+    CFRelease(leftUp);
+}
 
 @end
