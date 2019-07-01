@@ -10,24 +10,26 @@
 #import "CanvasWindow.h"
 #import "CanvasView.h"
 #import "RulesList.h"
-#import "Events.h"
 
 @implementation CanvasWindowController
 
 - (void)reinitWindow {
     NSRect frame = NSScreen.mainScreen.frame;
-    //NSLog(@"%@",NSScreen.screens.firstObject.frame);
-    //NSPoint mouseLoc;
-    //mouseLoc = [NSEvent mouseLocation]; //get current mouse position
-    //NSLog(@"Mouse location: %f %f", mouseLoc.x, mouseLoc.y);
     NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
-    NSView *view = [[CanvasView alloc] initWithFrame:frame];
+    if (convasView) {
+        [convasView removeFromSuperview];
+    }
+    convasView = [[CanvasView alloc] initWithFrame:frame];
+    NSView *view = convasView;
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
-
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
+}
+
+-(void) cleanNote{
+    [convasView drawNote];
 }
 
 - (id)init {
@@ -76,35 +78,43 @@
     [self.window.contentView resizeTo:frame];
 }
 
-//- (void)writeDirection:(NSString *)directionStr; {
-//    [self.window.contentView writeDirection:directionStr];
-//}
-
 - (void)writeActionRuleIndex:(NSInteger)actionRuleIndex; {
     [self.window.contentView writeActionRuleIndex:actionRuleIndex];
 }
 
-- (void)aaa: (CGPoint) point {
-    NSLog(@"do something.");
-    CGEventRef e = CGEventCreateKeyboardEvent(NULL, kVK_Control, true);
-    CGEventPost(kCGSessionEventTap, e);
-    CFRelease(e);
+- (void)rightClick:(NSDictionary*) pointDic;{
+    double x =[[pointDic valueForKey:@"x"] doubleValue];
+    double y =[[pointDic valueForKey:@"y"] doubleValue];
+#ifdef DEBUG
+    NSLog(@"NSDictionary point:%@", pointDic);
+    NSLog(@"callRightMenu at x:%f y:%f", x,y);
+#endif
+    CGPoint point = CGPointMake(x, y);
+    //usleep(25000);
+    CGEventRef controlDown = CGEventCreateKeyboardEvent(NULL, 0x3B, true);
+    CGEventPost(kCGSessionEventTap, controlDown);
+    CFRelease(controlDown);
+    usleep(25000);// Improve reliability
     
-    CGEventRef leftDown = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseDown, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
+    CGEventRef leftDown = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseDown,point, kCGMouseButtonLeft);
     CGEventPost(kCGHIDEventTap, leftDown);
     CFRelease(leftDown);
     
     usleep(15000); // Improve reliability
     
     // Left button up
-    CGEventRef leftUp = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseUp, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
+    CGEventRef leftUp = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseUp, point, kCGMouseButtonLeft);
     CGEventPost(kCGHIDEventTap, leftUp);
-    CGEventCreateKeyboardEvent(NULL, , true);
-    e = CGEventCreateKeyboardEvent(NULL, kVK_Control, false);
-    CGEventPost(kCGSessionEventTap, e);
-    CFRelease(e);
+    
+    CGEventRef controlUp  = CGEventCreateKeyboardEvent(NULL, 0x3B, false);
+    CGEventPost(kCGSessionEventTap, controlUp);
+    CFRelease(controlUp);
     
     CFRelease(leftUp);
 }
 
+- (void)threadRightClick:(CGPoint) point;{
+    NSThread * newThread = [[NSThread alloc]initWithTarget:self selector:@selector(rightClick:) object:@{@"x":@(point.x),@"y":@(point.y)}] ;
+    [newThread start];
+}
 @end

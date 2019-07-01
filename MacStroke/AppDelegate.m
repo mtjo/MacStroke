@@ -280,13 +280,13 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                     shouldShow = NO;
                     return event;
                 }
+                
                 shouldShow = YES;
             }
             
             if (mouseDownEvent) { // mouseDownEvent may not release when kCGEventTapDisabledByTimeout
                 //resetDirection();
                 resetGestureB();
-                
                 
                 CGPoint location = CGEventGetLocation(mouseDownEvent);
                 CGEventPost(kCGSessionEventTap, mouseDownEvent);
@@ -366,26 +366,21 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                 [windowController handleMouseEvent:mouseEvent];
                 setGestureB(mouseEvent);
                 if (!handleGesture(true)) {
- 
                     NSString *appname =frontBundleName();
-                        if ([appname isEqualToString:@"com.jetbrains.PhpStorm"]&&!mouseDraggedEvent) {
-                            CGPoint p = CGEventGetLocation(mouseDownEvent);
-
-                            NSThread *thread = [[NSThread alloc] initWithTarget: windowController
-                                                                       selector:@selector(aaa:)
-                                                                         object:@(p)];
-                            [thread start];
-                            //callRightMenu(p);
-                        }else{
-                    CGEventPost(kCGSessionEventTap, mouseDownEvent);
-                    //if (mouseDraggedEvent) {
-                    //    CGEventPost(kCGSessionEventTap, mouseDraggedEvent);
-                    //}
-                    CGEventPost(kCGSessionEventTap, event);
-                        }
+                    if ([appname isEqualToString:@"com.jetbrains.PhpStorm"]&&!mouseDraggedEvent) {
+                        CGPoint p = CGEventGetLocation(mouseDownEvent);
+                        [windowController threadRightClick:p];
+                    }else{
+                        CGEventPost(kCGSessionEventTap, mouseDownEvent);
+                        //if (mouseDraggedEvent) {
+                        //    CGEventPost(kCGSessionEventTap, mouseDraggedEvent);
+                        //}
+                        CGEventPost(kCGSessionEventTap, event);
+                    }
                 }else {
                     double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
                     //NSLog(@"%f",noteRetetionTime);
+                    //[windowController reinitWindow];
                     [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:windowController selector:@selector(reinitWindow) userInfo:nil repeats:NO];
                 }
                 CFRelease(mouseDownEvent);            }
@@ -405,12 +400,13 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             if (!shouldShow || !mouseDownEvent) {
                 return event;
             }
+            
             double delta = CGEventGetDoubleValueField(event, kCGScrollWheelEventDeltaAxis1);
             
             NSTimeInterval current = [NSDate timeIntervalSinceReferenceDate];
             if (current - lastMouseWheelEventTime > 0.3) {
                 if (delta > 0) {
-                    // NSLog(@"Down!");
+                    //NSLog(@"Down!");
                     //addDirection('d', true);
                     
                 } else if (delta < 0){
@@ -439,45 +435,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     
     return NULL;
 }
-
-
-void callRightMenu(const CGPoint point)
-{
-
-    // Left button down
-    NSLog(@"callRightMenu");
-    NSString *clickAt = [NSString alloc];
-    int x = (int)point.x;
-    int y = (int)point.y;
-    clickAt = [clickAt initWithFormat:@"c:%d,%d",x,y];
-    NSLog(@"clickAt:%@",clickAt);
-
-    NSString *path = @"/Volumes/cliclick/cliclick";
-    NSArray *args = @[@"kd:ctrl",@"c:700,500",@"ku:ctrl"];
-    [NSTask launchedTaskWithLaunchPath:path arguments:args];
-    
-    
-//    CGEventRef e = CGEventCreateKeyboardEvent(NULL, kVK_Control, true);
-//    CGEventPost(kCGSessionEventTap, e);
-//    CFRelease(e);
-//
-//    CGEventRef leftDown = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseDown, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
-//    CGEventPost(kCGHIDEventTap, leftDown);
-//    CFRelease(leftDown);
-//
-//    usleep(15000); // Improve reliability
-//
-//    // Left button up
-//    CGEventRef leftUp = CGEventCreateMouseEvent(NULL, kCGEventLeftMouseUp, CGPointMake(point.x, point.y), kCGMouseButtonLeft);
-//    CGEventPost(kCGHIDEventTap, leftUp);
-//
-    e = CGEventCreateKeyboardEvent(NULL, kVK_Control, false);
-//    CGEventPost(kCGSessionEventTap, e);
-//    CFRelease(e);
-//
-//    CFRelease(leftUp);
-}
-
 
 -(void) setSettingRuleIndex:(NSInteger)index;
 {

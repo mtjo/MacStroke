@@ -33,6 +33,7 @@
 		3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */; };
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
+		4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D334FA422C73AB100E97738 /* DrawNoteView.m */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
 		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
@@ -116,6 +117,8 @@
 		3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MGOptionsDefine.m; sourceTree = "<group>"; };
 		4D03F1411E3F335C007AA1B1 /* DrawGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawGesture.h; sourceTree = "<group>"; };
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
+		4D334FA322C73AB100E97738 /* DrawNoteView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DrawNoteView.h; sourceTree = "<group>"; };
+		4D334FA422C73AB100E97738 /* DrawNoteView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DrawNoteView.m; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
 		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
@@ -264,6 +267,8 @@
 				4D03F1421E3F335C007AA1B1 /* DrawGesture.m */,
 				4DD3CBFC1E615C6200AFC850 /* PreGesture.h */,
 				4DD3CBFD1E615C6200AFC850 /* PreGesture.m */,
+				4D334FA322C73AB100E97738 /* DrawNoteView.h */,
+				4D334FA422C73AB100E97738 /* DrawNoteView.m */,
 			);
 			path = MacStroke;
 			sourceTree = "<group>";
@@ -534,6 +539,7 @@
 				264184A9FF52175212CBE73F /* CanvasWindow.m in Sources */,
 				4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */,
 				2641800AADBF86F6E76A37B3 /* CanvasView.m in Sources */,
+				4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */,
 				264183EEE694EB7761D6066B /* CanvasWindowController.m in Sources */,
 				26418E623E410EF207EFA2A8 /* RulesList.m in Sources */,
 				B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */,

@@ -210,6 +210,7 @@ static NSArray *exampleAppleScripts;
     [self addView:self.rulesPreferenceView label:NSLocalizedString(@"Rules", nil) image:[NSImage imageNamed:@"Rules.png"]];
     [self addView:self.filtersPrefrenceView label:NSLocalizedString(@"Filters", nil) image:[NSImage imageNamed:@"list@2x.png"]];
     [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
+    [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
     [self addFlexibleSpacer];
     [self addView:self.aboutPreferenceView label:NSLocalizedString(@"About", nil) image:[NSImage imageNamed:@"About.png"]];
 
