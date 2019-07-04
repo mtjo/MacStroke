@@ -64,6 +64,7 @@ NSMutableArray<NSMutableDictionary *> *_rulesList;  // private
 
 - (void)clear {
     [_rulesList removeAllObjects];
+    [self save];
 }
 
 - (void)save {

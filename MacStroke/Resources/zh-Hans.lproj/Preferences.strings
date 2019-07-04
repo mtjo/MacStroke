@@ -27,7 +27,7 @@
 "321.title" = "-";
 
 /* Class = "NSButtonCell"; title = "Reset"; ObjectID = "326"; */
-"326.title" = "重置";
+"326.title" = "清除";
 
 /* Class = "NSButtonCell"; title = "Show Gesture Preview"; ObjectID = "354"; */
 "354.title" = "手势匹配最小分数";
@@ -211,5 +211,6 @@
 
 "Draw Gesture" = "绘制手势";
 
-
-
+"mRd-EA-0K2.title" = "从运行中的App中选取";
+"A3A-9b-yiu.title" = "模拟鼠标右键，支持'*'字符匹配。示例：'com.jetbrains.*'";
+"KsE-ag-z8d.title" = "载入预设";

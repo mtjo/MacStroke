@@ -13,8 +13,8 @@
     NSPoint lastLocation;
     NSUInteger radius;
     NSMutableArray *points; // NSPoint array
-//    NSString *directionToDraw;
-    NSInteger actionRuleIndex;
+    NSColor *noteColor;
+    NSString *noteToDraw;
 }
 
 - (void)clear;
@@ -23,8 +23,10 @@
 
 - (void)setEnable:(BOOL)shouldEnable;
 
-//- (void)writeDirection:(NSString *)directionStr;
+- (void)setDrawNote:(NSString*) note;
 
-- (void)writeActionRuleIndex:(NSInteger )Index;
+- (void)drawNote;
+
+- (void) writeActionRuleIndex:(NSInteger )Index;
 
 @end

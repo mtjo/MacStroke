@@ -75,4 +75,19 @@
       <sparkle:minimumSystemVersion>10.9</sparkle:minimumSystemVersion>
     </item>
   </channel>
+  <channel>
+    <title>MacStroke Changelog</title>
+    <link>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</link>
+    <description>Most recent changes with links to updates.</description>
+    <language>en</language>
+    <item>
+      <title>Version1.0.5</title>
+      <sparkle:releaseNotesLink>
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.0.5.html
+      </sparkle:releaseNotesLink>
+      <pubDate>2019-07-04 15:07:07  +8</pubDate>
+      <enclosure url="https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.5.zip" sparkle:version="1.0.5" length="1810639" type="application/octet-stream" sparkle:dsaSignature="MCwCFDZ9z5ZgITmBsOgGV3aUbPDolUBIAhQWvTJyqqWH00gpOMnFn28wchXVhw==" />
+      <sparkle:minimumSystemVersion>10.9</sparkle:minimumSystemVersion>
+    </item>
+  </channel>
 </rss>

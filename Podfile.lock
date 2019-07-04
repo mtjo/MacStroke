@@ -17,6 +17,13 @@ DEPENDENCIES:
   - ShortcutRecorder (from `https://github.com/Kentzo/ShortcutRecorder`)
   - Sparkle
 
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - DBPrefsWindowController
+    - HexColors
+    - IYLoginItem
+    - Sparkle
+
 EXTERNAL SOURCES:
   ShortcutRecorder:
     :git: https://github.com/Kentzo/ShortcutRecorder
@@ -33,6 +40,6 @@ SPEC CHECKSUMS:
   ShortcutRecorder: c0e1ae0e97917925feab04e8817d2be6ef1b0548
   Sparkle: ccd95233b12a3e3d4eeb55ff01dd4c8bb8188b07
 
-PODFILE CHECKSUM: 93657201b5570182af1b109448ebe9c3f78e6872
+PODFILE CHECKSUM: 43682152d7750cb8fc3b02531cfea2d378f7f8a6
 
-COCOAPODS: 1.1.1
+COCOAPODS: 1.6.1

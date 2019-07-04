@@ -33,33 +33,35 @@
 		3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */; };
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
+		4D1017B922CA5EB0002394A7 /* RightClick.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D1017B822CA5EB0002394A7 /* RightClick.png */; };
+		4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D334FA422C73AB100E97738 /* DrawNoteView.m */; };
+		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
+		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
+		4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D97909A22CAFE110047A70C /* RightClicksList.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
 		4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */; };
 		4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */; };
-		581E41284C4ED34BF9DBC158 /* libPods-MacStroke.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3EE6C0D6897D25A6144EF2D /* libPods-MacStroke.a */; };
 		880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7591CA5738A006E7A74 /* Preferences.xib */; };
 		880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75D1CA5745D006E7A74 /* AppPickerWindowController.xib */; };
 		880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75F1CA5745D006E7A74 /* Credits.rtf */; };
 		880AA7661CA5745D006E7A74 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7611CA5745D006E7A74 /* InfoPlist.strings */; };
 		880AA7691CA57491006E7A74 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7671CA57491006E7A74 /* MainMenu.xib */; };
 		880AA7741CA57884006E7A74 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7721CA57884006E7A74 /* Localizable.strings */; };
-		8815F63B1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 8815F63A1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript */; };
 		88331A381C9402810064ADD5 /* AppleScript_Editor_Logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 88331A371C9402810064ADD5 /* AppleScript_Editor_Logo.png */; };
 		88331A3B1C9D22290064ADD5 /* AppleScriptsList.m in Sources */ = {isa = PBXBuildFile; fileRef = 88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */; };
 		887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */ = {isa = PBXBuildFile; fileRef = 887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */; };
 		88DCBC641C9D354F000727C2 /* ChromeCloseTabsToTheRight.applescript in Resources */ = {isa = PBXBuildFile; fileRef = 8815F63A1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript */; };
-		88EB641C1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */; };
 		88EB641D1CCA33E50018A8BE /* OpenMacStrokePreferences.applescript in Resources */ = {isa = PBXBuildFile; fileRef = 88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */; };
 		B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */; };
 		B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */; };
 		C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C610961B1DED98C700FCC263 /* CoreImage.framework */; };
 		D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */ = {isa = PBXBuildFile; fileRef = D01C87CA1DE9DF2600B47E7D /* logo.png */; };
-		D065A3C91D18154E0062900A /* SearchInWeb.applescript in Sources */ = {isa = PBXBuildFile; fileRef = D065A3C81D18154E0062900A /* SearchInWeb.applescript */; };
 		D065A3CA1D18155E0062900A /* SearchInWeb.applescript in Resources */ = {isa = PBXBuildFile; fileRef = D065A3C81D18154E0062900A /* SearchInWeb.applescript */; };
 		D09794D11DE5DA1900E88F73 /* scroll.png in Resources */ = {isa = PBXBuildFile; fileRef = D09794D01DE5DA1900E88F73 /* scroll.png */; };
 		D09FDBF51E06CDB50085FC36 /* README.html in Resources */ = {isa = PBXBuildFile; fileRef = D09FDBF31E06CDB50085FC36 /* README.html */; };
+		F2C464A8F086B9812C917A5E /* Pods_MacStroke.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,8 +119,16 @@
 		3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MGOptionsDefine.m; sourceTree = "<group>"; };
 		4D03F1411E3F335C007AA1B1 /* DrawGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawGesture.h; sourceTree = "<group>"; };
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
+		4D1017B822CA5EB0002394A7 /* RightClick.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = RightClick.png; path = ../../../../Downloads/RightClick.png; sourceTree = "<group>"; };
+		4D334FA322C73AB100E97738 /* DrawNoteView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DrawNoteView.h; sourceTree = "<group>"; };
+		4D334FA422C73AB100E97738 /* DrawNoteView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DrawNoteView.m; sourceTree = "<group>"; };
+		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
+		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
+		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
+		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
+		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
 		4DC1D9571EE6715300E93245 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Preferences.strings; sourceTree = "<group>"; };
@@ -127,6 +137,7 @@
 		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
 		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
 		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
+		87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MacStroke.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		880AA76A1CA575D5006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		880AA76D1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = "zh-Hans"; path = "zh-Hans.lproj/Credits.rtf"; sourceTree = "<group>"; };
 		880AA76E1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
@@ -149,7 +160,6 @@
 		B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dsa_pub.pem; sourceTree = "<group>"; };
 		B6F75AE01BD65BDD00A8CF63 /* AppPickerWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppPickerWindowController.h; sourceTree = "<group>"; };
 		B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppPickerWindowController.m; sourceTree = "<group>"; };
-		C3EE6C0D6897D25A6144EF2D /* libPods-MacStroke.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MacStroke.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C610961B1DED98C700FCC263 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		CD4C14F9B6CF13E8CE5E01BC /* Pods-MacStroke.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MacStroke.debug.xcconfig"; path = "Pods/Target Support Files/Pods-MacStroke/Pods-MacStroke.debug.xcconfig"; sourceTree = "<group>"; };
 		D01C87CA1DE9DF2600B47E7D /* logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = logo.png; sourceTree = "<group>"; };
@@ -165,9 +175,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */,
 				C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */,
 				1381E4AC1824E7E800E815F5 /* Cocoa.framework in Frameworks */,
-				581E41284C4ED34BF9DBC158 /* libPods-MacStroke.a in Frameworks */,
+				F2C464A8F086B9812C917A5E /* Pods_MacStroke.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,10 +214,11 @@
 		1381E4AA1824E7E800E815F5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4D42B20022A7578400FC3699 /* IOBluetooth.framework */,
 				C610961B1DED98C700FCC263 /* CoreImage.framework */,
 				1381E4AB1824E7E800E815F5 /* Cocoa.framework */,
 				1381E4AD1824E7E800E815F5 /* Other Frameworks */,
-				C3EE6C0D6897D25A6144EF2D /* libPods-MacStroke.a */,
+				87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -224,40 +236,46 @@
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
 			isa = PBXGroup;
 			children = (
+				1381E4BD1824E7E800E815F5 /* AppDelegate.h */,
+				1381E4BE1824E7E800E815F5 /* AppDelegate.m */,
 				4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */,
 				4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */,
 				4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */,
-				4DBB074B1E41B205006D1739 /* Stroke.h */,
-				4DBB074C1E41B206006D1739 /* Stroke.m */,
+				88331A391C9D22290064ADD5 /* AppleScriptsList.h */,
+				88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */,
 				B6F75AE01BD65BDD00A8CF63 /* AppPickerWindowController.h */,
 				B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */,
-				1381E4BD1824E7E800E815F5 /* AppDelegate.h */,
-				1381E4BE1824E7E800E815F5 /* AppDelegate.m */,
-				1381E4C31824E7E800E815F5 /* Images.xcassets */,
-				1381E4B21824E7E800E815F5 /* Supporting Files */,
 				264184868E6F3B7E8747AAA2 /* AppPrefsWindowController.h */,
 				26418FC7DDD865F972F5D0D7 /* AppPrefsWindowController.m */,
-				264189E588806C286B6552A8 /* Resources */,
+				4D42B1FA22A753D000FC3699 /* BtDelegate.h */,
+				4D42B1FB22A753D100FC3699 /* BtDelegate.m */,
+				264184DD0A5ACE29690D7EF2 /* CanvasView.h */,
+				26418B1111120858F175152C /* CanvasView.m */,
 				2641881917BAF09AFC2A7CC7 /* CanvasWindow.m */,
 				264187BE8168A714F0DB88B7 /* CanvasWindowController.h */,
 				264188F91072F914D0FF443E /* CanvasWindowController.m */,
-				264184DD0A5ACE29690D7EF2 /* CanvasView.h */,
-				26418B1111120858F175152C /* CanvasView.m */,
+				4D03F1411E3F335C007AA1B1 /* DrawGesture.h */,
+				4D03F1421E3F335C007AA1B1 /* DrawGesture.m */,
+				4D334FA322C73AB100E97738 /* DrawNoteView.h */,
+				4D334FA422C73AB100E97738 /* DrawNoteView.m */,
+				4D74C6821E3CD99300F6A289 /* GestureCompare.h */,
+				4D74C6831E3CD99300F6A289 /* GestureCompare.m */,
+				1381E4C31824E7E800E815F5 /* Images.xcassets */,
+				3CDC5D998F35E9F8C91C7789 /* Model */,
+				4DD3CBFC1E615C6200AFC850 /* PreGesture.h */,
+				4DD3CBFD1E615C6200AFC850 /* PreGesture.m */,
+				264189E588806C286B6552A8 /* Resources */,
+				4D97909922CAFE110047A70C /* RightClicksList.h */,
+				4D97909A22CAFE110047A70C /* RightClicksList.m */,
 				2641853CD8AE42C95077D980 /* RulesList.h */,
 				26418733B12703C123D16E95 /* RulesList.m */,
 				2641846D9674154891849969 /* SRRecorderControlWithTagid.h */,
 				264180FBF385AF13387254C2 /* SRRecorderControlWithTagid.m */,
+				4DBB074B1E41B205006D1739 /* Stroke.h */,
+				4DBB074C1E41B206006D1739 /* Stroke.m */,
+				1381E4B21824E7E800E815F5 /* Supporting Files */,
 				26418C419A597E159158ED0D /* utils.h */,
 				26418F4D8FB5BC803E3EB850 /* utils.m */,
-				3CDC5D998F35E9F8C91C7789 /* Model */,
-				88331A391C9D22290064ADD5 /* AppleScriptsList.h */,
-				88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */,
-				4D74C6821E3CD99300F6A289 /* GestureCompare.h */,
-				4D74C6831E3CD99300F6A289 /* GestureCompare.m */,
-				4D03F1411E3F335C007AA1B1 /* DrawGesture.h */,
-				4D03F1421E3F335C007AA1B1 /* DrawGesture.m */,
-				4DD3CBFC1E615C6200AFC850 /* PreGesture.h */,
-				4DD3CBFD1E615C6200AFC850 /* PreGesture.m */,
 			);
 			path = MacStroke;
 			sourceTree = "<group>";
@@ -295,6 +313,7 @@
 		264189E588806C286B6552A8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				4D1017B822CA5EB0002394A7 /* RightClick.png */,
 				D09FDBF31E06CDB50085FC36 /* README.html */,
 				D01C87CA1DE9DF2600B47E7D /* logo.png */,
 				D09794D01DE5DA1900E88F73 /* scroll.png */,
@@ -356,7 +375,6 @@
 				1381E4A51824E7E800E815F5 /* Frameworks */,
 				1381E4A61824E7E800E815F5 /* Resources */,
 				C2CC8958184B6BE82579F7B1 /* [CP] Embed Pods Frameworks */,
-				78ED3B33608EAD983CB74225 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -390,7 +408,7 @@
 			isa = PBXProject;
 			attributes = {
 				CLASSPREFIX = MBA;
-				LastUpgradeCheck = 0820;
+				LastUpgradeCheck = 1020;
 				ORGANIZATIONNAME = "Chivalry Software";
 				TargetAttributes = {
 					1381E4A71824E7E800E815F5 = {
@@ -403,7 +421,7 @@
 			};
 			buildConfigurationList = 1381E4A31824E7E800E815F5 /* Build configuration list for PBXProject "MacStroke" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -442,6 +460,7 @@
 				4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */,
 				264185813821B17A6CF8761E /* Rules.png in Resources */,
 				B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */,
+				4D1017B922CA5EB0002394A7 /* RightClick.png in Resources */,
 				887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */,
 				D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */,
 				2641871BACBB993F84AF778C /* About.png in Resources */,
@@ -472,28 +491,16 @@
 			files = (
 			);
 			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
 			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-MacStroke-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_ROOT}/../Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
-			showEnvVarsInLog = 0;
-		};
-		78ED3B33608EAD983CB74225 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-MacStroke/Pods-MacStroke-resources.sh\"\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 		C2CC8958184B6BE82579F7B1 /* [CP] Embed Pods Frameworks */ = {
@@ -502,13 +509,26 @@
 			files = (
 			);
 			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MacStroke/Pods-MacStroke-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/DBPrefsWindowController/DBPrefsWindowController.framework",
+				"${BUILT_PRODUCTS_DIR}/HexColors/HexColors.framework",
+				"${BUILT_PRODUCTS_DIR}/IYLoginItem/IYLoginItem.framework",
+				"${BUILT_PRODUCTS_DIR}/ShortcutRecorder/ShortcutRecorder.framework",
+				"${PODS_ROOT}/Sparkle/Sparkle.framework",
+				"${PODS_ROOT}/Sparkle/Sparkle.framework.dSYM",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/DBPrefsWindowController.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/HexColors.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/IYLoginItem.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ShortcutRecorder.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework",
+				"${DWARF_DSYM_FOLDER_PATH}/Sparkle.framework.dSYM",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-MacStroke/Pods-MacStroke-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MacStroke/Pods-MacStroke-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -521,7 +541,6 @@
 				1381E4B81824E7E800E815F5 /* main.m in Sources */,
 				4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */,
 				1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */,
-				8815F63B1C9D346A00C8DB3F /* ChromeCloseTabsToTheRight.applescript in Sources */,
 				4DBB074F1E41B206006D1739 /* Stroke.m in Sources */,
 				4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */,
 				88331A3B1C9D22290064ADD5 /* AppleScriptsList.m in Sources */,
@@ -529,15 +548,16 @@
 				264184A9FF52175212CBE73F /* CanvasWindow.m in Sources */,
 				4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */,
 				2641800AADBF86F6E76A37B3 /* CanvasView.m in Sources */,
-				D065A3C91D18154E0062900A /* SearchInWeb.applescript in Sources */,
+				4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */,
+				4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */,
 				264183EEE694EB7761D6066B /* CanvasWindowController.m in Sources */,
 				26418E623E410EF207EFA2A8 /* RulesList.m in Sources */,
 				B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */,
 				264183DA0542C17E1932F696 /* SRRecorderControlWithTagid.m in Sources */,
 				2641813EC194C60DC1B1806D /* utils.m in Sources */,
+				4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */,
 				3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */,
 				4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */,
-				88EB641C1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript in Sources */,
 				3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -645,14 +665,22 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -689,14 +717,22 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -728,7 +764,6 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
-				PODS_BUILD_DIR = $BUILD_DIR;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -745,8 +780,6 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
-				PODS_BUILD_DIR = $BUILD_DIR;
-				PODS_CONFIGURATION_BUILD_DIR = "$PODS_BUILD_DIR/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

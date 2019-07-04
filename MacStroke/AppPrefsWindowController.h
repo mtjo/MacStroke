@@ -18,6 +18,7 @@
 @property(strong, nonatomic) IBOutlet NSView *appleScriptPreferenceView;
 @property(strong, nonatomic) IBOutlet NSView *aboutPreferenceView;
 @property(strong, nonatomic) IBOutlet NSView *filtersPrefrenceView;
+@property(strong, nonatomic) IBOutlet NSView *rightClickPrefrenceView;
 
 @property(weak) IBOutlet NSTableView *rulesTableView;
 
@@ -42,7 +43,9 @@
 @property(weak) IBOutlet NSTextField *minScoreTextField;
 @property(weak) IBOutlet NSSlider *minScoreSlider;
 @property(weak) IBOutlet NSTableView *appleScriptTableView;
+
 @property(weak) IBOutlet NSTextField *appleScriptTextField;
+@property(weak) IBOutlet NSTableView *rightClickTableView;
 @property(weak) IBOutlet NSButton *showIconInStatusBarButton;
 @property(weak) IBOutlet NSComboBox *languageComboBox;
 
@@ -55,5 +58,7 @@
 - (void) preSetRuleGestureAtIndex:(NSInteger)index;
 
 - (IBAction)onSetGestureData:(id)sender;
+
+- (void)rightClickPickCallback:(NSString *)appname atIndex:(NSInteger)index;
 
 @end

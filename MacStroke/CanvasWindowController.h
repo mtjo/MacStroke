@@ -7,6 +7,8 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "DrawNoteView.h"
+#import "CanvasView.h"
 
 @interface CanvasWindowController : NSWindowController {
     BOOL enable;
@@ -18,9 +20,12 @@
 
 - (void)handleScreenParametersChange:(NSNotification *)notification;
 
-//- (void)writeDirection:(NSString *)directionStr;
-
 - (void)writeActionRuleIndex:(NSInteger)actionRuleIndex;
 
 - (void)reinitWindow; // reinit canvas window for dual screen
+
+- (void)rightClick:(NSDictionary*) pointDic;
+
+- (void)threadRightClick:(CGPoint) point;
+
 @end

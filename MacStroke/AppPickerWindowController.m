@@ -87,7 +87,7 @@ NSMutableString *_filter;
             }
         }
         
-        if (!self.addedToTextView) {
+        if (!self.addedToTextView&&!self.selectOne) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self.filtersTableView reloadData];
                 [self.loadingLabel setStringValue:NSLocalizedString(@"Loading..", nil)];
@@ -123,12 +123,24 @@ NSMutableString *_filter;
 - (CGFloat)tableView:(NSTableView *)tableView heightOfRow:(NSInteger)row {
     return 20;
 }
+-(void)selectOne:(id)sender
+{
+    for (int index = 0; index<[_checkBoxs count] ; index++) {
+        [_checkBoxs[index] setState:NSControlStateValueOff];
+    }
+    [_checkBoxs[[sender tag]] setState:NSControlStateValueOn];
+}
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
     NSView *result;
     if ([tableColumn.identifier isEqualToString:@"CheckBox"]) {
         NSButton *checkBox = [[NSButton alloc] init];
-        [checkBox setButtonType:NSSwitchButton];
+        if (self.selectOne) {
+            [checkBox setTag:row];
+            [checkBox setAction:@selector(selectOne:)];
+        }
+         [checkBox setButtonType:NSSwitchButton];
+        
         [checkBox setState:[_filters[row] checkedState]];
         [checkBox setTitle:@""];
         [checkBox setTag:row];
@@ -166,6 +178,8 @@ NSMutableString *_filter;
 //            [_filter appendString:@"|"];
             if (self.addedToTextView) {
                 [self.addedToTextView setString:[NSString stringWithFormat:@"%@\n%@", [self.addedToTextView string], [_filters[[btn tag]] text]]];
+            }else if(self.selectOne){
+                [_filter appendString:[_filters[[btn tag]] text]];
             } else {
                 [_filter appendString:[_filters[[btn tag]] text]];
                 [_filter appendString:@"|"];
@@ -173,8 +187,11 @@ NSMutableString *_filter;
         }
     }
 
-    if (!self.addedToTextView && self.parentWindow) {
+    if (!self.addedToTextView && self.parentWindow &&!self.selectOne) {
         [self.parentWindow rulePickCallback:_filter atIndex:self.indexForParentWindow];
+    }
+    if (!self.addedToTextView && self.parentWindow&& self.selectOne) {
+        [self.parentWindow rightClickPickCallback:_filter atIndex:self.indexForParentWindow];
     }
 
 //    [NSApp stopModal];
