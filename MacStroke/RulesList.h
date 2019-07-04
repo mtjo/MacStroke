@@ -93,6 +93,8 @@ typedef enum {
 
 - (void)reInit;
 
+- (void)clear;
+
 - (void)save;
 
 - (NSData *)nsData;

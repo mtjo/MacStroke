@@ -1,11 +1,10 @@
 //
 //  AppPrefsWindowController.m
 //
-
-
 #import "AppPrefsWindowController.h"
 #import "RulesList.h"
 #import "AppleScriptsList.h"
+#import "RightClicksList.h"
 #import "SRRecorderControlWithTagid.h"
 #import "NSBundle+LoginItem.h"
 #import "BlackWhiteFilter.h"
@@ -46,56 +45,20 @@ static NSArray *exampleAppleScripts;
 - (void)changeSize:(NSInteger *)index changeSizeButton:(NSButton *)button preferenceView:(NSView *)view {
     *index += 1;
     *index %= PREF_WINDOW_SIZECOUNT;
-
+    
     NSString *title;
-
+    
     if (*index != PREF_WINDOW_SIZECOUNT - 1) {
         title = NSLocalizedString(@"Go bigger", nil);
     } else {
         title = NSLocalizedString(@"Reset size", nil);
     }
-
+    
     [button setTitle:title];
-
+    
     [view setFrameSize:PREF_WINDOW_SIZES[*index]];
     [self changeWindowSizeToFitInsideView:view];
     [self crossFadeView:view withView:view];
-    
-    @autoreleasepool {
-        __block IOBluetoothDeviceInquiry *inquiry;
-        __block bool keepRunning = true;
-        
-        BtDelegate *a = [[BtDelegate alloc] init];
-        
-        NSDate *now = [NSDate date];
-        NSDate *endTime = [NSDate dateWithTimeIntervalSinceNow:18];
-        
-        inquiry = [IOBluetoothDeviceInquiry inquiryWithDelegate:a];
-        [inquiry start];
-        
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            NSInteger counter = 0;
-            
-            while(keepRunning && [[NSDate date] compare:endTime] == NSOrderedAscending) {
-                if(a.devices.count > 0) {
-                    keepRunning = false;
-                    NSLog(@"got");
-                }
-                usleep(100000);
-                NSLog(@"waiting %.2f s", counter++/10.f);
-            }
-            keepRunning = false;
-            [inquiry stop];
-            
-            NSLog(@"\nstart: %@\n end:%@", now, [NSDate date]);
-        });
-        
-        while (keepRunning) {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
-        }
-        
-//        return 0;
-    }
     
 }
 
@@ -105,7 +68,7 @@ static NSArray *exampleAppleScripts;
 
 - (void)windowDidLoad {
     [super windowDidLoad];
-//    [self.blockFilter bind:NSValueBinding toObject:[NSUserDefaults standardUserDefaults]  withKeyPath:@"blockFilter" options:nil];
+    //    [self.blockFilter bind:NSValueBinding toObject:[NSUserDefaults standardUserDefaults]  withKeyPath:@"blockFilter" options:nil];
     
     [[self window] setDelegate:self];
     
@@ -124,8 +87,13 @@ static NSArray *exampleAppleScripts;
     [[self languageComboBox] addItemsWithObjectValues:[NSArray arrayWithObjects:@"en", @"zh-Hans", nil]];
     
     NSArray *languages = [[NSUserDefaults standardUserDefaults] objectForKey:@"AppleLanguages"];
+    NSLog(@"languages:%@",languages);
     if (languages) {
-        [[self languageComboBox] selectItemWithObjectValue:languages[0]];
+        for (int i=0;i<[[self languageComboBox] numberOfItems];i++) {
+            if ([languages[0] hasPrefix:[[self languageComboBox] itemObjectValueAtIndex:i]]) {
+                [[self languageComboBox] selectItemAtIndex:i];
+            }
+        }
     }
     
     for (NSUInteger i = 0;i < [exampleAppleScripts count];i += 2) {
@@ -148,7 +116,7 @@ static NSArray *exampleAppleScripts;
 }
 
 - (void)refreshFilterRadioAndTextViewState {
-//    self.blackListModeRadio.cell stat
+    //    self.blackListModeRadio.cell stat
     //NSLog(@"BWFilter.isInWhiteListMode: %d", BWFilter.isInWhiteListMode);
     [self.blackListModeRadio setState:BWFilter.isInWhiteListMode ? NSOffState : NSOnState];
     [self.whiteListModeRadio setState:BWFilter.isInWhiteListMode ? NSOnState : NSOffState];
@@ -156,10 +124,10 @@ static NSArray *exampleAppleScripts;
     //[NSColor hx_colorWithHexString:@"E3E6EA"];
     NSColor *active = [NSColor hx_colorWithHexRGBAString:@"#ffffff"];
     self.blackListTextView.backgroundColor = BWFilter.isInWhiteListMode ? notActive : active;
-//    ((NSScrollView *)(self.blackListTextView.superview.superview)).backgroundColor=BWFilter.isInWhiteListMode?notActive:active;
+    //    ((NSScrollView *)(self.blackListTextView.superview.superview)).backgroundColor=BWFilter.isInWhiteListMode?notActive:active;
     self.whiteListTextView.backgroundColor = BWFilter.isInWhiteListMode ? active : notActive;
-//    ((NSScrollView *)(self.whiteListTextView.superview.superview)).backgroundColor=BWFilter.isInWhiteListMode?active:notActive;
-
+    //    ((NSScrollView *)(self.whiteListTextView.superview.superview)).backgroundColor=BWFilter.isInWhiteListMode?active:notActive;
+    
     [self.whiteListTextView.superview.superview needsLayout];
     [self.whiteListTextView.superview.superview needsDisplay];
     [self.blackListTextView.superview.superview needsLayout];
@@ -167,7 +135,7 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction) addShortcutRule:(id)sender {
-    [[RulesList sharedRulesList] addRuleWithDirection:NSLocalizedString(@"Double click Modify", nil) gestureData:nil filter:@"*safari|*chrome" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil text:NSLocalizedString(@"Double click Modify", nil) password:NSLocalizedString(@"Double click Modify", nil) note:NSLocalizedString(@"Double click Modify", nil)];
+    [[RulesList sharedRulesList] addRuleWithDirection:NSLocalizedString(@"Double click Modify", nil) gestureData:nil filter:@"*" filterType:FILTER_TYPE_WILDCARD actionType:ACTION_TYPE_SHORTCUT shortcutKeyCode:0 shortcutFlag:0 appleScriptId:nil text:NSLocalizedString(@"Double click Modify", nil) password:NSLocalizedString(@"Double click Modify", nil) note:NSLocalizedString(@"Double click Modify", nil)];
     [_rulesTableView reloadData];
 }
 
@@ -178,18 +146,18 @@ static NSArray *exampleAppleScripts;
 
 - (IBAction)changeSizeOfPreferenceWindow:(id)sender {
     [self changeSize:&currentRulesWindowSizeIndex changeSizeButton:[self changeRulesWindowSizeButton] preferenceView:[self rulesPreferenceView]];
-
-//    NSRect rectOfRules=self.rulesPreferenceView.frame;
-//    rectOfRules.size.width=1000;
-//    rectOfRules.size.height=640;
-//    rectOfRules.origin.x=0;
-//    rectOfRules.origin.y=0;
-//    self.rulesPreferenceView.frame=rectOfRules;
-//    [self.rulesPreferenceView needsLayout];
-//    [self.rulesPreferenceView needsDisplay];
-//    [self.rulesTableView sizeToFit]
-//    self.window size
-//    [self loadViewForIdentifier:@"Rules" animate:YES];
+    
+    //    NSRect rectOfRules=self.rulesPreferenceView.frame;
+    //    rectOfRules.size.width=1000;
+    //    rectOfRules.size.height=640;
+    //    rectOfRules.origin.x=0;
+    //    rectOfRules.origin.y=0;
+    //    self.rulesPreferenceView.frame=rectOfRules;
+    //    [self.rulesPreferenceView needsLayout];
+    //    [self.rulesPreferenceView needsDisplay];
+    //    [self.rulesTableView sizeToFit]
+    //    self.window size
+    //    [self loadViewForIdentifier:@"Rules" animate:YES];
 }
 
 - (void)changeWindowSizeToFitInsideView:(NSView *)view {
@@ -205,33 +173,74 @@ static NSArray *exampleAppleScripts;
     [_rulesTableView reloadData];
 }
 
+- (IBAction)clearRules:(id)sender {
+    NSAlert *alert = [[NSAlert alloc] init];
+    
+    NSString *title1 =NSLocalizedString(@"Ok", nil);
+    
+    NSString *title2 =NSLocalizedString(@"Cancel", nil);
+    
+    NSString *messagetext =NSLocalizedString(@"warning!", nil);
+    
+    NSString *informativetext =NSLocalizedString(@"Are you sure you want to clear all the rules?", nil);
+    
+    
+    [alert addButtonWithTitle:title1];
+    
+    [alert addButtonWithTitle:title2];
+    
+    [alert setMessageText:messagetext];
+    
+    [alert setInformativeText:informativetext];
+    [alert setAlertStyle:NSWarningAlertStyle];
+    
+    
+    [[[alert window] contentView] autoresizesSubviews];
+    
+    NSUInteger action = [alert runModal];
+    
+    
+    if(action == NSAlertFirstButtonReturn)
+    {
+        [[RulesList sharedRulesList] clear];
+        [_rulesTableView reloadData];
+        
+    }
+    else if(action == NSAlertSecondButtonReturn )
+    {
+    
+        
+    }
+
+}
+
 - (void)setupToolbar {
     [self addView:self.generalPreferenceView label:NSLocalizedString(@"General", nil) image:[NSImage imageNamed:@"General.png"]];
     [self addView:self.rulesPreferenceView label:NSLocalizedString(@"Rules", nil) image:[NSImage imageNamed:@"Rules.png"]];
     [self addView:self.filtersPrefrenceView label:NSLocalizedString(@"Filters", nil) image:[NSImage imageNamed:@"list@2x.png"]];
     [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
-    [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
+    [self addView:self.rightClickPrefrenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"RightClick.png"]];
     [self addFlexibleSpacer];
     [self addView:self.aboutPreferenceView label:NSLocalizedString(@"About", nil) image:[NSImage imageNamed:@"About.png"]];
-
+    
     // Optional configuration settings.
     [self setCrossFade:[[NSUserDefaults standardUserDefaults] boolForKey:@"fade"]];
     [self setShiftSlowsAnimation:[[NSUserDefaults standardUserDefaults] boolForKey:@"shiftSlowsAnimation"]];
-
+    
 }
 
 - (IBAction)blockFilterPickBtnDidClick:(id)sender {
-//    self.pickerWindowController = [[AppPickerWindowController alloc] initWithWindowNibName:@"AppPickerWindowController"];
-//
-//
-////    [self.pickerWindowController  showDialog];
-//    [self.pickerWindowController  showWindow:self];
-//
-//    if([windowController generateFilter]){
-//        _blockFilter.stringValue = [windowController generateFilter];
-//        [[NSUserDefaults standardUserDefaults] setObject:[windowController generateFilter] forKey:@"blockFilter"];
-//    }
-//    [[NSUserDefaults standardUserDefaults] synchronize];
+    //    self.pickerWindowController = [[AppPickerWindowController alloc] initWithWindowNibName:@"AppPickerWindowController"];
+    //
+    //
+    ////    [self.pickerWindowController  showDialog];
+    //    [self.pickerWindowController  showWindow:self];
+    //
+    //    if([windowController generateFilter]){
+    //        _blockFilter.stringValue = [windowController generateFilter];
+    //        [[NSUserDefaults standardUserDefaults] setObject:[windowController generateFilter] forKey:@"blockFilter"];
+    //    }
+    //    [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 - (void)close {
@@ -256,7 +265,7 @@ static NSArray *exampleAppleScripts;
     } else if (sender == self.blackListModeRadio) {
         BWFilter.isInWhiteListMode = NO;
     }
-
+    
     [self refreshFilterRadioAndTextViewState];
 }
 
@@ -285,10 +294,10 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction)colorChanged:(id)sender {
-//    SET_LINE_COLOR(self.lineColorWell.color);
+    //    SET_LINE_COLOR(self.lineColorWell.color);
     [MGOptionsDefine setLineColor:self.lineColorWell.color];
 }
-     
+
 - (IBAction)chooseFont:(id)sender {
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
     [fontManager setSelectedFont:[NSFont fontWithName:[self.fontNameTextField stringValue] size:[self.fontNameTextField floatValue]] isMultiple:NO];
@@ -324,7 +333,7 @@ static NSArray *exampleAppleScripts;
     NSURL *defaultPrefsFile = [[NSBundle mainBundle]
                                URLForResource:@"DefaultPreferences" withExtension:@"plist"];
     NSDictionary *defaultPrefs =
-        [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
+    [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
     for (NSString *key in defaultPrefs) {
         [defs setObject:[defaultPrefs objectForKey:key] forKey:key];
     }
@@ -356,6 +365,35 @@ static NSArray *exampleAppleScripts;
     //    [[RulesList sharedRulesList] save];
     //    [_rulesTableView reloadData];
 }
+
+
+
+- (IBAction)rightClickPickBtnDidClick:(id)sender {
+    if ([_rightClickTableView selectedRow] == -1) {
+        NSUserNotification *notification = [[NSUserNotification alloc] init];
+        notification.title = @"MacStroke";
+        notification.informativeText = NSLocalizedString(@"Select a filter first!", nil);
+        notification.soundName = NSUserNotificationDefaultSoundName;
+        
+        [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
+        return ;
+    }
+    
+    self.pickerWindowController = [[AppPickerWindowController alloc] initWithWindowNibName:@"AppPickerWindowController"];
+    self.pickerWindowController.parentWindow = self;
+    self.pickerWindowController.selectOne = YES;
+    self.pickerWindowController.indexForParentWindow = [_rightClickTableView selectedRow];
+    [self.pickerWindowController showWindow:self];
+    
+    
+    //    [windowController showDialog];
+    //    if([windowController generateFilter]){
+    //        [[RulesList sharedRulesList] setWildFilter:[windowController generateFilter] atIndex:index];
+    //    }
+    //    [[RulesList sharedRulesList] save];
+    //    [_rulesTableView reloadData];
+}
+
 
 - (IBAction)createAppleScript:(id)sender {
     [[AppleScriptsList sharedAppleScriptsList] addAppleScript:@"New AppleScript"
@@ -428,7 +466,7 @@ static NSString *currentScriptId = nil;
         [[[AppleScriptsList sharedAppleScriptsList] scriptAtIndex:index] writeToFile:currentScriptPath atomically:YES
                                                                             encoding:NSUTF8StringEncoding error:&error];
         [[NSWorkspace sharedWorkspace] openFile:currentScriptPath];
-    
+        
         isEditing = YES;
         [[self editInExternalEditorButton] setTitle:NSLocalizedString(@"Stop",nil)];
     } else {
@@ -493,8 +531,8 @@ static NSString *currentScriptId = nil;
     NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!", nil);
     
     [self alertModalFirstBtnTitle:title1 SecondBtnTitle:title2 MessageText:messagetext InformativeText:informativetext];
-
-
+    
+    
 }
 
 
@@ -515,10 +553,10 @@ static NSString *currentScriptId = nil;
     
     [alert setAlertStyle:NSWarningAlertStyle];
     
-
+    
     NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(110 , 17, 100, 25)];
     [comboBox setEditable:NO];
-
+    
     NSArray *preArray=[[NSArray alloc]initWithObjects:
                        @"←",@"↑",@"→",@"↓",
                        @"↙",@"↗",@"↘",@"↖",
@@ -554,13 +592,13 @@ static NSString *currentScriptId = nil;
                        @"Z",@"Z Revered", nil];
     [comboBox addItemsWithObjectValues:preArray];
     comboBox.stringValue=@"Plase Select";
-
+    
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(preGestureSelectionChanged:)
                                                  name:NSComboBoxSelectionDidChangeNotification
                                                object:comboBox];
     [comboBox setTranslatesAutoresizingMaskIntoConstraints:YES];
-
+    
     
     [[[alert window] contentView] addSubview:comboBox];
     
@@ -571,12 +609,14 @@ static NSString *currentScriptId = nil;
     
     if(action == NSAlertFirstButtonReturn)
     {
-        //NSLog(@"defaultButton clicked!");
+        NSLog(@"defaultButton clicked!");
         
     }
     else if(action == NSAlertSecondButtonReturn )
     {
         //settingRuleIndex = -1;
+         [[AppDelegate appDelegate] setSettingRuleIndex:-1];
+        
     }
 }
 
@@ -603,7 +643,7 @@ static NSString *currentScriptId = nil;
         
         [_rulesTableView reloadData];
         [RulesList pressKeyWithFlags:kVK_Return virtualKey:kVK_Return];
-
+        
     }
 }
 
@@ -636,6 +676,7 @@ static NSString *currentScriptId = nil;
         [[self appleScriptTextField] setStringValue:@""];
     }
 }
+
 
 - (IBAction)showInStatusBarCheckChanged:(id)sender {
     [[AppDelegate appDelegate] updateStatusBarItem];
@@ -676,17 +717,17 @@ static NSString *currentScriptId = nil;
         [task setArguments:arguments];
         NSPipe *pipe = [NSPipe pipe];
         [task setStandardInput:pipe];
-         
+        
         NSFileHandle *file = [pipe fileHandleForWriting];
         
         [task launch];
-
+        
         NSData *data = [NSData dataWithContentsOfURL:url];
         if (data) {
             [file writeData:data];
         }
         [file closeFile];
-
+        
         NSUserNotification *notification = [[NSUserNotification alloc] init];
         notification.title = @"MacStroke";
         notification.informativeText = NSLocalizedString(@"Restart MacStroke to take effect", nil);
@@ -762,15 +803,15 @@ static NSString *currentScriptId = nil;
         NSString *gesture = control.stringValue;
         NSCharacterSet *invalidGestureCharacters = [NSCharacterSet characterSetWithCharactersInString:@"ULDRZud?*"];
         invalidGestureCharacters = [invalidGestureCharacters invertedSet];
-//        if ([gesture rangeOfCharacterFromSet:invalidGestureCharacters].location != NSNotFound) {
-//            NSUserNotification *notification = [[NSUserNotification alloc] init];
-//            notification.title = @"MacStroke";
-//            notification.informativeText = NSLocalizedString(@"Gesture must only contain \"ULDRZud?*\"", nil);
-//            notification.soundName = NSUserNotificationDefaultSoundName;
-//            
-//            [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
-//            return NO;
-//        }
+        //        if ([gesture rangeOfCharacterFromSet:invalidGestureCharacters].location != NSNotFound) {
+        //            NSUserNotification *notification = [[NSUserNotification alloc] init];
+        //            notification.title = @"MacStroke";
+        //            notification.informativeText = NSLocalizedString(@"Gesture must only contain \"ULDRZud?*\"", nil);
+        //            notification.soundName = NSUserNotificationDefaultSoundName;
+        //
+        //            [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
+        //            return NO;
+        //        }
         [control setStringValue:gesture];
         [[RulesList sharedRulesList] setDirection:gesture atIndex:control.tag];
     } else if ([control.identifier isEqualToString:@"Filter"]) {  // edit filter
@@ -787,6 +828,9 @@ static NSString *currentScriptId = nil;
     else if ([control.identifier isEqualToString:@"Password"]) {  // edit title
         [[RulesList sharedRulesList] setPassword:control.stringValue atIndex:control.tag];
     }
+    else if ([control.identifier isEqualToString:@"Appname"]) {  // edit title
+        [[RightClicksList sharedRightClicksList] setAppnameAtIndex:[[self rightClickTableView] selectedRow] appname:control.stringValue];
+    }
     [[RulesList sharedRulesList] save];
     [[AppleScriptsList sharedAppleScriptsList] save];
     return YES;
@@ -802,14 +846,26 @@ static NSString *currentScriptId = nil;
 }
 
 #pragma mark -
+#pragma mark AppPickerCallback Implementation
+- (void)rightClickPickCallback:(NSString *)appname atIndex:(NSInteger)index {
+    [[RightClicksList sharedRightClicksList] setAppnameAtIndex:index appname:appname];
+    [[RightClicksList sharedRightClicksList]  save];
+    [_rightClickTableView reloadData];
+}
+
+
+#pragma mark -
 #pragma mark NSTableViewDataSource Implementation
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
     if (tableView == [self rulesTableView]) {
         return [[RulesList sharedRulesList] count];
-    } else {
+    } else if(tableView == [self appleScriptTableView]) {
         return [[AppleScriptsList sharedAppleScriptsList] count];
+    }else if(tableView == [self rightClickTableView]){
+        return [[RightClicksList sharedRightClicksList] count];
     }
+    return 0;
 }
 
 #pragma mark -
@@ -838,7 +894,7 @@ static NSString *currentScriptId = nil;
         }else{
             textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 235, 20)];
         }
-       
+        
         
         [textField.cell setWraps:YES];
         [textField.cell setScrollable:YES];
@@ -896,7 +952,7 @@ static NSString *currentScriptId = nil;
             [cloumn addSubview:comboBox];
             result = cloumn;
         }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_TEXT){
-
+            
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
             NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 100, 20)];
             
@@ -909,7 +965,7 @@ static NSString *currentScriptId = nil;
             
             //[textField setFont:[NSFont fontWithName:@"Monaco" size:14]];
             [textField setLineBreakMode:NSLineBreakByTruncatingTail];
-
+            
             textField.stringValue = [rulesList textAtIndex:row];
             textField.identifier = @"Text";
             textField.delegate = self;
@@ -917,7 +973,7 @@ static NSString *currentScriptId = nil;
             [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:textField];
             result = cloumn;
-
+            
             
         }else if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_PASSWORD){
             cloumn = [[NSView alloc] initWithFrame:self.window.frame];
@@ -939,7 +995,7 @@ static NSString *currentScriptId = nil;
             [textField setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:textField];
             result = cloumn;
-   
+            
         }
     } else if ([tableColumn.identifier isEqualToString:@"TriggerOnEveryMatch"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
@@ -953,11 +1009,24 @@ static NSString *currentScriptId = nil;
         result = checkButton;
     }else if ([tableColumn.identifier isEqualToString:@"Gesture_Image"]) {
         NSMutableArray *ruleGestureData= [[ruleListArr objectAtIndex:row] objectForKey:@"data"];
-        DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame atRow:row atAppPrefsWindowController:self];
-        [drawGesture setPoints:ruleGestureData];
-        result = drawGesture;
-
-
+        
+        if ([ruleGestureData count]>0) {
+            DrawGesture *drawGesture = [[DrawGesture alloc] initWithFrame:self.window.frame atRow:row atAppPrefsWindowController:self];
+            [drawGesture setPoints:ruleGestureData];
+            result = drawGesture;
+        }else{
+            NSButton *addButton = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 28, 80, 25)] ;
+            [addButton setTag:row];
+            [addButton setBezelStyle:NSTexturedSquareBezelStyle];
+            
+            [addButton setAction:@selector(onSetGestureData:)];
+            [addButton setTitle:NSLocalizedString(@"Draw Gesture", nil)];
+            [addButton setTranslatesAutoresizingMaskIntoConstraints:YES];
+            result = addButton;
+        }
+        
+        
+        
     }else if ([tableColumn.identifier isEqualToString:@"Type"]) {
         cloumn = [[NSView alloc] initWithFrame:self.window.frame];
         
@@ -977,7 +1046,7 @@ static NSString *currentScriptId = nil;
                                                  selector:@selector(changeActionType:)
                                                      name:NSComboBoxSelectionDidChangeNotification
                                                    object:comboBox];
-
+        
         switch ([rulesList actionTypeAtIndex:row]) {
             case ACTION_TYPE_SHORTCUT:
                 comboBox.stringValue=NSLocalizedString(@"Hot Key", nil);
@@ -997,7 +1066,7 @@ static NSString *currentScriptId = nil;
         [cloumn addSubview:comboBox];
         //[comboBox ];
         result = cloumn;
-
+        
     }
     return result;
 }
@@ -1017,11 +1086,60 @@ static NSString *currentScriptId = nil;
     return textField;
 }
 
+- (NSView *)tableViewForRightClicks:(NSTableColumn *)tableColumn row:(NSInteger)row {
+    RightClicksList *rightClicksList = [RightClicksList sharedRightClicksList];
+    NSTextField *textField = [[NSTextField alloc] init];
+    [textField.cell setWraps:NO];
+    [textField.cell setScrollable:YES];
+    [textField setEditable:YES];
+    [textField setBezeled:NO];
+    [textField setDrawsBackground:NO];
+    [textField setDelegate:self];
+    [textField setLineBreakMode:NSLineBreakByTruncatingMiddle];
+    [textField setStringValue:[rightClicksList appnameAtIndex:row]];
+    [textField setIdentifier:@"Appname"];
+    return textField;
+}
+- (IBAction)createRightClick:(id)sender {
+    RightClicksList *rightClicksList =  [RightClicksList sharedRightClicksList];
+    [rightClicksList addRightClicks:@"appname"];
+    [rightClicksList save];
+    NSLog(@"removeRightClick count:%ld",(long)[rightClicksList count]);
+    [_rightClickTableView reloadData];
+    [_rightClickTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:[rightClicksList count] - 1] byExtendingSelection:NO];
+}
+
+- (IBAction)resetRightClick:(id)sender {
+    RightClicksList *rightClicksList =  [RightClicksList sharedRightClicksList];
+    [rightClicksList reInit];
+    [rightClicksList save];
+    [_rightClickTableView reloadData];
+    [_rightClickTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:[rightClicksList count] - 1] byExtendingSelection:NO];
+}
+
+
+- (IBAction)removeRightClick:(id)sender {
+    NSInteger index = [[self rightClickTableView] selectedRow];
+
+    RightClicksList *rightClicksList =  [RightClicksList sharedRightClicksList];
+    if (index != -1) {
+        [rightClicksList removeAtIndex:index];
+        [rightClicksList save];
+        [_rightClickTableView reloadData];
+        if ([rightClicksList count] > 0) {
+            index = MIN(index, [rightClicksList count] - 1);
+            [_rightClickTableView selectRowIndexes:[NSIndexSet indexSetWithIndex:index] byExtendingSelection:NO];
+        }
+    }
+}
+
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
     if (tableView == [self rulesTableView]) {
         return [self tableViewForRules:tableColumn row:row];
     } else if (tableView == [self appleScriptTableView]) {
         return [self tableViewForAppleScripts:tableColumn row:row];
+    }else if (tableView == [self rightClickTableView]) {
+        return [self tableViewForRightClicks:tableColumn row:row];
     }
     return nil;
 }

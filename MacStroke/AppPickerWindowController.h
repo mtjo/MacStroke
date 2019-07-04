@@ -17,6 +17,7 @@
 
 @property(nonatomic, strong) NSTextView *addedToTextView;
 @property(nonatomic, strong) NSWindowController <AppPickerCallback> *parentWindow;
+@property(nonatomic, assign) BOOL selectOne;
 @property(nonatomic, strong) IBOutlet NSTableView *filtersTableView;
 @property(nonatomic, assign) NSUInteger indexForParentWindow;
 @property(nonatomic, strong) IBOutlet NSTextField *loadingLabel;
@@ -25,5 +26,5 @@
 
 @protocol AppPickerCallback
 - (void)rulePickCallback:(NSString *)rulesStringSplitedByStick atIndex:(NSInteger)index;
-
+- (void)rightClickPickCallback:(NSString *)appname atIndex:(NSInteger)index;
 @end

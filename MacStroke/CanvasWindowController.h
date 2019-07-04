@@ -12,7 +12,6 @@
 
 @interface CanvasWindowController : NSWindowController {
     BOOL enable;
-    CanvasView *convasView;
 }
 
 @property(assign, nonatomic) BOOL enable;

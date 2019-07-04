@@ -73,7 +73,7 @@
     NSBezierPath *path = [NSBezierPath bezierPath];
     path.lineWidth =  2;
     NSColor *color = [NSColor colorWithRed:1 green:0.1 blue:0 alpha:1];
-    if ([points count]){
+    if ([points count]>0){
         for (int i = 0; i < points.count-1; i++) {
             color = [NSColor colorWithRed:0.5*i/(1.00*points.count) green:0.47+0.53*i/(1.00*points.count) blue:0.9 alpha:1];
             [color setStroke];

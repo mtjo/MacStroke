@@ -6,6 +6,7 @@
 #import "NSBundle+LoginItem.h"
 #import "BlackWhiteFilter.h"
 #import "GestureCompare.h"
+#import "RightClicksList.h"
 
 @implementation AppDelegate
 
@@ -40,7 +41,7 @@ static NSInteger settingRuleIndex;
         });
         return ;
     }
-    
+    [self initAppAtFirstLaunch];
     windowController = [[CanvasWindowController alloc] init];
     
     CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
@@ -367,7 +368,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                 setGestureB(mouseEvent);
                 if (!handleGesture(true)) {
                     NSString *appname =frontBundleName();
-                    if ([appname isEqualToString:@"com.jetbrains.PhpStorm"]&&!mouseDraggedEvent) {
+                    if ([[RightClicksList sharedRightClicksList] needRightClickByAppname:appname]  &&!mouseDraggedEvent) {
                         CGPoint p = CGEventGetLocation(mouseDownEvent);
                         [windowController threadRightClick:p];
                     }else{
@@ -378,17 +379,13 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
                         CGEventPost(kCGSessionEventTap, event);
                     }
                 }else {
-                    double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
-                    //NSLog(@"%f",noteRetetionTime);
-                    //[windowController reinitWindow];
-                    [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:windowController selector:@selector(reinitWindow) userInfo:nil repeats:NO];
+                    [windowController reinitWindow];
                 }
                 CFRelease(mouseDownEvent);            }
             
             if (mouseDraggedEvent) {
                 CFRelease(mouseDraggedEvent);
             }
-            
             
             mouseDownEvent = mouseDraggedEvent = NULL;
             shouldShow = NO;
@@ -444,5 +441,28 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 {
     return settingRuleIndex;
 }
+
+-(void) initAppAtFirstLaunch;
+{
+    // 判断是不是第一次启动APP
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"firstLaunch"];
+        [[RulesList sharedRulesList] reInit];
+        [[RightClicksList sharedRightClicksList] reInit];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        //载入预设值
+        NSUserDefaults * defs = [NSUserDefaults standardUserDefaults];
+        NSURL *defaultPrefsFile = [[NSBundle mainBundle]
+                                   URLForResource:@"DefaultPreferences" withExtension:@"plist"];
+        NSDictionary *defaultPrefs =
+        [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
+        for (NSString *key in defaultPrefs) {
+            [defs setObject:[defaultPrefs objectForKey:key] forKey:key];
+        }
+        [defs synchronize];
+        [MGOptionsDefine resetColors];
+    }
+}
+
 
 @end

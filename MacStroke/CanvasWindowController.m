@@ -16,20 +16,13 @@
 - (void)reinitWindow {
     NSRect frame = NSScreen.mainScreen.frame;
     NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
-    if (convasView) {
-        [convasView removeFromSuperview];
-    }
-    convasView = [[CanvasView alloc] initWithFrame:frame];
-    NSView *view = convasView;
+
+    NSView *view = [[CanvasView alloc] initWithFrame:frame];
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
-}
-
--(void) cleanNote{
-    [convasView drawNote];
 }
 
 - (id)init {
