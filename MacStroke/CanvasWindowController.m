@@ -16,8 +16,15 @@
 - (void)reinitWindow {
     frame = NSScreen.mainScreen.frame;
     window = [[CanvasWindow alloc] initWithContentRect:frame];
+    if (cleanNote) {
+        [viewList removeAllObjects];
+    }
     if (view!= nil) {
+        cleanNote = NO;
         [viewList addObject:view];
+        //clear draw note after noteRetetionTime
+        double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
+        [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:self selector:@selector(clearNote) userInfo:nil repeats:NO];
     }
     view = [[CanvasView alloc] initWithFrame:frame];
     window.contentView = view;
@@ -25,16 +32,14 @@
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
-    
-    
+        
 }
 
 - (id)init {
     self = [super init];
-    viewList = [NSMutableArray alloc];
+    viewList = [[NSMutableArray alloc] init];
     if (self) {
         [self reinitWindow];
-
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(handleScreenParametersChange:) name:NSApplicationDidChangeScreenParametersNotification object:nil];
     }
     return self;
@@ -116,16 +121,16 @@
     [newThread start];
 }
 
-- (void)cleanViewList{
-    if ([viewList count]> 0) {
-        while ([viewList firstObject] ) {
-            [[viewList firstObject] removeFromSuperview];
-            [[viewList firstObject] releaseGState];
-            
+- (void)clearNote{
+    if ([viewList count]>0) {
+        for(id obj in viewList){
+            //NSLog(@"%@",obj);
+            NSView *_view = obj;
+            [_view removeFromSuperview];
+            [_view releaseGState];
         }
-
     }
-
+    cleanNote = YES;
 }
 
 @end
