@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1020"
+   LastUpgradeVersion = "1120"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -29,11 +29,9 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
       </Testables>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -44,7 +42,7 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         FilePath = "/Users/mtjo/Library/Developer/Xcode/DerivedData/MacStroke-cfkmtiopopiztlgiyajuntmgkxni/Build/Products/Release/MacStroke.app">
+         FilePath = "/Users/mtjo/Library/Developer/Xcode/DerivedData/MacStroke-cfkmtiopopiztlgiyajuntmgkxni/Build/Products/Debug/MacStroke.app">
       </PathRunnable>
       <MacroExpansion>
          <BuildableReference
@@ -55,8 +53,6 @@
             ReferencedContainer = "container:MacStroke.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
-      <AdditionalOptions>
-      </AdditionalOptions>
       <LocationScenarioReference
          identifier = "com.apple.dt.IDEFoundation.CurrentLocationScenarioIdentifier"
          referenceType = "1">

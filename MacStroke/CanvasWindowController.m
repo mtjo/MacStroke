@@ -14,19 +14,24 @@
 @implementation CanvasWindowController
 
 - (void)reinitWindow {
-    NSRect frame = NSScreen.mainScreen.frame;
-    NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
-
-    NSView *view = [[CanvasView alloc] initWithFrame:frame];
+    frame = NSScreen.mainScreen.frame;
+    window = [[CanvasWindow alloc] initWithContentRect:frame];
+    if (view!= nil) {
+        [viewList addObject:view];
+    }
+    view = [[CanvasView alloc] initWithFrame:frame];
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
+    
+    
 }
 
 - (id)init {
     self = [super init];
+    viewList = [NSMutableArray alloc];
     if (self) {
         [self reinitWindow];
 
@@ -110,4 +115,17 @@
     NSThread * newThread = [[NSThread alloc]initWithTarget:self selector:@selector(rightClick:) object:@{@"x":@(point.x),@"y":@(point.y)}] ;
     [newThread start];
 }
+
+- (void)cleanViewList{
+    if ([viewList count]> 0) {
+        while ([viewList firstObject] ) {
+            [[viewList firstObject] removeFromSuperview];
+            [[viewList firstObject] releaseGState];
+            
+        }
+
+    }
+
+}
+
 @end
