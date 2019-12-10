@@ -101,7 +101,7 @@
         https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.0.6.html
       </sparkle:releaseNotesLink>
       <pubDate>2019-12-10 09:45:51 +8</pubDate>
-      <enclosure url="https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.6.zip" sparkle:version="1.0.6" length="1748234" type="application/octet-stream" sparkle:dsaSignature="MCwCFAWi3LXKGk7tOzZbv2TH+JNCtERWAhQbOvRXvvvtYFQk2ikWc829h072MQ==" />
+      <enclosure url="https://github.com/mtjo/MacStroke/raw/release/Download/MacStroke-1.0.6.zip" sparkle:version="1.0.6" length="1748234" type="application/octet-stream" sparkle:dsaSignature="MC0CFQCWnXF2ZglMd3H9qPYZMfCQpB4kPwIUTYkYUGl6ZGDj9HTy8wkUQDMA0Hw=" />
       <sparkle:minimumSystemVersion>10.9</sparkle:minimumSystemVersion>
     </item>
   </channel>
