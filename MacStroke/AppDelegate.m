@@ -19,7 +19,7 @@ static BOOL isEnabled;
 static AppPrefsWindowController *_preferencesWindowController;
 static NSTimeInterval lastMouseWheelEventTime;
 
-static NSMutableArray *GestureB;
+static NSMutableArray *gestureB;
 static NSInteger actionRuleIndex;
 
 static NSInteger settingRuleIndex;
@@ -76,13 +76,12 @@ static NSInteger settingRuleIndex;
     
     direction = [NSMutableString string];
     
-    GestureB = [[NSMutableArray alloc] init];
+    gestureB = [[NSMutableArray alloc] init];
     isEnabled = YES;
     
     NSURL *defaultPrefsFile = [[NSBundle mainBundle]
                                URLForResource:@"DefaultPreferences" withExtension:@"plist"];
-    NSDictionary *defaultPrefs =
-    [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
+    NSDictionary *defaultPrefs = [NSDictionary dictionaryWithContentsOfURL:defaultPrefsFile];
     [[NSUserDefaults standardUserDefaults] registerDefaults:defaultPrefs];
     
     [BWFilter compatibleProcedureWithPreviousVersionBlockRules];
@@ -172,18 +171,17 @@ static NSInteger settingRuleIndex;
 
 static void setGestureB(NSEvent *event){
     NSPoint newLocation = event.locationInWindow;
-    [GestureB addObject:[NSValue valueWithPoint:newLocation]];
+    [gestureB addObject:[NSValue valueWithPoint:newLocation]];
 }
 
 static void setActionIndex(){
-    
     RulesList *rulesList = [RulesList sharedRulesList];
     
     NSInteger count = [rulesList count];
     //NSLog(@"%ld",(long)count);
     NSArray *ruleListArr=[NSKeyedUnarchiver unarchiveObjectWithData:[rulesList nsData]];
     //NSLog(@"%@",ruleListArr);
-    int tmp_Index=-1;
+    int tmpIndex=-1;
     double tmp_score = 0.0;
     double minscore =[[NSUserDefaults standardUserDefaults] doubleForKey:@"minScore"];
     bool enableGestureMinScore=[[NSUserDefaults standardUserDefaults] boolForKey:@"enableGestureMinScore"];
@@ -193,17 +191,17 @@ static void setActionIndex(){
             //}
             NSArray *Ruledata=[[ruleListArr objectAtIndex:i] objectForKey:@"data"];
             if(Ruledata!=nil){
-                NSMutableArray *GestureA = [[NSMutableArray alloc] initWithArray:Ruledata];
-                double score = [GestureCompare compareByGestureA:GestureA GestureB:GestureB];
+                NSMutableArray *gestureA = [[NSMutableArray alloc] initWithArray:Ruledata];
+                double score = [GestureCompare compareByGestureA:gestureA GestureB:gestureB];
                 //NSLog(@"%d:%f",i,score);
                 if(enableGestureMinScore){
                     if(score>0 && score>tmp_score && score >minscore){
-                        tmp_Index=i;
+                        tmpIndex=i;
                         tmp_score=score;
                     }
                 }else {
                     if(score>0 && score>tmp_score){
-                        tmp_Index=i;
+                        tmpIndex=i;
                         tmp_score=score;
                     }
                     
@@ -213,18 +211,17 @@ static void setActionIndex(){
         }
         
     }
-    actionRuleIndex=tmp_Index;
+    actionRuleIndex=tmpIndex;
     [windowController writeActionRuleIndex:actionRuleIndex];
 }
 
 void resetGestureB() {
-    [GestureB removeAllObjects];
+    [gestureB removeAllObjects];
     actionRuleIndex =-1;
 }
 bool setRuleData(){
-    
     if(settingRuleIndex>-1){
-        [[RulesList sharedRulesList] setGestureData:GestureB atIndex:settingRuleIndex];
+        [[RulesList sharedRulesList] setGestureData:gestureB atIndex:settingRuleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
         notification.title = @"MacStroke";
         notification.informativeText = NSLocalizedString(@"Gesture draw complete!", nil);

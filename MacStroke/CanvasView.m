@@ -147,21 +147,11 @@ static NSColor *loadedColor;
     }
     noteToDraw = [[RulesList sharedRulesList] noteAtIndex:Index];
     [self setDrawNote:noteToDraw];
-    
-    //clear draw note after noteRetetionTime
-    double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
-    [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:self selector:@selector(clearNote) userInfo:nil repeats:NO];
-    
-    
-}
-
--(void) clearNote;{
-    [self setDrawNote:@""];
+        
 }
 
 - (void)setDrawNote:(NSString*) note;{
     noteToDraw = note;
     self.needsDisplay = YES;
 }
-
 @end
