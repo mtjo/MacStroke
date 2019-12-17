@@ -111,7 +111,7 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
-      <title>Version1.0.6</title>
+      <title>Version1.0.7</title>
       <sparkle:releaseNotesLink>
         https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.0.7.html
       </sparkle:releaseNotesLink>
