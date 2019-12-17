@@ -14,25 +14,16 @@
 @implementation CanvasWindowController
 
 - (void)reinitWindow {
-    frame = NSScreen.mainScreen.frame;
-    window = [[CanvasWindow alloc] initWithContentRect:frame];
-    if (cleanNote) {
-        [viewList removeAllObjects];
-    }
-    if (view!= nil) {
-        cleanNote = NO;
-        [viewList addObject:view];
-        //clear draw note after noteRetetionTime
-        double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
-        [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:self selector:@selector(clearNote) userInfo:nil repeats:NO];
-    }
-    view = [[CanvasView alloc] initWithFrame:frame];
+    NSRect frame = NSScreen.mainScreen.frame;
+    NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
+    NSView *view = [[CanvasView alloc] initWithFrame:frame];
+    [viewList addObject:view];
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
-        
+    
 }
 
 - (id)init {
@@ -69,6 +60,9 @@
             break;
         case NSRightMouseUp:
             [self.window.contentView mouseUp:event];
+            //clear draw note after noteRetetionTime
+            double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
+            [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:self selector:@selector(clearNote:) userInfo:viewList repeats:NO];
             break;
         default:
             break;
@@ -121,16 +115,25 @@
     [newThread start];
 }
 
-- (void)clearNote{
-    if ([viewList count]>0) {
-        for(id obj in viewList){
-            //NSLog(@"%@",obj);
-            NSView *_view = obj;
-            [_view removeFromSuperview];
-            [_view releaseGState];
+- (void)clearNote:(NSTimer *)timer{
+#ifdef DEBUG
+    NSLog(@"%ld",[viewList count]);
+#endif
+    NSArray *_viewList = [[NSArray alloc] initWithArray: [timer userInfo]];
+    _viewList = [[_viewList reverseObjectEnumerator] allObjects];
+    if ([_viewList count]>0) {
+        for(int i = 0; i < [_viewList count]; i++){
+            if (i>5) {
+                break;
+            }
+#ifdef DEBUG
+            NSLog(@"%d",i );
+#endif
+            
+            [[_viewList objectAtIndex:i] removeFromSuperview];
+            [[_viewList objectAtIndex:i] releaseGState];
         }
     }
-    cleanNote = YES;
 }
 
 @end

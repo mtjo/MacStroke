@@ -12,11 +12,7 @@
 
 @interface CanvasWindowController : NSWindowController {
     BOOL enable;
-    NSRect frame;
-    NSWindow *window;
-    NSView *view, *lastView;
     NSMutableArray<NSView *> *viewList;
-    BOOL cleanNote;
 }
 
 @property(assign, nonatomic) BOOL enable;
@@ -32,5 +28,7 @@
 - (void)rightClick:(NSDictionary*) pointDic;
 
 - (void)threadRightClick:(CGPoint) point;
+
+- (void)clearNote:(NSTimer *)timer;
 
 @end
