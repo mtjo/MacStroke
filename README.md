@@ -26,6 +26,7 @@ MacStroke
 
 
 
-[Feedback BUG & Construction](mailto:mtjo.net@gmail.com?subject=Feedback BUG %26 Construction&cc=mtjo_00@163.com&body=Feedback BUG Please describe in detail, it is best to attach BUG screenshots and system version screenshots)
+###Issues
+[Feedback BUG & Construction](https://github.com/mtjo/MacStroke/issues)
 
 Power by [![mtjo](https://github.com/mtjo/MacStroke/raw/release/logo-mtjo.png)](http://mtjo.net)

@@ -20,7 +20,8 @@ MacStroke
 ###下载
 [MacStroke-1.0.6.zip](https://github.com/mtjo/MacStroke/releases/download/1.0.6/MacStroke-1.0.6.zip)
 
-[反馈BUG&建义](mailto:mtjo.net@gmail.com?subject=%e5%8f%8d%e9%a6%88BUG%26%e5%bb%ba%e4%b9%89&cc=mtjo_00@163.com&body=%e5%8f%8d%e9%a6%88BUG%e8%af%b7%e8%af%a6%e7%bb%86%e6%8f%8f%e8%bf%b0%ef%bc%8c%e6%9c%80%e5%a5%bd%e8%83%bd%e9%99%84%e4%b8%8aBUG%e6%88%aa%e5%9b%be%e5%92%8c%e7%b3%bb%e7%bb%9f%e7%89%88%e6%9c%ac%e6%88%aa%e5%9b%be)
+###反馈
+[反馈BUG&建义](https://github.com/mtjo/MacStroke/issues)
 
 
 
