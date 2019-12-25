@@ -72,18 +72,6 @@
     if ([operation isEqualToString:@"newFile"]) {
         NSFileManager *fileManager = [NSFileManager defaultManager];
         
-        NSLog(@"isWritableFileAtPath: %hhd",  [fileManager isWritableFileAtPath:data[@"path"]]);
-        if (![fileManager isWritableFileAtPath:data[@"path"]]) {
-            NSAlert *alert = [[NSAlert alloc] init];
-            [alert setAlertStyle:NSInformationalAlertStyle];
-            NSString *msg =  NSLocalizedString(@"The current directory: %s does not have write permission!", nil);
-            msg = [msg stringByReplacingOccurrencesOfString:@"%s" withString:data[@"path"]];
-            [alert setMessageText:msg];
-            
-            [alert runModal];
-            return;
-        }
-        
         NSString *filepath =  [data[@"path"] stringByAppendingString:NSLocalizedString(@"/newTextFile",nil)];
         BOOL isDirectory = NO;
         BOOL isExist =  [fileManager fileExistsAtPath:filepath isDirectory:&isDirectory];
@@ -95,14 +83,38 @@
                 filepath= _filepath;
             }
         }
-       
+        
         BOOL ret = [fileManager createFileAtPath:filepath contents:nil attributes:nil];
         if (ret) {
             NSLog(@"文件创建成功");
+            return;
         }else {
-            NSLog(@"文件创建失败");
+            NSLog(@"文件创建失败，尝试用root创建");
+            NSString *fullScript = [@"touch " stringByAppendingString:filepath];
+            NSDictionary *errorInfo = [NSDictionary new];
+            NSString *script =  [NSString stringWithFormat:@"do shell script \"%@\" with administrator privileges", fullScript];
+            
+            NSAppleScript *appleScript = [[NSAppleScript new] initWithSource:script];
+            NSAppleEventDescriptor * eventResult = [appleScript executeAndReturnError:&errorInfo];
+            
+            // Check errorInfo
+            if (! eventResult)
+            {
+                // do something you want
+                NSAlert *alert = [[NSAlert alloc] init];
+                [alert setAlertStyle:NSInformationalAlertStyle];
+                NSString *msg =  NSLocalizedString(@"The current directory: %s does not have write permission!", nil);
+                msg = [msg stringByReplacingOccurrencesOfString:@"%s" withString:data[@"path"]];
+                [alert setMessageText:msg];
+                
+                [alert runModal];
+                return;
+            }else{
+                return;
+            }
+            
         }
-
+        
     } else if ([operation isEqualToString:@"openInTerminal"]){
         NSString *cmd = [@"open -a Terminal " stringByAppendingString: data[@"path"]];
         system([cmd UTF8String]);

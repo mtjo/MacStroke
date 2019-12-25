@@ -103,7 +103,7 @@
 {
     NSURL* target = [[FIFinderSyncController defaultController] targetedURL];
     NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
-    ;
+    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"newFile",@"path": [target path]}];
@@ -118,6 +118,7 @@
     NSLog(@"path: %@",[target path]);
     
     NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
+     NSLog(@"items: %@",items);
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"openInTerminal",@"path": [target path]}];
