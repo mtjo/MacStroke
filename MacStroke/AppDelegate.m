@@ -1,12 +1,5 @@
 #import "AppDelegate.h"
-#import "AppPrefsWindowController.h"
-#import "CanvasWindowController.h"
-#import "RulesList.h"
-#import "utils.h"
-#import "NSBundle+LoginItem.h"
-#import "BlackWhiteFilter.h"
-#import "GestureCompare.h"
-#import "RightClicksList.h"
+
 
 @implementation AppDelegate
 
@@ -24,6 +17,7 @@ static NSInteger actionRuleIndex;
 
 static NSInteger settingRuleIndex;
 
+static RightClickMenu *rightClickMenu;
 
 + (AppDelegate *)appDelegate {
     return (AppDelegate *) [[NSApplication sharedApplication] delegate];
@@ -33,6 +27,8 @@ static NSInteger settingRuleIndex;
     NSArray *apps = [NSRunningApplication runningApplicationsWithBundleIdentifier:[[NSBundle mainBundle] bundleIdentifier]];
     NSDistributedNotificationCenter *center = [NSDistributedNotificationCenter defaultCenter];
     NSString *name = @"MacStrokeOpenPreferences";
+    rightClickMenu = [[RightClickMenu alloc] init];
+    [rightClickMenu tick];
     if ([apps count] > 1)
     {
         [center postNotificationName:name object:nil userInfo:nil deliverImmediately:YES];

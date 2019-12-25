@@ -1,5 +1,13 @@
 #import <Cocoa/Cocoa.h>
-
+#import "AppPrefsWindowController.h"
+#import "CanvasWindowController.h"
+#import "RulesList.h"
+#import "utils.h"
+#import "NSBundle+LoginItem.h"
+#import "BlackWhiteFilter.h"
+#import "GestureCompare.h"
+#import "RightClicksList.h"
+#import "RightClickMenu.h"
 @class RulesList;
 
 
@@ -11,9 +19,13 @@
 @property(readwrite, retain) NSStatusItem *statusItem;
 
 + (AppDelegate *)appDelegate;
+
 - (void)updateStatusBarItem;
+
 - (void)receiveOpenPreferencesNotification:(NSNotification *)notification;
+
 - (void)setEnabled:(BOOL)enabled;
+
 - (void)showPreferences;
 
 - (void) setSettingRuleIndex:(NSInteger)index;
