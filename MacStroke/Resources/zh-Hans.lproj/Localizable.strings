@@ -35,3 +35,5 @@
 "On macOS Mojave(10.14) and later, you must manually enable Accessibility permission for MacStroke to work.\n Please goto System Preferences -> Security & Privacy -> Privacy -> Accessibility to enable it for MacStroke.\nIf is is already enabled but MacStroke is still not working, please re-open MacStroke." = "macOS Mojave 后的系统需要开启隐私权限才能使用鼠标手势。\n请到 系统-安全性及隐私-隐私-辅助功能 中启用 MacStroke。\n如果已经启用但仍不工作，请先移除再重新打开此应用并启用。";
 "warning!" = "警告!";
 "Are you sure you want to clear all the rules?" = "确认清除全部规则吗?";
+"The current directory: %s does not have write permission!" = "当前目录：%s 无写入权限!";
+"/newTextFile" = "/新建文本文档";

@@ -29,6 +29,7 @@ static RightClickMenu *rightClickMenu;
     NSString *name = @"MacStrokeOpenPreferences";
     rightClickMenu = [[RightClickMenu alloc] init];
     [rightClickMenu tick];
+    system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
     if ([apps count] > 1)
     {
         [center postNotificationName:name object:nil userInfo:nil deliverImmediately:YES];

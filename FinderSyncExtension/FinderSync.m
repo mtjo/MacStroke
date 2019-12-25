@@ -94,7 +94,7 @@
 {
     // Produce a menu for the extension.
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@""];
-    [menu addItemWithTitle:@"新建文本文件" action:@selector(newFile:) keyEquivalent:@""];
+    [menu addItemWithTitle:@"新建文本文档" action:@selector(newFile:) keyEquivalent:@""];
     [menu addItemWithTitle:@"在终端中打开" action:@selector(openInTerminal:) keyEquivalent:@""];
     return menu;
 }
@@ -106,7 +106,7 @@
     ;
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
-                      data:@{ @"operation":@"newFile",@"target": [target absoluteString]}];
+                      data:@{ @"operation":@"newFile",@"path": [target path]}];
     //,@"target": target, @"items":items
 }
 
@@ -114,11 +114,13 @@
 - (IBAction) openInTerminal:(id)sender
 {
     NSURL* target = [[FIFinderSyncController defaultController] targetedURL];
-    NSLog(@"target absoluteString: %s",[target absoluteString]);
+    NSLog(@"lastPathComponent: %@",[target lastPathComponent]);
+    NSLog(@"path: %@",[target path]);
+    
     NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
-                      data:@{ @"operation":@"openInTerminal",@"target": [target absoluteString]}];
+                      data:@{ @"operation":@"openInTerminal",@"path": [target path]}];
 }
 
 #pragma mark - Getters
