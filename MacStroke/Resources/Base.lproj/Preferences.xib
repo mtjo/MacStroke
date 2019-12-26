@@ -1138,14 +1138,6 @@
                         <rect key="frame" x="3" y="3" width="520" height="219"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="I2T-NH-e7c" userLabel="Gesture Min Score">
-                                <rect key="frame" x="18" y="183" width="169" height="18"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="check" title="Enable Right Click Menu" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="AZW-1J-Wth">
-                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                    <font key="font" metaFont="system"/>
-                                </buttonCell>
-                            </button>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nbp-FN-kUZ">
                                 <rect key="frame" x="210" y="243" width="54" height="17"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -1157,7 +1149,7 @@
                                 </textFieldCell>
                             </textField>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="r1u-S5-IC3">
-                                <rect key="frame" x="18" y="160" width="255" height="18"/>
+                                <rect key="frame" x="18" y="183" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="newTextFile" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="tFw-3G-uFc">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -1165,7 +1157,7 @@
                                 </buttonCell>
                             </button>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="APL-nm-usX">
-                                <rect key="frame" x="18" y="134" width="255" height="18"/>
+                                <rect key="frame" x="18" y="152" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="open in terminal" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="WKb-RS-fgU">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -1173,7 +1165,7 @@
                                 </buttonCell>
                             </button>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Buw-2f-d2Q">
-                                <rect key="frame" x="18" y="107" width="255" height="18"/>
+                                <rect key="frame" x="18" y="118" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="copy file path" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="CU0-vn-X8R">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
