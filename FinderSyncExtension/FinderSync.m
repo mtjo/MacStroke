@@ -96,6 +96,8 @@
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@""];
     [menu addItemWithTitle:@"新建文本文档" action:@selector(newFile:) keyEquivalent:@""];
     [menu addItemWithTitle:@"在终端中打开" action:@selector(openInTerminal:) keyEquivalent:@""];
+    [menu addItemWithTitle:@"复制路径" action:@selector(copyFilePath:) keyEquivalent:@""];
+
     return menu;
 }
 
@@ -104,9 +106,15 @@
     NSURL* target = [[FIFinderSyncController defaultController] targetedURL];
     NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
     
+    NSMutableArray<NSString*> *_item = [[NSMutableArray alloc] init];
+    [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
+        [_item addObject: [obj path]];
+    }];
+    
+    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
-                      data:@{ @"operation":@"newFile",@"path": [target path]}];
+                      data:@{ @"operation":@"newFile",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
     //,@"target": target, @"items":items
 }
 
@@ -114,14 +122,29 @@
 - (IBAction) openInTerminal:(id)sender
 {
     NSURL* target = [[FIFinderSyncController defaultController] targetedURL];
-    NSLog(@"lastPathComponent: %@",[target lastPathComponent]);
-    NSLog(@"path: %@",[target path]);
-    
     NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
-     NSLog(@"items: %@",items);
+    
+    NSMutableArray<NSString*> *_item = [[NSMutableArray alloc] init];
+    [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
+        [_item addObject: [obj path]];
+    }];
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
-                      data:@{ @"operation":@"openInTerminal",@"path": [target path]}];
+                      data:@{ @"operation":@"openInTerminal",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
+}
+
+- (IBAction) copyFilePath:(id)sender
+{
+    NSURL* target = [[FIFinderSyncController defaultController] targetedURL];
+    NSArray* items = [[FIFinderSyncController defaultController] selectedItemURLs];
+    
+    NSMutableArray<NSString*> *_item = [[NSMutableArray alloc] init];
+    [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
+        [_item addObject: [obj path]];
+    }];
+    // send custom message to the MainApp
+    [self.commChannel send:@"CustomMessageReceivedNotification"
+                      data:@{ @"operation":@"copyFilePath",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
 }
 
 #pragma mark - Getters
