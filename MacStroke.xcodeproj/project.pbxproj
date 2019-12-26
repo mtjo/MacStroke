@@ -36,9 +36,6 @@
 		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D5ABFB423B0547200EA37CB /* IndexRequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */; };
 		4D5ABFB923B0547200EA37CB /* Ssh.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D5ABFB023B0547200EA37CB /* Ssh.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		4D5ABFC623B0BD3300EA37CB /* FinderService.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D5ABFC523B0BD3300EA37CB /* FinderService.m */; };
-		4D5ABFC823B0BD3300EA37CB /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D5ABFC723B0BD3300EA37CB /* main.m */; };
-		4D5ABFCC23B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 4D5ABFC123B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270C223B3650B00AC8745 /* FinderSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270C123B3650B00AC8745 /* FinderSync.m */; };
 		4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270CD23B3671E00AC8745 /* FinderCommChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */; };
@@ -79,13 +76,6 @@
 			remoteGlobalIDString = 4D5ABFAF23B0547200EA37CB;
 			remoteInfo = Ssh;
 		};
-		4D5ABFCA23B0BD3300EA37CB /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4D5ABFC023B0BD3300EA37CB;
-			remoteInfo = FinderService;
-		};
 		4D6270C523B3650B00AC8745 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
@@ -102,7 +92,6 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
 			dstSubfolderSpec = 16;
 			files = (
-				4D5ABFCC23B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc in Embed XPC Services */,
 			);
 			name = "Embed XPC Services";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -167,7 +156,6 @@
 		4D334FA422C73AB100E97738 /* DrawNoteView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DrawNoteView.m; sourceTree = "<group>"; };
 		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
-		4D350E5123B2159C0043447D /* FinderService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinderService.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
 		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
@@ -176,12 +164,6 @@
 		4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = IndexRequestHandler.m; sourceTree = "<group>"; };
 		4D5ABFB523B0547200EA37CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4D5ABFB623B0547200EA37CB /* Ssh.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ssh.entitlements; sourceTree = "<group>"; };
-		4D5ABFC123B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
-		4D5ABFC323B0BD3300EA37CB /* FinderServiceProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderServiceProtocol.h; sourceTree = "<group>"; };
-		4D5ABFC423B0BD3300EA37CB /* FinderService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderService.h; sourceTree = "<group>"; };
-		4D5ABFC523B0BD3300EA37CB /* FinderService.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderService.m; sourceTree = "<group>"; };
-		4D5ABFC723B0BD3300EA37CB /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		4D5ABFC923B0BD3300EA37CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderSyncExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D6270C023B3650B00AC8745 /* FinderSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderSync.h; sourceTree = "<group>"; };
 		4D6270C123B3650B00AC8745 /* FinderSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderSync.m; sourceTree = "<group>"; };
@@ -255,13 +237,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4D5ABFBE23B0BD3300EA37CB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		4D6270BB23B3650B00AC8745 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -277,7 +252,6 @@
 			children = (
 				1381E4B11824E7E800E815F5 /* MacStroke */,
 				4D5ABFB123B0547200EA37CB /* Ssh */,
-				4D5ABFC223B0BD3300EA37CB /* FinderService */,
 				4D6270BF23B3650B00AC8745 /* FinderSyncExtension */,
 				1381E4AA1824E7E800E815F5 /* Frameworks */,
 				1381E4A91824E7E800E815F5 /* Products */,
@@ -289,7 +263,6 @@
 			isa = PBXGroup;
 			children = (
 				4D5ABFB023B0547200EA37CB /* Ssh.appex */,
-				4D5ABFC123B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc */,
 				4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */,
 			);
 			name = Products;
@@ -435,19 +408,6 @@
 			path = Ssh;
 			sourceTree = "<group>";
 		};
-		4D5ABFC223B0BD3300EA37CB /* FinderService */ = {
-			isa = PBXGroup;
-			children = (
-				4D350E5123B2159C0043447D /* FinderService.entitlements */,
-				4D5ABFC323B0BD3300EA37CB /* FinderServiceProtocol.h */,
-				4D5ABFC423B0BD3300EA37CB /* FinderService.h */,
-				4D5ABFC523B0BD3300EA37CB /* FinderService.m */,
-				4D5ABFC723B0BD3300EA37CB /* main.m */,
-				4D5ABFC923B0BD3300EA37CB /* Info.plist */,
-			);
-			path = FinderService;
-			sourceTree = "<group>";
-		};
 		4D6270BF23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXGroup;
 			children = (
@@ -489,7 +449,6 @@
 			);
 			dependencies = (
 				4D5ABFB823B0547200EA37CB /* PBXTargetDependency */,
-				4D5ABFCB23B0BD3300EA37CB /* PBXTargetDependency */,
 				4D6270C623B3650B00AC8745 /* PBXTargetDependency */,
 			);
 			name = MacStroke;
@@ -512,23 +471,6 @@
 			productName = Ssh;
 			productReference = 4D5ABFB023B0547200EA37CB /* Ssh.appex */;
 			productType = "com.apple.product-type.app-extension";
-		};
-		4D5ABFC023B0BD3300EA37CB /* FinderService */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 4D5ABFCD23B0BD3300EA37CB /* Build configuration list for PBXNativeTarget "FinderService" */;
-			buildPhases = (
-				4D5ABFBD23B0BD3300EA37CB /* Sources */,
-				4D5ABFBE23B0BD3300EA37CB /* Frameworks */,
-				4D5ABFBF23B0BD3300EA37CB /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = FinderService;
-			productName = FinderService;
-			productReference = 4D5ABFC123B0BD3300EA37CB /* 6H594KH8XS.net.mtjo.MacStroke.FinderService.xpc */;
-			productType = "com.apple.product-type.xpc-service";
 		};
 		4D6270BD23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXNativeTarget;
@@ -565,11 +507,6 @@
 						CreatedOnToolsVersion = 11.3;
 						ProvisioningStyle = Automatic;
 					};
-					4D5ABFC023B0BD3300EA37CB = {
-						CreatedOnToolsVersion = 11.3;
-						DevelopmentTeam = 6H594KH8XS;
-						ProvisioningStyle = Automatic;
-					};
 					4D6270BD23B3650B00AC8745 = {
 						CreatedOnToolsVersion = 11.3;
 						DevelopmentTeam = 6H594KH8XS;
@@ -593,7 +530,6 @@
 			targets = (
 				1381E4A71824E7E800E815F5 /* MacStroke */,
 				4D5ABFAF23B0547200EA37CB /* Ssh */,
-				4D5ABFC023B0BD3300EA37CB /* FinderService */,
 				4D6270BD23B3650B00AC8745 /* FinderSyncExtension */,
 			);
 		};
@@ -636,13 +572,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4D5ABFAE23B0547200EA37CB /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4D5ABFBF23B0BD3300EA37CB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -745,15 +674,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4D5ABFBD23B0BD3300EA37CB /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4D5ABFC823B0BD3300EA37CB /* main.m in Sources */,
-				4D5ABFC623B0BD3300EA37CB /* FinderService.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		4D6270BA23B3650B00AC8745 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -770,11 +690,6 @@
 			isa = PBXTargetDependency;
 			target = 4D5ABFAF23B0547200EA37CB /* Ssh */;
 			targetProxy = 4D5ABFB723B0547200EA37CB /* PBXContainerItemProxy */;
-		};
-		4D5ABFCB23B0BD3300EA37CB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4D5ABFC023B0BD3300EA37CB /* FinderService */;
-			targetProxy = 4D5ABFCA23B0BD3300EA37CB /* PBXContainerItemProxy */;
 		};
 		4D6270C623B3650B00AC8745 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1040,64 +955,6 @@
 			};
 			name = Release;
 		};
-		4D5ABFCE23B0BD3300EA37CB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = FinderService/FinderService.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 6H594KH8XS;
-				ENABLE_HARDENED_RUNTIME = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = FinderService/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = 6H594KH8XS.net.mtjo.MacStroke.FinderService;
-				PRODUCT_NAME = 6H594KH8XS.net.mtjo.MacStroke.FinderService;
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
-		4D5ABFCF23B0BD3300EA37CB /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = FinderService/FinderService.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				DEVELOPMENT_TEAM = 6H594KH8XS;
-				ENABLE_HARDENED_RUNTIME = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = FinderService/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = 6H594KH8XS.net.mtjo.MacStroke.FinderService;
-				PRODUCT_NAME = 6H594KH8XS.net.mtjo.MacStroke.FinderService;
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
 		4D6270C923B3650B00AC8745 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1184,15 +1041,6 @@
 			buildConfigurations = (
 				4D5ABFBB23B0547200EA37CB /* Debug */,
 				4D5ABFBC23B0547200EA37CB /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		4D5ABFCD23B0BD3300EA37CB /* Build configuration list for PBXNativeTarget "FinderService" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				4D5ABFCE23B0BD3300EA37CB /* Debug */,
-				4D5ABFCF23B0BD3300EA37CB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

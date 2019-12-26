@@ -108,6 +108,13 @@ static NSArray *exampleAppleScripts;
     NSString *content = [NSString stringWithContentsOfFile:readme encoding:NSUTF8StringEncoding error:NULL];
     
     [[[self webView] mainFrame] loadHTMLString:content baseURL:[NSURL URLWithString:readme]];
+    
+    //right click menu
+    if(![[NSUserDefaults standardUserDefaults] doubleForKey:@"enableRightClickMenu"]){
+        [[self enableNewFileButton] setEnabled:NO];
+         [[self enableOpenInTerminalButton] setEnabled:NO];
+         [[self enablecopyFilePathButton] setEnabled:NO];
+    }
 }
 
 - (BOOL)windowShouldClose:(id)sender {
@@ -208,10 +215,10 @@ static NSArray *exampleAppleScripts;
     }
     else if(action == NSAlertSecondButtonReturn )
     {
-    
+        
         
     }
-
+    
 }
 
 - (void)setupToolbar {
@@ -616,7 +623,7 @@ static NSString *currentScriptId = nil;
     else if(action == NSAlertSecondButtonReturn )
     {
         //settingRuleIndex = -1;
-         [[AppDelegate appDelegate] setSettingRuleIndex:-1];
+        [[AppDelegate appDelegate] setSettingRuleIndex:-1];
         
     }
 }
@@ -929,9 +936,9 @@ static NSString *currentScriptId = nil;
             [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
             recordView.tagid = row;
             recordView.objectValue = @{
-                                       @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
-                                       @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
-                                       };
+                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
+                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
+            };
             [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:recordView];
             result = cloumn;
@@ -1121,7 +1128,7 @@ static NSString *currentScriptId = nil;
 
 - (IBAction)removeRightClick:(id)sender {
     NSInteger index = [[self rightClickTableView] selectedRow];
-
+    
     RightClicksList *rightClicksList =  [RightClicksList sharedRightClicksList];
     if (index != -1) {
         [rightClicksList removeAtIndex:index];
@@ -1143,6 +1150,22 @@ static NSString *currentScriptId = nil;
         return [self tableViewForRightClicks:tableColumn row:row];
     }
     return nil;
+}
+
+- (IBAction)onToggleRightClickMenu:(id)sender{
+    NSButton *button = (NSButton *)sender;
+    bool enabled = [button state];
+    //NSLog(@"onToggleRightClickMenu:%d",enabled);
+    [[self enableNewFileButton] setEnabled:enabled];
+    [[self enableOpenInTerminalButton] setEnabled:enabled];
+    [[self enablecopyFilePathButton] setEnabled:enabled];
+    if(enabled){
+        [[AppDelegate appDelegate] initRightClickMenu];
+        system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
+    }else{
+        system("pluginkit -e ignore -i net.mtjo.MacStroke.FinderSyncExtension");
+    }
+    
 }
 
 @end

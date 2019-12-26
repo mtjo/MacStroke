@@ -32,4 +32,6 @@
 
 - (NSInteger) getSettingRuleIndex;
 
+-(void) initRightClickMenu;
+
 @end

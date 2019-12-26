@@ -20,6 +20,9 @@
                 <outlet property="changeFiltersWindowSizeButton" destination="O3m-tP-4Yw" id="7uN-LQ-1EY"/>
                 <outlet property="changeRulesWindowSizeButton" destination="ZxS-0a-wRT" id="yWx-fd-53b"/>
                 <outlet property="editInExternalEditorButton" destination="klG-Yb-lXf" id="naw-LL-eBh"/>
+                <outlet property="enableNewFileButton" destination="r1u-S5-IC3" id="i68-bq-kDF"/>
+                <outlet property="enableOpenInTerminalButton" destination="APL-nm-usX" id="iYw-wC-ug3"/>
+                <outlet property="enablecopyFilePathButton" destination="Buw-2f-d2Q" id="Ap5-vG-xLU"/>
                 <outlet property="filtersPrefrenceView" destination="cal-FD-Bsi" id="1gw-dE-dvA"/>
                 <outlet property="generalPreferenceView" destination="99" id="126"/>
                 <outlet property="languageComboBox" destination="0fU-Oh-h2G" id="hS4-zl-2V8"/>
@@ -80,7 +83,7 @@
                                 </textFieldCell>
                             </textField>
                             <button misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ccx-Tb-9cw">
-                                <rect key="frame" x="18" y="44" width="204" height="18"/>
+                                <rect key="frame" x="18" y="44" width="166" height="18"/>
                                 <buttonCell key="cell" type="check" title="Show Icon In Status Bar" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="ztS-80-zXz">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -180,7 +183,7 @@
                                 </connections>
                             </button>
                             <button misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="399">
-                                <rect key="frame" x="18" y="57" width="255" height="18"/>
+                                <rect key="frame" x="18" y="57" width="146" height="18"/>
                                 <buttonCell key="cell" type="check" title="Disable Mouse Path" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="400">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -415,14 +418,14 @@
                         <action selector="removeRule:" target="-2" id="323"/>
                     </connections>
                 </button>
-                <scrollView autohidesScrollers="YES" horizontalLineScroll="20" horizontalPageScroll="10" verticalLineScroll="20" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="285">
-                    <rect key="frame" x="6" y="30" width="646" height="206"/>
+                <scrollView misplaced="YES" autohidesScrollers="YES" horizontalLineScroll="20" horizontalPageScroll="10" verticalLineScroll="20" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="285">
+                    <rect key="frame" x="6" y="30" width="646" height="262"/>
                     <clipView key="contentView" id="dRt-B1-99d">
-                        <rect key="frame" x="1" y="0.0" width="644" height="190"/>
+                        <rect key="frame" x="1" y="0.0" width="644" height="246"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView canDrawConcurrently="YES" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowHeight="18" headerView="287" viewBased="YES" id="289">
-                                <rect key="frame" x="0.0" y="0.0" width="807" height="167"/>
+                                <rect key="frame" x="0.0" y="0.0" width="807" height="223"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <size key="intercellSpacing" width="3" height="2"/>
                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -648,7 +651,7 @@
                         </subviews>
                     </clipView>
                     <scroller key="horizontalScroller" verticalHuggingPriority="750" horizontal="YES" id="288">
-                        <rect key="frame" x="1" y="190" width="644" height="15"/>
+                        <rect key="frame" x="1" y="246" width="644" height="15"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </scroller>
                     <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="286">
@@ -796,7 +799,7 @@
                     <rect key="frame" x="298" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="Bk2-kE-aKD">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="UlC-dc-fu7">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -822,7 +825,7 @@
                     <rect key="frame" x="7" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="w6q-uf-DH3">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="IB6-jz-VHi">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -914,7 +917,7 @@
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     <clipView key="contentView" ambiguous="YES" id="HAd-Pq-7NJ">
                         <rect key="frame" x="1" y="1" width="181" height="384"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" ambiguous="YES" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="T1p-6B-s66">
                                 <rect key="frame" x="0.0" y="0.0" width="181" height="384"/>
@@ -1131,46 +1134,57 @@
             <rect key="frame" x="0.0" y="0.0" width="530" height="315"/>
             <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
             <subviews>
-                <box borderType="line" title="Right Click Menu" id="grE-O7-8pa" userLabel="Right Click Menu">
-                    <rect key="frame" x="2" y="51" width="526" height="237"/>
+                <box borderType="line" id="grE-O7-8pa" userLabel="Right Click Menu">
+                    <rect key="frame" x="2" y="6" width="526" height="309"/>
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     <view key="contentView" id="77z-1j-0LD">
-                        <rect key="frame" x="3" y="3" width="520" height="219"/>
+                        <rect key="frame" x="3" y="3" width="520" height="291"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nbp-FN-kUZ">
-                                <rect key="frame" x="210" y="243" width="54" height="17"/>
+                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="tgQ-ac-UTi">
+                                <rect key="frame" x="18" y="264" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="FontScale" id="563-dP-ks0">
-                                    <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" groupingSize="0" minimumIntegerDigits="0" maximumIntegerDigits="42" id="xLp-qM-svZ"/>
-                                    <font key="font" metaFont="system"/>
-                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
-                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                </textFieldCell>
-                            </textField>
-                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="r1u-S5-IC3">
-                                <rect key="frame" x="18" y="183" width="255" height="18"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="check" title="newTextFile" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="tFw-3G-uFc">
+                                <buttonCell key="cell" type="check" title="enable right click menu" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="aBT-rq-ADq">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
+                                <connections>
+                                    <action selector="onToggleRightClickMenu:" target="-2" id="axR-LO-Nd1"/>
+                                    <binding destination="72" name="value" keyPath="values.enableRightClickMenu" id="dJa-t2-KGJ"/>
+                                </connections>
+                            </button>
+                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="r1u-S5-IC3">
+                                <rect key="frame" x="42" y="244" width="255" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="check" title="new text file" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="tFw-3G-uFc">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <binding destination="72" name="value" keyPath="values.newFile" id="DMD-Ce-yhN"/>
+                                </connections>
                             </button>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="APL-nm-usX">
-                                <rect key="frame" x="18" y="152" width="255" height="18"/>
+                                <rect key="frame" x="42" y="224" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="open in terminal" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="WKb-RS-fgU">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
+                                <connections>
+                                    <binding destination="72" name="value" keyPath="values.openInTerMinal" id="S4b-CK-cfL"/>
+                                </connections>
                             </button>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Buw-2f-d2Q">
-                                <rect key="frame" x="18" y="118" width="255" height="18"/>
+                                <rect key="frame" x="42" y="204" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="copy file path" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="CU0-vn-X8R">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
+                                <connections>
+                                    <binding destination="72" name="value" keyPath="values.copyFilePath" id="Rgd-9E-Onw"/>
+                                </connections>
                             </button>
                         </subviews>
                     </view>
@@ -1217,7 +1231,7 @@
                     </textFieldCell>
                 </textField>
                 <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" misplaced="YES" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="356">
-                    <rect key="frame" x="37" y="409" width="198" height="17"/>
+                    <rect key="frame" x="37" y="409" width="181" height="17"/>
                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Author: mtjo.net@gmail.com" id="357">
                         <font key="font" metaFont="system"/>
                         <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
