@@ -31,6 +31,7 @@
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
 		4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D334FA422C73AB100E97738 /* DrawNoteView.m */; };
+		4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
 		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D5ABFB423B0547200EA37CB /* IndexRequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */; };
@@ -164,6 +165,7 @@
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
 		4D334FA322C73AB100E97738 /* DrawNoteView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DrawNoteView.h; sourceTree = "<group>"; };
 		4D334FA422C73AB100E97738 /* DrawNoteView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DrawNoteView.m; sourceTree = "<group>"; };
+		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D350E5123B2159C0043447D /* FinderService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinderService.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 		264189E588806C286B6552A8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */,
 				4DC9C499239EA5EF005087A4 /* RightClick.png */,
 				D09FDBF31E06CDB50085FC36 /* README.html */,
 				D01C87CA1DE9DF2600B47E7D /* logo.png */,
@@ -615,6 +618,7 @@
 				880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */,
 				880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */,
 				264182480FA70DFC89B87842 /* Updates.tiff in Resources */,
+				4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */,
 				4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */,
 				264185813821B17A6CF8761E /* Rules.png in Resources */,
 				B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */,
