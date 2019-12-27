@@ -14,7 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy) NSMutableDictionary<NSString*, NSNumber*>* queuedUpdates;
 @property(nonatomic, strong) NSTimer* timer;
 
-- (void) tick;
+- (void) initFinderSyncExtension;
 
 - (void) updatePath:(NSString*)path withStatus:(NSNumber*)status;
 

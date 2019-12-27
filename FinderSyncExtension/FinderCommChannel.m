@@ -13,12 +13,13 @@
 {
     NSString* observedObject = self.mainAppBundleID;
     NSDistributedNotificationCenter* center = [NSDistributedNotificationCenter defaultCenter];
-
+    
     [center addObserver:self selector:@selector(observingPathSet:)
                    name:@"ObservingPathSetNotification" object:observedObject];
-
     [center addObserver:self selector:@selector(filesStatusUpdated:)
                    name:@"FilesStatusUpdatedNotification" object:observedObject];
+    [center addObserver:self selector:@selector(syncSharedDefaults:)
+                   name:@"SyncSharedDefaultsNotification" object:observedObject];
 }
 
 - (void) send:(NSString*)name data:(NSDictionary*)data
@@ -52,6 +53,26 @@
         [[FIFinderSyncController defaultController] setBadgeIdentifier:syncStatus.stringValue forURL:url];
     }
 }
+
+- (void) syncSharedDefaults:(NSNotification*)notif
+{
+    NSLog(@"NSNotification: %@",  [notif name]);
+    NSDictionary *data = notif.userInfo;
+    NSLog(@"syncSharedDefaults data: %@", data);
+    
+    NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
+    
+    NSLog(@"enable: %@",data[@"enableNewFile"] );
+    NSLog(@"enableRightClickMenu: %@",data[@"enableRightClickMenu"] );
+    
+    [sharedDefaults setBool:[data[@"enableRightClickMenu"] intValue]  forKey:@"enableRightClickMenu"];
+    [sharedDefaults setBool:[data[@"enableNewFile"] intValue]  forKey:@"enableNewFile"];
+    [sharedDefaults setBool:[data[@"enableOpenInTerminal"] intValue]  forKey:@"enableOpenInTerminal"];
+    [sharedDefaults setBool:[data[@"enableCopyFilePath"] intValue]  forKey:@"enableCopyFilePath"];
+    [sharedDefaults setBool:[data[@"enableCopyFilePath"] intValue]  forKey:@"enableCopyFilePath"];
+    [sharedDefaults setObject:data[@"items"] forKey:@"items"];
+}
+
 
 #pragma mark - Getters
 

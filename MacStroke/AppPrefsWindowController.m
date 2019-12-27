@@ -110,10 +110,10 @@ static NSArray *exampleAppleScripts;
     [[[self webView] mainFrame] loadHTMLString:content baseURL:[NSURL URLWithString:readme]];
     
     //right click menu
-    if(![[NSUserDefaults standardUserDefaults] doubleForKey:@"enableRightClickMenu"]){
+    if(![[NSUserDefaults standardUserDefaults] boolForKey:@"enableRightClickMenu"]){
         [[self enableNewFileButton] setEnabled:NO];
-         [[self enableOpenInTerminalButton] setEnabled:NO];
-         [[self enablecopyFilePathButton] setEnabled:NO];
+        [[self enableOpenInTerminalButton] setEnabled:NO];
+        [[self enablecopyFilePathButton] setEnabled:NO];
     }
 }
 
@@ -1153,19 +1153,25 @@ static NSString *currentScriptId = nil;
 }
 
 - (IBAction)onToggleRightClickMenu:(id)sender{
+    
     NSButton *button = (NSButton *)sender;
     bool enabled = [button state];
-    //NSLog(@"onToggleRightClickMenu:%d",enabled);
     [[self enableNewFileButton] setEnabled:enabled];
     [[self enableOpenInTerminalButton] setEnabled:enabled];
     [[self enablecopyFilePathButton] setEnabled:enabled];
-    if(enabled){
+    [self initFinderSyncExtension];
+    
+    
+}
+-(void) initFinderSyncExtension{
+    NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
+       
+    if([sharedDefaults boolForKey :@"enableRightClickMenu"]){
         [[AppDelegate appDelegate] initRightClickMenu];
         system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
     }else{
         system("pluginkit -e ignore -i net.mtjo.MacStroke.FinderSyncExtension");
     }
-    
 }
 
 @end

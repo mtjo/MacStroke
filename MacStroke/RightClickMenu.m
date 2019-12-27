@@ -10,23 +10,19 @@
 
 @implementation RightClickMenu
 
-- (void) tick
+- (void) initFinderSyncExtension
 {
-    NSLog(@"tick call");
     NSDistributedNotificationCenter* center = [NSDistributedNotificationCenter defaultCenter];
     [center addObserver:self selector:@selector(rootPathRequested:)
                    name:@"RequestObservingPathNotification" object:nil];
-    
     [center addObserver:self selector:@selector(customMessageReceivedFromFinder:)
                    name:@"CustomMessageReceivedNotification" object:nil];
-    
-    //_timer = [NSTimer scheduledTimerWithTimeInterval:0.25 target:self selector:@selector(tick) userInfo:nil repeats:YES];
-    
+    [self syncSharedDefaultsToFinderSyncExtension];
     if (self.queuedUpdates.count == 0)
     {
         return;
     }
-    
+    [self syncSharedDefaultsToFinderSyncExtension];
     id data = @{ @"paths": self.queuedUpdates };
     [self send:@"FilesStatusUpdatedNotification" data:data];
     [self.queuedUpdates removeAllObjects];
@@ -51,8 +47,27 @@
 
 - (void) rootPathRequested:(NSNotification*)notif
 {
-    NSLog(@"rootPathRequested: %@", notif);
     [self send:@"ObservingPathSetNotification" data:@{ @"path": @"/" }];
+    [self syncSharedDefaultsToFinderSyncExtension];
+    
+}
+
+- (void) syncSharedDefaultsToFinderSyncExtension
+{
+    NSMutableArray<NSString*> *array = [[NSMutableArray alloc] init];
+    [array addObject:NSLocalizedString(@"New text file",nil)];
+    [array addObject:NSLocalizedString(@"Open in Terminal",nil)];
+    [array addObject:NSLocalizedString(@"Copy file path",nil)];
+    NSString *items = [array componentsJoinedByString:@","];
+
+    NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
+    [self send:@"SyncSharedDefaultsNotification" data:@{
+        @"enableRightClickMenu":  [NSString stringWithFormat: @"%hhd",  [sharedDefaults boolForKey:@"enableRightClickMenu"]],
+        @"enableNewFile": [NSString stringWithFormat: @"%hhd", [sharedDefaults boolForKey:@"newFile"]],
+        @"enableOpenInTerminal":  [NSString stringWithFormat: @"%hhd", [sharedDefaults boolForKey:@"openInTerminal"]],
+        @"enableCopyFilePath":  [NSString stringWithFormat: @"%hhd", [sharedDefaults boolForKey:@"copyFilePath"]],
+        @"items": items
+    }];
 }
 
 - (void) customMessageReceivedFromFinder:(NSNotification*)notif
@@ -66,12 +81,10 @@
     NSLog(@"NSNotification: %@",  [notif name]);
     
     NSString* operation = data[@"operation"];
-    //system("open -F -a Terminal ~/docker");
     NSLog(@"data: %@",data);
     NSLog(@"operation: %@",operation);
     if ([operation isEqualToString:@"newFile"]) {
         [self newFile:data[@"path"]];
-        
     } else if ([operation isEqualToString:@"openInTerminal"]){
         [self openInTerminal:data[@"items"]];
     } else if([operation isEqualToString:@"copyFilePath"]){

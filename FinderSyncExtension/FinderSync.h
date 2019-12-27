@@ -12,7 +12,14 @@
 @class FinderCommChannel;
 
 @interface FinderSync : FIFinderSync
-
+{
+    BOOL enableRightClickMenu;
+    BOOL enableNewFile;
+    BOOL enableOpenInTerminal;
+    BOOL enableCopyFilePath;
+    NSArray<NSString *> *items;
+    NSUserDefaults *sharedDefaults;
+}
 @property(nonatomic, strong) NSURL* root;
 @property(nonatomic, strong) FinderCommChannel* commChannel;
 

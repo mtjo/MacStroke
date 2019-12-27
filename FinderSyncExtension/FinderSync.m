@@ -14,6 +14,21 @@
 - (instancetype) init
 {
     self = [super init];
+    sharedDefaults = [NSUserDefaults standardUserDefaults];
+    enableRightClickMenu = [sharedDefaults boolForKey:@"enableRightClickMenu"];
+    enableNewFile = [sharedDefaults boolForKey:@"enableNewFile"];
+    enableOpenInTerminal = [sharedDefaults boolForKey:@"enableOpenInTerminal"];
+    enableCopyFilePath = [sharedDefaults boolForKey:@"enableCopyFilePath"];
+    items = [[sharedDefaults stringForKey:@"items"] componentsSeparatedByString:@","];
+    
+    NSLog(@"enableRightClickMenu: %hhd ,enableNewFile: %hhd ,enableOpenInTerminal:%hhd ,enableCopyFilePath: %hhd , items: %@",
+          enableRightClickMenu,
+          enableNewFile,
+          enableOpenInTerminal,
+          enableCopyFilePath,
+          items
+          );
+    
     
     NSLog(@"%s launched from %@ ; compiled at %s", __PRETTY_FUNCTION__, [[NSBundle mainBundle] bundlePath], __TIME__);
     
@@ -46,24 +61,25 @@
     [FIFinderSyncController defaultController].directoryURLs = [NSSet setWithObject:root];
 }
 
+
 #pragma mark - Primary Finder Sync methods
 
 - (void) beginObservingDirectoryAtURL:(NSURL*)url
 {
     // The user is now seeing the container's contents.
     // If they see it in more than one view at a time, we're only told once.
-    NSLog(@"beginObservingDirectoryAtURL:%@", url.filePathURL);
+    //NSLog(@"beginObservingDirectoryAtURL:%@", url.filePathURL);
 }
 
 - (void) endObservingDirectoryAtURL:(NSURL*)url
 {
     // The user is no longer seeing the container's contents.
-    NSLog(@"endObservingDirectoryAtURL:%@", url.filePathURL);
+    //NSLog(@"endObservingDirectoryAtURL:%@", url.filePathURL);
 }
 
 - (void) requestBadgeIdentifierForURL:(NSURL*)url
 {
-    NSLog(@"requestBadgeIdentifierForURL:%@", url.filePathURL);
+    //NSLog(@"requestBadgeIdentifierForURL:%@", url.filePathURL);
     
     NSString* status = [self.index[url.path] stringValue];
     if (status.length == 0)
@@ -93,11 +109,21 @@
 - (NSMenu*) menuForMenuKind:(FIMenuKind)whichMenu
 {
     // Produce a menu for the extension.
+    
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@""];
-    [menu addItemWithTitle:@"新建文本文档" action:@selector(newFile:) keyEquivalent:@""];
-    [menu addItemWithTitle:@"在终端中打开" action:@selector(openInTerminal:) keyEquivalent:@""];
-    [menu addItemWithTitle:@"复制路径" action:@selector(copyFilePath:) keyEquivalent:@""];
-
+    
+    
+    
+    if(enableNewFile) {
+        [menu addItemWithTitle:[items objectAtIndex:0] action:@selector(newFile:) keyEquivalent:@""];
+    }
+    if (enableOpenInTerminal) {
+        [menu addItemWithTitle:[items objectAtIndex:1] action:@selector(openInTerminal:) keyEquivalent:@""];
+    }
+    if (enableCopyFilePath) {
+        [menu addItemWithTitle:[items objectAtIndex:2] action:@selector(copyFilePath:) keyEquivalent:@""];
+    }
+    
     return menu;
 }
 
@@ -110,6 +136,7 @@
     [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
         [_item addObject: [obj path]];
     }];
+    
     
     
     // send custom message to the MainApp

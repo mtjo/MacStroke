@@ -799,7 +799,7 @@
                     <rect key="frame" x="298" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="Bk2-kE-aKD">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="UlC-dc-fu7">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -825,7 +825,7 @@
                     <rect key="frame" x="7" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="w6q-uf-DH3">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="IB6-jz-VHi">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -1172,10 +1172,10 @@
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
                                 <connections>
-                                    <binding destination="72" name="value" keyPath="values.openInTerMinal" id="S4b-CK-cfL"/>
+                                    <binding destination="72" name="value" keyPath="values.openInTerminal" id="nkC-ui-B4Q"/>
                                 </connections>
                             </button>
-                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Buw-2f-d2Q">
+                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Buw-2f-d2Q" userLabel="Enable copy File Path Button">
                                 <rect key="frame" x="42" y="204" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="copy file path" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="CU0-vn-X8R">

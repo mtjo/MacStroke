@@ -466,7 +466,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 -(void) initRightClickMenu;
 {
     rightClickMenu = [[RightClickMenu alloc] init];
-    [rightClickMenu tick];
+    [rightClickMenu initFinderSyncExtension];
 }
 
 @end

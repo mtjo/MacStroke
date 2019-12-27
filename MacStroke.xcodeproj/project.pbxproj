@@ -13,7 +13,6 @@
 		1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1381E4BE1824E7E800E815F5 /* AppDelegate.m */; };
 		1381E4C41824E7E800E815F5 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1381E4C31824E7E800E815F5 /* Images.xcassets */; };
 		2641800AADBF86F6E76A37B3 /* CanvasView.m in Sources */ = {isa = PBXBuildFile; fileRef = 26418B1111120858F175152C /* CanvasView.m */; };
-		2641804FA39EEA04BDDC27B2 /* right.png in Resources */ = {isa = PBXBuildFile; fileRef = 26418DFD972C75FBEF81D049 /* right.png */; };
 		2641813EC194C60DC1B1806D /* utils.m in Sources */ = {isa = PBXBuildFile; fileRef = 26418F4D8FB5BC803E3EB850 /* utils.m */; };
 		264182480FA70DFC89B87842 /* Updates.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 26418C0A252C6E5467076636 /* Updates.tiff */; };
 		264183649CB68AD1A072883A /* AppPrefsWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 26418FC7DDD865F972F5D0D7 /* AppPrefsWindowController.m */; };
@@ -23,9 +22,6 @@
 		264185813821B17A6CF8761E /* Rules.png in Resources */ = {isa = PBXBuildFile; fileRef = 264188A38F5F48B61F3EF173 /* Rules.png */; };
 		2641871BACBB993F84AF778C /* About.png in Resources */ = {isa = PBXBuildFile; fileRef = 264188CA1FEAB47BE83286F8 /* About.png */; };
 		26418785A1CC885F4D2FFDF5 /* General.png in Resources */ = {isa = PBXBuildFile; fileRef = 264182CCCB38C9FAD7896BD5 /* General.png */; };
-		26418990BAAA8C09484967DD /* down.png in Resources */ = {isa = PBXBuildFile; fileRef = 26418331BA0AD1E0D42A4E53 /* down.png */; };
-		26418AD8D88FC1BA381305BA /* left.png in Resources */ = {isa = PBXBuildFile; fileRef = 264180FCC355082AC7EDFD74 /* left.png */; };
-		26418B30A89965ED65EC8209 /* up.png in Resources */ = {isa = PBXBuildFile; fileRef = 2641860492954D6BD5AF2FD5 /* up.png */; };
 		26418E623E410EF207EFA2A8 /* RulesList.m in Sources */ = {isa = PBXBuildFile; fileRef = 26418733B12703C123D16E95 /* RulesList.m */; };
 		3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */; };
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
@@ -125,14 +121,11 @@
 		1381E4BE1824E7E800E815F5 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		1381E4C31824E7E800E815F5 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		264180FBF385AF13387254C2 /* SRRecorderControlWithTagid.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SRRecorderControlWithTagid.m; sourceTree = "<group>"; };
-		264180FCC355082AC7EDFD74 /* left.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = left.png; sourceTree = "<group>"; };
 		264182CCCB38C9FAD7896BD5 /* General.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = General.png; sourceTree = "<group>"; };
-		26418331BA0AD1E0D42A4E53 /* down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = down.png; sourceTree = "<group>"; };
 		2641846D9674154891849969 /* SRRecorderControlWithTagid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SRRecorderControlWithTagid.h; sourceTree = "<group>"; };
 		264184868E6F3B7E8747AAA2 /* AppPrefsWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppPrefsWindowController.h; sourceTree = "<group>"; };
 		264184DD0A5ACE29690D7EF2 /* CanvasView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CanvasView.h; sourceTree = "<group>"; };
 		2641853CD8AE42C95077D980 /* RulesList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RulesList.h; sourceTree = "<group>"; };
-		2641860492954D6BD5AF2FD5 /* up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = up.png; sourceTree = "<group>"; };
 		26418733B12703C123D16E95 /* RulesList.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RulesList.m; sourceTree = "<group>"; };
 		264187BE8168A714F0DB88B7 /* CanvasWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CanvasWindowController.h; sourceTree = "<group>"; };
 		2641881917BAF09AFC2A7CC7 /* CanvasWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CanvasWindow.m; sourceTree = "<group>"; };
@@ -143,7 +136,6 @@
 		26418C0A252C6E5467076636 /* Updates.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = Updates.tiff; sourceTree = "<group>"; };
 		26418C419A597E159158ED0D /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		26418D5612632F8BDA1AE8CA /* CanvasWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CanvasWindow.h; path = ../CanvasWindow.h; sourceTree = "<group>"; };
-		26418DFD972C75FBEF81D049 /* right.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = right.png; sourceTree = "<group>"; };
 		26418F4D8FB5BC803E3EB850 /* utils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = utils.m; sourceTree = "<group>"; };
 		26418FC7DDD865F972F5D0D7 /* AppPrefsWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppPrefsWindowController.m; sourceTree = "<group>"; };
 		3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BlackWhiteFilter.m; sourceTree = "<group>"; };
@@ -375,10 +367,6 @@
 				26418C0A252C6E5467076636 /* Updates.tiff */,
 				264188A38F5F48B61F3EF173 /* Rules.png */,
 				264188CA1FEAB47BE83286F8 /* About.png */,
-				26418DFD972C75FBEF81D049 /* right.png */,
-				2641860492954D6BD5AF2FD5 /* up.png */,
-				264180FCC355082AC7EDFD74 /* left.png */,
-				26418331BA0AD1E0D42A4E53 /* down.png */,
 				887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */,
 				88EB641B1CCA328C0018A8BE /* OpenMacStrokePreferences.applescript */,
 				26418D5612632F8BDA1AE8CA /* CanvasWindow.h */,
@@ -561,12 +549,8 @@
 				887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */,
 				D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */,
 				2641871BACBB993F84AF778C /* About.png in Resources */,
-				2641804FA39EEA04BDDC27B2 /* right.png in Resources */,
 				880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */,
-				26418B30A89965ED65EC8209 /* up.png in Resources */,
 				88331A381C9402810064ADD5 /* AppleScript_Editor_Logo.png in Resources */,
-				26418AD8D88FC1BA381305BA /* left.png in Resources */,
-				26418990BAAA8C09484967DD /* down.png in Resources */,
 				D09794D11DE5DA1900E88F73 /* scroll.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
