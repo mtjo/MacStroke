@@ -30,8 +30,6 @@
 		4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
 		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
-		4D5ABFB423B0547200EA37CB /* IndexRequestHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */; };
-		4D5ABFB923B0547200EA37CB /* Ssh.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D5ABFB023B0547200EA37CB /* Ssh.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270C223B3650B00AC8745 /* FinderSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270C123B3650B00AC8745 /* FinderSync.m */; };
 		4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270CD23B3671E00AC8745 /* FinderCommChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */; };
@@ -65,13 +63,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		4D5ABFB723B0547200EA37CB /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4D5ABFAF23B0547200EA37CB;
-			remoteInfo = Ssh;
-		};
 		4D6270C523B3650B00AC8745 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
@@ -98,7 +89,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				4D5ABFB923B0547200EA37CB /* Ssh.appex in Embed App Extensions */,
 				4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
@@ -151,11 +141,6 @@
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
 		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
-		4D5ABFB023B0547200EA37CB /* Ssh.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Ssh.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		4D5ABFB223B0547200EA37CB /* IndexRequestHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IndexRequestHandler.h; sourceTree = "<group>"; };
-		4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = IndexRequestHandler.m; sourceTree = "<group>"; };
-		4D5ABFB523B0547200EA37CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4D5ABFB623B0547200EA37CB /* Ssh.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ssh.entitlements; sourceTree = "<group>"; };
 		4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderSyncExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D6270C023B3650B00AC8745 /* FinderSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderSync.h; sourceTree = "<group>"; };
 		4D6270C123B3650B00AC8745 /* FinderSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderSync.m; sourceTree = "<group>"; };
@@ -222,13 +207,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4D5ABFAD23B0547200EA37CB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		4D6270BB23B3650B00AC8745 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -243,7 +221,6 @@
 			isa = PBXGroup;
 			children = (
 				1381E4B11824E7E800E815F5 /* MacStroke */,
-				4D5ABFB123B0547200EA37CB /* Ssh */,
 				4D6270BF23B3650B00AC8745 /* FinderSyncExtension */,
 				1381E4AA1824E7E800E815F5 /* Frameworks */,
 				1381E4A91824E7E800E815F5 /* Products */,
@@ -254,7 +231,6 @@
 		1381E4A91824E7E800E815F5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4D5ABFB023B0547200EA37CB /* Ssh.appex */,
 				4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */,
 			);
 			name = Products;
@@ -385,17 +361,6 @@
 			path = Model;
 			sourceTree = "<group>";
 		};
-		4D5ABFB123B0547200EA37CB /* Ssh */ = {
-			isa = PBXGroup;
-			children = (
-				4D5ABFB223B0547200EA37CB /* IndexRequestHandler.h */,
-				4D5ABFB323B0547200EA37CB /* IndexRequestHandler.m */,
-				4D5ABFB523B0547200EA37CB /* Info.plist */,
-				4D5ABFB623B0547200EA37CB /* Ssh.entitlements */,
-			);
-			path = Ssh;
-			sourceTree = "<group>";
-		};
 		4D6270BF23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXGroup;
 			children = (
@@ -436,29 +401,11 @@
 			buildRules = (
 			);
 			dependencies = (
-				4D5ABFB823B0547200EA37CB /* PBXTargetDependency */,
 				4D6270C623B3650B00AC8745 /* PBXTargetDependency */,
 			);
 			name = MacStroke;
 			productName = MacGesture;
 			productType = "com.apple.product-type.application";
-		};
-		4D5ABFAF23B0547200EA37CB /* Ssh */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 4D5ABFBA23B0547200EA37CB /* Build configuration list for PBXNativeTarget "Ssh" */;
-			buildPhases = (
-				4D5ABFAC23B0547200EA37CB /* Sources */,
-				4D5ABFAD23B0547200EA37CB /* Frameworks */,
-				4D5ABFAE23B0547200EA37CB /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = Ssh;
-			productName = Ssh;
-			productReference = 4D5ABFB023B0547200EA37CB /* Ssh.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 		4D6270BD23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXNativeTarget;
@@ -491,10 +438,6 @@
 						DevelopmentTeam = 6H594KH8XS;
 						ProvisioningStyle = Automatic;
 					};
-					4D5ABFAF23B0547200EA37CB = {
-						CreatedOnToolsVersion = 11.3;
-						ProvisioningStyle = Automatic;
-					};
 					4D6270BD23B3650B00AC8745 = {
 						CreatedOnToolsVersion = 11.3;
 						DevelopmentTeam = 6H594KH8XS;
@@ -517,7 +460,6 @@
 			projectRoot = "";
 			targets = (
 				1381E4A71824E7E800E815F5 /* MacStroke */,
-				4D5ABFAF23B0547200EA37CB /* Ssh */,
 				4D6270BD23B3650B00AC8745 /* FinderSyncExtension */,
 			);
 		};
@@ -552,13 +494,6 @@
 				880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */,
 				88331A381C9402810064ADD5 /* AppleScript_Editor_Logo.png in Resources */,
 				D09794D11DE5DA1900E88F73 /* scroll.png in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		4D5ABFAE23B0547200EA37CB /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -650,14 +585,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4D5ABFAC23B0547200EA37CB /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4D5ABFB423B0547200EA37CB /* IndexRequestHandler.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		4D6270BA23B3650B00AC8745 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -670,11 +597,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		4D5ABFB823B0547200EA37CB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4D5ABFAF23B0547200EA37CB /* Ssh */;
-			targetProxy = 4D5ABFB723B0547200EA37CB /* PBXContainerItemProxy */;
-		};
 		4D6270C623B3650B00AC8745 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4D6270BD23B3650B00AC8745 /* FinderSyncExtension */;
@@ -883,62 +805,6 @@
 			};
 			name = Release;
 		};
-		4D5ABFBB23B0547200EA37CB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = Ssh/Ssh.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_HARDENED_RUNTIME = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = Ssh/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = net.mtjo.MacStroke.Ssh;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
-		4D5ABFBC23B0547200EA37CB /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CODE_SIGN_ENTITLEMENTS = Ssh/Ssh.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COPY_PHASE_STRIP = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = Ssh/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = net.mtjo.MacStroke.Ssh;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
 		4D6270C923B3650B00AC8745 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1016,15 +882,6 @@
 			buildConfigurations = (
 				1381E4DA1824E7E800E815F5 /* Debug */,
 				1381E4DB1824E7E800E815F5 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		4D5ABFBA23B0547200EA37CB /* Build configuration list for PBXNativeTarget "Ssh" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				4D5ABFBB23B0547200EA37CB /* Debug */,
-				4D5ABFBC23B0547200EA37CB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
