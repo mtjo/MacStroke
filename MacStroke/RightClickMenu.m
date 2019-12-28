@@ -175,6 +175,9 @@
     system("pluginkit -e ignore -i net.mtjo.MacStroke.FinderSyncExtension");
 }
 
-
+-(void) delayedEnableFinderExtension{
+    [NSTimer scheduledTimerWithTimeInterval:1
+                                     target:self selector:@selector(enableFinderExtension) userInfo:nil repeats:NO];
+}
 
 @end

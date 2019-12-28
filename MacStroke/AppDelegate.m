@@ -462,12 +462,8 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 -(void) initRightClickMenu;
 {
-    //NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
     rightClickMenu = [[RightClickMenu alloc] init];
-//    if([sharedDefaults boolForKey :@"enableRightClickMenu"]){
-//        [rightClickMenu enableFinderExtension];
-//    }
-    [rightClickMenu enableFinderExtension];
+    [rightClickMenu delayedEnableFinderExtension];
     [rightClickMenu initFinderSyncExtension];
 }
 
