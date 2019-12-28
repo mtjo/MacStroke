@@ -161,4 +161,18 @@
     [pasteboard setString:path forType:NSStringPboardType];
 }
 
+- (void) reEnableFinderExtension{
+    [self disableFinderExtension];
+    [NSTimer scheduledTimerWithTimeInterval:2
+                                     target:self selector:@selector(enableFinderExtension) userInfo:nil repeats:NO];
+}
+-(void) enableFinderExtension{
+    system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
+}
+-(void) disableFinderExtension{
+    system("pluginkit -e ignore -i net.mtjo.MacStroke.FinderSyncExtension");
+}
+
+
+
 @end

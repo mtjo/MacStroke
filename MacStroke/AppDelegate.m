@@ -27,13 +27,6 @@ static RightClickMenu *rightClickMenu;
     NSArray *apps = [NSRunningApplication runningApplicationsWithBundleIdentifier:[[NSBundle mainBundle] bundleIdentifier]];
     NSDistributedNotificationCenter *center = [NSDistributedNotificationCenter defaultCenter];
     NSString *name = @"MacStrokeOpenPreferences";
-    
-
-    if([[NSUserDefaults standardUserDefaults] doubleForKey:@"enableRightClickMenu"]){
-        [self initRightClickMenu];
-        system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
-    }
-    
     if ([apps count] > 1)
     {
         [center postNotificationName:name object:nil userInfo:nil deliverImmediately:YES];
@@ -100,6 +93,10 @@ static RightClickMenu *rightClickMenu;
     
     lastMouseWheelEventTime = 0;
     settingRuleIndex=-1;
+    
+    //init Right Click Menu
+    [self initRightClickMenu];
+
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag
@@ -465,7 +462,12 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 -(void) initRightClickMenu;
 {
+    //NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
     rightClickMenu = [[RightClickMenu alloc] init];
+//    if([sharedDefaults boolForKey :@"enableRightClickMenu"]){
+//        [rightClickMenu enableFinderExtension];
+//    }
+    //[rightClickMenu enableFinderExtension];
     [rightClickMenu initFinderSyncExtension];
 }
 

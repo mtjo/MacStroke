@@ -1159,19 +1159,11 @@ static NSString *currentScriptId = nil;
     [[self enableNewFileButton] setEnabled:enabled];
     [[self enableOpenInTerminalButton] setEnabled:enabled];
     [[self enablecopyFilePathButton] setEnabled:enabled];
-    [self initFinderSyncExtension];
+    [[AppDelegate appDelegate] initRightClickMenu];
     
     
 }
--(void) initFinderSyncExtension{
-    NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
-       
-    if([sharedDefaults boolForKey :@"enableRightClickMenu"]){
-        [[AppDelegate appDelegate] initRightClickMenu];
-        system("pluginkit -e use -i net.mtjo.MacStroke.FinderSyncExtension");
-    }else{
-        system("pluginkit -e ignore -i net.mtjo.MacStroke.FinderSyncExtension");
-    }
+- (IBAction)onToggleNewFile:(id)sender {
+    [[AppDelegate appDelegate] initRightClickMenu];
 }
-
 @end

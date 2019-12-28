@@ -25,6 +25,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) customMessageReceivedFromFinder:(NSNotification*)notif;
 
 - (NSMutableDictionary<NSString*, NSNumber*>*) queuedUpdates;
+
+- (void) reEnableFinderExtension;
+
+- (void) enableFinderExtension;
+
+- (void) disableFinderExtension;
+
 @end
 
 NS_ASSUME_NONNULL_END

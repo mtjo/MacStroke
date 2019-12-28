@@ -36,5 +36,7 @@
 	<true/>
 	<key>copyFilePath</key>
 	<true/>
+	<key>enableRightClickMenu</key>
+	<true/>
 </dict>
 </plist>

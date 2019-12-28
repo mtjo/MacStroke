@@ -20,14 +20,17 @@
     enableOpenInTerminal = [sharedDefaults boolForKey:@"enableOpenInTerminal"];
     enableCopyFilePath = [sharedDefaults boolForKey:@"enableCopyFilePath"];
     items = [[sharedDefaults stringForKey:@"items"] componentsSeparatedByString:@","];
+    NSNotificationCenter *center = [NSNotificationCenter  defaultCenter]; [center addObserver:self selector:@selector(defaultsChanged:) name:NSUserDefaultsDidChangeNotification object:nil];
     
-    NSLog(@"enableRightClickMenu: %hhd ,enableNewFile: %hhd ,enableOpenInTerminal:%hhd ,enableCopyFilePath: %hhd , items: %@",
+#ifdef DEBUG
+    NSLog(@"defaultsChanged: enableRightClickMenu: %hhd ,enableNewFile: %hhd ,enableOpenInTerminal:%hhd ,enableCopyFilePath: %hhd , items: %@",
           enableRightClickMenu,
           enableNewFile,
           enableOpenInTerminal,
           enableCopyFilePath,
           items
           );
+#endif
     
     
     NSLog(@"%s launched from %@ ; compiled at %s", __PRETTY_FUNCTION__, [[NSBundle mainBundle] bundlePath], __TIME__);
@@ -112,16 +115,16 @@
     
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@""];
     
-    
-    
-    if(enableNewFile) {
-        [menu addItemWithTitle:[items objectAtIndex:0] action:@selector(newFile:) keyEquivalent:@""];
-    }
-    if (enableOpenInTerminal) {
-        [menu addItemWithTitle:[items objectAtIndex:1] action:@selector(openInTerminal:) keyEquivalent:@""];
-    }
-    if (enableCopyFilePath) {
-        [menu addItemWithTitle:[items objectAtIndex:2] action:@selector(copyFilePath:) keyEquivalent:@""];
+    if (enableRightClickMenu) {
+        if(enableNewFile) {
+            [menu addItemWithTitle:[items objectAtIndex:0] action:@selector(newFile:) keyEquivalent:@""];
+        }
+        if (enableOpenInTerminal) {
+            [menu addItemWithTitle:[items objectAtIndex:1] action:@selector(openInTerminal:) keyEquivalent:@""];
+        }
+        if (enableCopyFilePath) {
+            [menu addItemWithTitle:[items objectAtIndex:2] action:@selector(copyFilePath:) keyEquivalent:@""];
+        }
     }
     
     return menu;
@@ -194,6 +197,25 @@
         _index = NSMutableDictionary.dictionary;
     }
     return _index;
+}
+
+
+- (void)defaultsChanged:(NSNotification *)notification {
+    sharedDefaults = [NSUserDefaults standardUserDefaults];
+    enableRightClickMenu = [sharedDefaults boolForKey:@"enableRightClickMenu"];
+    enableNewFile = [sharedDefaults boolForKey:@"enableNewFile"];
+    enableOpenInTerminal = [sharedDefaults boolForKey:@"enableOpenInTerminal"];
+    enableCopyFilePath = [sharedDefaults boolForKey:@"enableCopyFilePath"];
+    items = [[sharedDefaults stringForKey:@"items"] componentsSeparatedByString:@","];
+#ifdef DEBUG
+    NSLog(@"defaultsChanged: enableRightClickMenu: %hhd ,enableNewFile: %hhd ,enableOpenInTerminal:%hhd ,enableCopyFilePath: %hhd , items: %@",
+          enableRightClickMenu,
+          enableNewFile,
+          enableOpenInTerminal,
+          enableCopyFilePath,
+          items
+          );
+#endif
 }
 
 @end
