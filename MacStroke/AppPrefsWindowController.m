@@ -6,7 +6,6 @@
 #import "AppleScriptsList.h"
 #import "RightClicksList.h"
 #import "SRRecorderControlWithTagid.h"
-#import "NSBundle+LoginItem.h"
 #import "BlackWhiteFilter.h"
 #import "HexColors.h"
 #import "MGOptionsDefine.h"
