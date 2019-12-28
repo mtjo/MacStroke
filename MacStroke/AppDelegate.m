@@ -467,7 +467,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 //    if([sharedDefaults boolForKey :@"enableRightClickMenu"]){
 //        [rightClickMenu enableFinderExtension];
 //    }
-    //[rightClickMenu enableFinderExtension];
+    [rightClickMenu enableFinderExtension];
     [rightClickMenu initFinderSyncExtension];
 }
 

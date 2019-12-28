@@ -87,7 +87,9 @@ static NSArray *exampleAppleScripts;
     [[self languageComboBox] addItemsWithObjectValues:[NSArray arrayWithObjects:@"en", @"zh-Hans", nil]];
     
     NSArray *languages = [[NSUserDefaults standardUserDefaults] objectForKey:@"AppleLanguages"];
+#ifdef DEBUG
     NSLog(@"languages:%@",languages);
+#endif
     if (languages) {
         for (int i=0;i<[[self languageComboBox] numberOfItems];i++) {
             if ([languages[0] hasPrefix:[[self languageComboBox] itemObjectValueAtIndex:i]]) {

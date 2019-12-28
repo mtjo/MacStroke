@@ -30,7 +30,9 @@
 
 - (void) send:(NSString*)name data:(id)data
 {
+#ifdef DEBUG
     NSLog(@"Sending %@ data: %@", name, data);
+#endif
     NSDistributedNotificationCenter* center = [NSDistributedNotificationCenter defaultCenter];
     [center postNotificationName:name
                           object:NSBundle.mainBundle.bundleIdentifier
