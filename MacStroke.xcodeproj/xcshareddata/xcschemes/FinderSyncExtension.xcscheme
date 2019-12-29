@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1130"
-   version = "1.7">
+   version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1381E4A71824E7E800E815F5"
-               BuildableName = "MacStroke"
-               BlueprintName = "MacStroke"
+               BlueprintIdentifier = "4D6270BD23B3650B00AC8745"
+               BuildableName = "FinderSyncExtension.appex"
+               BlueprintName = "FinderSyncExtension"
                ReferencedContainer = "container:MacStroke.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,45 +32,28 @@
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      selectedDebuggerIdentifier = ""
+      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <PathRunnable
-         runnableDebuggingMode = "0"
-         BundleIdentifier = "net.mtjo.MacStroke"
-         FilePath = "/Users/mtjo/Library/Developer/Xcode/DerivedData/MacStroke-cfkmtiopopiztlgiyajuntmgkxni/Build/Products/Release/MacStroke.app">
-      </PathRunnable>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1381E4A71824E7E800E815F5"
-            BuildableName = "MacStroke"
-            BlueprintName = "MacStroke"
-            ReferencedContainer = "container:MacStroke.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
-      <LocationScenarioReference
-         identifier = "com.apple.dt.IDEFoundation.CurrentLocationScenarioIdentifier"
-         referenceType = "1">
-      </LocationScenarioReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      debugDocumentVersioning = "YES">
+      debugDocumentVersioning = "YES"
+      launchAutomaticallySubstyle = "2">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1381E4A71824E7E800E815F5"
-            BuildableName = "MacStroke"
-            BlueprintName = "MacStroke"
+            BlueprintIdentifier = "4D6270BD23B3650B00AC8745"
+            BuildableName = "FinderSyncExtension.appex"
+            BlueprintName = "FinderSyncExtension"
             ReferencedContainer = "container:MacStroke.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

@@ -6,7 +6,6 @@
 #import "AppleScriptsList.h"
 #import "RightClicksList.h"
 #import "SRRecorderControlWithTagid.h"
-#import "NSBundle+LoginItem.h"
 #import "BlackWhiteFilter.h"
 #import "HexColors.h"
 #import "MGOptionsDefine.h"
@@ -87,7 +86,9 @@ static NSArray *exampleAppleScripts;
     [[self languageComboBox] addItemsWithObjectValues:[NSArray arrayWithObjects:@"en", @"zh-Hans", nil]];
     
     NSArray *languages = [[NSUserDefaults standardUserDefaults] objectForKey:@"AppleLanguages"];
+#ifdef DEBUG
     NSLog(@"languages:%@",languages);
+#endif
     if (languages) {
         for (int i=0;i<[[self languageComboBox] numberOfItems];i++) {
             if ([languages[0] hasPrefix:[[self languageComboBox] itemObjectValueAtIndex:i]]) {
@@ -108,6 +109,13 @@ static NSArray *exampleAppleScripts;
     NSString *content = [NSString stringWithContentsOfFile:readme encoding:NSUTF8StringEncoding error:NULL];
     
     [[[self webView] mainFrame] loadHTMLString:content baseURL:[NSURL URLWithString:readme]];
+    
+    //right click menu
+    if(![[NSUserDefaults standardUserDefaults] boolForKey:@"enableRightClickMenu"]){
+        [[self enableNewFileButton] setEnabled:NO];
+        [[self enableOpenInTerminalButton] setEnabled:NO];
+        [[self enablecopyFilePathButton] setEnabled:NO];
+    }
 }
 
 - (BOOL)windowShouldClose:(id)sender {
@@ -208,10 +216,10 @@ static NSArray *exampleAppleScripts;
     }
     else if(action == NSAlertSecondButtonReturn )
     {
-    
+        
         
     }
-
+    
 }
 
 - (void)setupToolbar {
@@ -220,6 +228,7 @@ static NSArray *exampleAppleScripts;
     [self addView:self.filtersPrefrenceView label:NSLocalizedString(@"Filters", nil) image:[NSImage imageNamed:@"list@2x.png"]];
     [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
     [self addView:self.rightClickPrefrenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"RightClick.png"]];
+    [self addView:self.rightClickMenuPrefrenceView label:NSLocalizedString(@"RightClickMenu", nil) image:[NSImage imageNamed:@"RightClickMenu.png"]];
     [self addFlexibleSpacer];
     [self addView:self.aboutPreferenceView label:NSLocalizedString(@"About", nil) image:[NSImage imageNamed:@"About.png"]];
     
@@ -615,7 +624,7 @@ static NSString *currentScriptId = nil;
     else if(action == NSAlertSecondButtonReturn )
     {
         //settingRuleIndex = -1;
-         [[AppDelegate appDelegate] setSettingRuleIndex:-1];
+        [[AppDelegate appDelegate] setSettingRuleIndex:-1];
         
     }
 }
@@ -928,9 +937,9 @@ static NSString *currentScriptId = nil;
             [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
             recordView.tagid = row;
             recordView.objectValue = @{
-                                       @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
-                                       @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
-                                       };
+                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
+                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
+            };
             [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:recordView];
             result = cloumn;
@@ -1120,7 +1129,7 @@ static NSString *currentScriptId = nil;
 
 - (IBAction)removeRightClick:(id)sender {
     NSInteger index = [[self rightClickTableView] selectedRow];
-
+    
     RightClicksList *rightClicksList =  [RightClicksList sharedRightClicksList];
     if (index != -1) {
         [rightClicksList removeAtIndex:index];
@@ -1144,4 +1153,18 @@ static NSString *currentScriptId = nil;
     return nil;
 }
 
+- (IBAction)onToggleRightClickMenu:(id)sender{
+    
+    NSButton *button = (NSButton *)sender;
+    bool enabled = [button state];
+    [[self enableNewFileButton] setEnabled:enabled];
+    [[self enableOpenInTerminalButton] setEnabled:enabled];
+    [[self enablecopyFilePathButton] setEnabled:enabled];
+    [[AppDelegate appDelegate] initRightClickMenu];
+    
+    
+}
+- (IBAction)onToggleNewFile:(id)sender {
+    [[AppDelegate appDelegate] initRightClickMenu];
+}
 @end

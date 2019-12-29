@@ -19,6 +19,7 @@
 @property(strong, nonatomic) IBOutlet NSView *aboutPreferenceView;
 @property(strong, nonatomic) IBOutlet NSView *filtersPrefrenceView;
 @property(strong, nonatomic) IBOutlet NSView *rightClickPrefrenceView;
+@property(strong, nonatomic) IBOutlet NSView *rightClickMenuPrefrenceView;
 
 @property(weak) IBOutlet NSTableView *rulesTableView;
 
@@ -48,6 +49,9 @@
 @property(weak) IBOutlet NSTableView *rightClickTableView;
 @property(weak) IBOutlet NSButton *showIconInStatusBarButton;
 @property(weak) IBOutlet NSComboBox *languageComboBox;
+@property(weak) IBOutlet NSButton *enableNewFileButton;
+@property (weak) IBOutlet NSButton *enableOpenInTerminalButton;
+@property (weak) IBOutlet NSButton *enablecopyFilePathButton;
 
 @property(weak) IBOutlet NSColorWell *lineColorWell;
 
@@ -60,5 +64,8 @@
 - (IBAction)onSetGestureData:(id)sender;
 
 - (void)rightClickPickCallback:(NSString *)appname atIndex:(NSInteger)index;
+
+- (IBAction)onToggleRightClickMenu:(id)sender;
+
 
 @end

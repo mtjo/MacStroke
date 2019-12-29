@@ -30,5 +30,13 @@
 	<string>0.1</string>
 	<key>noteBackgroundAlpha</key>
 	<string>0.1</string>
+	<key>newFile</key>
+	<true/>
+	<key>openInTerminal</key>
+	<true/>
+	<key>copyFilePath</key>
+	<true/>
+	<key>enableRightClickMenu</key>
+	<true/>
 </dict>
 </plist>

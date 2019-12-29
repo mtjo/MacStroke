@@ -1,12 +1,5 @@
 #import "AppDelegate.h"
-#import "AppPrefsWindowController.h"
-#import "CanvasWindowController.h"
-#import "RulesList.h"
-#import "utils.h"
-#import "NSBundle+LoginItem.h"
-#import "BlackWhiteFilter.h"
-#import "GestureCompare.h"
-#import "RightClicksList.h"
+
 
 @implementation AppDelegate
 
@@ -24,6 +17,7 @@ static NSInteger actionRuleIndex;
 
 static NSInteger settingRuleIndex;
 
+static RightClickMenu *rightClickMenu;
 
 + (AppDelegate *)appDelegate {
     return (AppDelegate *) [[NSApplication sharedApplication] delegate];
@@ -99,6 +93,10 @@ static NSInteger settingRuleIndex;
     
     lastMouseWheelEventTime = 0;
     settingRuleIndex=-1;
+    
+    //init Right Click Menu
+    [self initRightClickMenu];
+
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag
@@ -461,5 +459,12 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     }
 }
 
+
+-(void) initRightClickMenu;
+{
+    rightClickMenu = [[RightClickMenu alloc] init];
+    [rightClickMenu delayedEnableFinderExtension];
+    [rightClickMenu initFinderSyncExtension];
+}
 
 @end
