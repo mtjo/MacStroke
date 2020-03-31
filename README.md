@@ -22,7 +22,7 @@ MacStroke
 
 
 ###Download
-[MacStroke-1.0.6.zip](https://github.com/mtjo/MacStroke/releases/download/1.0.6/MacStroke-1.0.6.zip)
+[MacStroke](https://github.com/mtjo/MacStroke/releases/)
 
 
 
