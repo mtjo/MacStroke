@@ -88,9 +88,9 @@
     if ([operation isEqualToString:@"newFile"]) {
         [self newFile:data[@"path"]];
     } else if ([operation isEqualToString:@"openInTerminal"]){
-        [self openInTerminal:data[@"items"]];
+        [self openInTerminal:[data[@"items"] length]>0?data[@"items"]:data[@"path"]];
     } else if([operation isEqualToString:@"copyFilePath"]){
-        [self copyFilePath:data[@"items"]];
+        [self copyFilePath:[data[@"items"] length]>0?data[@"items"]:data[@"path"]];
     }
 }
 

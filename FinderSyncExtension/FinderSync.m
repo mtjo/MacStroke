@@ -141,8 +141,6 @@
         [_item addObject: [obj path]];
     }];
     
-    
-    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"newFile",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
@@ -159,6 +157,7 @@
     [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
         [_item addObject: [obj path]];
     }];
+    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"openInTerminal",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
