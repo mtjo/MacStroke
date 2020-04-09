@@ -96,17 +96,18 @@
 
 - (NSString*) toolbarItemName
 {
-    return @"FinderSyncExtension";
+    return @"MacStroke";
 }
 
 - (NSString*) toolbarItemToolTip
 {
-    return @"FinderSyncExtension: Click the toolbar item for a menu.";
+    return @"MacStroke: Click the toolbar item for a menu.";
 }
 
 - (NSImage*) toolbarItemImage
 {
-    return [NSImage imageNamed:NSImageNameCaution];
+    //return [NSImage imageNamed:NSImageNameCaution];
+    return [NSImage imageNamed:@"newFile.png"];
 }
 
 - (NSMenu*) menuForMenuKind:(FIMenuKind)whichMenu

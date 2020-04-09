@@ -1154,17 +1154,24 @@ static NSString *currentScriptId = nil;
 }
 
 - (IBAction)onToggleRightClickMenu:(id)sender{
-    
-    NSButton *button = (NSButton *)sender;
-    bool enabled = [button state];
-    [[self enableNewFileButton] setEnabled:enabled];
-    [[self enableOpenInTerminalButton] setEnabled:enabled];
-    [[self enablecopyFilePathButton] setEnabled:enabled];
+    //
+    //    NSButton *button = (NSButton *)sender;
+    //    bool enabled = [button state];
+    //    [[self enableNewFileButton] setEnabled:enabled];
+    //    [[self enableOpenInTerminalButton] setEnabled:enabled];
+    //    [[self enablecopyFilePathButton] setEnabled:enabled];
     [[AppDelegate appDelegate] initRightClickMenu];
-    
-    
 }
 - (IBAction)onToggleNewFile:(id)sender {
     [[AppDelegate appDelegate] initRightClickMenu];
+}
+- (IBAction)onChangeTerminal:(id)sender {
+    if(sender == self.useItermRadio ){
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useIterm"];
+        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useTerminal"];
+    }else{
+        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useIterm"];
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useTerminal"];
+    }
 }
 @end

@@ -38,5 +38,9 @@
 	<true/>
 	<key>enableRightClickMenu</key>
 	<true/>
+	<key>useIterm</key>
+	<false/>
+	<key>useTerminal</key>
+	<true/>
 </dict>
 </plist>
