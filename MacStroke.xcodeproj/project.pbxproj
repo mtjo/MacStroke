@@ -39,6 +39,7 @@
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
 		4DC9C49A239EA5EF005087A4 /* RightClick.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DC9C499239EA5EF005087A4 /* RightClick.png */; };
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
+		4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DD9B2FD243EFAAB0044A46E /* newFile.png */; };
 		4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */; };
 		4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */; };
 		880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7591CA5738A006E7A74 /* Preferences.xib */; };
@@ -160,6 +161,7 @@
 		4DC9C499239EA5EF005087A4 /* RightClick.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClick.png; sourceTree = "<group>"; };
 		4DD3CBFC1E615C6200AFC850 /* PreGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreGesture.h; sourceTree = "<group>"; };
 		4DD3CBFD1E615C6200AFC850 /* PreGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreGesture.m; sourceTree = "<group>"; };
+		4DD9B2FD243EFAAB0044A46E /* newFile.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = newFile.png; sourceTree = "<group>"; };
 		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
 		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
 		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
@@ -364,6 +366,7 @@
 		4D6270BF23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXGroup;
 			children = (
+				4DD9B2FC243EF9EB0044A46E /* Resources */,
 				4D6270CB23B3671E00AC8745 /* FinderCommChannel.h */,
 				4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */,
 				4D6270C023B3650B00AC8745 /* FinderSync.h */,
@@ -372,6 +375,14 @@
 				4D6270C423B3650B00AC8745 /* FinderSyncExtension.entitlements */,
 			);
 			path = FinderSyncExtension;
+			sourceTree = "<group>";
+		};
+		4DD9B2FC243EF9EB0044A46E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4DD9B2FD243EFAAB0044A46E /* newFile.png */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		CCE209CCED2C3EF90609FF7E /* Pods */ = {
@@ -501,6 +512,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -777,13 +789,13 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.0.8;
+				CURRENT_PROJECT_VERSION = 1.0.9;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -798,13 +810,13 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.0.8;
+				CURRENT_PROJECT_VERSION = 1.0.9;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

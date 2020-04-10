@@ -96,7 +96,7 @@ static RightClickMenu *rightClickMenu;
     
     //init Right Click Menu
     [self initRightClickMenu];
-
+    
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag
@@ -456,6 +456,7 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
         }
         [defs synchronize];
         [MGOptionsDefine resetColors];
+                
     }
 }
 

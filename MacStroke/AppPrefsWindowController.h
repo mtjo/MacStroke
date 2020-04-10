@@ -67,5 +67,10 @@
 
 - (IBAction)onToggleRightClickMenu:(id)sender;
 
+@property (weak) IBOutlet NSButton *useTerminalRadio;
+
+@property (weak) IBOutlet NSButton *useItermRadio;
+
+- (IBAction)onChangeTerminal:(id)sender;
 
 @end

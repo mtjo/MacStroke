@@ -36,6 +36,8 @@
                 <outlet property="rulesTableView" destination="289" id="324"/>
                 <outlet property="showIconInStatusBarButton" destination="ccx-Tb-9cw" id="M8p-za-0vX"/>
                 <outlet property="updater" destination="360" id="364"/>
+                <outlet property="useItermRadio" destination="AZR-kj-Uza" id="3ga-F0-2dz"/>
+                <outlet property="useTerminalRadio" destination="i4C-Cm-Kgx" id="fjg-uH-8A5"/>
                 <outlet property="versionCode" destination="num-fq-Ld9" id="JsU-bx-3Ga"/>
                 <outlet property="webView" destination="GwU-Ng-Wic" id="cNR-fg-lsI"/>
                 <outlet property="whiteListModeRadio" destination="jtj-ww-LUc" id="TB8-YB-Lnl"/>
@@ -799,7 +801,7 @@
                     <rect key="frame" x="298" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="Bk2-kE-aKD">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="UlC-dc-fu7">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -825,7 +827,7 @@
                     <rect key="frame" x="7" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="w6q-uf-DH3">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="IB6-jz-VHi">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -917,7 +919,7 @@
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     <clipView key="contentView" ambiguous="YES" id="HAd-Pq-7NJ">
                         <rect key="frame" x="1" y="1" width="181" height="384"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" ambiguous="YES" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="T1p-6B-s66">
                                 <rect key="frame" x="0.0" y="0.0" width="181" height="384"/>
@@ -1053,7 +1055,7 @@
                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     <clipView key="contentView" ambiguous="YES" id="SfF-yc-hY4">
                         <rect key="frame" x="1" y="1" width="503" height="242"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" ambiguous="YES" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="W7c-fb-Pqe">
                                 <rect key="frame" x="0.0" y="0.0" width="503" height="242"/>
@@ -1162,6 +1164,7 @@
                                 </buttonCell>
                                 <connections>
                                     <action selector="onToggleNewFile:" target="-2" id="qsm-In-hiL"/>
+                                    <binding destination="72" name="enabled" keyPath="values.enableRightClickMenu" id="Fww-jv-7SX"/>
                                     <binding destination="72" name="value" keyPath="values.newFile" id="DMD-Ce-yhN"/>
                                 </connections>
                             </button>
@@ -1174,11 +1177,12 @@
                                 </buttonCell>
                                 <connections>
                                     <action selector="onToggleNewFile:" target="-2" id="jWs-rO-OMy"/>
+                                    <binding destination="72" name="enabled" keyPath="values.enableRightClickMenu" id="Hob-rv-f7o"/>
                                     <binding destination="72" name="value" keyPath="values.openInTerminal" id="nkC-ui-B4Q"/>
                                 </connections>
                             </button>
                             <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Buw-2f-d2Q" userLabel="Enable copy File Path Button">
-                                <rect key="frame" x="42" y="204" width="255" height="18"/>
+                                <rect key="frame" x="42" y="179" width="255" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="copy file path" bezelStyle="regularSquare" imagePosition="left" alignment="left" state="on" inset="2" id="CU0-vn-X8R">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -1186,7 +1190,34 @@
                                 </buttonCell>
                                 <connections>
                                     <action selector="onToggleNewFile:" target="-2" id="mrq-IU-KnO"/>
+                                    <binding destination="72" name="enabled" keyPath="values.enableRightClickMenu" id="lgf-YR-wDX"/>
                                     <binding destination="72" name="value" keyPath="values.copyFilePath" id="Rgd-9E-Onw"/>
+                                </connections>
+                            </button>
+                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="i4C-Cm-Kgx">
+                                <rect key="frame" x="63" y="201" width="74" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="radio" title="Terminal" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="NAi-O2-6kl">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="onChangeTerminal:" target="-2" id="odK-I4-db9"/>
+                                    <binding destination="72" name="enabled" keyPath="values.enableRightClickMenu" id="vxW-Zs-OKC"/>
+                                    <binding destination="72" name="value" keyPath="values.useTerminal" id="Spn-Vv-lLI"/>
+                                </connections>
+                            </button>
+                            <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="AZR-kj-Uza">
+                                <rect key="frame" x="136" y="201" width="54" height="18"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="radio" title="Iterm" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="1CK-4r-Yeb">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="onChangeTerminal:" target="-2" id="hLJ-We-B8e"/>
+                                    <binding destination="72" name="enabled" keyPath="values.enableRightClickMenu" id="wRE-t7-SwC"/>
+                                    <binding destination="72" name="value" keyPath="values.useIterm" id="osW-Wm-g5D"/>
                                 </connections>
                             </button>
                         </subviews>

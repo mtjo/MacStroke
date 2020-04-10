@@ -96,17 +96,18 @@
 
 - (NSString*) toolbarItemName
 {
-    return @"FinderSyncExtension";
+    return @"MacStroke";
 }
 
 - (NSString*) toolbarItemToolTip
 {
-    return @"FinderSyncExtension: Click the toolbar item for a menu.";
+    return @"MacStroke: Click the toolbar item for a menu.";
 }
 
 - (NSImage*) toolbarItemImage
 {
-    return [NSImage imageNamed:NSImageNameCaution];
+    //return [NSImage imageNamed:NSImageNameCaution];
+    return [NSImage imageNamed:@"newFile.png"];
 }
 
 - (NSMenu*) menuForMenuKind:(FIMenuKind)whichMenu
@@ -140,8 +141,6 @@
         [_item addObject: [obj path]];
     }];
     
-    
-    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"newFile",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];
@@ -158,6 +157,7 @@
     [items enumerateObjectsUsingBlock: ^(id obj, NSUInteger idx, BOOL *stop) {
         [_item addObject: [obj path]];
     }];
+    
     // send custom message to the MainApp
     [self.commChannel send:@"CustomMessageReceivedNotification"
                       data:@{ @"operation":@"openInTerminal",@"path": [target path],@"items":[_item componentsJoinedByString:@","]}];

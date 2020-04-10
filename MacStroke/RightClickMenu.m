@@ -61,7 +61,7 @@
     [array addObject:NSLocalizedString(@"Open in Terminal",nil)];
     [array addObject:NSLocalizedString(@"Copy file path",nil)];
     NSString *items = [array componentsJoinedByString:@","];
-
+    
     NSUserDefaults *sharedDefaults = [NSUserDefaults standardUserDefaults];
     [self send:@"SyncSharedDefaultsNotification" data:@{
         @"enableRightClickMenu":  [NSString stringWithFormat: @"%hhd",  [sharedDefaults boolForKey:@"enableRightClickMenu"]],
@@ -88,9 +88,9 @@
     if ([operation isEqualToString:@"newFile"]) {
         [self newFile:data[@"path"]];
     } else if ([operation isEqualToString:@"openInTerminal"]){
-        [self openInTerminal:data[@"items"]];
+        [self openInTerminal:[data[@"items"] length]>0?data[@"items"]:data[@"path"]];
     } else if([operation isEqualToString:@"copyFilePath"]){
-        [self copyFilePath:data[@"items"]];
+        [self copyFilePath:[data[@"items"] length]>0?data[@"items"]:data[@"path"]];
     }
 }
 
@@ -153,7 +153,12 @@
     }
 }
 - (void) openInTerminal:(NSString*) path{
-    NSString *cmd = [@"open -a Terminal " stringByAppendingString: path];
+    NSString *terminal = @"open -a Terminal ";
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"useIterm"]){
+        terminal =@"open -a Iterm ";
+    }
+    
+    NSString *cmd = [terminal stringByAppendingString: path];
     system([cmd UTF8String]);
 }
 
@@ -176,7 +181,9 @@
 }
 
 -(void) delayedEnableFinderExtension{
-    [NSTimer scheduledTimerWithTimeInterval:1
+    [NSTimer scheduledTimerWithTimeInterval:10
+                                     target:self selector:@selector(enableFinderExtension) userInfo:nil repeats:NO];
+    [NSTimer scheduledTimerWithTimeInterval:120
                                      target:self selector:@selector(enableFinderExtension) userInfo:nil repeats:NO];
 }
 
