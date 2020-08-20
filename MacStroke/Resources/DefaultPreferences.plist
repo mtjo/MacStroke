@@ -42,5 +42,7 @@
 	<false/>
 	<key>useTerminal</key>
 	<true/>
+	<key>enableHistoryClipboard</key>
+	<true/>
 </dict>
 </plist>

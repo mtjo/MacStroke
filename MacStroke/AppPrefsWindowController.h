@@ -20,6 +20,7 @@
 @property(strong, nonatomic) IBOutlet NSView *filtersPrefrenceView;
 @property(strong, nonatomic) IBOutlet NSView *rightClickPrefrenceView;
 @property(strong, nonatomic) IBOutlet NSView *rightClickMenuPrefrenceView;
+@property(strong, nonatomic) IBOutlet NSView *clipboardPrefrenceView;
 
 @property(weak) IBOutlet NSTableView *rulesTableView;
 

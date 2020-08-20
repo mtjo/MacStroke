@@ -35,6 +35,8 @@
 		4D6270CD23B3671E00AC8745 /* FinderCommChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */; };
 		4D6270D523B37F2100AC8745 /* RightClickMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270D423B37F2100AC8745 /* RightClickMenu.m */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
+		4D88EE1B24EA87B800BDCD6D /* Clipboard.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D88EE1A24EA87B800BDCD6D /* Clipboard.png */; };
+		4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */; };
 		4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D97909A22CAFE110047A70C /* RightClicksList.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
 		4DC9C49A239EA5EF005087A4 /* RightClick.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DC9C499239EA5EF005087A4 /* RightClick.png */; };
@@ -153,6 +155,9 @@
 		4D6270D423B37F2100AC8745 /* RightClickMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClickMenu.m; sourceTree = "<group>"; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
+		4D88EE1A24EA87B800BDCD6D /* Clipboard.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Clipboard.png; sourceTree = "<group>"; };
+		4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipboard.h; sourceTree = "<group>"; };
+		4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipboard.m; sourceTree = "<group>"; };
 		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
@@ -306,6 +311,8 @@
 				26418F4D8FB5BC803E3EB850 /* utils.m */,
 				4D6270D323B37F2100AC8745 /* RightClickMenu.h */,
 				4D6270D423B37F2100AC8745 /* RightClickMenu.m */,
+				4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */,
+				4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */,
 			);
 			path = MacStroke;
 			sourceTree = "<group>";
@@ -325,6 +332,7 @@
 		264189E588806C286B6552A8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				4D88EE1A24EA87B800BDCD6D /* Clipboard.png */,
 				4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */,
 				4DC9C499239EA5EF005087A4 /* RightClick.png */,
 				D09FDBF31E06CDB50085FC36 /* README.html */,
@@ -481,6 +489,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D88EE1B24EA87B800BDCD6D /* Clipboard.png in Resources */,
 				D09FDBF51E06CDB50085FC36 /* README.html in Resources */,
 				D065A3CA1D18155E0062900A /* SearchInWeb.applescript in Resources */,
 				88EB641D1CCA33E50018A8BE /* OpenMacStrokePreferences.applescript in Resources */,
@@ -574,6 +583,7 @@
 			files = (
 				1381E4B81824E7E800E815F5 /* main.m in Sources */,
 				4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */,
+				4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */,
 				1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */,
 				4DBB074F1E41B206006D1739 /* Stroke.m in Sources */,
 				4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */,

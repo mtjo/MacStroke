@@ -337,7 +337,7 @@ static inline void pressKeyWithFlags(CGKeyCode virtualKey, CGEventFlags flags) {
         rule[@"apple_script_id"] = appleScriptId;
     }
     rule[@"note"] = note;
-    [_rulesList addObject:rule];
+    [_rulesList insertObject:rule atIndex:0];
     [self save];
 }
 

@@ -53,14 +53,9 @@
 /* Class = "NSTextFieldCell"; title = "Language:"; ObjectID = "5rs-3N-RX4"; */
 "5rs-3N-RX4.title" = "Language:";
 
-/* Class = "NSTextFieldCell"; title = "FontScale"; ObjectID = "7fQ-uo-GWm"; */
-"7fQ-uo-GWm.title" = "FontScale";
-
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "7xg-Hp-Yhw"; */
 "7xg-Hp-Yhw.title" = "Go bigger";
 
-/* Class = "NSTextFieldCell"; title = "FontScale"; ObjectID = "8SO-RX-LQO"; */
-"8SO-RX-LQO.title" = "FontScale";
 
 /* Class = "NSButtonCell"; title = "Reset Defaults"; ObjectID = "9qA-nt-g9l"; */
 "9qA-nt-g9l.title" = "Reset Defaults";

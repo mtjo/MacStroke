@@ -14,6 +14,7 @@
 "AppleScript" = "AppleScript";
 "RightClick" = "模拟右键";
 "RightClickMenu" = "右键菜单";
+"Clipboard" = "剪贴板";
 "About" = "关于";
 "Loading.." = "正在加载。。";
 "Stop" = "停止";

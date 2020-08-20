@@ -27,7 +27,7 @@
 
 @synthesize rulesTableView = _rulesTableView;
 
-static NSSize const PREF_WINDOW_SIZES[3] = {{658, 315}, {800, 500}, {1000, 640}};
+static NSSize const PREF_WINDOW_SIZES[3] = {{600, 400}, {800, 600}, {1000, 800}};
 static NSInteger const PREF_WINDOW_SIZECOUNT = 3;
 static NSInteger currentRulesWindowSizeIndex = 0;
 static NSInteger currentFiltersWindowSizeIndex = 0;
@@ -148,24 +148,21 @@ static NSArray *exampleAppleScripts;
 }
 
 - (IBAction)removeRule:(id)sender {
+    if ([_rulesTableView selectedRow] == -1) {
+        NSUserNotification *notification = [[NSUserNotification alloc] init];
+        notification.title = @"MacStroke";
+        notification.informativeText = NSLocalizedString(@"Select a filter first!", nil);
+        notification.soundName = NSUserNotificationDefaultSoundName;
+        
+        [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
+        return ;
+    }
     [[RulesList sharedRulesList] removeRuleAtIndex:_rulesTableView.selectedRow];
     [_rulesTableView reloadData];
 }
 
 - (IBAction)changeSizeOfPreferenceWindow:(id)sender {
     [self changeSize:&currentRulesWindowSizeIndex changeSizeButton:[self changeRulesWindowSizeButton] preferenceView:[self rulesPreferenceView]];
-    
-    //    NSRect rectOfRules=self.rulesPreferenceView.frame;
-    //    rectOfRules.size.width=1000;
-    //    rectOfRules.size.height=640;
-    //    rectOfRules.origin.x=0;
-    //    rectOfRules.origin.y=0;
-    //    self.rulesPreferenceView.frame=rectOfRules;
-    //    [self.rulesPreferenceView needsLayout];
-    //    [self.rulesPreferenceView needsDisplay];
-    //    [self.rulesTableView sizeToFit]
-    //    self.window size
-    //    [self loadViewForIdentifier:@"Rules" animate:YES];
 }
 
 - (void)changeWindowSizeToFitInsideView:(NSView *)view {
@@ -183,25 +180,16 @@ static NSArray *exampleAppleScripts;
 
 - (IBAction)clearRules:(id)sender {
     NSAlert *alert = [[NSAlert alloc] init];
-    
     NSString *title1 =NSLocalizedString(@"Ok", nil);
-    
     NSString *title2 =NSLocalizedString(@"Cancel", nil);
-    
     NSString *messagetext =NSLocalizedString(@"warning!", nil);
-    
     NSString *informativetext =NSLocalizedString(@"Are you sure you want to clear all the rules?", nil);
     
-    
     [alert addButtonWithTitle:title1];
-    
     [alert addButtonWithTitle:title2];
-    
     [alert setMessageText:messagetext];
-    
     [alert setInformativeText:informativetext];
     [alert setAlertStyle:NSWarningAlertStyle];
-    
     
     [[[alert window] contentView] autoresizesSubviews];
     
@@ -229,6 +217,7 @@ static NSArray *exampleAppleScripts;
     [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
     [self addView:self.rightClickPrefrenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"RightClick.png"]];
     [self addView:self.rightClickMenuPrefrenceView label:NSLocalizedString(@"RightClickMenu", nil) image:[NSImage imageNamed:@"RightClickMenu.png"]];
+    [self addView:self.clipboardPrefrenceView label:NSLocalizedString(@"Clipboard", nil) image:[NSImage imageNamed:@"Clipboard.png"]];
     [self addFlexibleSpacer];
     [self addView:self.aboutPreferenceView label:NSLocalizedString(@"About", nil) image:[NSImage imageNamed:@"About.png"]];
     
@@ -557,8 +546,6 @@ static NSString *currentScriptId = nil;
     [alert setMessageText:messagetext];
     
     [alert setInformativeText:informativetext];
-    
-    
     
     [alert setAlertStyle:NSWarningAlertStyle];
     
@@ -901,7 +888,8 @@ static NSString *currentScriptId = nil;
         }else if([tableColumn.identifier isEqualToString:@"Filter"] ){
             textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 160, 20)];
         }else{
-            textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 235, 20)];
+            
+            textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0 , 30, 400, 20)];
         }
         
         
@@ -1161,6 +1149,10 @@ static NSString *currentScriptId = nil;
     //    [[self enableOpenInTerminalButton] setEnabled:enabled];
     //    [[self enablecopyFilePathButton] setEnabled:enabled];
     [[AppDelegate appDelegate] initRightClickMenu];
+}
+
+- (IBAction)onToggleClipboard:(id)sender{
+    [[AppDelegate appDelegate] initHistoryClipboard];
 }
 - (IBAction)onToggleNewFile:(id)sender {
     [[AppDelegate appDelegate] initRightClickMenu];

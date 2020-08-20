@@ -8,6 +8,7 @@
 #import "GestureCompare.h"
 #import "RightClicksList.h"
 #import "RightClickMenu.h"
+#import "HistoryClipboard.h"
 @class RulesList;
 
 
@@ -33,5 +34,7 @@
 - (NSInteger) getSettingRuleIndex;
 
 -(void) initRightClickMenu;
+
+-(void) initHistoryClipboard;
 
 @end

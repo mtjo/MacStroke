@@ -8,6 +8,7 @@ static CGEventRef mouseDownEvent, mouseDraggedEvent;
 static NSMutableString *direction;
 static NSPoint lastLocation;
 static CFMachPortRef mouseEventTap;
+static CFMachPortRef keyBoardEventTap;
 static BOOL isEnabled;
 static AppPrefsWindowController *_preferencesWindowController;
 static NSTimeInterval lastMouseWheelEventTime;
@@ -18,6 +19,7 @@ static NSInteger actionRuleIndex;
 static NSInteger settingRuleIndex;
 
 static RightClickMenu *rightClickMenu;
+static HistoryClipboard * historyClipboard;
 
 + (AppDelegate *)appDelegate {
     return (AppDelegate *) [[NSApplication sharedApplication] delegate];
@@ -41,11 +43,22 @@ static RightClickMenu *rightClickMenu;
     CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
     mouseEventTap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, eventMask, mouseEventCallback, NULL);
     
+    /* Keyboard events. */
+    CGEventMask keyBoardEventMask = CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventKeyUp) | CGEventMaskBit(kCGEventFlagsChanged);
+    CFRunLoopRef theRL = CFRunLoopGetCurrent();
+        keyBoardEventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap ,kCGEventTapOptionListenOnly,keyBoardEventMask,&keyBoardEventCallback,NULL);
+        CFRunLoopSourceRef keyUpRunLoopSourceRef =  CFMachPortCreateRunLoopSource(NULL, keyBoardEventTap, 0);
+        CFRelease(keyBoardEventTap);
+        CFRunLoopAddSource(theRL, keyUpRunLoopSourceRef, kCFRunLoopDefaultMode);
+        CFRelease(keyUpRunLoopSourceRef);
+
+
+    
     const void * keys[] = { kAXTrustedCheckOptionPrompt };
     const void * values[] = { kCFBooleanTrue };
     
     CFDictionaryRef options = CFDictionaryCreate(
-                                                 kCFAllocatorDefault,
+                                                  kCFAllocatorDefault,
                                                  keys,
                                                  values,
                                                  sizeof(keys) / sizeof(*keys),
@@ -59,6 +72,14 @@ static RightClickMenu *rightClickMenu;
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
         CFRelease(mouseEventTap);
         CFRelease(runLoopSource);
+        
+            /* Keyboard events. */
+        CFRunLoopSourceRef keyBoardRunLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, keyBoardEventTap, 0);
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
+        CFRelease(keyBoardEventTap);
+        CFRelease(keyBoardRunLoopSource);
+        
+        
     } else {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setAlertStyle:NSInformationalAlertStyle];
@@ -428,6 +449,23 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     return NULL;
 }
 
+
+
+static CGEventRef keyBoardEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *userInfo)
+{
+ 
+    UniCharCount actualStringLength = 0;
+    UniChar inputString[128];
+    CGEventKeyboardGetUnicodeString(event, 128, &actualStringLength, inputString);
+    NSString* inputedString = [[NSString alloc] initWithBytes:(const void*)inputString length:actualStringLength encoding:NSUTF8StringEncoding];
+    
+    CGEventFlags flag = CGEventGetFlags(event);
+    NSLog(@"inputed string:%@, flags:%lld", inputedString, flag);
+    return event;
+}
+
+
+
 -(void) setSettingRuleIndex:(NSInteger)index;
 {
     settingRuleIndex = index;
@@ -466,6 +504,15 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     rightClickMenu = [[RightClickMenu alloc] init];
     [rightClickMenu delayedEnableFinderExtension];
     [rightClickMenu initFinderSyncExtension];
+}
+
+
+-(void) initHistoryClipboard
+{
+    historyClipboard = [[HistoryClipboard alloc] init];
+    
+    [historyClipboard enableHistoryClipboard];
+
 }
 
 @end
