@@ -13,15 +13,23 @@
 #import "CanvasView.h"
 #import "DrawGesture.h"
 #import "PreGesture.h"
+#import "HistoryClipoardListWindowController.h"
 
 @interface AppPrefsWindowController ()
 @property AppPickerWindowController *pickerWindowController;
+@end
+
+@interface HistoryClipoardListWindowController ()
+@property HistoryClipoardListWindowController *historyClipoardListWindowController;
 @end
 
 // A hack for the private getter of contentSubview
 @interface DBPrefsWindowController (PrivateMethodHack)
 -(NSView *)contentSubview;
 @end
+
+
+
 
 @implementation AppPrefsWindowController
 
@@ -1165,5 +1173,9 @@ static NSString *currentScriptId = nil;
         [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useIterm"];
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useTerminal"];
     }
+}
+- (IBAction)showHistoryCilpboardList:(id)sender {
+    HistoryClipoardListWindowController *historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+        [historyClipoardListWindowController showWindow:self];
 }
 @end

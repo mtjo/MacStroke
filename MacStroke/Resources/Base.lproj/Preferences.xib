@@ -433,7 +433,7 @@
             <connections>
                 <outlet property="nextKeyView" destination="101" id="220"/>
             </connections>
-            <point key="canvasLocation" x="-434.5" y="231"/>
+            <point key="canvasLocation" x="-432" y="26"/>
         </customView>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
         <customView misplaced="YES" id="5" userLabel="Rules">
@@ -764,7 +764,7 @@
                 <constraint firstItem="285" firstAttribute="leading" secondItem="5" secondAttribute="leading" constant="6" id="rp6-4Y-ncu"/>
                 <constraint firstItem="wro-vn-00Q" firstAttribute="leading" secondItem="5" secondAttribute="leading" constant="20" symbolic="YES" id="x2N-kG-Aoi"/>
             </constraints>
-            <point key="canvasLocation" x="-309" y="731"/>
+            <point key="canvasLocation" x="-386" y="518"/>
         </customView>
         <userDefaultsController representsSharedInstance="YES" id="72" userLabel="Shared Defaults"/>
         <customView id="cal-FD-Bsi" userLabel="Filters">
@@ -841,7 +841,7 @@
                     <rect key="frame" x="298" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="Bk2-kE-aKD">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="UlC-dc-fu7">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -867,7 +867,7 @@
                     <rect key="frame" x="7" y="35" width="283" height="298"/>
                     <clipView key="contentView" drawsBackground="NO" id="w6q-uf-DH3">
                         <rect key="frame" x="1" y="1" width="266" height="296"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <textView importsGraphics="NO" richText="NO" horizontallyResizable="YES" verticallyResizable="YES" usesFontPanel="YES" findStyle="panel" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" smartInsertDelete="YES" id="IB6-jz-VHi">
                                 <rect key="frame" x="0.0" y="0.0" width="266" height="296"/>
@@ -1115,7 +1115,7 @@
                     <rect key="frame" x="13" y="35" width="504" height="244"/>
                     <clipView key="contentView" id="SfF-yc-hY4">
                         <rect key="frame" x="1" y="1" width="502" height="242"/>
-                        <autoresizingMask key="autoresizingMask"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="W7c-fb-Pqe">
                                 <rect key="frame" x="0.0" y="0.0" width="502" height="242"/>
@@ -1403,6 +1403,9 @@
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
+                                <connections>
+                                    <action selector="showHistoryCilpboardList:" target="-2" id="2Az-RI-uJP"/>
+                                </connections>
                             </button>
                         </subviews>
                         <constraints>

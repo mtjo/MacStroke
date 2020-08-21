@@ -7,6 +7,7 @@
 #import "DBPrefsWindowController.h"
 #import "SRRecorderControl.h"
 #import "AppPickerWindowController.h"
+#import "HistoryClipoardListWindowController.h"
 #import <Sparkle/Sparkle.h>
 
 @class LaunchAtLoginController;
