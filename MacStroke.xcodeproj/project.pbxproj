@@ -39,6 +39,8 @@
 		4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */; };
 		4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D97909A22CAFE110047A70C /* RightClicksList.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
+		4DC3137E24EF9E370004CF3A /* HistoryClipoardList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DC3137C24EF9E370004CF3A /* HistoryClipoardList.m */; };
+		4DC3137F24EF9E370004CF3A /* HistoryClipoardList.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4DC3137D24EF9E370004CF3A /* HistoryClipoardList.xib */; };
 		4DC9C49A239EA5EF005087A4 /* RightClick.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DC9C499239EA5EF005087A4 /* RightClick.png */; };
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
 		4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DD9B2FD243EFAAB0044A46E /* newFile.png */; };
@@ -163,6 +165,9 @@
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
 		4DC1D9571EE6715300E93245 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Preferences.strings; sourceTree = "<group>"; };
+		4DC3137B24EF9E370004CF3A /* HistoryClipoardList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipoardList.h; sourceTree = "<group>"; };
+		4DC3137C24EF9E370004CF3A /* HistoryClipoardList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipoardList.m; sourceTree = "<group>"; };
+		4DC3137D24EF9E370004CF3A /* HistoryClipoardList.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = HistoryClipoardList.xib; sourceTree = "<group>"; };
 		4DC9C499239EA5EF005087A4 /* RightClick.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClick.png; sourceTree = "<group>"; };
 		4DD3CBFC1E615C6200AFC850 /* PreGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreGesture.h; sourceTree = "<group>"; };
 		4DD3CBFD1E615C6200AFC850 /* PreGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreGesture.m; sourceTree = "<group>"; };
@@ -268,7 +273,7 @@
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
 			isa = PBXGroup;
 			children = (
-				4D350E5023B2151D0043447D /* MacStroke.entitlements */,
+				4DC3138024EF9ECC0004CF3A /* HistoryClipoard */,
 				1381E4BD1824E7E800E815F5 /* AppDelegate.h */,
 				1381E4BE1824E7E800E815F5 /* AppDelegate.m */,
 				4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */,
@@ -294,10 +299,13 @@
 				4D74C6821E3CD99300F6A289 /* GestureCompare.h */,
 				4D74C6831E3CD99300F6A289 /* GestureCompare.m */,
 				1381E4C31824E7E800E815F5 /* Images.xcassets */,
+				4D350E5023B2151D0043447D /* MacStroke.entitlements */,
 				3CDC5D998F35E9F8C91C7789 /* Model */,
 				4DD3CBFC1E615C6200AFC850 /* PreGesture.h */,
 				4DD3CBFD1E615C6200AFC850 /* PreGesture.m */,
 				264189E588806C286B6552A8 /* Resources */,
+				4D6270D323B37F2100AC8745 /* RightClickMenu.h */,
+				4D6270D423B37F2100AC8745 /* RightClickMenu.m */,
 				4D97909922CAFE110047A70C /* RightClicksList.h */,
 				4D97909A22CAFE110047A70C /* RightClicksList.m */,
 				2641853CD8AE42C95077D980 /* RulesList.h */,
@@ -309,10 +317,6 @@
 				1381E4B21824E7E800E815F5 /* Supporting Files */,
 				26418C419A597E159158ED0D /* utils.h */,
 				26418F4D8FB5BC803E3EB850 /* utils.m */,
-				4D6270D323B37F2100AC8745 /* RightClickMenu.h */,
-				4D6270D423B37F2100AC8745 /* RightClickMenu.m */,
-				4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */,
-				4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */,
 			);
 			path = MacStroke;
 			sourceTree = "<group>";
@@ -332,6 +336,7 @@
 		264189E588806C286B6552A8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				4DC3137D24EF9E370004CF3A /* HistoryClipoardList.xib */,
 				4D88EE1A24EA87B800BDCD6D /* Clipboard.png */,
 				4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */,
 				4DC9C499239EA5EF005087A4 /* RightClick.png */,
@@ -383,6 +388,17 @@
 				4D6270C423B3650B00AC8745 /* FinderSyncExtension.entitlements */,
 			);
 			path = FinderSyncExtension;
+			sourceTree = "<group>";
+		};
+		4DC3138024EF9ECC0004CF3A /* HistoryClipoard */ = {
+			isa = PBXGroup;
+			children = (
+				4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */,
+				4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */,
+				4DC3137B24EF9E370004CF3A /* HistoryClipoardList.h */,
+				4DC3137C24EF9E370004CF3A /* HistoryClipoardList.m */,
+			);
+			path = HistoryClipoard;
 			sourceTree = "<group>";
 		};
 		4DD9B2FC243EF9EB0044A46E /* Resources */ = {
@@ -501,6 +517,7 @@
 				075C1BC91C214E9A00B7211A /* list@2x.png in Resources */,
 				880AA7741CA57884006E7A74 /* Localizable.strings in Resources */,
 				26418785A1CC885F4D2FFDF5 /* General.png in Resources */,
+				4DC3137F24EF9E370004CF3A /* HistoryClipoardList.xib in Resources */,
 				880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */,
 				880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */,
 				264182480FA70DFC89B87842 /* Updates.tiff in Resources */,
@@ -585,6 +602,7 @@
 				4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */,
 				4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */,
 				1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */,
+				4DC3137E24EF9E370004CF3A /* HistoryClipoardList.m in Sources */,
 				4DBB074F1E41B206006D1739 /* Stroke.m in Sources */,
 				4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */,
 				88331A3B1C9D22290064ADD5 /* AppleScriptsList.m in Sources */,

@@ -118,6 +118,9 @@ static HistoryClipboard * historyClipboard;
     //init Right Click Menu
     [self initRightClickMenu];
     
+     //init History Clipboard
+    [self initHistoryClipboard];
+    
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApplication hasVisibleWindows:(BOOL)flag

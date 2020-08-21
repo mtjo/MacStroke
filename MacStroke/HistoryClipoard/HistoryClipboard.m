@@ -24,12 +24,9 @@ static    NSMutableArray<NSString *> *historyList = nil;
         NSArray *types = [pasteboard types];
         if ([types containsObject:NSPasteboardTypeString]) {
             NSString *s = [pasteboard stringForType:NSPasteboardTypeString];
-            //[historyList addObject:s];
             [historyList insertObject:s atIndex:0];
-            
-#ifdef DEBUG
             NSLog(@"NSPasteboard:%@", historyList);
-#endif
+           
         }
         changeCount = [pasteboard changeCount];
     }
