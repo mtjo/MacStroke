@@ -131,6 +131,7 @@ NSMutableString *_filter;
     [_checkBoxs[[sender tag]] setState:NSControlStateValueOn];
 }
 
+
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
     NSView *result;
     if ([tableColumn.identifier isEqualToString:@"CheckBox"]) {

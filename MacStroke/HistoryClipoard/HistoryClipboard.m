@@ -11,7 +11,7 @@
 @implementation HistoryClipboard
 static NSTimer *timer = nil;
 static long changeCount;
-static    NSMutableArray<NSString *> *historyList = nil;
+static NSMutableArray *historyList = nil;
 
 - (void) handleTimer: (NSTimer *) timer
 {
@@ -26,7 +26,7 @@ static    NSMutableArray<NSString *> *historyList = nil;
             NSString *s = [pasteboard stringForType:NSPasteboardTypeString];
             [historyList insertObject:s atIndex:0];
             NSLog(@"NSPasteboard:%@", historyList);
-           
+            
         }
         changeCount = [pasteboard changeCount];
     }
@@ -54,11 +54,9 @@ static    NSMutableArray<NSString *> *historyList = nil;
     }else{
         [timer invalidate];
     }
-    
-    
-    
 }
 
-
-
+- (NSMutableArray *) getHistoryClipboardList{
+    return historyList;
+}
 @end

@@ -7,11 +7,19 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "AppDelegate.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface HistoryClipoardListWindowController : NSWindowController <NSTableViewDelegate, NSTableViewDataSource>
-@property(nonatomic, strong) IBOutlet NSTableView *historyClipoard;
+{
+    NSMutableArray * _dataArray;
+    IBOutlet NSTableView *tableOutlet;
+}
+@property (assign) IBOutlet NSTableView *tableOutlet;
+
+- (void)doubleClick:(id)nid;
+
 @end
 
 NS_ASSUME_NONNULL_END

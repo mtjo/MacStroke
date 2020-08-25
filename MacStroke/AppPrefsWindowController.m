@@ -17,6 +17,8 @@
 
 @interface AppPrefsWindowController ()
 @property AppPickerWindowController *pickerWindowController;
+@property HistoryClipoardListWindowController *historyClipoardListWindowController;
+
 @end
 
 @interface HistoryClipoardListWindowController ()
@@ -1175,7 +1177,21 @@ static NSString *currentScriptId = nil;
     }
 }
 - (IBAction)showHistoryCilpboardList:(id)sender {
-    HistoryClipoardListWindowController *historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
-        [historyClipoardListWindowController showWindow:self];
+    
+    //instantiate preferences window controller
+    if (!_historyClipoardListWindowController) {
+        _historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+        [_historyClipoardListWindowController showWindow:self];
+        [_historyClipoardListWindowController.window center];
+        [_historyClipoardListWindowController.window makeKeyWindow];
+        [_historyClipoardListWindowController.window setLevel:21];
+    } else {
+        [_historyClipoardListWindowController.window close];
+        _historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+        [_historyClipoardListWindowController showWindow:self];
+        [_historyClipoardListWindowController.window center];
+        [_historyClipoardListWindowController.window makeKeyWindow];
+        [_historyClipoardListWindowController.window setLevel:21];
+    }
 }
 @end

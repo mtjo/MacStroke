@@ -1,0 +1,21 @@
+
+/* Class = "NSTableColumn"; headerCell.title = "content"; ObjectID = "7PW-cd-Irs"; */
+"7PW-cd-Irs.headerCell.title" = "content";
+
+/* Class = "NSWindow"; title = "History Clipboard"; ObjectID = "F0z-JX-Cv5"; */
+"F0z-JX-Cv5.title" = "History Clipboard";
+
+/* Class = "NSTableColumn"; headerCell.title = "id"; ObjectID = "W4X-5N-Z8l"; */
+"W4X-5N-Z8l.headerCell.title" = "id";
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "b1k-dp-BaL"; */
+"b1k-dp-BaL.title" = "Text Cell";
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "p6o-gw-fvF"; */
+"p6o-gw-fvF.title" = "Text Cell";
+
+/* Class = "NSTextFieldCell"; title = "content"; ObjectID = "p7k-95-mpc"; */
+"p7k-95-mpc.title" = "content";
+
+/* Class = "NSTextFieldCell"; title = "id"; ObjectID = "pRw-Ux-AEW"; */
+"pRw-Ux-AEW.title" = "id";

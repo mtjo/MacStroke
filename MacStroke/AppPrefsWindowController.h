@@ -75,4 +75,5 @@
 
 - (IBAction)onChangeTerminal:(id)sender;
 
+- (IBAction)showHistoryCilpboardList:(id)sender;
 @end

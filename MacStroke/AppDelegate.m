@@ -21,6 +21,9 @@ static NSInteger settingRuleIndex;
 static RightClickMenu *rightClickMenu;
 static HistoryClipboard * historyClipboard;
 
+
+static HistoryClipoardListWindowController *historyClipoardListWindowController;
+
 + (AppDelegate *)appDelegate {
     return (AppDelegate *) [[NSApplication sharedApplication] delegate];
 }
@@ -463,6 +466,16 @@ static CGEventRef keyBoardEventCallback(CGEventTapProxy proxy, CGEventType type,
     NSString* inputedString = [[NSString alloc] initWithBytes:(const void*)inputString length:actualStringLength encoding:NSUTF8StringEncoding];
     
     CGEventFlags flag = CGEventGetFlags(event);
+    
+    NSLog(@"event:%@", event);
+    
+    if(flag == 1179914 && [inputedString isEqualToString:@"v"] ){
+        
+        [_preferencesWindowController showHistoryCilpboardList:nil];
+        
+    }
+    
+
     NSLog(@"inputed string:%@, flags:%lld", inputedString, flag);
     return event;
 }
@@ -517,5 +530,9 @@ static CGEventRef keyBoardEventCallback(CGEventTapProxy proxy, CGEventType type,
     [historyClipboard enableHistoryClipboard];
 
 }
+-(HistoryClipboard *) getHistoryClipboard{
+    return historyClipboard;
+}
+
 
 @end
