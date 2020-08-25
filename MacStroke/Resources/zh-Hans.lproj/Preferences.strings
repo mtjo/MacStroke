@@ -14,7 +14,7 @@
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "293"; */
 "293.title" = "Text Cell";
 
-/* Class = "BindingConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "302"; */
+/* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "302"; */
 "302.ibShadowedDisplayPattern" = "%{value1}@";
 
 /* Class = "NSTableColumn"; headerCell.title = "Action"; ObjectID = "306"; */
@@ -26,10 +26,10 @@
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "321"; */
 "321.title" = "-";
 
-/* Class = "NSButtonCell"; title = "Reset"; ObjectID = "326"; */
+/* Class = "NSButtonCell"; title = "Clear"; ObjectID = "326"; */
 "326.title" = "清除";
 
-/* Class = "NSButtonCell"; title = "Show Gesture Preview"; ObjectID = "354"; */
+/* Class = "NSButtonCell"; title = "Gesture Min Score"; ObjectID = "354"; */
 "354.title" = "手势匹配最小分数";
 
 /* Class = "NSTextFieldCell"; title = "Author: mtjo.net@gmail.com"; ObjectID = "357"; */
@@ -41,14 +41,14 @@
 /* Class = "NSButtonCell"; title = "Auto Start at Login"; ObjectID = "403"; */
 "403.title" = "开机自动启动";
 
-/* Class = "NSButtonCell"; title = "Choose"; ObjectID = "02o-xA-KDH"; */
-"02o-xA-KDH.title" = "选择";
+/* Class = "NSButtonCell"; title = "Iterm"; ObjectID = "1CK-4r-Yeb"; */
+"1CK-4r-Yeb.title" = "Iterm";
 
-/* Class = "NSTextFieldCell"; title = "Font:"; ObjectID = "0ye-8N-1Bv"; */
-"0ye-8N-1Bv.title" = "字体：";
+/* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "1ks-xH-EZh"; */
+"1ks-xH-EZh.ibShadowedDisplayPattern" = "%{value1}@";
 
-/* Class = "NSTextFieldCell"; title = "jiegec@qq.com"; ObjectID = "3XA-Af-eIC"; */
-"3XA-Af-eIC.title" = "jiegec@qq.com";
+/* Class = "NSTextFieldCell"; title = "FontName"; ObjectID = "3Bx-Ex-Id5"; */
+"3Bx-Ex-Id5.title" = "FontName";
 
 /* Class = "NSBox"; title = "Gesture"; ObjectID = "4xM-Ya-MxN"; */
 "4xM-Ya-MxN.title" = "手势";
@@ -60,12 +60,17 @@
 "7xg-Hp-Yhw.title" = "放大窗口";
 
 
+/* Class = "NSButtonCell"; title = "-"; ObjectID = "9QT-H7-zsv"; */
+"9QT-H7-zsv.title" = "-";
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "9X6-DQ-y4B"; */
+"9X6-DQ-y4B.title" = "Text Cell";
 
 /* Class = "NSButtonCell"; title = "Reset Defaults"; ObjectID = "9qA-nt-g9l"; */
 "9qA-nt-g9l.title" = "重置到预设";
 
-/* Class = "NSTableColumn"; headerCell.title = "Edit_Gesture"; ObjectID = "Awl-cu-DKF"; */
-"Awl-cu-DKF.headerCell.title" = "编辑手势";
+/* Class = "NSTextFieldCell"; title = "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"; ObjectID = "A3A-9b-yiu"; */
+"A3A-9b-yiu.title" = "模拟鼠标右键，支持'*'字符匹配。示例：'com.jetbrains.*'";
 
 /* Class = "NSTextFieldCell"; title = "Retention Time:"; ObjectID = "BAQ-QG-BiC"; */
 "BAQ-QG-BiC.title" = "显示时间:";
@@ -73,14 +78,38 @@
 /* Class = "NSButtonCell"; title = "Black list mode"; ObjectID = "BDA-RK-czZ"; */
 "BDA-RK-czZ.title" = "黑名单模式";
 
-/* Class = "NSMenuItem"; title = "+"; ObjectID = "BT0-6L-6TA"; */
-"BT0-6L-6TA.title" = "+";
+/* Class = "NSButtonCell"; title = "copy file path"; ObjectID = "CU0-vn-X8R"; */
+"CU0-vn-X8R.title" = "复制路径";
+
+/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "DIk-ah-Bo4"; */
+"DIk-ah-Bo4.title" = "Table View Cell";
+
+/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "GG1-Up-WoA"; */
+"GG1-Up-WoA.title" = "Table View Cell";
+
+/* Class = "NSButtonCell"; title = "storage"; ObjectID = "H1g-KK-RiX"; */
+"H1g-KK-RiX.title" = "存储";
 
 /* Class = "NSButtonCell"; title = "Export"; ObjectID = "JCy-Wc-jcu"; */
 "JCy-Wc-jcu.title" = "导出";
 
-/* Class = "NSTextFieldCell"; title = "Co-developer: @zhangciwu in github"; ObjectID = "MJR-m4-m46"; */
-"MJR-m4-m46.title" = "联合开发者： @zhangciwu in github";
+/* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "Jme-ae-6kh"; */
+"Jme-ae-6kh.ibShadowedDisplayPattern" = "%{value1}@";
+
+/* Class = "NSButtonCell"; title = "Defaults"; ObjectID = "KsE-ag-z8d"; */
+"KsE-ag-z8d.title" = "载入预设";
+
+/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Mkk-zs-5mz"; */
+"Mkk-zs-5mz.title" = "Table View Cell";
+
+/* Class = "NSMenuItem"; title = "Item 3"; ObjectID = "N0i-5K-XPM"; */
+"N0i-5K-XPM.title" = "Item 3";
+
+/* Class = "NSButtonCell"; title = "Terminal"; ObjectID = "NAi-O2-6kl"; */
+"NAi-O2-6kl.title" = "Terminal";
+
+/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "NaW-YH-Xxz"; */
+"NaW-YH-Xxz.title" = "Table View Cell";
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "PQ5-fb-DKg"; */
 "PQ5-fb-DKg.title" = "添加..";
@@ -97,14 +126,20 @@
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "RUf-9S-74q"; */
 "RUf-9S-74q.title" = "Table View Cell";
 
-/* Class = "NSButtonCell"; title = "Merge Consecutive Identical Gestures"; ObjectID = "Tzh-fR-TUh"; */
-"Tzh-fR-TUh.title" = "合并连续相同手势";
+/* Class = "NSButtonCell"; title = "Limit history list count: "; ObjectID = "RbU-gH-DC2"; */
+"RbU-gH-DC2.title" = "限制记录数量: ";
+
+/* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Txe-4D-nRJ"; */
+"Txe-4D-nRJ.title" = "Table View Cell";
 
 /* Class = "NSTableColumn"; headerCell.title = "Note"; ObjectID = "Urw-VE-VYr"; */
 "Urw-VE-VYr.headerCell.title" = "说明";
 
 /* Class = "NSButtonCell"; title = "apply rules"; ObjectID = "VCT-WP-3Oh"; */
 "VCT-WP-3Oh.title" = "应用规则";
+
+/* Class = "NSButtonCell"; title = "open in terminal"; ObjectID = "WKb-RS-fgU"; */
+"WKb-RS-fgU.title" = "在终端中打开";
 
 /* Class = "NSButtonCell"; title = "Pick a running app"; ObjectID = "WsD-th-NkZ"; */
 "WsD-th-NkZ.title" = "从运行中的App中选取";
@@ -118,6 +153,9 @@
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "ZnZ-zo-5eD"; */
 "ZnZ-zo-5eD.title" = "Text Cell";
 
+/* Class = "NSButtonCell"; title = "enable right click menu"; ObjectID = "aBT-rq-ADq"; */
+"aBT-rq-ADq.title" = "启用右键菜单";
+
 /* Class = "NSTextFieldCell"; title = "Background Apha"; ObjectID = "aQD-oq-9CK"; */
 "aQD-oq-9CK.title" = "背景透明度";
 
@@ -127,11 +165,20 @@
 /* Class = "NSTextFieldCell"; title = "Version:"; ObjectID = "b8r-Ju-Lat"; */
 "b8r-Ju-Lat.title" = "版本：";
 
-/* Class = "NSTextFieldCell"; title = "Gesture Size:"; ObjectID = "c53-qo-yp4"; */
+/* Class = "NSButtonCell"; title = "show history clipboard"; ObjectID = "bT0-SV-Om8"; */
+"bT0-SV-Om8.title" = "显示记录";
+
+/* Class = "NSButtonCell"; title = "+"; ObjectID = "c4y-2v-rkX"; */
+"c4y-2v-rkX.title" = "+";
+
+/* Class = "NSTextFieldCell"; title = "Min Score:"; ObjectID = "c53-qo-yp4"; */
 "c53-qo-yp4.title" = "最小分数：";
 
 /* Class = "NSButtonCell"; title = "Show Gesture Note"; ObjectID = "c54-P3-kT2"; */
 "c54-P3-kT2.title" = "显示手势提示";
+
+/* Class = "NSButtonCell"; title = "enable history clipboard"; ObjectID = "cAV-oO-NQz"; */
+"cAV-oO-NQz.title" = "启用历史粘贴板";
 
 /* Class = "NSButtonCell"; title = "Edit in External Editor"; ObjectID = "cl6-Yg-6iY"; */
 "cl6-Yg-6iY.title" = "在外部编辑器编辑";
@@ -142,14 +189,14 @@
 /* Class = "NSTableColumn"; headerCell.title = "Type"; ObjectID = "f42-hH-rDD"; */
 "f42-hH-rDD.headerCell.title" = "类型";
 
-/* Class = "NSTextFieldCell"; title = "FontName"; ObjectID = "fEL-3U-jlH"; */
-"fEL-3U-jlH.title" = "FontName";
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "fFw-3C-iig"; */
+"fFw-3C-iig.title" = "Text Cell";
+
+/* Class = "NSTextFieldCell"; title = "FontSize"; ObjectID = "ffg-PP-JsW"; */
+"ffg-PP-JsW.title" = "FontSize";
 
 /* Class = "NSButtonCell"; title = "+"; ObjectID = "fo8-ZY-CtD"; */
 "fo8-ZY-CtD.title" = "+";
-
-/* Class = "NSButtonCell"; title = "Check"; ObjectID = "gPX-Pa-jb5"; */
-"gPX-Pa-jb5.title" = "Check";
 
 /* Class = "NSTextFieldCell"; placeholderString = "Enter AppleScript here"; ObjectID = "gTD-R3-oZl"; */
 "gTD-R3-oZl.placeholderString" = "Enter AppleScript here";
@@ -157,32 +204,35 @@
 /* Class = "NSButtonCell"; title = "Enable MacStroke"; ObjectID = "gbg-RG-zrR"; */
 "gbg-RG-zrR.title" = "启用MacStroke";
 
-/* Class = "NSTableColumn"; headerCell.title = "Trigger on every match"; ObjectID = "gla-Uy-MuL"; */
-"gla-Uy-MuL.headerCell.title" = "每次匹配时触发";
+/* Class = "NSButtonCell"; title = "+"; ObjectID = "gja-GR-Ue3"; */
+"gja-GR-Ue3.title" = "+";
 
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "hFe-TH-zPF"; */
 "hFe-TH-zPF.title" = "-";
 
-/* Class = "NSButtonCell"; title = "Show Gesture Note"; ObjectID = "kHw-iF-xLb"; */
-"kHw-iF-xLb.title" = "显示手势说明";
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "ib9-4l-w4P"; */
+"ib9-4l-w4P.title" = "Text Cell";
+
+/* Class = "NSMenuItem"; title = "Item 1"; ObjectID = "igL-9q-xhF"; */
+"igL-9q-xhF.title" = "Item 1";
+
+/* Class = "NSButtonCell"; title = "ram"; ObjectID = "in7-8b-KAn"; */
+"in7-8b-KAn.title" = "内存";
+
+/* Class = "NSButtonCell"; title = "local"; ObjectID = "lQy-ff-LeV"; */
+"lQy-ff-LeV.title" = "本地";
 
 /* Class = "NSTextFieldCell"; title = "Font:"; ObjectID = "mP7-1C-3nv"; */
 "mP7-1C-3nv.title" = "字体:";
 
-/* Class = "NSMenuItem"; title = "Add a Shortcut Rule"; ObjectID = "mVL-bN-Qa5"; */
-"mVL-bN-Qa5.title" = "添加一个快捷键规则";
+/* Class = "NSButtonCell"; title = "Pick a running app"; ObjectID = "mRd-EA-0K2"; */
+"mRd-EA-0K2.title" = "从运行中的App中选取";
 
 /* Class = "NSTextFieldCell"; title = "code"; ObjectID = "mgw-z2-mZe"; */
 "mgw-z2-mZe.title" = "code";
 
-/* Class = "NSTextFieldCell"; title = "FontSize"; ObjectID = "oRe-ac-8qu"; */
-"oRe-ac-8qu.title" = "FontSize";
-
-/* Class = "NSMenuItem"; title = "Add a AppleScript Rule"; ObjectID = "pqG-Ck-V2g"; */
-"pqG-Ck-V2g.title" = "添加一个AppleScript规则";
-
-/* Class = "NSBox"; title = "Note"; ObjectID = "rgA-le-oEg"; */
-"rgA-le-oEg.title" = "提示";
+/* Class = "NSMenuItem"; title = "Item 2"; ObjectID = "n3s-v8-d8G"; */
+"n3s-v8-d8G.title" = "Item 2";
 
 /* Class = "NSButtonCell"; title = "Automatically Download Updates"; ObjectID = "rOi-wV-Iez"; */
 "rOi-wV-Iez.title" = "自动下载更新";
@@ -190,8 +240,14 @@
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "rUX-BY-P9Y"; */
 "rUX-BY-P9Y.title" = "Text Cell";
 
+/* Class = "NSBox"; title = "Note"; ObjectID = "rgA-le-oEg"; */
+"rgA-le-oEg.title" = "提示";
+
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "seb-qO-V3w"; */
 "seb-qO-V3w.title" = "添加..";
+
+/* Class = "NSButtonCell"; title = "new text file"; ObjectID = "tFw-3G-uFc"; */
+"tFw-3G-uFc.title" = "新建文本文档";
 
 /* Class = "NSButtonCell"; title = "Choose"; ObjectID = "yCw-Ch-TOF"; */
 "yCw-Ch-TOF.title" = "选择";
@@ -208,21 +264,3 @@
 /* Class = "NSButtonCell"; title = "White list mode"; ObjectID = "ztb-nI-iil"; */
 "ztb-nI-iil.title" = "白名单模式";
 
-"Draw Gesture" = "绘制手势";
-
-"mRd-EA-0K2.title" = "从运行中的App中选取";
-"A3A-9b-yiu.title" = "模拟鼠标右键，支持'*'字符匹配。示例：'com.jetbrains.*'";
-"KsE-ag-z8d.title" = "载入预设";
-
-"grE-O7-8pa.title" = "右键菜单";
-"aBT-rq-ADq.title" = "启用右键菜单";
-"tFw-3G-uFc.title" = "新建文本文档";
-"WKb-RS-fgU.title" = "在终端中打开";
-"CU0-vn-X8R.title" = "复制路径";
-
-"cAV-oO-NQz.title" = "启用历史粘贴板";
-"RbU-gH-DC2.title" = "限制记录数量";
-"H1g-KK-RiX.title" = "存储";
-"in7-8b-KAn.title" = "内存";
-"lQy-ff-LeV.title" = "本地";
-"bT0-SV-Om8.title" = "显示记录";
