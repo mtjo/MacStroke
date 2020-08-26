@@ -470,7 +470,7 @@
                     <rect key="frame" x="6" y="38" width="646" height="324"/>
                     <clipView key="contentView" id="dRt-B1-99d">
                         <rect key="frame" x="1" y="0.0" width="644" height="308"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView canDrawConcurrently="YES" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowHeight="18" headerView="287" viewBased="YES" id="289">
                                 <rect key="frame" x="0.0" y="0.0" width="782" height="285"/>
@@ -979,7 +979,7 @@
                     <rect key="frame" x="10" y="20" width="183" height="386"/>
                     <clipView key="contentView" id="HAd-Pq-7NJ">
                         <rect key="frame" x="1" y="1" width="181" height="384"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="T1p-6B-s66">
                                 <rect key="frame" x="0.0" y="0.0" width="181" height="384"/>
@@ -1115,7 +1115,7 @@
                     <rect key="frame" x="13" y="35" width="504" height="244"/>
                     <clipView key="contentView" id="SfF-yc-hY4">
                         <rect key="frame" x="1" y="1" width="502" height="242"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="W7c-fb-Pqe">
                                 <rect key="frame" x="0.0" y="0.0" width="502" height="242"/>
@@ -1397,8 +1397,8 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="fvb-Wh-zUM">
-                                <rect key="frame" x="38" y="128" width="177" height="32"/>
+                            <button verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fvb-Wh-zUM">
+                                <rect key="frame" x="38" y="105" width="177" height="32"/>
                                 <buttonCell key="cell" type="push" title="show history clipboard" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="bT0-SV-Om8">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
