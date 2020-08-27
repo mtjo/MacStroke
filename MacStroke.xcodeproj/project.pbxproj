@@ -166,7 +166,6 @@
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
-		4DC1D9571EE6715300E93245 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Preferences.strings; sourceTree = "<group>"; };
 		4DC9C499239EA5EF005087A4 /* RightClick.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClick.png; sourceTree = "<group>"; };
 		4DD3CBFC1E615C6200AFC850 /* PreGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreGesture.h; sourceTree = "<group>"; };
 		4DD3CBFD1E615C6200AFC850 /* PreGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreGesture.m; sourceTree = "<group>"; };
@@ -659,7 +658,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4DC1D9571EE6715300E93245 /* en */,
 				4DE22E6B24F510050046248A /* zh-Hans */,
 			);
 			name = Preferences.xib;

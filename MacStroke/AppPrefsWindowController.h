@@ -59,6 +59,8 @@
 
 @property(assign) IBOutlet WebView *webView;
 
+@property(assign) IBOutlet NSView *keyboardShortcut;
+
 - (void)rulePickCallback:(NSString *)rulesStringSplitedByStick atIndex:(NSInteger)index;
 
 - (void) preSetRuleGestureAtIndex:(NSInteger)index;

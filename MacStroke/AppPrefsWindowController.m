@@ -126,6 +126,21 @@ static NSArray *exampleAppleScripts;
         [[self enableOpenInTerminalButton] setEnabled:NO];
         [[self enablecopyFilePathButton] setEnabled:NO];
     }
+    
+    SRRecorderControlWithTagid *recordView = [[SRRecorderControlWithTagid alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
+
+    recordView.delegate = self;
+    [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
+    recordView.tagid = 0;
+//    Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:NO];
+//    addWildcardShortcutRule(self, @"CloseTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_W, NSCommandKeyMask, @"",@"", @"Close Tab");
+    recordView.objectValue = @{
+        @"keyCode" : @(kVK_ANSI_W),
+        @"modifierFlags" : @(NSCommandKeyMask),
+    };
+    [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
+    _keyboardShortcut = recordView;
+    
 }
 
 - (BOOL)windowShouldClose:(id)sender {
@@ -934,10 +949,12 @@ static NSString *currentScriptId = nil;
             recordView.delegate = self;
             [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
             recordView.tagid = row;
-            recordView.objectValue = @{
-                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
-                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
-            };
+//            recordView.objectValue = @{
+//                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
+//                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
+//            };
+            SRShortcut *sRShortcut = [[SRShortcut alloc] initWithCode:[rulesList shortcutKeycodeAtIndex:row] modifierFlags:[rulesList shortcutFlagAtIndex:row] characters:nil charactersIgnoringModifiers:nil];
+            recordView.objectValue =sRShortcut;
             [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:recordView];
             result = cloumn;
@@ -1194,4 +1211,9 @@ static NSString *currentScriptId = nil;
         [_historyClipoardListWindowController.window setLevel:21];
     }
 }
+
+- (IBAction)changeStroageLocalction:(NSButton *)sender {
+    NSLog(@"tag :%ld",(long)[sender tag]);
+}
+
 @end
