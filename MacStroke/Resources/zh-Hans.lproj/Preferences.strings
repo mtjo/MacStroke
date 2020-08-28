@@ -59,6 +59,8 @@
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "7xg-Hp-Yhw"; */
 "7xg-Hp-Yhw.title" = "放大窗口";
 
+/* Class = "NSTextFieldCell"; title = "FontScale"; ObjectID = "8SO-RX-LQO"; */
+"8SO-RX-LQO.title" = "FontScale";
 
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "9QT-H7-zsv"; */
 "9QT-H7-zsv.title" = "-";
@@ -72,6 +74,9 @@
 /* Class = "NSTextFieldCell"; title = "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"; ObjectID = "A3A-9b-yiu"; */
 "A3A-9b-yiu.title" = "模拟鼠标右键，支持'*'字符匹配。示例：'com.jetbrains.*'";
 
+/* Class = "NSTextFieldCell"; title = "storage:"; ObjectID = "Afk-XI-7ct"; */
+"Afk-XI-7ct.title" = "存储:";
+
 /* Class = "NSTextFieldCell"; title = "Retention Time:"; ObjectID = "BAQ-QG-BiC"; */
 "BAQ-QG-BiC.title" = "显示时间:";
 
@@ -84,11 +89,11 @@
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "DIk-ah-Bo4"; */
 "DIk-ah-Bo4.title" = "Table View Cell";
 
+/* Class = "NSTextFieldCell"; title = "keyboard shortcut:"; ObjectID = "Dlc-Zp-mj2"; */
+"Dlc-Zp-mj2.title" = "keyboard shortcut:";
+
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "GG1-Up-WoA"; */
 "GG1-Up-WoA.title" = "Table View Cell";
-
-/* Class = "NSButtonCell"; title = "storage"; ObjectID = "H1g-KK-RiX"; */
-"H1g-KK-RiX.title" = "存储";
 
 /* Class = "NSButtonCell"; title = "Export"; ObjectID = "JCy-Wc-jcu"; */
 "JCy-Wc-jcu.title" = "导出";
