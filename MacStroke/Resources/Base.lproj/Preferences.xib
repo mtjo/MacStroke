@@ -1347,7 +1347,7 @@
                                     <binding destination="72" name="value" keyPath="values.enableHistoryClipboard" id="1HQ-nZ-SJE"/>
                                 </connections>
                             </button>
-                            <button verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fvb-Wh-zUM">
+                            <button verticalHuggingPriority="750" ambiguous="YES" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fvb-Wh-zUM">
                                 <rect key="frame" x="14" y="85" width="177" height="32"/>
                                 <buttonCell key="cell" type="push" title="show history clipboard" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="bT0-SV-Om8">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -1364,9 +1364,8 @@
                                     <rect key="frame" x="3" y="3" width="494" height="67"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
-                                        <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="lKP-Z3-FTd">
+                                        <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lKP-Z3-FTd">
                                             <rect key="frame" x="5" y="44" width="164" height="18"/>
-                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <buttonCell key="cell" type="check" title="Limit history list count: " bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="RbU-gH-DC2">
                                                 <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                 <font key="font" metaFont="system"/>
@@ -1385,21 +1384,20 @@
                                             </buttonCell>
                                             <connections>
                                                 <action selector="changeStroageLocalction:" target="-2" id="4at-bq-lWh"/>
-                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" id="mOn-71-tFO"/>
                                                 <binding destination="72" name="value" keyPath="values.clipoardStroageRam" id="Cb6-9p-hNI"/>
+                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" id="mOn-71-tFO"/>
                                             </connections>
                                         </button>
-                                        <button fixedFrame="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="oxE-19-KZk">
-                                            <rect key="frame" x="150" y="12" width="51" height="17"/>
-                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                        <button ambiguous="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="oxE-19-KZk">
+                                            <rect key="frame" x="150" y="11" width="51" height="18"/>
                                             <buttonCell key="cell" type="radio" title="local" bezelStyle="regularSquare" imagePosition="left" alignment="left" inset="2" id="lQy-ff-LeV">
                                                 <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                 <font key="font" metaFont="system"/>
                                             </buttonCell>
                                             <connections>
                                                 <action selector="changeStroageLocalction:" target="-2" id="7Lp-85-wMd"/>
-                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" id="OQa-OD-8am"/>
                                                 <binding destination="72" name="value" keyPath="values.clipoardStroageLocal" id="a2S-fe-5Uh"/>
+                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" id="OQa-OD-8am"/>
                                             </connections>
                                         </button>
                                         <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="hLK-hB-R2U">
@@ -1420,10 +1418,10 @@
                                                 <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                             </textFieldCell>
                                         </textField>
-                                        <textField verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="8Iq-iT-zC4" userLabel="history count">
-                                            <rect key="frame" x="166" y="42" width="75" height="21"/>
+                                        <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="8Iq-iT-zC4" userLabel="history count">
+                                            <rect key="frame" x="175" y="42" width="75" height="21"/>
                                             <constraints>
-                                                <constraint firstAttribute="width" constant="75" id="yZF-Ic-xic"/>
+                                                <constraint firstAttribute="width" constant="75" id="IkJ-Tm-ebc"/>
                                             </constraints>
                                             <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="FmP-AU-jq7" userLabel="history count">
                                                 <font key="font" metaFont="system"/>
@@ -1432,14 +1430,23 @@
                                             </textFieldCell>
                                             <connections>
                                                 <binding destination="72" name="editable" keyPath="values.enableHistoryClipboard" id="82i-MP-crO"/>
-                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" previousBinding="82i-MP-crO" id="l6N-Fj-IfZ"/>
                                                 <binding destination="72" name="value" keyPath="values.historyClipoardList" id="j60-KG-mnn"/>
+                                                <binding destination="72" name="enabled" keyPath="values.limitHistoryListCount" previousBinding="82i-MP-crO" id="l6N-Fj-IfZ"/>
                                             </connections>
                                         </textField>
                                     </subviews>
+                                    <constraints>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="leading" secondItem="YCv-RP-yMV" secondAttribute="leading" constant="7" id="IM2-RM-EIv"/>
+                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="leading" secondItem="lKP-Z3-FTd" secondAttribute="trailing" constant="8" id="LPU-G1-QK4"/>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="top" secondItem="YCv-RP-yMV" secondAttribute="top" constant="7" id="MD7-8E-H0e"/>
+                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="top" secondItem="YCv-RP-yMV" secondAttribute="top" constant="4" id="THc-a0-BeY"/>
+                                        <constraint firstItem="oxE-19-KZk" firstAttribute="top" secondItem="8Iq-iT-zC4" secondAttribute="bottom" constant="14" id="VMJ-nT-Ydp"/>
+                                        <constraint firstAttribute="bottom" secondItem="8Iq-iT-zC4" secondAttribute="bottom" constant="42" id="g7e-rt-qsa"/>
+                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="baseline" secondItem="lKP-Z3-FTd" secondAttribute="baseline" id="tbg-IJ-cNU"/>
+                                    </constraints>
                                 </view>
                             </box>
-                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Lbj-k7-enf">
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Lbj-k7-enf">
                                 <rect key="frame" x="18" y="138" width="119" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="keyboard shortcut:" id="Dlc-Zp-mj2">
                                     <font key="font" metaFont="system"/>
@@ -1447,7 +1454,7 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="32N-kM-JPJ">
+                            <textField verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="32N-kM-JPJ">
                                 <rect key="frame" x="143" y="135" width="96" height="21"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="96" id="tus-sr-JQ6"/>
