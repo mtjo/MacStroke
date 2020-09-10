@@ -14,6 +14,7 @@
 #import "DrawGesture.h"
 #import "PreGesture.h"
 #import "HistoryClipoardListWindowController.h"
+#import <ShortcutRecorder/SRShortcutAction.h>
 
 @interface AppPrefsWindowController ()
 @property AppPickerWindowController *pickerWindowController;
@@ -127,19 +128,32 @@ static NSArray *exampleAppleScripts;
         [[self enablecopyFilePathButton] setEnabled:NO];
     }
     
-    SRRecorderControlWithTagid *recordView = [[SRRecorderControlWithTagid alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
+    
+    NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
+    NSString *keyPath = @"values.historyCilpboardListShortcut";
+    NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
+    
+    SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
+                                                                                    ofObject:defaults
+                                                                               actionHandler:^BOOL(SRShortcutAction *anAction) {
+        if ([[AppDelegate appDelegate] isHistoryClipboardEnable] ) {
+         [self showHistoryCilpboardList:nil];
+        }
 
-    recordView.delegate = self;
-    [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
-    recordView.tagid = 0;
-//    Gesture=[PreGesture getGestureByLetter:@"L" IsRevered:NO];
-//    addWildcardShortcutRule(self, @"CloseTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_W, NSCommandKeyMask, @"",@"", @"Close Tab");
-    recordView.objectValue = @{
-        @"keyCode" : @(kVK_ANSI_W),
-        @"modifierFlags" : @(NSCommandKeyMask),
-    };
-    [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
-    _keyboardShortcut = recordView;
+        return YES;
+    }];
+    [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
+    
+    SRRecorderControl *recorder = [SRRecorderControl new];
+    [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
+    
+    [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
+    
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
+        recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"⇧⌘V"];
+    }
+    
+    [_keyboardShortcut addSubview:recorder];
     
 }
 
@@ -809,9 +823,13 @@ static NSString *currentScriptId = nil;
 #pragma mark SRRecorderControlDelegate Implementation
 
 - (void)shortcutRecorderDidEndRecording:(SRRecorderControl *)aRecorder {
+    
+    NSLog(@"SRRecorderControl%@",aRecorder);
+    
     NSInteger id = ((SRRecorderControlWithTagid *) aRecorder).tagid;
     NSUInteger keycode = [aRecorder.objectValue[@"keyCode"] unsignedIntegerValue];
     NSUInteger flag = [[aRecorder objectValue][@"modifierFlags"] unsignedIntegerValue];
+    
     [[RulesList sharedRulesList] setShortcutWithKeycode:keycode withFlag:flag atIndex:id];
 }
 
@@ -946,15 +964,14 @@ static NSString *currentScriptId = nil;
         if ([rulesList actionTypeAtIndex:row] == ACTION_TYPE_SHORTCUT) {
             SRRecorderControlWithTagid *recordView = [[SRRecorderControlWithTagid alloc] initWithFrame:NSMakeRect(0 , 27, 100, 25)];
             
+            
             recordView.delegate = self;
             [recordView setAllowedModifierFlags:SRCocoaModifierFlagsMask requiredModifierFlags:0 allowsEmptyModifierFlags:YES];
             recordView.tagid = row;
-//            recordView.objectValue = @{
-//                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
-//                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
-//            };
-            SRShortcut *sRShortcut = [[SRShortcut alloc] initWithCode:[rulesList shortcutKeycodeAtIndex:row] modifierFlags:[rulesList shortcutFlagAtIndex:row] characters:nil charactersIgnoringModifiers:nil];
-            recordView.objectValue =sRShortcut;
+            recordView.objectValue = [SRShortcut shortcutWithDictionary:@{
+                @"keyCode" : @([rulesList shortcutKeycodeAtIndex:row]),
+                @"modifierFlags" : @([rulesList shortcutFlagAtIndex:row]),
+            }];
             [recordView setTranslatesAutoresizingMaskIntoConstraints:YES];
             [cloumn addSubview:recordView];
             result = cloumn;
@@ -1213,7 +1230,7 @@ static NSString *currentScriptId = nil;
 }
 
 - (IBAction)changeStroageLocalction:(NSButton *)sender {
-    NSLog(@"tag :%ld",(long)[sender tag]);
+    [self onToggleClipboard:nil];
 }
 
 @end

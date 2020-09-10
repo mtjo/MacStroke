@@ -157,7 +157,7 @@
 		4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FinderCommChannel.m; sourceTree = "<group>"; };
 		4D6270D323B37F2100AC8745 /* RightClickMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClickMenu.h; sourceTree = "<group>"; };
 		4D6270D423B37F2100AC8745 /* RightClickMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClickMenu.m; sourceTree = "<group>"; };
-		4D639C4224F8A128004F34B6 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
+		4D639C4424F8A280004F34B6 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4D88EE1A24EA87B800BDCD6D /* Clipboard.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Clipboard.png; sourceTree = "<group>"; };
@@ -658,7 +658,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4D639C4224F8A128004F34B6 /* zh-Hans */,
+				4D639C4424F8A280004F34B6 /* zh-Hans */,
 			);
 			name = Preferences.xib;
 			sourceTree = "<group>";

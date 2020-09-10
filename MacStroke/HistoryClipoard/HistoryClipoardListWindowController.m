@@ -20,9 +20,11 @@
     [super windowDidLoad];
     
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
-    //_dataArray = [[NSMutableArray alloc] initWithArray:[[[AppDelegate appDelegate] getHistoryClipboard] getHistoryClipboardList]];
     _dataArray = [[[AppDelegate appDelegate] getHistoryClipboard] getHistoryClipboardList];
-    NSLog(@"_dataArray:%@",_dataArray);
+#ifdef DEBUG
+    NSLog(@"HistoryClipoardList:%@",_dataArray);
+#endif
+    
     
 }
 
@@ -45,7 +47,6 @@
     }else if ([tableColumn.identifier isEqualToString:@"content"]) {
         [textField setStringValue:_dataArray[row]];
     }
-    [textField setAction:@selector(doubleClickTableView:)];
     
     result = textField;
     
@@ -75,6 +76,15 @@
     [pasteboard clearContents];  //必须清空，否则setString会失败。
     [pasteboard setString:s forType:NSStringPboardType];
     [self.window close];
+}
+- (IBAction)clearHistoryList:(id)sender {
+    [_dataArray removeAllObjects];
+    [_tableOutlet reloadData];
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
+        NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
+
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"localHistoryClipoardList"];
+    }
 }
 
 

@@ -39,7 +39,7 @@
 "400.title" = "不绘制鼠标路径";
 
 /* Class = "NSButtonCell"; title = "Auto Start at Login"; ObjectID = "403"; */
-"403.title" = "开机自动启动";
+"403.title" = "自动启动";
 
 /* Class = "NSButtonCell"; title = "Iterm"; ObjectID = "1CK-4r-Yeb"; */
 "1CK-4r-Yeb.title" = "Iterm";
@@ -58,9 +58,6 @@
 
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "7xg-Hp-Yhw"; */
 "7xg-Hp-Yhw.title" = "放大窗口";
-
-/* Class = "NSTextFieldCell"; title = "FontScale"; ObjectID = "8SO-RX-LQO"; */
-"8SO-RX-LQO.title" = "FontScale";
 
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "9QT-H7-zsv"; */
 "9QT-H7-zsv.title" = "-";
@@ -90,7 +87,7 @@
 "DIk-ah-Bo4.title" = "Table View Cell";
 
 /* Class = "NSTextFieldCell"; title = "keyboard shortcut:"; ObjectID = "Dlc-Zp-mj2"; */
-"Dlc-Zp-mj2.title" = "keyboard shortcut:";
+"Dlc-Zp-mj2.title" = "快捷键:";
 
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "GG1-Up-WoA"; */
 "GG1-Up-WoA.title" = "Table View Cell";

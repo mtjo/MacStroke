@@ -8,7 +8,6 @@ static CGEventRef mouseDownEvent, mouseDraggedEvent;
 static NSMutableString *direction;
 static NSPoint lastLocation;
 static CFMachPortRef mouseEventTap;
-static CFMachPortRef keyBoardEventTap;
 static BOOL isEnabled;
 static AppPrefsWindowController *_preferencesWindowController;
 static NSTimeInterval lastMouseWheelEventTime;
@@ -46,15 +45,6 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
     CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
     mouseEventTap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, eventMask, mouseEventCallback, NULL);
     
-    /* Keyboard events. */
-    CGEventMask keyBoardEventMask = CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventKeyUp) | CGEventMaskBit(kCGEventFlagsChanged);
-    CFRunLoopRef theRL = CFRunLoopGetCurrent();
-        keyBoardEventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap ,kCGEventTapOptionListenOnly,keyBoardEventMask,&keyBoardEventCallback,NULL);
-        CFRunLoopSourceRef keyUpRunLoopSourceRef =  CFMachPortCreateRunLoopSource(NULL, keyBoardEventTap, 0);
-        CFRelease(keyBoardEventTap);
-        CFRunLoopAddSource(theRL, keyUpRunLoopSourceRef, kCFRunLoopDefaultMode);
-        CFRelease(keyUpRunLoopSourceRef);
-
 
     
     const void * keys[] = { kAXTrustedCheckOptionPrompt };
@@ -76,11 +66,6 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
         CFRelease(mouseEventTap);
         CFRelease(runLoopSource);
         
-            /* Keyboard events. */
-        CFRunLoopSourceRef keyBoardRunLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, keyBoardEventTap, 0);
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
-        CFRelease(keyBoardEventTap);
-        CFRelease(keyBoardRunLoopSource);
         
         
     } else {
@@ -457,31 +442,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 
 
-static CGEventRef keyBoardEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *userInfo)
-{
- 
-    UniCharCount actualStringLength = 0;
-    UniChar inputString[128];
-    CGEventKeyboardGetUnicodeString(event, 128, &actualStringLength, inputString);
-    NSString* inputedString = [[NSString alloc] initWithBytes:(const void*)inputString length:actualStringLength encoding:NSUTF8StringEncoding];
-    
-    CGEventFlags flag = CGEventGetFlags(event);
-    
-    NSLog(@"event:%@", event);
-    
-    if(flag == 1179914 && [inputedString isEqualToString:@"v"] ){
-        
-        [_preferencesWindowController showHistoryCilpboardList:nil];
-        
-    }
-    
-
-    NSLog(@"inputed string:%@, flags:%lld", inputedString, flag);
-    return event;
-}
-
-
-
 -(void) setSettingRuleIndex:(NSInteger)index;
 {
     settingRuleIndex = index;
@@ -532,6 +492,10 @@ static CGEventRef keyBoardEventCallback(CGEventTapProxy proxy, CGEventType type,
 }
 -(HistoryClipboard *) getHistoryClipboard{
     return historyClipboard;
+}
+
+-(BOOL) isHistoryClipboardEnable{
+    return [historyClipboard isEnable];
 }
 
 

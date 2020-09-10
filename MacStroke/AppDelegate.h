@@ -38,5 +38,6 @@
 -(void) initHistoryClipboard;
 
 -(HistoryClipboard *) getHistoryClipboard;
+-(BOOL) isHistoryClipboardEnable;
 
 @end

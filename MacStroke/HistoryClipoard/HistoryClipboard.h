@@ -17,6 +17,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void) enableHistoryClipboard;
 
+- (BOOL) isEnable;
+
 - (NSMutableArray *) getHistoryClipboardList;
 
 @end
