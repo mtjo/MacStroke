@@ -9,6 +9,7 @@
 #import "RightClicksList.h"
 #import "RightClickMenu.h"
 #import "HistoryClipboard.h"
+#import <ShortcutRecorder/SRShortcutAction.h>
 @class RulesList;
 
 

@@ -106,8 +106,7 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
     //init Right Click Menu
     [self initRightClickMenu];
     
-    NSLog(@"init");
-     //init History Clipboard
+    //init History Clipboard
     [self initHistoryClipboard];
     
 }
@@ -486,8 +485,31 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 -(void) initHistoryClipboard
 {
+    
+    NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
+    NSString *keyPath = @"values.historyCilpboardListShortcut";
+    NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
 
-    [_preferencesWindowController initCilpboardShotCut];
+    SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
+                                                                                    ofObject:defaults
+                                                                               actionHandler:^BOOL(SRShortcutAction *anAction) {
+        if ([[AppDelegate appDelegate] isHistoryClipboardEnable] ) {
+            [self showHistoryCilpboardList:nil];
+        }
+        
+        return YES;
+    }];
+    [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
+    
+    SRRecorderControl *recorder = [SRRecorderControl new];
+    [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
+    
+    [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
+    
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
+        recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^V"];
+    }
+    
 
     historyClipboard = [[HistoryClipboard alloc] init];
     
@@ -502,5 +524,22 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     return [historyClipboard isEnable];
 }
 
+- (IBAction)showHistoryCilpboardList:(id)sender {
+    //instantiate preferences window controller
+    if (!historyClipoardListWindowController) {
+        historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+        [historyClipoardListWindowController showWindow:self];
+        [historyClipoardListWindowController.window center];
+        [historyClipoardListWindowController.window makeKeyWindow];
+        [historyClipoardListWindowController.window setLevel:21];
+    } else {
+        [historyClipoardListWindowController.window close];
+        historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+        [historyClipoardListWindowController showWindow:self];
+        [historyClipoardListWindowController.window center];
+        [historyClipoardListWindowController.window makeKeyWindow];
+        [historyClipoardListWindowController.window setLevel:21];
+    }
+}
 
 @end

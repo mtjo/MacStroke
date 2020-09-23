@@ -35,9 +35,6 @@
 		4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270CD23B3671E00AC8745 /* FinderCommChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */; };
 		4D6270D523B37F2100AC8745 /* RightClickMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270D423B37F2100AC8745 /* RightClickMenu.m */; };
-		4D735926251AEC370007FC58 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D735928251AEC370007FC58 /* InfoPlist.strings */; };
-		4D735985251AF7430007FC58 /* MacStroke-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4D735984251AF7430007FC58 /* MacStroke-Info.plist */; };
-		4D73598C251AF7B00007FC58 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D73598E251AF7B00007FC58 /* InfoPlist.strings */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
 		4D7A390E2519C8BF00DFB194 /* OpenMacStrokePreferences.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 4D7A390B2519C8BE00DFB194 /* OpenMacStrokePreferences.applescript */; };
 		4D7A390F2519C8BF00DFB194 /* ChromeCloseTabsToTheRight.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 4D7A390C2519C8BE00DFB194 /* ChromeCloseTabsToTheRight.applescript */; };
@@ -516,7 +513,6 @@
 				880AA7691CA57491006E7A74 /* MainMenu.xib in Resources */,
 				075C1BC91C214E9A00B7211A /* list@2x.png in Resources */,
 				880AA7741CA57884006E7A74 /* Localizable.strings in Resources */,
-				4D735985251AF7430007FC58 /* MacStroke-Info.plist in Resources */,
 				26418785A1CC885F4D2FFDF5 /* General.png in Resources */,
 				880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */,
 				880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */,
@@ -526,8 +522,6 @@
 				264185813821B17A6CF8761E /* Rules.png in Resources */,
 				B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */,
 				887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */,
-				4D735926251AEC370007FC58 /* InfoPlist.strings in Resources */,
-				4D73598C251AF7B00007FC58 /* InfoPlist.strings in Resources */,
 				D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */,
 				2641871BACBB993F84AF778C /* About.png in Resources */,
 				880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */,
@@ -841,13 +835,13 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.0.9;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -862,13 +856,13 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.0.9;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -889,6 +883,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -897,6 +892,7 @@
 				INFOPLIST_FILE = FinderSyncExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = net.mtjo.MacStroke.FinderSyncExtension;
@@ -920,6 +916,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -927,6 +924,7 @@
 				INFOPLIST_FILE = FinderSyncExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = net.mtjo.MacStroke.FinderSyncExtension;
