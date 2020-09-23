@@ -40,12 +40,16 @@ static  bool enable = false;
             }
             
             //NSLog(@"NSPasteboard:%@", historyList);
-            NSLog(@"clipoardStroageLocal:%hdd", [[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
             
+#ifdef DEBUG
+            NSLog(@"clipoardStroageLocal:%hdd", [[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
+#endif
             if([sharedDefaults boolForKey:@"clipoardStroageLocal"]){
                 [sharedDefaults setObject:historyList forKey:@"localHistoryClipoardList"];
-                NSLog(@"NSPasteboard:%@", historyList);
                 
+#ifdef DEBUG
+                NSLog(@"NSPasteboard:%@", historyList);
+#endif
                 [sharedDefaults synchronize];
             }
             

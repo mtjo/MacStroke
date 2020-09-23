@@ -47,9 +47,13 @@ static NSInteger currentFiltersWindowSizeIndex = 0;
 static NSArray *exampleAppleScripts;
 
 + (void)initialize {
-    exampleAppleScripts = [NSArray arrayWithObjects:@"ChromeCloseTabsToTheRight", @"Close Tabs To The Right In Chrome",
-                           @"OpenMacStrokePreferences", @"Open MacStroke Preferences",
-                           @"SearchInWeb", @"Search in Web", nil];
+    exampleAppleScripts = [NSArray arrayWithObjects:@"ChromeCloseTabsToTheRight",
+                           @"Close Tabs To The Right In Chrome",
+                           @"OpenMacStrokePreferences",
+                           @"Open MacStroke Preferences",
+                           @"SearchInWeb",
+                           @"Search in Web", nil];
+
 }
 
 - (void)changeSize:(NSInteger *)index changeSizeButton:(NSButton *)button preferenceView:(NSView *)view {
@@ -128,32 +132,8 @@ static NSArray *exampleAppleScripts;
         [[self enablecopyFilePathButton] setEnabled:NO];
     }
     
-    
-    NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
-    NSString *keyPath = @"values.historyCilpboardListShortcut";
-    NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
-    
-    SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
-                                                                                    ofObject:defaults
-                                                                               actionHandler:^BOOL(SRShortcutAction *anAction) {
-        if ([[AppDelegate appDelegate] isHistoryClipboardEnable] ) {
-         [self showHistoryCilpboardList:nil];
-        }
-
-        return YES;
-    }];
-    [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
-    
-    SRRecorderControl *recorder = [SRRecorderControl new];
-    [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
-    
-    [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
-    
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
-        recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"⇧⌘V"];
-    }
-    
-    [_keyboardShortcut addSubview:recorder];
+    [self initCilpboardShotCut];
+  
     
 }
 
@@ -442,14 +422,20 @@ static NSArray *exampleAppleScripts;
 
 - (void)exampleAppleScriptSelected:(id)sender {
     NSInteger index = [sender tag];
-    
+
     NSString* path = [[NSBundle mainBundle] pathForResource:exampleAppleScripts[index]
-                                                     ofType:@"applescript"];
+                                                     ofType:@"scpt"];
     NSError* error = nil;
+    NSURL *scriptURL = [NSURL fileURLWithPath: path];
+    NSAppleScript *as = [[NSAppleScript alloc]
+                         initWithContentsOfURL: scriptURL
+                         error: nil];
+   ;
+
     [[AppleScriptsList sharedAppleScriptsList] addAppleScript:exampleAppleScripts[index+1]
-                                                       script:[NSString stringWithContentsOfFile:path
-                                                                                        encoding:NSUTF8StringEncoding
-                                                                                           error:&error]];
+                                                       script: [as source]];
+    NSLog(@"error: %@",error);
+
     [[AppleScriptsList sharedAppleScriptsList] save];
     
     [[self appleScriptTableView] reloadData];
@@ -705,7 +691,11 @@ static NSString *currentScriptId = nil;
     
     if (selectedRow != -1) {
         [[self appleScriptTextField] setEnabled:YES];
-        [[self appleScriptTextField] setStringValue:[[AppleScriptsList sharedAppleScriptsList] scriptAtIndex:selectedRow]];
+        NSString *applescript =  [[AppleScriptsList sharedAppleScriptsList] scriptAtIndex:selectedRow];
+        if (applescript == nil) {
+            applescript = @"";
+        }
+        [[self appleScriptTextField] setStringValue:applescript];
     } else {
         [[self appleScriptTextField] setEnabled:NO];
         [[self appleScriptTextField] setStringValue:@""];
@@ -1230,7 +1220,47 @@ static NSString *currentScriptId = nil;
 }
 
 - (IBAction)changeStroageLocalction:(NSButton *)sender {
-    [self onToggleClipboard:nil];
+    NSLog(@"changeStroageLocalction tag:%ld" ,    (long)[sender tag]);
+    switch ([sender tag]) {
+        case 0:
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageRam"];
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageLocal"];            break;
+        case 1:
+            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageRam"];
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageLocal"];            break;
+        default:
+            break;
+    }
+    
+    [self onToggleClipboard:sender];
+}
+
+- (void)initCilpboardShotCut{
+      NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
+      NSString *keyPath = @"values.historyCilpboardListShortcut";
+      NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
+
+      SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
+                                                                                      ofObject:defaults
+                                                                                 actionHandler:^BOOL(SRShortcutAction *anAction) {
+          if ([[AppDelegate appDelegate] isHistoryClipboardEnable] ) {
+              [self showHistoryCilpboardList:nil];
+          }
+          
+          return YES;
+      }];
+      [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
+      
+      SRRecorderControl *recorder = [SRRecorderControl new];
+      [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
+      
+      [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
+      
+      if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
+          recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"⇧⌘V"];
+      }
+      
+      [_keyboardShortcut addSubview:recorder];
 }
 
 @end

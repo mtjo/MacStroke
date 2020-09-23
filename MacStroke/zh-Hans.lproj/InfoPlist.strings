@@ -1,0 +1,8 @@
+/* 
+  InfoPlist.strings
+  MacStroke
+
+  Created by MTJO on 2020/9/23.
+  Copyright © 2020 Chivalry Software. All rights reserved.
+*/
+"NSAppleEventsUsageDescription" = "MacStroke.app 需要运行 Apple Script 部分脚本必需授权允许才能正常运行!";

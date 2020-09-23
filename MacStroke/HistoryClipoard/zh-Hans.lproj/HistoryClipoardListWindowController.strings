@@ -11,6 +11,9 @@
 /* Class = "NSTextFieldCell"; title = "centent"; ObjectID = "b1k-dp-BaL"; */
 "b1k-dp-BaL.title" = "内容";
 
+/* Class = "NSButtonCell"; title = " clear"; ObjectID = "ccl-zD-bEl"; */
+"ccl-zD-bEl.title" = "清除";
+
 /* Class = "NSTextFieldCell"; title = "id"; ObjectID = "p6o-gw-fvF"; */
 "p6o-gw-fvF.title" = "id";
 

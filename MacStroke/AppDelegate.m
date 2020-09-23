@@ -106,6 +106,7 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
     //init Right Click Menu
     [self initRightClickMenu];
     
+    NSLog(@"init");
      //init History Clipboard
     [self initHistoryClipboard];
     
@@ -485,6 +486,9 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 -(void) initHistoryClipboard
 {
+
+    [_preferencesWindowController initCilpboardShotCut];
+
     historyClipboard = [[HistoryClipboard alloc] init];
     
     [historyClipboard enableHistoryClipboard];

@@ -68,7 +68,13 @@
 - (void)doubleClick:(id)object {
     // This gets called after following steps 1-3.
     NSInteger row = [_tableOutlet clickedRow];
+    
+#ifdef DEBUG
     NSLog(@"doubleClick rowNumber:%ld",row);
+#endif
+    if (row < 0) {
+        return;
+    }
     NSString *s =_dataArray[row];
     [_dataArray removeObjectAtIndex:row];
     
@@ -82,7 +88,7 @@
     [_tableOutlet reloadData];
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
         NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
-
+        
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"localHistoryClipoardList"];
     }
 }

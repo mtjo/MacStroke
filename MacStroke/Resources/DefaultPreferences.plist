@@ -45,9 +45,9 @@
 	<key>enableHistoryClipboard</key>
 	<true/>
 	<key>clipoardStroageLocal</key>
-	<false/>
-	<key>clipoardStroageRam</key>
 	<true/>
+	<key>clipoardStroageRam</key>
+	<false/>
 	<key>historyClipoardList</key>
 	<integer>100</integer>
 </dict>

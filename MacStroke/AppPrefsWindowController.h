@@ -78,4 +78,6 @@
 - (IBAction)onChangeTerminal:(id)sender;
 
 - (IBAction)showHistoryCilpboardList:(id)sender;
+
+- (void)initCilpboardShotCut;
 @end
