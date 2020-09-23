@@ -5,6 +5,9 @@
 /* Class = "NSWindow"; title = "History Clipboard"; ObjectID = "F0z-JX-Cv5"; */
 "F0z-JX-Cv5.title" = "历史粘贴板";
 
+/* Class = "NSTextFieldCell"; title = "tips: Double-click the content to copy it to clipboard and then you can paste anywhere ."; ObjectID = "Vsw-rJ-Vad"; */
+"Vsw-rJ-Vad.title" = "tips: 双击内容将其复制到剪贴板，然后可以将其粘贴到任何地方。";
+
 /* Class = "NSTableColumn"; headerCell.title = "id"; ObjectID = "W4X-5N-Z8l"; */
 "W4X-5N-Z8l.headerCell.title" = "序号";
 

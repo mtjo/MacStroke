@@ -159,6 +159,7 @@
 		4D735927251AEC370007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		4D735984251AF7430007FC58 /* MacStroke-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "MacStroke-Info.plist"; sourceTree = "<group>"; };
 		4D73598D251AF7B00007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		4D7359C0251B4E6E0007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4D7A390B2519C8BE00DFB194 /* OpenMacStrokePreferences.applescript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.applescript; path = OpenMacStrokePreferences.applescript; sourceTree = "<group>"; };
@@ -179,7 +180,6 @@
 		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
 		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
 		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
-		4DEDBF822509C63900E8CAA1 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
 		87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MacStroke.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		880AA76D1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = "zh-Hans"; path = "zh-Hans.lproj/Credits.rtf"; sourceTree = "<group>"; };
 		880AA7731CA57884006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -664,7 +664,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				4DE22E6324F50E820046248A /* Base */,
-				4DEDBF822509C63900E8CAA1 /* zh-Hans */,
+				4D7359C0251B4E6E0007FC58 /* zh-Hans */,
 			);
 			name = HistoryClipoardListWindowController.xib;
 			sourceTree = "<group>";
