@@ -504,12 +504,10 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     SRRecorderControl *recorder = [SRRecorderControl new];
     [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
     
-    [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
+    //recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^⇧V"];
+    NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
     
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"firstLaunch"]) {
-        recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^V"];
-    }
-    
+   
 
     historyClipboard = [[HistoryClipboard alloc] init];
     

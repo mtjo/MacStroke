@@ -1116,7 +1116,7 @@ static NSString *currentScriptId = nil;
     [textField setIdentifier:@"Title"];
     return textField;
 }
-
+ 
 - (NSView *)tableViewForRightClicks:(NSTableColumn *)tableColumn row:(NSInteger)row {
     RightClicksList *rightClicksList = [RightClicksList sharedRightClicksList];
     NSTextField *textField = [[NSTextField alloc] init];
@@ -1229,7 +1229,7 @@ static NSString *currentScriptId = nil;
     [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
     
     [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
-    
+        
     [_keyboardShortcut addSubview:recorder];
 }
 
