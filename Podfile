@@ -7,3 +7,4 @@ target 'MacStroke' do
   pod 'IYLoginItem'
   pod 'HexColors', '~> 4.0.0'
 end
+

@@ -13,6 +13,10 @@
 @interface CanvasWindowController : NSWindowController {
     BOOL enable;
     NSMutableArray<NSView *> *viewList;
+    
+    NSMutableDictionary *windows;
+    NSWindow *window;
+    NSView *view;
 }
 
 @property(assign, nonatomic) BOOL enable;

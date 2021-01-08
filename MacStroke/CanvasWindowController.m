@@ -14,27 +14,45 @@
 @implementation CanvasWindowController
 
 - (void)reinitWindow {
+
     NSRect frame = NSScreen.mainScreen.frame;
-    NSWindow *window = [[CanvasWindow alloc] initWithContentRect:frame];
-    NSView *view = [[CanvasView alloc] initWithFrame:frame];
+    //[NSScreen mainScreen]
+    NSNumber *longNumber = [NSNumber numberWithLong:[[NSScreen mainScreen] hash]];
+    NSString *screenkey = [longNumber stringValue];
+    if ([[windows allKeys] containsObject:screenkey]) {
+        window = [windows objectForKey:screenkey];
+    }else{
+        window = [[CanvasWindow alloc] initWithContentRect:frame];
+        [windows setObject:window forKey:screenkey];
+    }
+
+
+    [view releaseGState];
+   
+
+    
+    view = [[CanvasView alloc] initWithFrame:frame];
+
     [viewList addObject:view];
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
     window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces;
     self.window = window;
     [window orderFront:self];
-    
+    [window setReleasedWhenClosed:YES];
 }
 
 - (id)init {
     self = [super init];
     viewList = [[NSMutableArray alloc] init];
+    windows = [NSMutableDictionary dictionary];
     if (self) {
         [self reinitWindow];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(handleScreenParametersChange:) name:NSApplicationDidChangeScreenParametersNotification object:nil];
     }
     return self;
 }
+
 
 - (BOOL)enable {
     return enable;

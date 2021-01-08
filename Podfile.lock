@@ -3,7 +3,7 @@ PODS:
   - HexColors (4.0.0)
   - IYLoginItem (0.1)
   - ShortcutRecorder (3.3.0)
-  - Sparkle (1.23.0)
+  - Sparkle (1.24.0)
 
 DEPENDENCIES:
   - DBPrefsWindowController
@@ -25,8 +25,8 @@ SPEC CHECKSUMS:
   HexColors: 5f95843ef89aff6a72e1fd3a8ebabf205cc43379
   IYLoginItem: e57a86b39d3b9ab0e2fc033adedae01efafd9adf
   ShortcutRecorder: 49b4c7f615133f02d0b23f91edfca9046ec0e1b3
-  Sparkle: 55b1a87ba69d56913375a281546b7c82dec95bb0
+  Sparkle: 270cd27377bf04e9c128af06e3a22d0f572d6ee3
 
 PODFILE CHECKSUM: 3ced9e931d526d439e3e2abf863f0998f45108eb
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.10.0

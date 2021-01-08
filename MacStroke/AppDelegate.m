@@ -42,7 +42,7 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
     [self initAppAtFirstLaunch];
     windowController = [[CanvasWindowController alloc] init];
     
-    CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
+    CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown);
     mouseEventTap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, eventMask, mouseEventCallback, NULL);
     
 
@@ -501,11 +501,12 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     }];
     [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
     
+    
     SRRecorderControl *recorder = [SRRecorderControl new];
     [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
-    
+    NSLog(@"historyCilpboardListShortcut:%@", options);
     //recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^⇧V"];
-    NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
+    //NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
     
    
 

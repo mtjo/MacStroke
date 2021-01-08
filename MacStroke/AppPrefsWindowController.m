@@ -38,7 +38,7 @@
 
 @synthesize rulesTableView = _rulesTableView;
 
-static NSSize const PREF_WINDOW_SIZES[3] = {{600, 400}, {800, 600}, {1000, 800}};
+static NSSize const PREF_WINDOW_SIZES[3] = {{800, 400}, {800, 600}, {1000, 800}};
 static NSInteger const PREF_WINDOW_SIZECOUNT = 3;
 static NSInteger currentRulesWindowSizeIndex = 0;
 static NSInteger currentFiltersWindowSizeIndex = 0;
@@ -73,6 +73,8 @@ static NSArray *exampleAppleScripts;
     [view setFrameSize:PREF_WINDOW_SIZES[*index]];
     [self changeWindowSizeToFitInsideView:view];
     [self crossFadeView:view withView:view];
+    [self windowShouldZoom:self.window toFrame:self.window.frame];
+   
     
 }
 
@@ -243,6 +245,8 @@ static NSArray *exampleAppleScripts;
     // Optional configuration settings.
     [self setCrossFade:[[NSUserDefaults standardUserDefaults] boolForKey:@"fade"]];
     [self setShiftSlowsAnimation:[[NSUserDefaults standardUserDefaults] boolForKey:@"shiftSlowsAnimation"]];
+
+
     
 }
 
