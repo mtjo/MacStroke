@@ -76,6 +76,7 @@
 @property (weak) IBOutlet NSButton *useItermRadio;
 
 - (IBAction)onChangeTerminal:(id)sender;
-
+- (IBAction)filterViewGoBiggerClicked:(id)sender;
+- (IBAction)changeSizeOfPreferenceWindow:(id)sender;
 - (void)initCilpboardShotCut;
 @end

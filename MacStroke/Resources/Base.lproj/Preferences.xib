@@ -48,11 +48,11 @@
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
         <customView id="99" userLabel="General">
-            <rect key="frame" x="0.0" y="0.0" width="800" height="480"/>
+            <rect key="frame" x="0.0" y="0.0" width="800" height="487"/>
             <autoresizingMask key="autoresizingMask"/>
             <subviews>
                 <box borderType="line" title="General" translatesAutoresizingMaskIntoConstraints="NO" id="zLw-Oi-GBf">
-                    <rect key="frame" x="17" y="299" width="766" height="161"/>
+                    <rect key="frame" x="17" y="306" width="766" height="161"/>
                     <view key="contentView" id="Ei1-dP-sWp">
                         <rect key="frame" x="3" y="3" width="760" height="143"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -143,13 +143,13 @@
                     </view>
                 </box>
                 <box borderType="line" title="Gesture" translatesAutoresizingMaskIntoConstraints="NO" id="4xM-Ya-MxN">
-                    <rect key="frame" x="17" y="162" width="766" height="133"/>
+                    <rect key="frame" x="17" y="162" width="766" height="140"/>
                     <view key="contentView" id="nbd-3i-kYj">
-                        <rect key="frame" x="3" y="3" width="760" height="115"/>
+                        <rect key="frame" x="3" y="3" width="760" height="122"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="353" userLabel="Gesture Min Score">
-                                <rect key="frame" x="18" y="80" width="138" height="18"/>
+                                <rect key="frame" x="18" y="87" width="138" height="18"/>
                                 <buttonCell key="cell" type="check" title="Gesture Min Score" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="354">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -159,7 +159,7 @@
                                 </connections>
                             </button>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="gw6-Zj-Tad" userLabel="Min Score:">
-                                <rect key="frame" x="172" y="83" width="69" height="16"/>
+                                <rect key="frame" x="172" y="90" width="69" height="16"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Min Score:" id="c53-qo-yp4">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -167,10 +167,7 @@
                                 </textFieldCell>
                             </textField>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4pA-0I-vtt">
-                                <rect key="frame" x="238" y="83" width="38" height="16"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="34" id="hr0-gO-ga8"/>
-                                </constraints>
+                                <rect key="frame" x="238" y="90" width="38" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="score" id="VAT-yD-qQg">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -181,7 +178,7 @@
                                 </connections>
                             </textField>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="5rb-jA-QTU">
-                                <rect key="frame" x="18" y="36" width="215" height="18"/>
+                                <rect key="frame" x="18" y="43" width="215" height="18"/>
                                 <buttonCell key="cell" type="check" title="Show Gesture In Whatever App" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="Pif-49-STQ">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -191,7 +188,7 @@
                                 </connections>
                             </button>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="399">
-                                <rect key="frame" x="18" y="58" width="215" height="18"/>
+                                <rect key="frame" x="18" y="65" width="215" height="18"/>
                                 <buttonCell key="cell" type="check" title="Disable Mouse Path" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="400">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -201,7 +198,7 @@
                                 </connections>
                             </button>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yFC-aS-4mO">
-                                <rect key="frame" x="18" y="13" width="68" height="16"/>
+                                <rect key="frame" x="18" y="20" width="68" height="16"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Line color:" id="eIp-tq-2xl">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -209,22 +206,22 @@
                                 </textFieldCell>
                             </textField>
                             <colorWell translatesAutoresizingMaskIntoConstraints="NO" id="lVi-qT-AYg">
-                                <rect key="frame" x="92" y="13" width="91" height="14"/>
+                                <rect key="frame" x="92" y="20" width="91" height="14"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="91" id="xQE-jj-MpX"/>
+                                    <constraint firstAttribute="width" constant="91" id="lRb-Bz-O0Q"/>
                                 </constraints>
                                 <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                                 <connections>
                                     <action selector="colorChanged:" target="-2" id="0w8-33-wML"/>
-                                    <binding destination="72" name="value" keyPath="values.lineColor" id="ZAU-q1-8oR">
+                                    <binding destination="72" name="value" keyPath="values.lineColor" id="Uea-OI-oI5">
                                         <dictionary key="options">
-                                            <string key="NSValueTransformerName">NSUnarchiveFromData</string>
+                                            <string key="NSValueTransformerName">NSKeyedUnarchiveFromData</string>
                                         </dictionary>
                                     </binding>
                                 </connections>
                             </colorWell>
                             <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="bP7-3k-KUa" userLabel="minScore Slider">
-                                <rect key="frame" x="280" y="73" width="214" height="28"/>
+                                <rect key="frame" x="280" y="80" width="214" height="28"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="210" id="dI3-yW-xV1"/>
                                 </constraints>
@@ -235,17 +232,16 @@
                             </slider>
                         </subviews>
                         <constraints>
-                            <constraint firstItem="lVi-qT-AYg" firstAttribute="leading" secondItem="yFC-aS-4mO" secondAttribute="trailing" constant="8" symbolic="YES" id="2Tc-Sk-25A"/>
                             <constraint firstItem="gw6-Zj-Tad" firstAttribute="top" secondItem="nbd-3i-kYj" secondAttribute="top" constant="16" id="2zG-Tn-Fdm"/>
                             <constraint firstItem="399" firstAttribute="top" secondItem="353" secondAttribute="bottom" constant="6" symbolic="YES" id="7YA-dL-W5X"/>
                             <constraint firstItem="399" firstAttribute="trailing" secondItem="5rb-jA-QTU" secondAttribute="trailing" id="E5A-ZG-Ftr"/>
                             <constraint firstItem="5rb-jA-QTU" firstAttribute="leading" secondItem="yFC-aS-4mO" secondAttribute="leading" id="Hw2-by-Y39"/>
                             <constraint firstItem="5rb-jA-QTU" firstAttribute="top" secondItem="399" secondAttribute="bottom" constant="6" symbolic="YES" id="Igc-6l-Jkh"/>
-                            <constraint firstAttribute="bottom" secondItem="lVi-qT-AYg" secondAttribute="bottom" constant="13" id="NhX-ug-kU7"/>
-                            <constraint firstItem="lVi-qT-AYg" firstAttribute="top" secondItem="5rb-jA-QTU" secondAttribute="bottom" constant="10" id="Pov-du-wHk"/>
                             <constraint firstItem="4pA-0I-vtt" firstAttribute="leading" secondItem="gw6-Zj-Tad" secondAttribute="trailing" constant="1" id="Qhp-oU-uQf"/>
+                            <constraint firstItem="lVi-qT-AYg" firstAttribute="leading" secondItem="yFC-aS-4mO" secondAttribute="trailing" constant="8" symbolic="YES" id="S15-dN-kJF"/>
                             <constraint firstItem="bP7-3k-KUa" firstAttribute="leading" secondItem="4pA-0I-vtt" secondAttribute="trailing" constant="8" id="Ut1-eB-fWc"/>
                             <constraint firstItem="353" firstAttribute="leading" secondItem="399" secondAttribute="leading" id="YE5-pv-Imt"/>
+                            <constraint firstItem="lVi-qT-AYg" firstAttribute="bottom" secondItem="yFC-aS-4mO" secondAttribute="bottom" id="bj4-IZ-dam"/>
                             <constraint firstItem="yFC-aS-4mO" firstAttribute="top" secondItem="5rb-jA-QTU" secondAttribute="bottom" constant="8" symbolic="YES" id="dVZ-nK-GGX"/>
                             <constraint firstItem="399" firstAttribute="leading" secondItem="5rb-jA-QTU" secondAttribute="leading" id="h3h-fY-6NI"/>
                             <constraint firstItem="4pA-0I-vtt" firstAttribute="top" secondItem="nbd-3i-kYj" secondAttribute="top" constant="16" id="lfG-WL-bIh"/>
@@ -253,6 +249,7 @@
                             <constraint firstItem="bP7-3k-KUa" firstAttribute="top" secondItem="nbd-3i-kYj" secondAttribute="top" constant="16" id="uA9-bG-Y1B"/>
                             <constraint firstItem="gw6-Zj-Tad" firstAttribute="leading" secondItem="353" secondAttribute="trailing" constant="18" id="why-Yf-7Pu"/>
                             <constraint firstItem="353" firstAttribute="top" secondItem="nbd-3i-kYj" secondAttribute="top" constant="18" id="xai-NJ-jY0"/>
+                            <constraint firstItem="lVi-qT-AYg" firstAttribute="top" secondItem="5rb-jA-QTU" secondAttribute="bottom" constant="10" id="zZV-X1-Grw"/>
                         </constraints>
                     </view>
                 </box>
@@ -426,7 +423,7 @@
             <connections>
                 <outlet property="nextKeyView" destination="101" id="220"/>
             </connections>
-            <point key="canvasLocation" x="-386" y="23"/>
+            <point key="canvasLocation" x="-386" y="22.5"/>
         </customView>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
         <customView misplaced="YES" id="5" userLabel="Rules">
@@ -703,10 +700,10 @@
                     <buttonCell key="cell" type="push" title="Go bigger" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Q7Q-zb-iKX">
                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                         <font key="font" metaFont="system"/>
+                        <connections>
+                            <action selector="changeSizeOfPreferenceWindow:" target="-2" id="3hg-UD-hXe"/>
+                        </connections>
                     </buttonCell>
-                    <connections>
-                        <action selector="changeSizeOfPreferenceWindow:" target="-2" id="xwh-PW-ijj"/>
-                    </connections>
                 </button>
                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="2vX-WF-Pfn">
                     <rect key="frame" x="267" y="-2" width="148" height="32"/>
@@ -791,7 +788,7 @@
                         <font key="font" metaFont="system"/>
                     </buttonCell>
                     <connections>
-                        <action selector="filterViewGoBiggerClicked:" target="-2" id="CNM-RL-Vmn"/>
+                        <action selector="filterViewGoBiggerClicked:" target="-2" id="ywH-Fb-dUC"/>
                     </connections>
                 </button>
                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Zse-PN-yEi">
@@ -972,7 +969,7 @@
                     <rect key="frame" x="10" y="20" width="227" height="386"/>
                     <clipView key="contentView" id="HAd-Pq-7NJ">
                         <rect key="frame" x="1" y="1" width="225" height="384"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" viewBased="YES" id="T1p-6B-s66">
                                 <rect key="frame" x="0.0" y="0.0" width="225" height="384"/>

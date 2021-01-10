@@ -73,8 +73,6 @@ static NSArray *exampleAppleScripts;
     [view setFrameSize:PREF_WINDOW_SIZES[*index]];
     [self changeWindowSizeToFitInsideView:view];
     [self crossFadeView:view withView:view];
-    [self windowShouldZoom:self.window toFrame:self.window.frame];
-   
     
 }
 
@@ -191,6 +189,7 @@ static NSArray *exampleAppleScripts;
     NSView *p = [self contentSubview];
     frame.origin.y = NSHeight([p frame]) - NSHeight([view bounds]);
     [view setFrame:frame];
+    
 }
 
 - (IBAction)resetRules:(id)sender {
@@ -245,8 +244,6 @@ static NSArray *exampleAppleScripts;
     // Optional configuration settings.
     [self setCrossFade:[[NSUserDefaults standardUserDefaults] boolForKey:@"fade"]];
     [self setShiftSlowsAnimation:[[NSUserDefaults standardUserDefaults] boolForKey:@"shiftSlowsAnimation"]];
-
-
     
 }
 
@@ -740,7 +737,7 @@ static NSString *currentScriptId = nil;
         
         NSArray *arguments = [NSArray arrayWithObjects:
                               @"-c" ,
-                              @"defaults import com.codefalling.MacStroke -",
+                              @"defaults import net.mtjo.MacStroke -",
                               nil];
         
         [task setArguments:arguments];
@@ -776,7 +773,7 @@ static NSString *currentScriptId = nil;
         
         NSArray *arguments = [NSArray arrayWithObjects:
                               @"-c" ,
-                              @"defaults export com.codefalling.MacStroke -",
+                              @"defaults export net.mtjo.MacStroke -",
                               nil];
         
         [task setArguments:arguments];
