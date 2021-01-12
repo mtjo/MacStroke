@@ -242,12 +242,6 @@
 /* Class = "NSMenuItem"; title = "Item 1"; ObjectID = "igL-9q-xhF"; */
 "igL-9q-xhF.title" = "Item 1";
 
-/* Class = "NSButtonCell"; title = "ram"; ObjectID = "in7-8b-KAn"; */
-"in7-8b-KAn.title" = "内存";
-
-/* Class = "NSButtonCell"; title = "local"; ObjectID = "lQy-ff-LeV"; */
-"lQy-ff-LeV.title" = "本地";
-
 /* Class = "NSTextFieldCell"; title = "Font:"; ObjectID = "mP7-1C-3nv"; */
 "mP7-1C-3nv.title" = "字体:";
 
@@ -260,6 +254,12 @@
 /* Class = "NSMenuItem"; title = "Item 2"; ObjectID = "n3s-v8-d8G"; */
 "n3s-v8-d8G.title" = "Item 2";
 
+/* Class = "NSMenuItem"; title = "ram"; ObjectID = "qWS-Rw-vgX"; */
+"qWS-Rw-vgX.title" = "内存";
+
+/* Class = "NSMenuItem"; title = "local"; ObjectID = "qs6-8b-I24"; */
+"qs6-8b-I24.title" = "本地";
+
 /* Class = "NSButtonCell"; title = "Automatically Download Updates"; ObjectID = "rOi-wV-Iez"; */
 "rOi-wV-Iez.title" = "自动下载更新";
 
@@ -268,6 +268,9 @@
 
 /* Class = "NSBox"; title = "Note"; ObjectID = "rgA-le-oEg"; */
 "rgA-le-oEg.title" = "提示";
+
+/* Class = "NSButtonCell"; title = "Show Icon"; ObjectID = "sGG-hv-18X"; */
+"sGG-hv-18X.title" = "显示图标";
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "seb-qO-V3w"; */
 "seb-qO-V3w.title" = "添加..";
