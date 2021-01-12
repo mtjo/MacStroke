@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		075C1BC91C214E9A00B7211A /* list@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 075C1BC81C214E9A00B7211A /* list@2x.png */; };
-		1381E4AC1824E7E800E815F5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1381E4AB1824E7E800E815F5 /* Cocoa.framework */; };
 		1381E4B81824E7E800E815F5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1381E4B71824E7E800E815F5 /* main.m */; };
 		1381E4BF1824E7E800E815F5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1381E4BE1824E7E800E815F5 /* AppDelegate.m */; };
 		1381E4C41824E7E800E815F5 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1381E4C31824E7E800E815F5 /* Images.xcassets */; };
@@ -30,9 +29,7 @@
 		4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D334FA422C73AB100E97738 /* DrawNoteView.m */; };
 		4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
-		4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D42B20022A7578400FC3699 /* IOBluetooth.framework */; };
 		4D6270C223B3650B00AC8745 /* FinderSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270C123B3650B00AC8745 /* FinderSync.m */; };
-		4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D6270CD23B3671E00AC8745 /* FinderCommChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */; };
 		4D6270D523B37F2100AC8745 /* RightClickMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270D423B37F2100AC8745 /* RightClickMenu.m */; };
 		4D74C6841E3CD99300F6A289 /* GestureCompare.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D74C6831E3CD99300F6A289 /* GestureCompare.m */; };
@@ -47,8 +44,21 @@
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
 		4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DD9B2FD243EFAAB0044A46E /* newFile.png */; };
 		4DE22E6224F50E820046248A /* HistoryClipoardListWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4DE22E6424F50E820046248A /* HistoryClipoardListWindowController.xib */; };
+		4DE9D75D25AD4E6D00B0D9DE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DE9D75C25AD4E4E00B0D9DE /* Assets.xcassets */; };
 		4DEC5E331E5F40F000DF37EB /* AppleScript.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */; };
 		4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */; };
+		4DF4D56625AD359300BC6E08 /* CoolToastTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D56525AD359300BC6E08 /* CoolToastTests.m */; };
+		4DF4D56825AD359300BC6E08 /* CoolToast.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DF4D55825AD359300BC6E08 /* CoolToast.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DF4D5D025AD3D6500BC6E08 /* ToastWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5C725AD3D6500BC6E08 /* ToastWindowController.m */; };
+		4DF4D5D125AD3D6500BC6E08 /* CTView.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DF4D5C825AD3D6500BC6E08 /* CTView.h */; };
+		4DF4D5D225AD3D6500BC6E08 /* CTCommon.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5C925AD3D6500BC6E08 /* CTCommon.m */; };
+		4DF4D5D325AD3D6500BC6E08 /* CTCommon.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DF4D5CA25AD3D6500BC6E08 /* CTCommon.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DF4D5D425AD3D6500BC6E08 /* CTScreen.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DF4D5CB25AD3D6500BC6E08 /* CTScreen.h */; };
+		4DF4D5D525AD3D6500BC6E08 /* ToastWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DF4D5CC25AD3D6500BC6E08 /* ToastWindowController.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DF4D5D625AD3D6500BC6E08 /* ToastWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CD25AD3D6500BC6E08 /* ToastWindowController.xib */; };
+		4DF4D5D725AD3D6500BC6E08 /* CTScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CE25AD3D6500BC6E08 /* CTScreen.m */; };
+		4DF4D5D825AD3D6500BC6E08 /* CTView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CF25AD3D6500BC6E08 /* CTView.m */; };
+		4DF4D61B25AD49E700BC6E08 /* CoolToast.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */; };
 		880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7591CA5738A006E7A74 /* Preferences.xib */; };
 		880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75D1CA5745D006E7A74 /* AppPickerWindowController.xib */; };
 		880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75F1CA5745D006E7A74 /* Credits.rtf */; };
@@ -59,11 +69,9 @@
 		887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */ = {isa = PBXBuildFile; fileRef = 887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */; };
 		B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */; };
 		B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */; };
-		C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C610961B1DED98C700FCC263 /* CoreImage.framework */; };
 		D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */ = {isa = PBXBuildFile; fileRef = D01C87CA1DE9DF2600B47E7D /* logo.png */; };
 		D09794D11DE5DA1900E88F73 /* scroll.png in Resources */ = {isa = PBXBuildFile; fileRef = D09794D01DE5DA1900E88F73 /* scroll.png */; };
 		D09FDBF51E06CDB50085FC36 /* README.html in Resources */ = {isa = PBXBuildFile; fileRef = D09FDBF31E06CDB50085FC36 /* README.html */; };
-		F2C464A8F086B9812C917A5E /* Pods_MacStroke.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +81,27 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4D6270BD23B3650B00AC8745;
 			remoteInfo = FinderSyncExtension;
+		};
+		4DF4D56025AD359300BC6E08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4DF4D55525AD359300BC6E08;
+			remoteInfo = CoolToast;
+		};
+		4DF4D56225AD359300BC6E08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1381E4A71824E7E800E815F5;
+			remoteInfo = MacStroke;
+		};
+		4DF4D56925AD359300BC6E08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1381E4A01824E7E800E815F5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4DF4D55525AD359300BC6E08;
+			remoteInfo = CoolToast;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -93,9 +122,18 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				4D6270C723B3650B00AC8745 /* FinderSyncExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DD20E3125AC576D0025CF79 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -104,10 +142,6 @@
 		075C1BC81C214E9A00B7211A /* list@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "list@2x.png"; sourceTree = "<group>"; };
 		1331CD80182C50E500782D16 /* menu_icon_16x16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = menu_icon_16x16.png; sourceTree = "<group>"; };
 		1331CD81182C50E500782D16 /* menu_icon_32x32.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = menu_icon_32x32.png; sourceTree = "<group>"; };
-		1381E4AB1824E7E800E815F5 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
-		1381E4AE1824E7E800E815F5 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
-		1381E4AF1824E7E800E815F5 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
-		1381E4B01824E7E800E815F5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		1381E4B71824E7E800E815F5 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		1381E4B91824E7E800E815F5 /* MacStroke-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MacStroke-Prefix.pch"; sourceTree = "<group>"; };
 		1381E4BD1824E7E800E815F5 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -145,8 +179,6 @@
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
-		4D42B20022A7578400FC3699 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
-		4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderSyncExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D6270C023B3650B00AC8745 /* FinderSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderSync.h; sourceTree = "<group>"; };
 		4D6270C123B3650B00AC8745 /* FinderSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderSync.m; sourceTree = "<group>"; };
 		4D6270C323B3650B00AC8745 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -177,10 +209,26 @@
 		4DD3CBFD1E615C6200AFC850 /* PreGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreGesture.m; sourceTree = "<group>"; };
 		4DD9B2FD243EFAAB0044A46E /* newFile.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = newFile.png; sourceTree = "<group>"; };
 		4DE22E6324F50E820046248A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/HistoryClipoardListWindowController.xib; sourceTree = "<group>"; };
+		4DE9D75625AD4A5B00B0D9DE /* CoolToastTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CoolToastTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DE9D75C25AD4E4E00B0D9DE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4DEC5E301E5F40F000DF37EB /* AppleScript.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = AppleScript.sdef; sourceTree = "<group>"; };
 		4DEC5E311E5F40F000DF37EB /* AppleScriptCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleScriptCommand.h; sourceTree = "<group>"; };
 		4DEC5E321E5F40F000DF37EB /* AppleScriptCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleScriptCommand.m; sourceTree = "<group>"; };
-		87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MacStroke.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DF4D55825AD359300BC6E08 /* CoolToast.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoolToast.h; sourceTree = "<group>"; };
+		4DF4D55925AD359300BC6E08 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4DF4D56525AD359300BC6E08 /* CoolToastTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CoolToastTests.m; sourceTree = "<group>"; };
+		4DF4D56725AD359300BC6E08 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4DF4D5C725AD3D6500BC6E08 /* ToastWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ToastWindowController.m; sourceTree = "<group>"; };
+		4DF4D5C825AD3D6500BC6E08 /* CTView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CTView.h; sourceTree = "<group>"; };
+		4DF4D5C925AD3D6500BC6E08 /* CTCommon.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CTCommon.m; sourceTree = "<group>"; };
+		4DF4D5CA25AD3D6500BC6E08 /* CTCommon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CTCommon.h; sourceTree = "<group>"; };
+		4DF4D5CB25AD3D6500BC6E08 /* CTScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CTScreen.h; sourceTree = "<group>"; };
+		4DF4D5CC25AD3D6500BC6E08 /* ToastWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ToastWindowController.h; sourceTree = "<group>"; };
+		4DF4D5CD25AD3D6500BC6E08 /* ToastWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ToastWindowController.xib; sourceTree = "<group>"; };
+		4DF4D5CE25AD3D6500BC6E08 /* CTScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CTScreen.m; sourceTree = "<group>"; };
+		4DF4D5CF25AD3D6500BC6E08 /* CTView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CTView.m; sourceTree = "<group>"; };
+		4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = CoolToast.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DF4D61025AD48CD00BC6E08 /* FinderSyncExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderSyncExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		880AA76D1CA575D6006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = "zh-Hans"; path = "zh-Hans.lproj/Credits.rtf"; sourceTree = "<group>"; };
 		880AA7731CA57884006E7A74 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		880AA7751CA64DDB006E7A74 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -198,7 +246,6 @@
 		B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dsa_pub.pem; sourceTree = "<group>"; };
 		B6F75AE01BD65BDD00A8CF63 /* AppPickerWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppPickerWindowController.h; sourceTree = "<group>"; };
 		B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppPickerWindowController.m; sourceTree = "<group>"; };
-		C610961B1DED98C700FCC263 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		CD4C14F9B6CF13E8CE5E01BC /* Pods-MacStroke.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MacStroke.debug.xcconfig"; path = "Pods/Target Support Files/Pods-MacStroke/Pods-MacStroke.debug.xcconfig"; sourceTree = "<group>"; };
 		D01C87CA1DE9DF2600B47E7D /* logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = logo.png; sourceTree = "<group>"; };
 		D09794D01DE5DA1900E88F73 /* scroll.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = scroll.png; sourceTree = "<group>"; };
@@ -211,14 +258,25 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D42B20122A7578400FC3699 /* IOBluetooth.framework in Frameworks */,
-				C610961C1DED98C700FCC263 /* CoreImage.framework in Frameworks */,
-				1381E4AC1824E7E800E815F5 /* Cocoa.framework in Frameworks */,
-				F2C464A8F086B9812C917A5E /* Pods_MacStroke.framework in Frameworks */,
+				4DF4D61B25AD49E700BC6E08 /* CoolToast.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4D6270BB23B3650B00AC8745 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DF4D55325AD359300BC6E08 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DF4D55B25AD359300BC6E08 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -231,42 +289,17 @@
 		1381E49F1824E7E800E815F5 = {
 			isa = PBXGroup;
 			children = (
+				4DE9D75C25AD4E4E00B0D9DE /* Assets.xcassets */,
 				1381E4B11824E7E800E815F5 /* MacStroke */,
 				4D6270BF23B3650B00AC8745 /* FinderSyncExtension */,
-				1381E4AA1824E7E800E815F5 /* Frameworks */,
-				1381E4A91824E7E800E815F5 /* Products */,
+				4DF4D55725AD359300BC6E08 /* CoolToast */,
+				4DF4D56425AD359300BC6E08 /* CoolToastTests */,
 				CCE209CCED2C3EF90609FF7E /* Pods */,
+				4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */,
+				4DF4D61025AD48CD00BC6E08 /* FinderSyncExtension.appex */,
+				4DF4D61A25AD49E700BC6E08 /* Frameworks */,
+				4DE9D75625AD4A5B00B0D9DE /* CoolToastTests.xctest */,
 			);
-			sourceTree = "<group>";
-		};
-		1381E4A91824E7E800E815F5 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		1381E4AA1824E7E800E815F5 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				4D42B20022A7578400FC3699 /* IOBluetooth.framework */,
-				C610961B1DED98C700FCC263 /* CoreImage.framework */,
-				1381E4AB1824E7E800E815F5 /* Cocoa.framework */,
-				1381E4AD1824E7E800E815F5 /* Other Frameworks */,
-				87D110C28C80DB4E1A300331 /* Pods_MacStroke.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		1381E4AD1824E7E800E815F5 /* Other Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				1381E4AE1824E7E800E815F5 /* AppKit.framework */,
-				1381E4AF1824E7E800E815F5 /* CoreData.framework */,
-				1381E4B01824E7E800E815F5 /* Foundation.framework */,
-			);
-			name = "Other Frameworks";
 			sourceTree = "<group>";
 		};
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
@@ -409,6 +442,40 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		4DF4D55725AD359300BC6E08 /* CoolToast */ = {
+			isa = PBXGroup;
+			children = (
+				4DF4D5CA25AD3D6500BC6E08 /* CTCommon.h */,
+				4DF4D5C925AD3D6500BC6E08 /* CTCommon.m */,
+				4DF4D5CB25AD3D6500BC6E08 /* CTScreen.h */,
+				4DF4D5CE25AD3D6500BC6E08 /* CTScreen.m */,
+				4DF4D5C825AD3D6500BC6E08 /* CTView.h */,
+				4DF4D5CF25AD3D6500BC6E08 /* CTView.m */,
+				4DF4D5CC25AD3D6500BC6E08 /* ToastWindowController.h */,
+				4DF4D5C725AD3D6500BC6E08 /* ToastWindowController.m */,
+				4DF4D5CD25AD3D6500BC6E08 /* ToastWindowController.xib */,
+				4DF4D55825AD359300BC6E08 /* CoolToast.h */,
+				4DF4D55925AD359300BC6E08 /* Info.plist */,
+			);
+			path = CoolToast;
+			sourceTree = "<group>";
+		};
+		4DF4D56425AD359300BC6E08 /* CoolToastTests */ = {
+			isa = PBXGroup;
+			children = (
+				4DF4D56525AD359300BC6E08 /* CoolToastTests.m */,
+				4DF4D56725AD359300BC6E08 /* Info.plist */,
+			);
+			path = CoolToastTests;
+			sourceTree = "<group>";
+		};
+		4DF4D61A25AD49E700BC6E08 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		CCE209CCED2C3EF90609FF7E /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -419,6 +486,21 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		4DF4D55125AD359300BC6E08 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4DF4D5D325AD3D6500BC6E08 /* CTCommon.h in Headers */,
+				4DF4D5D525AD3D6500BC6E08 /* ToastWindowController.h in Headers */,
+				4DF4D5D125AD3D6500BC6E08 /* CTView.h in Headers */,
+				4DF4D56825AD359300BC6E08 /* CoolToast.h in Headers */,
+				4DF4D5D425AD3D6500BC6E08 /* CTScreen.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		1381E4A71824E7E800E815F5 /* MacStroke */ = {
@@ -432,11 +514,13 @@
 				C2CC8958184B6BE82579F7B1 /* [CP] Embed Pods Frameworks */,
 				4DA8D7D523AB28910024B541 /* Embed App Extensions */,
 				4D5ABFD023B0BD3300EA37CB /* Embed XPC Services */,
+				4DD20E3125AC576D0025CF79 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				4D6270C623B3650B00AC8745 /* PBXTargetDependency */,
+				4DF4D56A25AD359300BC6E08 /* PBXTargetDependency */,
 			);
 			name = MacStroke;
 			productName = MacGesture;
@@ -456,8 +540,45 @@
 			);
 			name = FinderSyncExtension;
 			productName = FinderSyncExtension;
-			productReference = 4D6270BE23B3650B00AC8745 /* FinderSyncExtension.appex */;
+			productReference = 4DF4D61025AD48CD00BC6E08 /* FinderSyncExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		4DF4D55525AD359300BC6E08 /* CoolToast */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4DF4D56D25AD359300BC6E08 /* Build configuration list for PBXNativeTarget "CoolToast" */;
+			buildPhases = (
+				4DF4D55125AD359300BC6E08 /* Headers */,
+				4DF4D55225AD359300BC6E08 /* Sources */,
+				4DF4D55325AD359300BC6E08 /* Frameworks */,
+				4DF4D55425AD359300BC6E08 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CoolToast;
+			productName = CoolToast;
+			productReference = 4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		4DF4D55D25AD359300BC6E08 /* CoolToastTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4DF4D57025AD359300BC6E08 /* Build configuration list for PBXNativeTarget "CoolToastTests" */;
+			buildPhases = (
+				4DF4D55A25AD359300BC6E08 /* Sources */,
+				4DF4D55B25AD359300BC6E08 /* Frameworks */,
+				4DF4D55C25AD359300BC6E08 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4DF4D56125AD359300BC6E08 /* PBXTargetDependency */,
+				4DF4D56325AD359300BC6E08 /* PBXTargetDependency */,
+			);
+			name = CoolToastTests;
+			productName = CoolToastTests;
+			productReference = 4DE9D75625AD4A5B00B0D9DE /* CoolToastTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -478,6 +599,16 @@
 						DevelopmentTeam = 6H594KH8XS;
 						ProvisioningStyle = Automatic;
 					};
+					4DF4D55525AD359300BC6E08 = {
+						CreatedOnToolsVersion = 12.3;
+						ProvisioningStyle = Automatic;
+					};
+					4DF4D55D25AD359300BC6E08 = {
+						CreatedOnToolsVersion = 12.3;
+						DevelopmentTeam = 6H594KH8XS;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 1381E4A71824E7E800E815F5;
+					};
 				};
 			};
 			buildConfigurationList = 1381E4A31824E7E800E815F5 /* Build configuration list for PBXProject "MacStroke" */;
@@ -490,12 +621,14 @@
 				"zh-Hans",
 			);
 			mainGroup = 1381E49F1824E7E800E815F5;
-			productRefGroup = 1381E4A91824E7E800E815F5 /* Products */;
+			productRefGroup = 1381E49F1824E7E800E815F5;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				1381E4A71824E7E800E815F5 /* MacStroke */,
 				4D6270BD23B3650B00AC8745 /* FinderSyncExtension */,
+				4DF4D55525AD359300BC6E08 /* CoolToast */,
+				4DF4D55D25AD359300BC6E08 /* CoolToastTests */,
 			);
 		};
 /* End PBXProject section */
@@ -535,6 +668,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DF4D55425AD359300BC6E08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4DE9D75D25AD4E6D00B0D9DE /* Assets.xcassets in Resources */,
+				4DF4D5D625AD3D6500BC6E08 /* ToastWindowController.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DF4D55C25AD359300BC6E08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -631,6 +780,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4DF4D55225AD359300BC6E08 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4DF4D5D725AD3D6500BC6E08 /* CTScreen.m in Sources */,
+				4DF4D5D825AD3D6500BC6E08 /* CTView.m in Sources */,
+				4DF4D5D025AD3D6500BC6E08 /* ToastWindowController.m in Sources */,
+				4DF4D5D225AD3D6500BC6E08 /* CTCommon.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DF4D55A25AD359300BC6E08 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4DF4D56625AD359300BC6E08 /* CoolToastTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -638,6 +806,21 @@
 			isa = PBXTargetDependency;
 			target = 4D6270BD23B3650B00AC8745 /* FinderSyncExtension */;
 			targetProxy = 4D6270C523B3650B00AC8745 /* PBXContainerItemProxy */;
+		};
+		4DF4D56125AD359300BC6E08 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4DF4D55525AD359300BC6E08 /* CoolToast */;
+			targetProxy = 4DF4D56025AD359300BC6E08 /* PBXContainerItemProxy */;
+		};
+		4DF4D56325AD359300BC6E08 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1381E4A71824E7E800E815F5 /* MacStroke */;
+			targetProxy = 4DF4D56225AD359300BC6E08 /* PBXContainerItemProxy */;
+		};
+		4DF4D56A25AD359300BC6E08 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4DF4D55525AD359300BC6E08 /* CoolToast */;
+			targetProxy = 4DF4D56925AD359300BC6E08 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -835,9 +1018,15 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/MacStroke",
+					"$(PROJECT_DIR)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
@@ -856,9 +1045,15 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/MacStroke",
+					"$(PROJECT_DIR)",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MacStroke/MacStroke-Prefix.pch";
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
@@ -931,6 +1126,132 @@
 			};
 			name = Release;
 		};
+		4DF4D56E25AD359300BC6E08 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = CoolToast/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.socoolby.CoolToast;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		4DF4D56F25AD359300BC6E08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = CoolToast/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.socoolby.CoolToast;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		4DF4D57125AD359300BC6E08 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6H594KH8XS;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = CoolToastTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = cn.mtjo.CoolToastTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacStroke.app/Contents/MacOS/MacStroke";
+			};
+			name = Debug;
+		};
+		4DF4D57225AD359300BC6E08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = 6H594KH8XS;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = CoolToastTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 11.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = cn.mtjo.CoolToastTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacStroke.app/Contents/MacOS/MacStroke";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -957,6 +1278,24 @@
 			buildConfigurations = (
 				4D6270C923B3650B00AC8745 /* Debug */,
 				4D6270CA23B3650B00AC8745 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4DF4D56D25AD359300BC6E08 /* Build configuration list for PBXNativeTarget "CoolToast" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4DF4D56E25AD359300BC6E08 /* Debug */,
+				4DF4D56F25AD359300BC6E08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4DF4D57025AD359300BC6E08 /* Build configuration list for PBXNativeTarget "CoolToastTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4DF4D57125AD359300BC6E08 /* Debug */,
+				4DF4D57225AD359300BC6E08 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

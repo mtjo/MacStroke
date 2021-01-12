@@ -222,7 +222,10 @@ static void setActionIndex(){
         
     }
     actionRuleIndex=tmpIndex;
-    [windowController writeActionRuleIndex:actionRuleIndex];
+    if (actionRuleIndex > -1 && [[NSUserDefaults standardUserDefaults] boolForKey:@"showGestureNote"]) {
+        NSString *note = [[RulesList sharedRulesList] noteAtIndex:actionRuleIndex];
+        [windowController showNoteTost:note];
+    }
 }
 
 void resetGestureB() {
@@ -504,7 +507,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     
     SRRecorderControl *recorder = [SRRecorderControl new];
     [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
-    NSLog(@"historyCilpboardListShortcut:%@", options);
     //recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^⇧V"];
     //NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
     

@@ -19,49 +19,13 @@ static NSColor *loadedColor;
 - (id)initWithFrame:(NSRect)frame {
     self = [super initWithFrame:frame];
     
-    noteColor = [MGOptionsDefine getNoteColor];
-    if( ![noteColor isEqualTo:loadedColor] ) {
-        loadedColor = noteColor;
-    }
-    
     if (self) {
         color = [MGOptionsDefine getLineColor];
         points = [[NSMutableArray alloc] init];
-        noteToDraw = @"";
         radius = 2;
     }
     
     return self;
-}
-
-- (void)drawNote {
-    // This should be called in drawRect
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:@"showGestureNote"] || [noteToDraw isEqualToString:@""]) {
-        return;
-    }
-    if (![noteToDraw isEqualToString:@""]) {
-        [NSGraphicsContext saveGraphicsState];
-        double noteBackgroundAlpha=[[NSUserDefaults standardUserDefaults] doubleForKey:@"noteBackgroundAlpha"];
-        
-        CGRect screenRect = [[NSScreen mainScreen] frame];
-        
-        NSFont *font = [NSFont fontWithName:[[NSUserDefaults standardUserDefaults] objectForKey:@"noteFontName"] size:[[NSUserDefaults standardUserDefaults] doubleForKey:@"noteFontSize"]];
-        
-        NSDictionary *textAttributes = @{NSFontAttributeName : font, NSForegroundColorAttributeName : noteColor};
-        
-        CGSize size = [noteToDraw sizeWithAttributes:textAttributes];
-        float x = ((screenRect.size.width - size.width) / 2);
-        float y = ((screenRect.size.height)/2);
-        
-        
-        CGContextRef context = [[NSGraphicsContext currentContext] graphicsPort];
-        CGContextSetRGBFillColor (context, 0, 0, 0, noteBackgroundAlpha);
-        CGContextFillRect (context, CGRectMake (x, y, size.width,size.height));
-        
-        [noteToDraw drawAtPoint:NSMakePoint(x, y) withAttributes:textAttributes];
-        [NSGraphicsContext restoreGraphicsState];
-    }
-    self.needsDisplay = YES;
 }
 
 
@@ -81,12 +45,10 @@ static NSColor *loadedColor;
         }
         [path stroke];
     }
-    [self drawNote];
 }
 
 - (void)clear {
     [points removeAllObjects];
-    noteToDraw = @"";
     self.needsDisplay = YES;
 }
 
@@ -141,17 +103,4 @@ static NSColor *loadedColor;
     [self clear];
 }
 
-- (void)writeActionRuleIndex:(NSInteger) Index; {
-    if(Index == -1){
-        return;
-    }
-    noteToDraw = [[RulesList sharedRulesList] noteAtIndex:Index];
-    [self setDrawNote:noteToDraw];
-        
-}
-
-- (void)setDrawNote:(NSString*) note;{
-    noteToDraw = note;
-    self.needsDisplay = YES;
-}
 @end

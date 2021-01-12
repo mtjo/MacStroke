@@ -25,11 +25,7 @@
         window = [[CanvasWindow alloc] initWithContentRect:frame];
         [windows setObject:window forKey:screenkey];
     }
-
-
     [view releaseGState];
-   
-
     
     view = [[CanvasView alloc] initWithFrame:frame];
 
@@ -78,9 +74,6 @@
             break;
         case NSRightMouseUp:
             [self.window.contentView mouseUp:event];
-            //clear draw note after noteRetetionTime
-            double noteRetetionTime = [[NSUserDefaults standardUserDefaults] doubleForKey:@"noteRetetionTime"];
-            [NSTimer scheduledTimerWithTimeInterval:noteRetetionTime target:self selector:@selector(clearNote:) userInfo:viewList repeats:NO];
             break;
         default:
             break;
@@ -93,8 +86,57 @@
     [self.window.contentView resizeTo:frame];
 }
 
-- (void)writeActionRuleIndex:(NSInteger)actionRuleIndex; {
-    [self.window.contentView writeActionRuleIndex:actionRuleIndex];
+- (void)showNoteTost:(NSString*) note {
+    if (note) {
+        
+        float noteBackgroundAlpha=[[NSUserDefaults standardUserDefaults] doubleForKey:@"noteBackgroundAlpha"];
+        
+        //clear draw note after noteRetetionTime
+        NSInteger noteRetetionTime = [[NSUserDefaults standardUserDefaults] integerForKey:@"noteRetetionTime"];
+        ToastWindowController *toastWindow=[ToastWindowController getToastWindow];
+        toastWindow.toastBackgroundColor=[NSColor colorWithRed:0 green:0 blue:0 alpha:noteBackgroundAlpha];
+        //toastWindow.backgroundColor
+        NSFont *font = [NSFont fontWithName:[[NSUserDefaults standardUserDefaults] objectForKey:@"noteFontName"] size:[[NSUserDefaults standardUserDefaults] doubleForKey:@"noteFontSize"]];
+        
+        BOOL hiddenNoteIcon = ![[NSUserDefaults standardUserDefaults] boolForKey:@"showNoteIcon"];
+        toastWindow.hiddenIcon=hiddenNoteIcon;
+        toastWindow.textFont = font;
+        toastWindow.animater=CTAnimaterFade;
+        toastWindow.animaterTimeSecond=0.5;
+        toastWindow.autoDismissTimeInSecond=noteRetetionTime;
+        
+        long notePostion  = [[NSUserDefaults standardUserDefaults] integerForKey:@"notePostion"];
+        switch (notePostion) {
+            case 0:
+                toastWindow.toastPostion=CTPositionMouse;
+                break;
+            case 1:
+                toastWindow.toastPostion=CTPositionCenter;
+                break;
+            case 2:
+                toastWindow.toastPostion=CTPositionRight|CTPositionTop;
+                break;
+            case 3:
+                toastWindow.toastPostion=CTPositionRight|CTPositionBottom;
+                break;
+            case 4:
+                toastWindow.toastPostion=CTPositionLeft|CTPositionTop;
+                break;
+            case 5:
+                toastWindow.toastPostion=CTPositionLeft|CTPositionBottom;;
+                break;
+            default:
+                toastWindow.toastPostion=CTPositionCenter;
+                break;
+        }
+        
+        NSLog(@"notePostion:%ld",notePostion);
+
+
+        //toastWindow.maxWidth=250;
+        //toastWindow.delegate=self;
+        [toastWindow showCoolToast:note];
+    }
 }
 
 - (void)rightClick:(NSDictionary*) pointDic;{
