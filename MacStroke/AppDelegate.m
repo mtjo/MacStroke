@@ -472,7 +472,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             [defs setObject:[defaultPrefs objectForKey:key] forKey:key];
         }
         [defs synchronize];
-        [MGOptionsDefine resetColors];
                 
     }
 }

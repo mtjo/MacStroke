@@ -162,7 +162,7 @@ static inline void addWildcardShortcutRule(RulesList *rulesList,
     
     
     //T Revered
-    Gesture=[PreGesture getGestureByLetter:@"T" IsRevered:NO];
+    Gesture=[PreGesture getGestureByLetter:@"T" IsRevered:YES];
     addWildcardShortcutRule(self, @"PrevTab", Gesture,ACTION_TYPE_SHORTCUT, kVK_ANSI_LeftBracket, NSShiftKeyMask|NSCommandKeyMask, @"",@"", @"Prev Tab");
     
     

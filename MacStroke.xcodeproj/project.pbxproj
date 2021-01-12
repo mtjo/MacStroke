@@ -26,7 +26,6 @@
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
 		4D0EA07724EFC67F004CCC85 /* HistoryClipoardListWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D0EA07524EFC67F004CCC85 /* HistoryClipoardListWindowController.m */; };
-		4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D334FA422C73AB100E97738 /* DrawNoteView.m */; };
 		4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
 		4D6270C223B3650B00AC8745 /* FinderSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270C123B3650B00AC8745 /* FinderSync.m */; };
@@ -67,6 +66,7 @@
 		88331A381C9402810064ADD5 /* AppleScript_Editor_Logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 88331A371C9402810064ADD5 /* AppleScript_Editor_Logo.png */; };
 		88331A3B1C9D22290064ADD5 /* AppleScriptsList.m in Sources */ = {isa = PBXBuildFile; fileRef = 88331A3A1C9D22290064ADD5 /* AppleScriptsList.m */; };
 		887E09251C8B0FD0003A4CC0 /* DefaultPreferences.plist in Resources */ = {isa = PBXBuildFile; fileRef = 887E09241C8B0FD0003A4CC0 /* DefaultPreferences.plist */; };
+		9A77D45C7EDD2261444C856F /* Pods_MacStroke.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E1FB7F2DD21284E896F7509 /* Pods_MacStroke.framework */; };
 		B6F75AD51BD4DECB00A8CF63 /* dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = B6F75AD41BD4DECB00A8CF63 /* dsa_pub.pem */; };
 		B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = B6F75AE11BD65BDD00A8CF63 /* AppPickerWindowController.m */; };
 		D01C87CB1DE9DF2600B47E7D /* logo.png in Resources */ = {isa = PBXBuildFile; fileRef = D01C87CA1DE9DF2600B47E7D /* logo.png */; };
@@ -169,16 +169,16 @@
 		3CDC56147BD933CE0A3EC116 /* MGOptionsDefine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MGOptionsDefine.h; sourceTree = "<group>"; };
 		3CDC5A614857FE77ADFEA4C8 /* BlackWhiteFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlackWhiteFilter.h; sourceTree = "<group>"; };
 		3CDC5E8230A2649DBD0DE765 /* MGOptionsDefine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MGOptionsDefine.m; sourceTree = "<group>"; };
+		3E1FB7F2DD21284E896F7509 /* Pods_MacStroke.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MacStroke.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D03F1411E3F335C007AA1B1 /* DrawGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawGesture.h; sourceTree = "<group>"; };
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
 		4D0EA07424EFC67F004CCC85 /* HistoryClipoardListWindowController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipoardListWindowController.h; sourceTree = "<group>"; };
 		4D0EA07524EFC67F004CCC85 /* HistoryClipoardListWindowController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipoardListWindowController.m; sourceTree = "<group>"; };
-		4D334FA322C73AB100E97738 /* DrawNoteView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DrawNoteView.h; sourceTree = "<group>"; };
-		4D334FA422C73AB100E97738 /* DrawNoteView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DrawNoteView.m; sourceTree = "<group>"; };
 		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
+		4D4D732925ADCD39008EC5BE /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D6270C023B3650B00AC8745 /* FinderSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderSync.h; sourceTree = "<group>"; };
 		4D6270C123B3650B00AC8745 /* FinderSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderSync.m; sourceTree = "<group>"; };
 		4D6270C323B3650B00AC8745 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -187,7 +187,6 @@
 		4D6270CC23B3671E00AC8745 /* FinderCommChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FinderCommChannel.m; sourceTree = "<group>"; };
 		4D6270D323B37F2100AC8745 /* RightClickMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClickMenu.h; sourceTree = "<group>"; };
 		4D6270D423B37F2100AC8745 /* RightClickMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClickMenu.m; sourceTree = "<group>"; };
-		4D639C4424F8A280004F34B6 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D735927251AEC370007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		4D735984251AF7430007FC58 /* MacStroke-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "MacStroke-Info.plist"; sourceTree = "<group>"; };
 		4D73598D251AF7B00007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
@@ -259,6 +258,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4DF4D61B25AD49E700BC6E08 /* CoolToast.framework in Frameworks */,
+				9A77D45C7EDD2261444C856F /* Pods_MacStroke.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,8 +326,6 @@
 				264188F91072F914D0FF443E /* CanvasWindowController.m */,
 				4D03F1411E3F335C007AA1B1 /* DrawGesture.h */,
 				4D03F1421E3F335C007AA1B1 /* DrawGesture.m */,
-				4D334FA322C73AB100E97738 /* DrawNoteView.h */,
-				4D334FA422C73AB100E97738 /* DrawNoteView.m */,
 				4D74C6821E3CD99300F6A289 /* GestureCompare.h */,
 				4D74C6831E3CD99300F6A289 /* GestureCompare.m */,
 				1381E4C31824E7E800E815F5 /* Images.xcassets */,
@@ -472,6 +470,7 @@
 		4DF4D61A25AD49E700BC6E08 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3E1FB7F2DD21284E896F7509 /* Pods_MacStroke.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -755,7 +754,6 @@
 				264184A9FF52175212CBE73F /* CanvasWindow.m in Sources */,
 				4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */,
 				2641800AADBF86F6E76A37B3 /* CanvasView.m in Sources */,
-				4D334FA522C73AB100E97738 /* DrawNoteView.m in Sources */,
 				4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */,
 				264183EEE694EB7761D6066B /* CanvasWindowController.m in Sources */,
 				26418E623E410EF207EFA2A8 /* RulesList.m in Sources */,
@@ -854,7 +852,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4D639C4424F8A280004F34B6 /* zh-Hans */,
+				4D4D732925ADCD39008EC5BE /* zh-Hans */,
 			);
 			name = Preferences.xib;
 			sourceTree = "<group>";

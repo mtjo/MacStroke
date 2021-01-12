@@ -102,7 +102,7 @@
         toastWindow.hiddenIcon=hiddenNoteIcon;
         toastWindow.textFont = font;
         toastWindow.animater=CTAnimaterFade;
-        toastWindow.animaterTimeSecond=0.5;
+        toastWindow.animaterTimeSecond=0.3;
         toastWindow.autoDismissTimeInSecond=noteRetetionTime;
         
         long notePostion  = [[NSUserDefaults standardUserDefaults] integerForKey:@"notePostion"];
@@ -123,16 +123,15 @@
                 toastWindow.toastPostion=CTPositionLeft|CTPositionTop;
                 break;
             case 5:
-                toastWindow.toastPostion=CTPositionLeft|CTPositionBottom;;
+                toastWindow.toastPostion=CTPositionLeft|CTPositionBottom;
                 break;
             default:
                 toastWindow.toastPostion=CTPositionCenter;
                 break;
         }
         
-        NSLog(@"notePostion:%ld",notePostion);
 
-
+        
         //toastWindow.maxWidth=250;
         //toastWindow.delegate=self;
         [toastWindow showCoolToast:note];

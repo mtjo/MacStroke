@@ -134,6 +134,8 @@ static NSArray *exampleAppleScripts;
     
     [self initCilpboardShotCut];
     
+    [_score setIntValue:(int)[[NSUserDefaults standardUserDefaults] integerForKey:@"minScore"]];
+    
     
 }
 
@@ -1232,6 +1234,11 @@ static NSString *currentScriptId = nil;
     [recorder bind:NSEnabledBinding toObject:defaults withKeyPath:@"values.enableHistoryClipboard" options:nil];
         
     [_keyboardShortcut addSubview:recorder];
+}
+
+- (IBAction)scoreChange:(id)sender {
+    NSSlider *slider = (NSSlider *)sender;
+    [_score setStringValue:[NSString stringWithFormat:@"%ld",(long)slider.integerValue]];
 }
 
 @end

@@ -7,7 +7,6 @@
 //
 #import <CoolToast/ToastWindowController.h>
 #import <Cocoa/Cocoa.h>
-#import "DrawNoteView.h"
 #import "CanvasView.h"
 
 

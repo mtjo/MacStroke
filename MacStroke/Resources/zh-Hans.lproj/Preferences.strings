@@ -101,6 +101,12 @@
 /* Class = "NSButtonCell"; title = "Defaults"; ObjectID = "KsE-ag-z8d"; */
 "KsE-ag-z8d.title" = "载入预设";
 
+/* Class = "NSMenuItem"; title = "Right Bottom"; ObjectID = "LRb-bO-mTr"; */
+"LRb-bO-mTr.title" = "右下";
+
+/* Class = "NSMenuItem"; title = "Center In Screen"; ObjectID = "MbW-m8-wZk"; */
+"MbW-m8-wZk.title" = "屏幕中央";
+
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Mkk-zs-5mz"; */
 "Mkk-zs-5mz.title" = "Table View Cell";
 
@@ -113,6 +119,9 @@
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "NaW-YH-Xxz"; */
 "NaW-YH-Xxz.title" = "Table View Cell";
 
+/* Class = "NSMenuItem"; title = "Left Top"; ObjectID = "PA0-s9-cYE"; */
+"PA0-s9-cYE.title" = "左上";
+
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "PQ5-fb-DKg"; */
 "PQ5-fb-DKg.title" = "添加..";
 
@@ -121,6 +130,9 @@
 
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "Q7Q-zb-iKX"; */
 "Q7Q-zb-iKX.title" = "放大窗口";
+
+/* Class = "NSTextFieldCell"; title = "Postion:"; ObjectID = "QUf-85-LIL"; */
+"QUf-85-LIL.title" = "显示位置:";
 
 /* Class = "NSTableColumn"; headerCell.title = "Image"; ObjectID = "QiK-o2-gjx"; */
 "QiK-o2-gjx.headerCell.title" = "手势图片";
@@ -137,6 +149,9 @@
 /* Class = "NSTableColumn"; headerCell.title = "Note"; ObjectID = "Urw-VE-VYr"; */
 "Urw-VE-VYr.headerCell.title" = "说明";
 
+/* Class = "NSTextFieldCell"; title = "score"; ObjectID = "VAT-yD-qQg"; */
+"VAT-yD-qQg.title" = "score";
+
 /* Class = "NSButtonCell"; title = "apply rules"; ObjectID = "VCT-WP-3Oh"; */
 "VCT-WP-3Oh.title" = "应用规则";
 
@@ -148,6 +163,9 @@
 
 /* Class = "NSButtonCell"; title = "Automatically Check for Updates"; ObjectID = "Yev-5n-cgO"; */
 "Yev-5n-cgO.title" = "自动检查更新";
+
+/* Class = "NSMenuItem"; title = "Right Top"; ObjectID = "YfU-b6-5Mi"; */
+"YfU-b6-5Mi.title" = "右上";
 
 /* Class = "NSButtonCell"; title = "Check Now"; ObjectID = "Z4w-5n-8OX"; */
 "Z4w-5n-8OX.title" = "立即检查更新";
@@ -185,6 +203,9 @@
 /* Class = "NSButtonCell"; title = "Edit in External Editor"; ObjectID = "cl6-Yg-6iY"; */
 "cl6-Yg-6iY.title" = "在外部编辑器编辑";
 
+/* Class = "NSMenuItem"; title = "Left Bottom"; ObjectID = "czg-8x-cAB"; */
+"czg-8x-cAB.title" = "左下";
+
 /* Class = "NSTextFieldCell"; title = "Line color:"; ObjectID = "eIp-tq-2xl"; */
 "eIp-tq-2xl.title" = "鼠标路经颜色：";
 
@@ -211,6 +232,9 @@
 
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "hFe-TH-zPF"; */
 "hFe-TH-zPF.title" = "-";
+
+/* Class = "NSMenuItem"; title = "Follow The Mouse"; ObjectID = "iFI-ug-R7c"; */
+"iFI-ug-R7c.title" = "跟随鼠标";
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "ib9-4l-w4P"; */
 "ib9-4l-w4P.title" = "Text Cell";
