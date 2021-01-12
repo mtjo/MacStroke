@@ -554,7 +554,7 @@ static NSString *currentScriptId = nil;
     
     NSString *messagetext =NSLocalizedString(@"Draw Gesture!", nil);
     
-    NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!", nil);
+    NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen, or select the preset gesture below.", nil);
     
     [self alertModalFirstBtnTitle:title1 SecondBtnTitle:title2 MessageText:messagetext InformativeText:informativetext];
     
@@ -577,10 +577,12 @@ static NSString *currentScriptId = nil;
     
     [alert setAlertStyle:NSWarningAlertStyle];
     
+//    [alert setShowsHelp:YES];
+//    [alert setHelpAnchor:@"https://github.com/mtjo/MacStroke/wiki"];
     
-    NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(110 , 17, 100, 25)];
+    
+    NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 0, 100, 25)];
     [comboBox setEditable:NO];
-    
     NSArray *preArray=[[NSArray alloc]initWithObjects:
                        @"←",@"↑",@"→",@"↓",
                        @"↙",@"↗",@"↘",@"↖",
@@ -624,9 +626,11 @@ static NSString *currentScriptId = nil;
     [comboBox setTranslatesAutoresizingMaskIntoConstraints:YES];
     
     
-    [[[alert window] contentView] addSubview:comboBox];
-    
+    //[[[alert window] contentView] addSubview:comboBox];
+    [alert setAccessoryView:comboBox];
+
     [[[alert window] contentView] autoresizesSubviews];
+
     
     NSUInteger action = [alert runModal];
     
@@ -1204,24 +1208,10 @@ static NSString *currentScriptId = nil;
     }
 }
 
-
-- (IBAction)changeStroageLocalction:(NSButton *)sender {
-#ifdef DEBUG
-    NSLog(@"changeStroageLocalction tag:%ld" , (long)[sender tag]);
-#endif
-    switch ([sender tag]) {
-        case 0:
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageRam"];
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageLocal"];            break;
-        case 1:
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageRam"];
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageLocal"];            break;
-        default:
-            break;
-    }
-    
-    [self onToggleClipboard:sender];
+- (IBAction)onChangeStroageLocalction:(id)sender {
+    [[AppDelegate appDelegate] initHistoryClipboard];
 }
+
 
 - (void)initCilpboardShotCut{
     NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;

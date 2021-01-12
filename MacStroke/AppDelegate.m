@@ -490,8 +490,8 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     
     NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
     NSString *keyPath = @"values.historyCilpboardListShortcut";
+    //NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
     NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
-
     SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
                                                                                     ofObject:defaults
                                                                                actionHandler:^BOOL(SRShortcutAction *anAction) {

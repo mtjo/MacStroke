@@ -27,7 +27,7 @@
 "Select a filter first!" = "请先选择一个规则！";
 "Restart MacStroke to take effect" = "重启MacStroke后生效";
 "Export succeeded" = "导出成功";
-"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!" = "你可以在屏幕上任何地方绘制手势,如果要取消，请点击取消按钮！";
+"You can draw a gesture anywhere on the screen, or select the preset gesture below." = "您可以在屏幕上的任意位置绘制手势，或在下面选择预设手势。";
 "Gesture draw complete!" = "手势绘制完成!";
 "Hot Key" = "热键";
 "Apple Script" = "AppleScript脚本";
