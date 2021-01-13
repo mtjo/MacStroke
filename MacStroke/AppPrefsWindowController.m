@@ -38,7 +38,7 @@
 
 @synthesize rulesTableView = _rulesTableView;
 
-static NSSize const PREF_WINDOW_SIZES[3] = {{600, 400}, {800, 600}, {1000, 800}};
+static NSSize const PREF_WINDOW_SIZES[3] = {{800, 400}, {800, 600}, {1000, 800}};
 static NSInteger const PREF_WINDOW_SIZECOUNT = 3;
 static NSInteger currentRulesWindowSizeIndex = 0;
 static NSInteger currentFiltersWindowSizeIndex = 0;
@@ -134,6 +134,8 @@ static NSArray *exampleAppleScripts;
     
     [self initCilpboardShotCut];
     
+    [_score setIntValue:(int)[[NSUserDefaults standardUserDefaults] integerForKey:@"minScore"]];
+    
     
 }
 
@@ -189,6 +191,7 @@ static NSArray *exampleAppleScripts;
     NSView *p = [self contentSubview];
     frame.origin.y = NSHeight([p frame]) - NSHeight([view bounds]);
     [view setFrame:frame];
+    
 }
 
 - (IBAction)resetRules:(id)sender {
@@ -551,7 +554,7 @@ static NSString *currentScriptId = nil;
     
     NSString *messagetext =NSLocalizedString(@"Draw Gesture!", nil);
     
-    NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen. If you want to cancel, click the Cancel button!", nil);
+    NSString *informativetext =NSLocalizedString(@"You can draw a gesture anywhere on the screen, or select the preset gesture below.", nil);
     
     [self alertModalFirstBtnTitle:title1 SecondBtnTitle:title2 MessageText:messagetext InformativeText:informativetext];
     
@@ -574,10 +577,12 @@ static NSString *currentScriptId = nil;
     
     [alert setAlertStyle:NSWarningAlertStyle];
     
+//    [alert setShowsHelp:YES];
+//    [alert setHelpAnchor:@"https://github.com/mtjo/MacStroke/wiki"];
     
-    NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(110 , 17, 100, 25)];
+    
+    NSComboBox *comboBox = [[NSComboBox alloc]initWithFrame:NSMakeRect(0 , 0, 100, 25)];
     [comboBox setEditable:NO];
-    
     NSArray *preArray=[[NSArray alloc]initWithObjects:
                        @"←",@"↑",@"→",@"↓",
                        @"↙",@"↗",@"↘",@"↖",
@@ -621,9 +626,11 @@ static NSString *currentScriptId = nil;
     [comboBox setTranslatesAutoresizingMaskIntoConstraints:YES];
     
     
-    [[[alert window] contentView] addSubview:comboBox];
-    
+    //[[[alert window] contentView] addSubview:comboBox];
+    [alert setAccessoryView:comboBox];
+
     [[[alert window] contentView] autoresizesSubviews];
+
     
     NSUInteger action = [alert runModal];
     
@@ -736,7 +743,7 @@ static NSString *currentScriptId = nil;
         
         NSArray *arguments = [NSArray arrayWithObjects:
                               @"-c" ,
-                              @"defaults import com.codefalling.MacStroke -",
+                              @"defaults import net.mtjo.MacStroke -",
                               nil];
         
         [task setArguments:arguments];
@@ -772,7 +779,7 @@ static NSString *currentScriptId = nil;
         
         NSArray *arguments = [NSArray arrayWithObjects:
                               @"-c" ,
-                              @"defaults export com.codefalling.MacStroke -",
+                              @"defaults export net.mtjo.MacStroke -",
                               nil];
         
         [task setArguments:arguments];
@@ -1191,34 +1198,11 @@ static NSString *currentScriptId = nil;
 - (IBAction)onToggleNewFile:(id)sender {
     [[AppDelegate appDelegate] initRightClickMenu];
 }
-- (IBAction)onChangeTerminal:(id)sender {
-    if(sender == self.useItermRadio ){
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useIterm"];
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useTerminal"];
-    }else{
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useIterm"];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useTerminal"];
-    }
+
+- (IBAction)onChangeStroageLocalction:(id)sender {
+    [[AppDelegate appDelegate] initHistoryClipboard];
 }
 
-
-- (IBAction)changeStroageLocalction:(NSButton *)sender {
-#ifdef DEBUG
-    NSLog(@"changeStroageLocalction tag:%ld" , (long)[sender tag]);
-#endif
-    switch ([sender tag]) {
-        case 0:
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageRam"];
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageLocal"];            break;
-        case 1:
-            [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"clipoardStroageRam"];
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"clipoardStroageLocal"];            break;
-        default:
-            break;
-    }
-    
-    [self onToggleClipboard:sender];
-}
 
 - (void)initCilpboardShotCut{
     NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
@@ -1232,5 +1216,14 @@ static NSString *currentScriptId = nil;
         
     [_keyboardShortcut addSubview:recorder];
 }
+
+- (IBAction)scoreChange:(id)sender {
+    NSSlider *slider = (NSSlider *)sender;
+    [_score setStringValue:[NSString stringWithFormat:@"%ld",(long)slider.integerValue]];
+}
+- (IBAction)issues:(id)sender {
+    NSURL *yourURL = [NSURL URLWithString:@"https://github.com/mtjo/MacStroke/issues"];
+    [[NSWorkspace sharedWorkspace]openURL:yourURL];
+    }
 
 @end

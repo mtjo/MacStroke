@@ -19,7 +19,7 @@
 	<key>minScore</key>
 	<integer>85</integer>
 	<key>noteFontSize</key>
-	<integer>88</integer>
+	<integer>40</integer>
 	<key>noteFontName</key>
 	<string>Monaco</string>
 	<key>openPrefOnStartup</key>
@@ -27,9 +27,9 @@
 	<key>enableGestureMinScore</key>
 	<true/>
 	<key>noteRetetionTime</key>
-	<string>0.1</string>
+	<string>1</string>
 	<key>noteBackgroundAlpha</key>
-	<string>0.1</string>
+	<string>0.5</string>
 	<key>newFile</key>
 	<true/>
 	<key>openInTerminal</key>
@@ -38,10 +38,8 @@
 	<true/>
 	<key>enableRightClickMenu</key>
 	<true/>
-	<key>useIterm</key>
-	<false/>
-	<key>useTerminal</key>
-	<true/>
+	<key>userTerminal</key>
+	<string>Terminal</string>
 	<key>enableHistoryClipboard</key>
 	<true/>
 	<key>clipoardStroageLocal</key>
@@ -49,7 +47,7 @@
 	<key>clipoardStroageRam</key>
 	<false/>
 	<key>historyClipoardList</key>
-	<integer>100</integer>
+	<integer>200</integer>
 	<key>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;
 &lt;plist version=&quot;1.0&quot;&gt;
@@ -59,5 +57,9 @@
 	<string></string>
 	<key>historyCilpboardListShortcut</key>
 	<data>YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGoCwwZGhscHR5VJG51bGzWDQ4PEBESExQVFhcYXW1vZGlmaWVyRmxhZ3NfEBtjaGFyYWN0ZXJzSWdub3JpbmdNb2RpZmllcnNWJGNsYXNzWmNoYXJhY3RlcnNXa2V5Q29kZVd2ZXJzaW9ugASABoAHgAWAA4ACUTEQCRIAGAAAYSIaUXbSHyAhIlokY2xhc3NuYW1lWCRjbGFzc2VzWlNSU2hvcnRjdXSiISNYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAUQBTAFwAYgBvAH0AmwCiAK0AtQC9AL8AwQDDAMUAxwDJAMsAzQDSANUA1wDcAOcA8AD7AP4AAAAAAAACAQAAAAAAAAAkAAAAAAAAAAAAAAAAAAABBw==</data>
+	<key>notePostion</key>
+	<integer>1</integer>
+	<key>showNoteIcon</key>
+	<true/>
 </dict>
 </plist>

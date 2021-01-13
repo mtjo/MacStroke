@@ -41,9 +41,6 @@
 /* Class = "NSButtonCell"; title = "Auto Start at Login"; ObjectID = "403"; */
 "403.title" = "自动启动";
 
-/* Class = "NSButtonCell"; title = "Iterm"; ObjectID = "1CK-4r-Yeb"; */
-"1CK-4r-Yeb.title" = "Iterm";
-
 /* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "1ks-xH-EZh"; */
 "1ks-xH-EZh.ibShadowedDisplayPattern" = "%{value1}@";
 
@@ -101,17 +98,26 @@
 /* Class = "NSButtonCell"; title = "Defaults"; ObjectID = "KsE-ag-z8d"; */
 "KsE-ag-z8d.title" = "载入预设";
 
+/* Class = "NSMenuItem"; title = "Right Bottom"; ObjectID = "LRb-bO-mTr"; */
+"LRb-bO-mTr.title" = "右下";
+
+/* Class = "NSMenuItem"; title = "Center In Screen"; ObjectID = "MbW-m8-wZk"; */
+"MbW-m8-wZk.title" = "屏幕中央";
+
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Mkk-zs-5mz"; */
 "Mkk-zs-5mz.title" = "Table View Cell";
 
 /* Class = "NSMenuItem"; title = "Item 3"; ObjectID = "N0i-5K-XPM"; */
 "N0i-5K-XPM.title" = "Item 3";
 
-/* Class = "NSButtonCell"; title = "Terminal"; ObjectID = "NAi-O2-6kl"; */
-"NAi-O2-6kl.title" = "Terminal";
-
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "NaW-YH-Xxz"; */
 "NaW-YH-Xxz.title" = "Table View Cell";
+
+/* Class = "NSButtonCell"; title = "issues"; ObjectID = "OAL-Wi-Opx"; */
+"OAL-Wi-Opx.title" = "意见反馈";
+
+/* Class = "NSMenuItem"; title = "Left Top"; ObjectID = "PA0-s9-cYE"; */
+"PA0-s9-cYE.title" = "左上";
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "PQ5-fb-DKg"; */
 "PQ5-fb-DKg.title" = "添加..";
@@ -122,6 +128,9 @@
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "Q7Q-zb-iKX"; */
 "Q7Q-zb-iKX.title" = "放大窗口";
 
+/* Class = "NSTextFieldCell"; title = "Postion:"; ObjectID = "QUf-85-LIL"; */
+"QUf-85-LIL.title" = "显示位置:";
+
 /* Class = "NSTableColumn"; headerCell.title = "Image"; ObjectID = "QiK-o2-gjx"; */
 "QiK-o2-gjx.headerCell.title" = "手势图片";
 
@@ -131,11 +140,17 @@
 /* Class = "NSButtonCell"; title = "Limit history list count: "; ObjectID = "RbU-gH-DC2"; */
 "RbU-gH-DC2.title" = "限制记录数量: ";
 
+/* Class = "NSMenuItem"; title = "Terminal"; ObjectID = "SzU-lR-VcI"; */
+"SzU-lR-VcI.title" = "Terminal";
+
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Txe-4D-nRJ"; */
 "Txe-4D-nRJ.title" = "Table View Cell";
 
 /* Class = "NSTableColumn"; headerCell.title = "Note"; ObjectID = "Urw-VE-VYr"; */
 "Urw-VE-VYr.headerCell.title" = "说明";
+
+/* Class = "NSTextFieldCell"; title = "score"; ObjectID = "VAT-yD-qQg"; */
+"VAT-yD-qQg.title" = "score";
 
 /* Class = "NSButtonCell"; title = "apply rules"; ObjectID = "VCT-WP-3Oh"; */
 "VCT-WP-3Oh.title" = "应用规则";
@@ -149,6 +164,9 @@
 /* Class = "NSButtonCell"; title = "Automatically Check for Updates"; ObjectID = "Yev-5n-cgO"; */
 "Yev-5n-cgO.title" = "自动检查更新";
 
+/* Class = "NSMenuItem"; title = "Right Top"; ObjectID = "YfU-b6-5Mi"; */
+"YfU-b6-5Mi.title" = "右上";
+
 /* Class = "NSButtonCell"; title = "Check Now"; ObjectID = "Z4w-5n-8OX"; */
 "Z4w-5n-8OX.title" = "立即检查更新";
 
@@ -158,8 +176,8 @@
 /* Class = "NSButtonCell"; title = "enable right click menu"; ObjectID = "aBT-rq-ADq"; */
 "aBT-rq-ADq.title" = "启用右键菜单";
 
-/* Class = "NSTextFieldCell"; title = "Background Apha"; ObjectID = "aQD-oq-9CK"; */
-"aQD-oq-9CK.title" = "背景透明度";
+/* Class = "NSTextFieldCell"; title = "Background Apha:"; ObjectID = "aQD-oq-9CK"; */
+"aQD-oq-9CK.title" = "背景透明度:";
 
 /* Class = "NSMenuItem"; title = "Load Example"; ObjectID = "adc-de-fgh"; */
 "adc-de-fgh.title" = "载入样例脚本";
@@ -185,6 +203,9 @@
 /* Class = "NSButtonCell"; title = "Edit in External Editor"; ObjectID = "cl6-Yg-6iY"; */
 "cl6-Yg-6iY.title" = "在外部编辑器编辑";
 
+/* Class = "NSMenuItem"; title = "Left Bottom"; ObjectID = "czg-8x-cAB"; */
+"czg-8x-cAB.title" = "左下";
+
 /* Class = "NSTextFieldCell"; title = "Line color:"; ObjectID = "eIp-tq-2xl"; */
 "eIp-tq-2xl.title" = "鼠标路经颜色：";
 
@@ -193,6 +214,9 @@
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "fFw-3C-iig"; */
 "fFw-3C-iig.title" = "Text Cell";
+
+/* Class = "NSMenuItem"; title = "Iterm"; ObjectID = "fSi-ag-jEo"; */
+"fSi-ag-jEo.title" = "Iterm";
 
 /* Class = "NSTextFieldCell"; title = "FontSize"; ObjectID = "ffg-PP-JsW"; */
 "ffg-PP-JsW.title" = "FontSize";
@@ -212,17 +236,14 @@
 /* Class = "NSButtonCell"; title = "-"; ObjectID = "hFe-TH-zPF"; */
 "hFe-TH-zPF.title" = "-";
 
+/* Class = "NSMenuItem"; title = "Follow The Mouse"; ObjectID = "iFI-ug-R7c"; */
+"iFI-ug-R7c.title" = "跟随鼠标";
+
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "ib9-4l-w4P"; */
 "ib9-4l-w4P.title" = "Text Cell";
 
 /* Class = "NSMenuItem"; title = "Item 1"; ObjectID = "igL-9q-xhF"; */
 "igL-9q-xhF.title" = "Item 1";
-
-/* Class = "NSButtonCell"; title = "ram"; ObjectID = "in7-8b-KAn"; */
-"in7-8b-KAn.title" = "内存";
-
-/* Class = "NSButtonCell"; title = "local"; ObjectID = "lQy-ff-LeV"; */
-"lQy-ff-LeV.title" = "本地";
 
 /* Class = "NSTextFieldCell"; title = "Font:"; ObjectID = "mP7-1C-3nv"; */
 "mP7-1C-3nv.title" = "字体:";
@@ -236,6 +257,12 @@
 /* Class = "NSMenuItem"; title = "Item 2"; ObjectID = "n3s-v8-d8G"; */
 "n3s-v8-d8G.title" = "Item 2";
 
+/* Class = "NSMenuItem"; title = "ram"; ObjectID = "qWS-Rw-vgX"; */
+"qWS-Rw-vgX.title" = "内存";
+
+/* Class = "NSMenuItem"; title = "local"; ObjectID = "qs6-8b-I24"; */
+"qs6-8b-I24.title" = "本地";
+
 /* Class = "NSButtonCell"; title = "Automatically Download Updates"; ObjectID = "rOi-wV-Iez"; */
 "rOi-wV-Iez.title" = "自动下载更新";
 
@@ -244,6 +271,9 @@
 
 /* Class = "NSBox"; title = "Note"; ObjectID = "rgA-le-oEg"; */
 "rgA-le-oEg.title" = "提示";
+
+/* Class = "NSButtonCell"; title = "Show Icon"; ObjectID = "sGG-hv-18X"; */
+"sGG-hv-18X.title" = "显示图标";
 
 /* Class = "NSButtonCell"; title = "add.."; ObjectID = "seb-qO-V3w"; */
 "seb-qO-V3w.title" = "添加..";

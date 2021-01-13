@@ -42,7 +42,7 @@ static HistoryClipoardListWindowController *historyClipoardListWindowController;
     [self initAppAtFirstLaunch];
     windowController = [[CanvasWindowController alloc] init];
     
-    CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventScrollWheel);
+    CGEventMask eventMask = CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseDragged) | CGEventMaskBit(kCGEventRightMouseUp) | CGEventMaskBit(kCGEventLeftMouseDown);
     mouseEventTap = CGEventTapCreate(kCGHIDEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault, eventMask, mouseEventCallback, NULL);
     
 
@@ -222,7 +222,10 @@ static void setActionIndex(){
         
     }
     actionRuleIndex=tmpIndex;
-    [windowController writeActionRuleIndex:actionRuleIndex];
+    if (actionRuleIndex > -1 && [[NSUserDefaults standardUserDefaults] boolForKey:@"showGestureNote"]) {
+        NSString *note = [[RulesList sharedRulesList] noteAtIndex:actionRuleIndex];
+        [windowController showNoteTost:note];
+    }
 }
 
 void resetGestureB() {
@@ -469,7 +472,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
             [defs setObject:[defaultPrefs objectForKey:key] forKey:key];
         }
         [defs synchronize];
-        [MGOptionsDefine resetColors];
                 
     }
 }
@@ -488,8 +490,8 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     
     NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
     NSString *keyPath = @"values.historyCilpboardListShortcut";
+    //NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
     NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
-
     SRShortcutAction *showHistoryCilpboardList = [SRShortcutAction shortcutActionWithKeyPath:keyPath
                                                                                     ofObject:defaults
                                                                                actionHandler:^BOOL(SRShortcutAction *anAction) {
@@ -501,11 +503,11 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     }];
     [[SRGlobalShortcutMonitor sharedMonitor] addAction:showHistoryCilpboardList forKeyEvent:SRKeyEventTypeDown];
     
+    
     SRRecorderControl *recorder = [SRRecorderControl new];
     [recorder bind:NSValueBinding toObject:defaults withKeyPath:keyPath options:options];
-    
     //recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^⇧V"];
-    NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
+    //NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
     
    
 

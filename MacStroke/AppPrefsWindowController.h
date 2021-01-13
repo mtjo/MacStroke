@@ -54,7 +54,7 @@
 @property(weak) IBOutlet NSButton *enableNewFileButton;
 @property (weak) IBOutlet NSButton *enableOpenInTerminalButton;
 @property (weak) IBOutlet NSButton *enablecopyFilePathButton;
-
+@property(weak) IBOutlet NSTextField *score;
 @property(weak) IBOutlet NSColorWell *lineColorWell;
 
 @property(assign) IBOutlet WebView *webView;
@@ -71,11 +71,9 @@
 
 - (IBAction)onToggleRightClickMenu:(id)sender;
 
-@property (weak) IBOutlet NSButton *useTerminalRadio;
-
-@property (weak) IBOutlet NSButton *useItermRadio;
-
-- (IBAction)onChangeTerminal:(id)sender;
-
+- (IBAction)filterViewGoBiggerClicked:(id)sender;
+- (IBAction)changeSizeOfPreferenceWindow:(id)sender;
 - (void)initCilpboardShotCut;
+
+
 @end
