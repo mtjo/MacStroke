@@ -41,9 +41,6 @@
 /* Class = "NSButtonCell"; title = "Auto Start at Login"; ObjectID = "403"; */
 "403.title" = "自动启动";
 
-/* Class = "NSButtonCell"; title = "Iterm"; ObjectID = "1CK-4r-Yeb"; */
-"1CK-4r-Yeb.title" = "Iterm";
-
 /* Class = "CocoaBindingsConnection"; ibShadowedDisplayPattern = "%{value1}@"; ObjectID = "1ks-xH-EZh"; */
 "1ks-xH-EZh.ibShadowedDisplayPattern" = "%{value1}@";
 
@@ -113,11 +110,11 @@
 /* Class = "NSMenuItem"; title = "Item 3"; ObjectID = "N0i-5K-XPM"; */
 "N0i-5K-XPM.title" = "Item 3";
 
-/* Class = "NSButtonCell"; title = "Terminal"; ObjectID = "NAi-O2-6kl"; */
-"NAi-O2-6kl.title" = "Terminal";
-
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "NaW-YH-Xxz"; */
 "NaW-YH-Xxz.title" = "Table View Cell";
+
+/* Class = "NSButtonCell"; title = "issues"; ObjectID = "OAL-Wi-Opx"; */
+"OAL-Wi-Opx.title" = "意见反馈";
 
 /* Class = "NSMenuItem"; title = "Left Top"; ObjectID = "PA0-s9-cYE"; */
 "PA0-s9-cYE.title" = "左上";
@@ -142,6 +139,9 @@
 
 /* Class = "NSButtonCell"; title = "Limit history list count: "; ObjectID = "RbU-gH-DC2"; */
 "RbU-gH-DC2.title" = "限制记录数量: ";
+
+/* Class = "NSMenuItem"; title = "Terminal"; ObjectID = "SzU-lR-VcI"; */
+"SzU-lR-VcI.title" = "Terminal";
 
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "Txe-4D-nRJ"; */
 "Txe-4D-nRJ.title" = "Table View Cell";
@@ -176,7 +176,7 @@
 /* Class = "NSButtonCell"; title = "enable right click menu"; ObjectID = "aBT-rq-ADq"; */
 "aBT-rq-ADq.title" = "启用右键菜单";
 
-/* Class = "NSTextFieldCell"; title = "Background Apha"; ObjectID = "aQD-oq-9CK"; */
+/* Class = "NSTextFieldCell"; title = "Background Apha:"; ObjectID = "aQD-oq-9CK"; */
 "aQD-oq-9CK.title" = "背景透明度:";
 
 /* Class = "NSMenuItem"; title = "Load Example"; ObjectID = "adc-de-fgh"; */
@@ -214,6 +214,9 @@
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "fFw-3C-iig"; */
 "fFw-3C-iig.title" = "Text Cell";
+
+/* Class = "NSMenuItem"; title = "Iterm"; ObjectID = "fSi-ag-jEo"; */
+"fSi-ag-jEo.title" = "Iterm";
 
 /* Class = "NSTextFieldCell"; title = "FontSize"; ObjectID = "ffg-PP-JsW"; */
 "ffg-PP-JsW.title" = "FontSize";

@@ -174,6 +174,7 @@
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
 		4D0EA07424EFC67F004CCC85 /* HistoryClipoardListWindowController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipoardListWindowController.h; sourceTree = "<group>"; };
 		4D0EA07524EFC67F004CCC85 /* HistoryClipoardListWindowController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipoardListWindowController.m; sourceTree = "<group>"; };
+		4D195C0E25AEF45A007C640C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
@@ -198,7 +199,6 @@
 		4D88EE1A24EA87B800BDCD6D /* Clipboard.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Clipboard.png; sourceTree = "<group>"; };
 		4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipboard.h; sourceTree = "<group>"; };
 		4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipboard.m; sourceTree = "<group>"; };
-		4D94D57125AE060A00AF4E1E /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
@@ -852,7 +852,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4D94D57125AE060A00AF4E1E /* zh-Hans */,
+				4D195C0E25AEF45A007C640C /* zh-Hans */,
 			);
 			name = Preferences.xib;
 			sourceTree = "<group>";
