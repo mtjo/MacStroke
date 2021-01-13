@@ -47,7 +47,7 @@
 	<key>clipoardStroageRam</key>
 	<false/>
 	<key>historyClipoardList</key>
-	<integer>100</integer>
+	<integer>200</integer>
 	<key>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;
 &lt;plist version=&quot;1.0&quot;&gt;
