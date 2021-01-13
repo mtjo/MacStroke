@@ -38,10 +38,8 @@
 	<true/>
 	<key>enableRightClickMenu</key>
 	<true/>
-	<key>useIterm</key>
-	<false/>
-	<key>useTerminal</key>
-	<true/>
+	<key>userTerminal</key>
+	<string>Terminal</string>
 	<key>enableHistoryClipboard</key>
 	<true/>
 	<key>clipoardStroageLocal</key>

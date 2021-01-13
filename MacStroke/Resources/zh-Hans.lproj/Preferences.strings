@@ -177,7 +177,7 @@
 "aBT-rq-ADq.title" = "启用右键菜单";
 
 /* Class = "NSTextFieldCell"; title = "Background Apha"; ObjectID = "aQD-oq-9CK"; */
-"aQD-oq-9CK.title" = "背景透明度";
+"aQD-oq-9CK.title" = "背景透明度:";
 
 /* Class = "NSMenuItem"; title = "Load Example"; ObjectID = "adc-de-fgh"; */
 "adc-de-fgh.title" = "载入样例脚本";

@@ -71,11 +71,6 @@
 
 - (IBAction)onToggleRightClickMenu:(id)sender;
 
-@property (weak) IBOutlet NSButton *useTerminalRadio;
-
-@property (weak) IBOutlet NSButton *useItermRadio;
-
-- (IBAction)onChangeTerminal:(id)sender;
 - (IBAction)filterViewGoBiggerClicked:(id)sender;
 - (IBAction)changeSizeOfPreferenceWindow:(id)sender;
 - (void)initCilpboardShotCut;

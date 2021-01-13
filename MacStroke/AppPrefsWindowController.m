@@ -1198,15 +1198,6 @@ static NSString *currentScriptId = nil;
 - (IBAction)onToggleNewFile:(id)sender {
     [[AppDelegate appDelegate] initRightClickMenu];
 }
-- (IBAction)onChangeTerminal:(id)sender {
-    if(sender == self.useItermRadio ){
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useIterm"];
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useTerminal"];
-    }else{
-        [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"useIterm"];
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"useTerminal"];
-    }
-}
 
 - (IBAction)onChangeStroageLocalction:(id)sender {
     [[AppDelegate appDelegate] initHistoryClipboard];
@@ -1230,5 +1221,9 @@ static NSString *currentScriptId = nil;
     NSSlider *slider = (NSSlider *)sender;
     [_score setStringValue:[NSString stringWithFormat:@"%ld",(long)slider.integerValue]];
 }
+- (IBAction)issues:(id)sender {
+    NSURL *yourURL = [NSURL URLWithString:@"https://github.com/mtjo/MacStroke/issues"];
+    [[NSWorkspace sharedWorkspace]openURL:yourURL];
+    }
 
 @end

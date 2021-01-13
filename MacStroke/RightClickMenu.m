@@ -80,11 +80,15 @@
     NSError* error;
     NSDictionary* data = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
     
-    NSLog(@"NSNotification: %@",  [notif name]);
+
     
     NSString* operation = data[@"operation"];
+#ifdef DEBUG
+    NSLog(@"NSNotification: %@",  [notif name]);
     NSLog(@"data: %@",data);
     NSLog(@"operation: %@",operation);
+#endif
+
     if ([operation isEqualToString:@"newFile"]) {
         [self newFile:data[@"path"]];
     } else if ([operation isEqualToString:@"openInTerminal"]){
@@ -153,12 +157,9 @@
     }
 }
 - (void) openInTerminal:(NSString*) path{
-    NSString *terminal = @"open -a Terminal ";
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"useIterm"]){
-        terminal =@"open -a Iterm ";
-    }
+    NSString *terminal =[[NSUserDefaults standardUserDefaults] stringForKey:@"userTerminal"];
     
-    NSString *cmd = [terminal stringByAppendingString: path];
+    NSString *cmd =  [NSString stringWithFormat:@"open -a %@ %@", terminal,path];
     system([cmd UTF8String]);
 }
 
