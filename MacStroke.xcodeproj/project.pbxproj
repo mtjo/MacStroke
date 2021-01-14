@@ -39,6 +39,8 @@
 		4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */; };
 		4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D97909A22CAFE110047A70C /* RightClicksList.m */; };
 		4DBB074F1E41B206006D1739 /* Stroke.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBB074C1E41B206006D1739 /* Stroke.m */; };
+		4DC1444625B010F9001E6D77 /* CoolToast.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */; };
+		4DC1444725B010F9001E6D77 /* CoolToast.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4DC9C49A239EA5EF005087A4 /* RightClick.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DC9C499239EA5EF005087A4 /* RightClick.png */; };
 		4DD3CBFE1E615C6200AFC850 /* PreGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD3CBFD1E615C6200AFC850 /* PreGesture.m */; };
 		4DD9B2FE243EFAAB0044A46E /* newFile.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DD9B2FD243EFAAB0044A46E /* newFile.png */; };
@@ -57,7 +59,6 @@
 		4DF4D5D625AD3D6500BC6E08 /* ToastWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CD25AD3D6500BC6E08 /* ToastWindowController.xib */; };
 		4DF4D5D725AD3D6500BC6E08 /* CTScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CE25AD3D6500BC6E08 /* CTScreen.m */; };
 		4DF4D5D825AD3D6500BC6E08 /* CTView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DF4D5CF25AD3D6500BC6E08 /* CTView.m */; };
-		4DF4D61B25AD49E700BC6E08 /* CoolToast.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DF4D5EE25AD412600BC6E08 /* CoolToast.framework */; };
 		880AA7571CA5738A006E7A74 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA7591CA5738A006E7A74 /* Preferences.xib */; };
 		880AA7641CA5745D006E7A74 /* AppPickerWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75D1CA5745D006E7A74 /* AppPickerWindowController.xib */; };
 		880AA7651CA5745D006E7A74 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 880AA75F1CA5745D006E7A74 /* Credits.rtf */; };
@@ -132,6 +133,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				4DC1444725B010F9001E6D77 /* CoolToast.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -257,8 +259,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4DF4D61B25AD49E700BC6E08 /* CoolToast.framework in Frameworks */,
 				9A77D45C7EDD2261444C856F /* Pods_MacStroke.framework in Frameworks */,
+				4DC1444625B010F9001E6D77 /* CoolToast.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

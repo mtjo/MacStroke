@@ -176,7 +176,7 @@
         https://github.com/mtjo/MacStroke/releases/tag/2.0.0
       </sparkle:releaseNotesLink>
       <pubDate>2021-01-13 18:31:43 +8</pubDate>
-      <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.0/MacStroke.zip" sparkle:version="2.0.0" length="2379507" type="application/octet-stream" sparkle:dsaSignature="MCsCFD4jp9Kk2fLmt80bx2WZnCqiG4K/AhNmowDah9cHTUdPItNpBXuirGbQ" />
+      <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.0/MacStroke.zip" sparkle:version="2.0.0" length="3132522" type="application/octet-stream" sparkle:dsaSignature="MCwCFHxNvn9+PcQT8C4s7aomtG8lecZCAhRbtoXkv878oR7WCVHJBxAKxYWmuA==" />
       <sparkle:minimumSystemVersion>10.10</sparkle:minimumSystemVersion>
     </item>
   </channel>
