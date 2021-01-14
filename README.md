@@ -1,32 +1,34 @@
 MacStroke
 ================================
-
-[中文版 English Version](https://github.com/mtjo/MacStroke/blob/master/README_zh-Hans.md)
-
+[English Version](https://github.com/mtjo/MacStroke/blob/master/README_en.md)
 
 ![MacStroke](https://github.com/mtjo/MacStroke/raw/release/logo.png)
 
-### Configurable global mouse gesture for macOS.
->MacStroke is a gesture-recognition application for MacOS. Gestures or strokes are movements that you make with you mouse (or your pen, finger etc.) while holding down a specific mouse button. MacStroke will execute certain actions if it recognizes the stroke; currently MacStroke can emulate key presses, execute shell commands, hold down modifiers and emulate a scroll wheel. The program was designed with Tablet PCs in mind and can be used effectively even without access to a keyboard. MacStroke tries to provide an intuitive and efficient user interface, while at the same time being highly configurable and offering many advanced features.<p>
-<p style="text-align:right">this description was copied from easyStroke</p>
+macOS上一款高度可配置的全局鼠标手势软件。
+===
+>MacStroke是MacOS的手势识别应用程序。 手势是在按住特定鼠标按钮的同时使用鼠标进行的运动。 如果手势被识别，MacStroke将执行某些操作。
+>目前MacStroke可以模拟按键，执行shell命令，执行apple script， MacStroke尝试提供直观和高效的用户界面，同时具有高度可配置性并提供许多高级功能。
+
+###  10.14系统后就要添加权限 设置->安全性与隐私->隐私->辅助功能 这个必须的, 才能正常使用
+
+![权限设置](https://github.com/mtjo/MacStroke/raw/release/help.png)
+
+### 预设手势说明
+
+![预设手势说明](https://github.com/mtjo/MacStroke/raw/release/MacStroke.gif)
 
 
-##  Add permissions after 10.14 system Settings-> Security & Privacy-> Privacy-> Accessibility This is necessary for normal use
+### 下载安装
+[MacStroke](https://github.com/mtjo/MacStroke/releases/latest)
 
-![permissions](https://github.com/mtjo/MacStroke/raw/release/help.png)
+### 反馈
+[反馈BUG&建义](https://github.com/mtjo/MacStroke/issues)
 
-
-# Preset gesture
-
-![Preset gesture](https://github.com/mtjo/MacStroke/raw/release/MacStroke.gif)
-
-
-### Download
-[MacStroke](https://github.com/mtjo/MacStroke/releases/)
-
-
-
-### Issues
-[Feedback BUG & Construction](https://github.com/mtjo/MacStroke/issues)
+### 软件实用的话就分享给你的亲朋好友,顺便帮点一下 star 和 fork (把软件发到 homebrew 有硬性要求)
+### 软件实用的话就分享给你的亲朋好友,顺便帮点一下 star 和 fork (把软件发到 homebrew 有硬性要求)
+### 软件实用的话就分享给你的亲朋好友,顺便帮点一下 star 和 fork (把软件发到 homebrew 有硬性要求)
+![homebrew](https://github.com/mtjo/MacStroke/raw/master/homebrew.png)
 
 Power by [![mtjo](https://github.com/mtjo/MacStroke/raw/release/logo-mtjo.png)](http://mtjo.net)
+
+
