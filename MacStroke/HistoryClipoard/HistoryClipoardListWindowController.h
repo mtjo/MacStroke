@@ -8,13 +8,15 @@
 
 #import <Cocoa/Cocoa.h>
 #import "AppDelegate.h"
-
+#import "HistoryClipboard.h"
 NS_ASSUME_NONNULL_BEGIN
 
 @interface HistoryClipoardListWindowController : NSWindowController <NSTableViewDelegate, NSTableViewDataSource>
 {
-    NSMutableArray * _dataArray;
+    NSMutableArray<NSMutableDictionary* > * _dataArray;
+    NSMutableArray<NSMutableDictionary* > * _topArray;
     IBOutlet NSTableView *tableOutlet;
+    HistoryClipboard * historyClipboard;
 }
 @property (assign) IBOutlet NSTableView *tableOutlet;
 

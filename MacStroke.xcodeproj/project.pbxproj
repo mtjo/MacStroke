@@ -35,6 +35,7 @@
 		4D7A390E2519C8BF00DFB194 /* OpenMacStrokePreferences.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 4D7A390B2519C8BE00DFB194 /* OpenMacStrokePreferences.applescript */; };
 		4D7A390F2519C8BF00DFB194 /* ChromeCloseTabsToTheRight.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 4D7A390C2519C8BE00DFB194 /* ChromeCloseTabsToTheRight.applescript */; };
 		4D7A39102519C8BF00DFB194 /* SearchInWeb.applescript in Sources */ = {isa = PBXBuildFile; fileRef = 4D7A390D2519C8BF00DFB194 /* SearchInWeb.applescript */; };
+		4D87C1B726648F5F00DEECF1 /* FinderSyncExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4DF4D61025AD48CD00BC6E08 /* FinderSyncExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D88EE1B24EA87B800BDCD6D /* Clipboard.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D88EE1A24EA87B800BDCD6D /* Clipboard.png */; };
 		4D88EE2624EA938400BDCD6D /* HistoryClipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */; };
 		4D97909B22CAFE110047A70C /* RightClicksList.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D97909A22CAFE110047A70C /* RightClicksList.m */; };
@@ -119,10 +120,11 @@
 		};
 		4DA8D7D523AB28910024B541 /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
+			buildActionMask = 12;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				4D87C1B726648F5F00DEECF1 /* FinderSyncExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;

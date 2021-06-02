@@ -11,7 +11,8 @@
 @implementation HistoryClipboard
 static NSTimer *timer = nil;
 static long changeCount;
-static NSMutableArray *historyList = nil;
+static NSMutableArray<NSMutableDictionary *> *historyList = nil;
+static NSMutableArray<NSMutableDictionary *> *topList = nil;
 static long maxListCount = 0;
 static bool limitHistoryListCount = false;
 NSUserDefaults *sharedDefaults;
@@ -28,10 +29,12 @@ static  bool enable = false;
         NSArray *types = [pasteboard types];
         if ([types containsObject:NSPasteboardTypeString]) {
             NSString *s = [pasteboard stringForType:NSPasteboardTypeString];
-            [historyList insertObject:s atIndex:0];
+            NSMutableDictionary *item = [[NSMutableDictionary alloc] init];
+            [item setValue:s forKey:@"content"];
+            [item setValue:@"0" forKey:@"isTop"];
+            [historyList insertObject:item atIndex:0];
             maxListCount = [sharedDefaults integerForKey:@"historyClipoardList"];
             if (maxListCount > 0 && limitHistoryListCount) {
-                
                 if ([historyList count] >maxListCount) {
                     for (long i=maxListCount-1; i<[historyList count]; i++) {
                         [historyList removeObjectAtIndex:i];
@@ -63,11 +66,11 @@ static  bool enable = false;
 {
     sharedDefaults = [NSUserDefaults standardUserDefaults];
     bool enableHistoryClipboard =  [sharedDefaults boolForKey:@"enableHistoryClipboard"];
+    topList = [self getTopList];
     
 #ifdef DEBUG
     NSLog(@"enableHistoryClipboard:%hdd", enableHistoryClipboard);
 #endif
-    
     
     if (enableHistoryClipboard) {
         limitHistoryListCount =  [sharedDefaults boolForKey:@"limitHistoryListCount"];
@@ -101,9 +104,36 @@ static  bool enable = false;
     }
 }
 
-- (NSMutableArray *) getHistoryClipboardList{
-    return historyList;
+- (NSMutableArray<NSMutableDictionary*> *) getHistoryClipboardList{
+    NSMutableArray<NSMutableDictionary*> * list = [[NSMutableArray alloc] init];
+    [list addObjectsFromArray:topList];
+    [list addObjectsFromArray:historyList];
+    return list;
 }
+
+- (void) saveTop: (NSMutableArray<NSMutableDictionary*>*) saveList {
+    topList = saveList;
+    [sharedDefaults setObject:topList forKey:@"localTopHistoryClipoardList"];
+    
+#ifdef DEBUG
+    NSLog(@"topList:%@", saveList);
+#endif
+    [sharedDefaults synchronize];
+}
+
+- (NSMutableArray *) getTopList {
+    NSArray * array =   [sharedDefaults arrayForKey:@"localTopHistoryClipoardList"];
+#ifdef DEBUG
+    NSLog(@"topList:%@", array);
+#endif
+    NSMutableArray *retList =[[NSMutableArray alloc] init];
+    if ([array count]>0) {
+        [retList addObjectsFromArray:array];
+    }
+    return retList;
+}
+
+
 -(BOOL) isEnable{
     return enable;
 }

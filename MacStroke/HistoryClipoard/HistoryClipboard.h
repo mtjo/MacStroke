@@ -21,6 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSMutableArray *) getHistoryClipboardList;
 
+- (void) saveTop: (NSMutableArray<NSMutableDictionary*>*) saveList;
+
+- (NSMutableArray *) getTopList;
+
 @end
 
 NS_ASSUME_NONNULL_END

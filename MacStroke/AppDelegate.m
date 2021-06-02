@@ -487,7 +487,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 -(void) initHistoryClipboard
 {
-    
     NSUserDefaultsController *defaults = NSUserDefaultsController.sharedUserDefaultsController;
     NSString *keyPath = @"values.historyCilpboardListShortcut";
     //NSDictionary *options = @{NSValueTransformerNameBindingOption: NSKeyedUnarchiveFromDataTransformerName};
@@ -509,8 +508,6 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
     //recorder.objectValue = [SRShortcut shortcutWithKeyEquivalent:@"^⇧V"];
     //NSLog(@"historyCilpboardListShortcut:%@", [[NSUserDefaults standardUserDefaults] objectForKey:@"historyCilpboardListShortcut"]);
     
-   
-
     historyClipboard = [[HistoryClipboard alloc] init];
     
     [historyClipboard enableHistoryClipboard];
@@ -526,20 +523,15 @@ static CGEventRef mouseEventCallback(CGEventTapProxy proxy, CGEventType type, CG
 
 - (IBAction)showHistoryCilpboardList:(id)sender {
     //instantiate preferences window controller
-    if (!historyClipoardListWindowController) {
-        historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
-        [historyClipoardListWindowController showWindow:self];
-        [historyClipoardListWindowController.window center];
-        [historyClipoardListWindowController.window makeKeyWindow];
-        [historyClipoardListWindowController.window setLevel:21];
-    } else {
+    if (historyClipoardListWindowController) {
         [historyClipoardListWindowController.window close];
-        historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
-        [historyClipoardListWindowController showWindow:self];
-        [historyClipoardListWindowController.window center];
-        [historyClipoardListWindowController.window makeKeyWindow];
-        [historyClipoardListWindowController.window setLevel:21];
     }
+    historyClipoardListWindowController = [[HistoryClipoardListWindowController alloc] initWithWindowNibName:@"HistoryClipoardListWindowController"];
+    [historyClipoardListWindowController.window center];
+    [historyClipoardListWindowController.window makeKeyWindow];
+    [historyClipoardListWindowController.window setLevel:21];
+    [historyClipoardListWindowController showWindow:nil];
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 @end
