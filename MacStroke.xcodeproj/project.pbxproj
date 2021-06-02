@@ -194,7 +194,6 @@
 		4D735927251AEC370007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		4D735984251AF7430007FC58 /* MacStroke-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "MacStroke-Info.plist"; sourceTree = "<group>"; };
 		4D73598D251AF7B00007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
-		4D7359C0251B4E6E0007FC58 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
 		4D74C6821E3CD99300F6A289 /* GestureCompare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GestureCompare.h; sourceTree = "<group>"; };
 		4D74C6831E3CD99300F6A289 /* GestureCompare.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GestureCompare.m; sourceTree = "<group>"; };
 		4D7A390B2519C8BE00DFB194 /* OpenMacStrokePreferences.applescript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.applescript; path = OpenMacStrokePreferences.applescript; sourceTree = "<group>"; };
@@ -205,6 +204,7 @@
 		4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipboard.m; sourceTree = "<group>"; };
 		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
+		4D9DEE432667387A0082D624 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
 		4DBB074B1E41B205006D1739 /* Stroke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Stroke.h; sourceTree = "<group>"; };
 		4DBB074C1E41B206006D1739 /* Stroke.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Stroke.m; sourceTree = "<group>"; };
 		4DC9C499239EA5EF005087A4 /* RightClick.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClick.png; sourceTree = "<group>"; };
@@ -847,7 +847,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				4DE22E6324F50E820046248A /* Base */,
-				4D7359C0251B4E6E0007FC58 /* zh-Hans */,
+				4D9DEE432667387A0082D624 /* zh-Hans */,
 			);
 			name = HistoryClipoardListWindowController.xib;
 			sourceTree = "<group>";

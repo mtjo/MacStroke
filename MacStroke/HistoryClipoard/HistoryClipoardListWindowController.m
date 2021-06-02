@@ -48,7 +48,14 @@
 #endif
 
     if ([tableColumn.identifier isEqualToString:@"id"]) {
-        [textField setStringValue:[NSString stringWithFormat:@"%ld",(long)row+1]];
+        NSInteger topCount = [_topArray count];
+        if (row<topCount) {
+            [textField setStringValue:[NSString stringWithFormat:@"[%ld]",(long)row+1]];
+            NSColor *color = [NSColor colorWithCalibratedWhite:0.65 alpha:1.0];
+            [textField setTextColor:color];
+        }else{
+            [textField setStringValue:[NSString stringWithFormat:@"%ld",(long)row-topCount+1]];
+        }
         result = textField;
     }else if ([tableColumn.identifier isEqualToString:@"content"]) {
         if ([_dataArray[row][@"isTop"] isEqualToString:@"1"]) {
@@ -58,8 +65,7 @@
         [textField setStringValue:_dataArray[row][@"content"]];
         result = textField;
     }else if ([tableColumn.identifier isEqualToString:@"operate"]) {
-        //NSButton *topBtn = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 0, 20, 20)] ;
-        NSButton *topBtn = [[NSButton alloc] initWithFrame:CGRectMake(20.0, 20.0, 60.0, 30.0)];
+        NSButton *topBtn = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 0, 20, 20)] ;
         [topBtn setTag:row];
         [topBtn setBezelStyle:NSTexturedSquareBezelStyle];
         [topBtn setTranslatesAutoresizingMaskIntoConstraints:YES];
@@ -67,11 +73,11 @@
         //[operate setAction:@selector(onSetGestureData:)];
         if ([_dataArray[row][@"isTop"] isEqualToString:@"0"]) {
             [topBtn setTitle:@"↑"];
-            [topBtn setToolTip:@"置顶"];
+            [topBtn setToolTip:NSLocalizedString(@"top", nil)];
             [topBtn setAction:@selector(addTop:)];
         }else{
             [topBtn setTitle:@"-"];
-            [topBtn setToolTip:@"取消置顶"];
+            [topBtn setToolTip:NSLocalizedString(@"remove top", nil)];
             [topBtn setAction:@selector(removeTop:)];
         }
         result = topBtn;

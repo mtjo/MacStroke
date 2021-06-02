@@ -43,3 +43,5 @@
 "New text file" = "新建文本文档";
 "Open in Terminal" = "在终端中打开";
 "Copy file path" = "复制路径";
+"top" = "置顶";
+"remove top" = "取消置顶";

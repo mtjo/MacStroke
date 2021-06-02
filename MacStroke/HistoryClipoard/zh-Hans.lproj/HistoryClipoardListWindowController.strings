@@ -2,8 +2,14 @@
 /* Class = "NSTableColumn"; headerCell.title = "content"; ObjectID = "7PW-cd-Irs"; */
 "7PW-cd-Irs.headerCell.title" = "内容";
 
+/* Class = "NSTableColumn"; headerCell.title = "operate"; ObjectID = "9UD-br-tDv"; */
+"9UD-br-tDv.headerCell.title" = "操作";
+
 /* Class = "NSWindow"; title = "History Clipboard"; ObjectID = "F0z-JX-Cv5"; */
 "F0z-JX-Cv5.title" = "历史粘贴板";
+
+/* Class = "NSTextFieldCell"; title = "id"; ObjectID = "UBv-bX-O2j"; */
+"UBv-bX-O2j.title" = "id";
 
 /* Class = "NSTextFieldCell"; title = "tips: Double-click the content to copy it to clipboard and then you can paste anywhere ."; ObjectID = "Vsw-rJ-Vad"; */
 "Vsw-rJ-Vad.title" = "tips: 双击内容将其复制到剪贴板，然后可以将其粘贴到任何地方。";
@@ -25,3 +31,6 @@
 
 /* Class = "NSTextFieldCell"; title = "id"; ObjectID = "pRw-Ux-AEW"; */
 "pRw-Ux-AEW.title" = "ID";
+
+/* Class = "NSButtonCell"; title = "top"; ObjectID = "zab-yZ-32M"; */
+"zab-yZ-32M.title" = "置顶";
