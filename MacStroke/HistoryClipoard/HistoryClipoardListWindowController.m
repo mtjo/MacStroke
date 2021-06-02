@@ -81,7 +81,6 @@
             [topBtn setAction:@selector(removeTop:)];
         }
         result = topBtn;
-        
     }
         
     return result;
