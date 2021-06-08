@@ -19,6 +19,9 @@ macOS上一款高度可配置的全局鼠标手势软件。
 
 
 ### 下载安装
+``` 
+brew install macstroke
+```
 [MacStroke](https://github.com/mtjo/MacStroke/releases/latest)
 
 ### 反馈
