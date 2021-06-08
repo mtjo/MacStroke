@@ -21,7 +21,11 @@ MacStroke
 ![Preset gesture](https://github.com/mtjo/MacStroke/raw/release/MacStroke.gif)
 
 
-### Download
+### Download & Install
+
+```
+brew install macstroke
+```
 [MacStroke](https://github.com/mtjo/MacStroke/releases/latest)
 
 
