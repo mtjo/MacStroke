@@ -116,12 +116,11 @@
 }
 - (IBAction)clearHistoryList:(id)sender {
     [_dataArray removeAllObjects];
-    [_tableOutlet reloadData];
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
         NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
-        
-        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"localHistoryClipoardList"];
+        [historyClipboard clearHistoryList];
     }
+    [self windowDidLoad];
 }
 - (void)keyDown:(NSEvent*)event {
   NSLog(@"%@ %@ - %@", self.className, NSStringFromSelector(_cmd), event);

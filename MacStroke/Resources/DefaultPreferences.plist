@@ -55,8 +55,8 @@
 	<key>showNoteIcon</key>
 	<true/>
 	<key>localTopHistoryClipoardList</key>
-	<array/>
+	<data></data>
 	<key>localHistoryClipoardList</key>
-	<array/>
+	<data></data>
 </dict>
 </plist>

@@ -228,11 +228,11 @@ static void setActionIndex(){
     }
 }
 
-void resetGestureB() {
+static void resetGestureB() {
     [gestureB removeAllObjects];
     actionRuleIndex =-1;
 }
-bool setRuleData(){
+static bool setRuleData(){
     if(settingRuleIndex>-1){
         [[RulesList sharedRulesList] setGestureData:gestureB atIndex:settingRuleIndex];
         NSUserNotification *notification = [[NSUserNotification alloc] init];
@@ -263,7 +263,7 @@ static bool handleGesture(BOOL lastGesture) {
     return [[RulesList sharedRulesList] handleGesture:actionRuleIndex isLastGesture:lastGesture];
 }
 
-void resetDirection() {
+static void resetDirection() {
     [direction setString:@""];
 }
 

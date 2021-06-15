@@ -18,6 +18,12 @@ static bool limitHistoryListCount = false;
 NSUserDefaults *sharedDefaults;
 static  bool enable = false;
 
+static NSString *HISTORY_CLIPOARD_LIST=@"historyClipoardList";
+static NSString *LOCAL_HISTORY_CLIPOARD_LIST = @"localHistoryClipoardList";
+static NSString *LOCAL_TOP_HISTORY_CLIPOARD_LIST = @"localTopHistoryClipoardList";
+static NSString *CONTENT = @"content";
+static NSString *ISTOP = @"isTop";
+
 - (void) handleTimer: (NSTimer *) timer
 {
     NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
@@ -30,10 +36,10 @@ static  bool enable = false;
         if ([types containsObject:NSPasteboardTypeString]) {
             NSString *s = [pasteboard stringForType:NSPasteboardTypeString];
             NSMutableDictionary *item = [[NSMutableDictionary alloc] init];
-            [item setValue:s forKey:@"content"];
-            [item setValue:@"0" forKey:@"isTop"];
+            [item setValue:s forKey:CONTENT];
+            [item setValue:@"0" forKey:ISTOP];
             [historyList insertObject:item atIndex:0];
-            maxListCount = [sharedDefaults integerForKey:@"historyClipoardList"];
+            maxListCount = [sharedDefaults integerForKey:HISTORY_CLIPOARD_LIST];
             if (maxListCount > 0 && limitHistoryListCount) {
                 if ([historyList count] >maxListCount) {
                     for (long i=maxListCount-1; i<[historyList count]; i++) {
@@ -48,7 +54,10 @@ static  bool enable = false;
             NSLog(@"clipoardStroageLocal:%hdd", [[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
 #endif
             if([sharedDefaults boolForKey:@"clipoardStroageLocal"]){
-                [sharedDefaults setObject:historyList forKey:@"localHistoryClipoardList"];
+                
+                NSData *nsHistoryList = [NSKeyedArchiver archivedDataWithRootObject:historyList];
+               
+                [sharedDefaults setObject:nsHistoryList forKey:LOCAL_HISTORY_CLIPOARD_LIST];
                 
 #ifdef DEBUG
                 NSLog(@"NSPasteboard:%@", historyList);
@@ -83,12 +92,17 @@ static  bool enable = false;
             historyList = [[NSMutableArray alloc] init];
         }
         if([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]){
-            NSArray * array =   [sharedDefaults arrayForKey:@"localHistoryClipoardList"];
+            @try {
+                NSData * data =   [sharedDefaults objectForKey:LOCAL_HISTORY_CLIPOARD_LIST];
+                historyList = [[NSMutableArray alloc] initWithArray:[NSKeyedUnarchiver unarchiveObjectWithData:data]];
+            } @catch (NSException *exception) {
+                NSLog(@"LOCAL_HISTORY_CLIPOARD_LIST exception:%@", exception);
+            }
             
 #ifdef DEBUG
-            NSLog(@"localHistoryClipoardList:%@", array);
+            NSLog(@"LOCAL_HISTORY_CLIPOARD_LIST:%@", historyList);
 #endif
-            [historyList addObjectsFromArray:array];
+
             
         }
         timer = [NSTimer scheduledTimerWithTimeInterval: 0.5
@@ -113,26 +127,44 @@ static  bool enable = false;
 
 - (void) saveTop: (NSMutableArray<NSMutableDictionary*>*) saveList {
     topList = saveList;
-    [sharedDefaults setObject:topList forKey:@"localTopHistoryClipoardList"];
+    NSData *nsTopList = [NSKeyedArchiver archivedDataWithRootObject:saveList];
+    [sharedDefaults setObject:nsTopList forKey:LOCAL_TOP_HISTORY_CLIPOARD_LIST];
     
 #ifdef DEBUG
-    NSLog(@"topList:%@", saveList);
+    NSLog(@"saveTop%@", saveList);
 #endif
     [sharedDefaults synchronize];
 }
 
 - (NSMutableArray *) getTopList {
-    NSArray * array =   [sharedDefaults arrayForKey:@"localTopHistoryClipoardList"];
-#ifdef DEBUG
-    NSLog(@"topList:%@", array);
-#endif
-    NSMutableArray *retList =[[NSMutableArray alloc] init];
-    if ([array count]>0) {
-        [retList addObjectsFromArray:array];
+    NSMutableArray *toplist =[[NSMutableArray alloc] init];
+    @try {
+        NSData *data  =   [sharedDefaults objectForKey:LOCAL_TOP_HISTORY_CLIPOARD_LIST];
+        toplist = [[NSMutableArray alloc] initWithArray:[NSKeyedUnarchiver unarchiveObjectWithData:data]];
+    } @catch (NSException *exception) {
+        NSLog(@"LOCAL_TOP_HISTORY_CLIPOARD_LIST exception: %@", exception);
     }
-    return retList;
+   
+#ifdef DEBUG
+    NSLog(@"topList:%@", toplist);
+#endif
+    return toplist;
+}
+-(BOOL) clearHistoryList{
+    [historyList removeAllObjects];
+    [self saveHistoryList:historyList];
+    return enable;
 }
 
+- (void) saveHistoryList: (NSMutableArray<NSMutableDictionary*>*) saveList {
+    NSData *nsTopList = [NSKeyedArchiver archivedDataWithRootObject:saveList];
+    [sharedDefaults setObject:nsTopList forKey:LOCAL_HISTORY_CLIPOARD_LIST];
+    
+#ifdef DEBUG
+    NSLog(@"saveHistoryList:%@", saveList);
+#endif
+    [sharedDefaults synchronize];
+}
 
 -(BOOL) isEnable{
     return enable;

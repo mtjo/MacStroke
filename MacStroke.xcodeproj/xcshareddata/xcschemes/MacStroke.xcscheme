@@ -52,7 +52,6 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         BundleIdentifier = "net.mtjo.MacStroke"
          FilePath = "/Users/mtjo/Library/Developer/Xcode/DerivedData/MacStroke-cfkmtiopopiztlgiyajuntmgkxni/Build/Products/Release/MacStroke.app">
       </PathRunnable>
    </LaunchAction>
