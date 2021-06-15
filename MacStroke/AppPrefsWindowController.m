@@ -235,8 +235,8 @@ static NSArray *exampleAppleScripts;
 - (void)setupToolbar {
     [self addView:self.generalPreferenceView label:NSLocalizedString(@"General", nil) image:[NSImage imageNamed:@"General.png"]];
     [self addView:self.rulesPreferenceView label:NSLocalizedString(@"Rules", nil) image:[NSImage imageNamed:@"Rules.png"]];
-    [self addView:self.filtersPrefrenceView label:NSLocalizedString(@"Filters", nil) image:[NSImage imageNamed:@"list@2x.png"]];
-    [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript_Editor_Logo.png"]];
+    [self addView:self.filtersPrefrenceView label:NSLocalizedString(@"Filters", nil) image:[NSImage imageNamed:@"FilterSetting.png"]];
+    [self addView:self.appleScriptPreferenceView label:NSLocalizedString(@"AppleScript", nil) image:[NSImage imageNamed:@"AppleScript.png"]];
     [self addView:self.rightClickPrefrenceView label:NSLocalizedString(@"RightClick", nil) image:[NSImage imageNamed:@"RightClick.png"]];
     [self addView:self.rightClickMenuPrefrenceView label:NSLocalizedString(@"RightClickMenu", nil) image:[NSImage imageNamed:@"RightClickMenu.png"]];
     [self addView:self.clipboardPrefrenceView label:NSLocalizedString(@"Clipboard", nil) image:[NSImage imageNamed:@"Clipboard.png"]];

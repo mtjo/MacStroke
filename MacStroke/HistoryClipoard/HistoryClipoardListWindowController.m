@@ -23,7 +23,9 @@
     _dataArray = [historyClipboard getHistoryClipboardList];
     _topArray = [historyClipboard getTopList];
     [_tableOutlet reloadData];
-    
+    NSLog(@"_topArray:%@",_topArray);
+
+
 #ifdef DEBUG
     NSLog(@"HistoryClipoardList:%@",_dataArray);
     NSLog(@"_topArray:%@",_topArray);
@@ -40,13 +42,16 @@
     [textField setBezeled:NO];
     [textField setEditable:NO];
     [textField setDrawsBackground:NO];
+    [[textField cell] setLineBreakMode:NSLineBreakByTruncatingMiddle];
+    //[[textField cell] setTruncatesLastVisibleLine:YES];
+
     [textField setTag:row];
     
 #ifdef DEBUG
     NSLog(@"identifier:%@",tableColumn.identifier);
     NSLog(@"_dataArray:%@",_dataArray[row]);
 #endif
-
+    
     if ([tableColumn.identifier isEqualToString:@"id"]) {
         NSInteger topCount = [_topArray count];
         if (row<topCount) {
@@ -62,13 +67,15 @@
             NSColor *color = [NSColor colorWithCalibratedWhite:0.65 alpha:1.0];
             [textField setTextColor:color];
         }
-        [textField setStringValue:_dataArray[row][@"content"]];
+        [textField setStringValue:[_dataArray[row][@"content"]  stringByReplacingOccurrencesOfString:@"\n" withString:@" "]];
+//        [textField setStringValue:[_dataArray[row][@"content"]  stringByReplacingOccurrencesOfString:@"\n" withString:@"↵"]];
         result = textField;
     }else if ([tableColumn.identifier isEqualToString:@"operate"]) {
-        NSButton *topBtn = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 0, 20, 20)] ;
+        NSButton *topBtn = [[NSButton alloc] initWithFrame:NSMakeRect(0 , 0, 25, 25)] ;
         [topBtn setTag:row];
         [topBtn setBezelStyle:NSTexturedSquareBezelStyle];
-        [topBtn setTranslatesAutoresizingMaskIntoConstraints:YES];
+        [topBtn setAutoresizesSubviews:false];
+        ///[topBtn setTranslatesAutoresizingMaskIntoConstraints:YES];
         [topBtn setTag:row];
         //[operate setAction:@selector(onSetGestureData:)];
         if ([_dataArray[row][@"isTop"] isEqualToString:@"0"]) {
@@ -80,9 +87,10 @@
             [topBtn setToolTip:NSLocalizedString(@"remove top", nil)];
             [topBtn setAction:@selector(removeTop:)];
         }
+        //[textField addSubview:topBtn];
         result = topBtn;
     }
-        
+    
     return result;
 }
 
@@ -115,20 +123,84 @@
     [self.window close];
 }
 - (IBAction)clearHistoryList:(id)sender {
-    [_dataArray removeAllObjects];
-    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
-        NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
-        [historyClipboard clearHistoryList];
-    }
-    [self windowDidLoad];
+    
+    NSAlert *alert = [[NSAlert alloc] init];
+    NSString *title1 =NSLocalizedString(@"Ok", nil);
+    NSString *title2 =NSLocalizedString(@"Cancel", nil);
+    NSString *messagetext =NSLocalizedString(@"warning!", nil);
+    NSString *informativetext =NSLocalizedString(@"Are you sure to clear all records?", nil);
+    [alert addButtonWithTitle:title1];
+    [alert addButtonWithTitle:title2];
+    
+    [alert setMessageText:messagetext];
+    [alert setInformativeText:informativetext];
+    [alert setAlertStyle:NSAlertStyleInformational];
+    
+    [[[alert window] contentView] autoresizesSubviews];
+    
+    [alert beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+        
+        if (result == NSAlertFirstButtonReturn) {
+            [self->_dataArray removeAllObjects];
+            if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
+                NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
+                [self->historyClipboard clearHistoryList];
+            }
+            [self windowDidLoad];
+            
+        }
+        
+        if (result == NSAlertSecondButtonReturn) {
+#ifdef DEBUG
+            NSLog(@"Cancel");
+#endif
+  
+        }
+    }];
+    
 }
+
+- (IBAction)clearAllTop:(id)sender{
+    
+    NSAlert *alert = [[NSAlert alloc] init];
+    NSString *title1 =NSLocalizedString(@"Ok", nil);
+    NSString *title2 =NSLocalizedString(@"Cancel", nil);
+    NSString *messagetext =NSLocalizedString(@"warning!", nil);
+    NSString *informativetext =NSLocalizedString(@"Are you sure to clear all top records?", nil);
+    [alert addButtonWithTitle:title1];
+    [alert addButtonWithTitle:title2];
+    
+    [alert setMessageText:messagetext];
+    [alert setInformativeText:informativetext];
+    [alert setAlertStyle:NSAlertStyleInformational];
+    
+    [[[alert window] contentView] autoresizesSubviews];
+    
+    [alert beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+        
+        if (result == NSAlertFirstButtonReturn) {
+            [self->_topArray removeAllObjects];
+            [self->historyClipboard saveTop:self->_topArray];
+            [self windowDidLoad];
+            
+        }
+        
+        if (result == NSAlertSecondButtonReturn) {
+#ifdef DEBUG
+            NSLog(@"Cancel");
+#endif
+  
+        }
+    }];
+}
+
 - (void)keyDown:(NSEvent*)event {
-  NSLog(@"%@ %@ - %@", self.className, NSStringFromSelector(_cmd), event);
-  [self interpretKeyEvents:[NSArray arrayWithObject:event]];
+    NSLog(@"%@ %@ - %@", self.className, NSStringFromSelector(_cmd), event);
+    [self interpretKeyEvents:[NSArray arrayWithObject:event]];
 }
 - (void)cancelOperation:(id)sender {
-  NSLog(@"%@ %@ - %@", self.className, NSStringFromSelector(_cmd), sender);
-  [self close];
+    NSLog(@"%@ %@ - %@", self.className, NSStringFromSelector(_cmd), sender);
+    [self close];
 }
 
 - (IBAction)addTop:(id)sender {
@@ -156,9 +228,9 @@
 #endif
     [historyClipboard saveTop:_topArray];
     [self windowDidLoad];
-
+    
     [_tableOutlet scrollRowToVisible:0];
-
+    
 }
 
 - (IBAction)removeTop:(id)sender {
@@ -178,5 +250,4 @@
     [historyClipboard saveTop:_topArray];
     [self windowDidLoad];
 }
-
 @end

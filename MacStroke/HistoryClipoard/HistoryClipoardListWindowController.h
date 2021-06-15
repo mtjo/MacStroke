@@ -18,6 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
     IBOutlet NSTableView *tableOutlet;
     HistoryClipboard * historyClipboard;
 }
+- (IBAction)clearAllTop:(id)sender;
+- (IBAction)clearHistoryList:(id)sender;
 @property (assign) IBOutlet NSTableView *tableOutlet;
 
 - (void)doubleClick:(id)nid;
