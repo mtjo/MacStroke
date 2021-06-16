@@ -2,6 +2,9 @@
 /* Class = "NSTableColumn"; headerCell.title = "content"; ObjectID = "7PW-cd-Irs"; */
 "7PW-cd-Irs.headerCell.title" = "内容";
 
+/* Class = "NSButtonCell"; title = "clearTop"; ObjectID = "8Va-vH-6nw"; */
+"8Va-vH-6nw.title" = "清除置顶";
+
 /* Class = "NSTableColumn"; headerCell.title = "operate"; ObjectID = "9UD-br-tDv"; */
 "9UD-br-tDv.headerCell.title" = "操作";
 
