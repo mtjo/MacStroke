@@ -23,8 +23,6 @@
     _dataArray = [historyClipboard getHistoryClipboardList];
     _topArray = [historyClipboard getTopList];
     [_tableOutlet reloadData];
-    NSLog(@"_topArray:%@",_topArray);
-
 
 #ifdef DEBUG
     NSLog(@"HistoryClipoardList:%@",_dataArray);

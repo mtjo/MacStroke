@@ -23,6 +23,7 @@ static NSString *LOCAL_HISTORY_CLIPOARD_LIST = @"localHistoryClipoardList";
 static NSString *LOCAL_TOP_HISTORY_CLIPOARD_LIST = @"localTopHistoryClipoardList";
 static NSString *CONTENT = @"content";
 static NSString *ISTOP = @"isTop";
+static NSString *CLIPOARD_STROAGE_LOCAL = @"clipoardStroageLocal";
 
 - (void) handleTimer: (NSTimer *) timer
 {
@@ -51,9 +52,9 @@ static NSString *ISTOP = @"isTop";
             //NSLog(@"NSPasteboard:%@", historyList);
             
 #ifdef DEBUG
-            NSLog(@"clipoardStroageLocal:%hdd", [[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
+            NSLog(@"CLIPOARD_STROAGE_LOCAL:%hdd", [[NSUserDefaults standardUserDefaults] boolForKey:CLIPOARD_STROAGE_LOCAL]);
 #endif
-            if([sharedDefaults boolForKey:@"clipoardStroageLocal"]){
+            if([sharedDefaults boolForKey:CLIPOARD_STROAGE_LOCAL]){
                 
                 NSData *nsHistoryList = [NSKeyedArchiver archivedDataWithRootObject:historyList];
                
@@ -91,7 +92,7 @@ static NSString *ISTOP = @"isTop";
         if (historyList == nil) {
             historyList = [[NSMutableArray alloc] init];
         }
-        if([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]){
+        if([[NSUserDefaults standardUserDefaults] boolForKey:CLIPOARD_STROAGE_LOCAL]){
             @try {
                 NSData * data =   [sharedDefaults objectForKey:LOCAL_HISTORY_CLIPOARD_LIST];
                 historyList = [[NSMutableArray alloc] initWithArray:[NSKeyedUnarchiver unarchiveObjectWithData:data]];
