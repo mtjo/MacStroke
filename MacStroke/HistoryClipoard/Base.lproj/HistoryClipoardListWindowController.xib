@@ -26,11 +26,11 @@
                         <rect key="frame" x="-1" y="34" width="709" height="356"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <clipView key="contentView" id="cuh-JN-94T">
-                            <rect key="frame" x="1" y="1" width="707" height="354"/>
+                            <rect key="frame" x="1" y="1" width="707" height="339"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" headerView="uVC-Mz-RP5" viewBased="YES" id="bSG-Td-zQP">
-                                    <rect key="frame" x="0.0" y="0.0" width="707" height="329"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="716" height="314"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <size key="intercellSpacing" width="3" height="2"/>
                                     <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -68,7 +68,7 @@
                                                 </tableCellView>
                                             </prototypeCellViews>
                                         </tableColumn>
-                                        <tableColumn identifier="content" width="596" minWidth="40" maxWidth="9999" id="7PW-cd-Irs">
+                                        <tableColumn identifier="content" width="605" minWidth="40" maxWidth="9999" id="7PW-cd-Irs">
                                             <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="content">
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
@@ -81,11 +81,11 @@
                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                             <prototypeCellViews>
                                                 <tableCellView id="FOI-z0-EAS" userLabel="content">
-                                                    <rect key="frame" x="51" y="1" width="596" height="17"/>
+                                                    <rect key="frame" x="51" y="1" width="605" height="17"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                     <subviews>
                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="3DE-Dy-Re5">
-                                                            <rect key="frame" x="0.0" y="0.0" width="596" height="17"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="605" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="content" id="p7k-95-mpc">
                                                                 <font key="font" metaFont="system"/>
@@ -112,7 +112,7 @@
                                             </textFieldCell>
                                             <prototypeCellViews>
                                                 <button verticalHuggingPriority="750" id="0cr-ak-FfO">
-                                                    <rect key="frame" x="650" y="1" width="55" height="32"/>
+                                                    <rect key="frame" x="659" y="1" width="55" height="32"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                     <buttonCell key="cell" type="push" title="top" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zab-yZ-32M">
                                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -129,7 +129,7 @@
                                 </tableView>
                             </subviews>
                         </clipView>
-                        <scroller key="horizontalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="9yT-TK-1sY">
+                        <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="9yT-TK-1sY">
                             <rect key="frame" x="1" y="340" width="707" height="15"/>
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
@@ -138,7 +138,7 @@
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
                         <tableHeaderView key="headerView" wantsLayer="YES" id="uVC-Mz-RP5">
-                            <rect key="frame" x="0.0" y="0.0" width="707" height="25"/>
+                            <rect key="frame" x="0.0" y="0.0" width="716" height="25"/>
                             <autoresizingMask key="autoresizingMask"/>
                         </tableHeaderView>
                     </scrollView>
