@@ -143,7 +143,7 @@
     <item>
       <title>Version1.0.9</title>
       <sparkle:releaseNotesLink>
-        https://github.com/mtjo/MacStroke/releases/tag/1.0.9
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.0.9.html
       </sparkle:releaseNotesLink>
       <pubDate>2020-04-10 10:58:32 +8</pubDate>
       <enclosure url="https://github.com/mtjo/MacStroke/releases/download/1.0.9/MacStroke.zip" sparkle:version="1.0.9" length="1834461" type="application/octet-stream" sparkle:dsaSignature="MC0CFQCYa3JSKCvPhHDeWKZd60AEVJWf6wIUEsIizygBSJmb7yLwTJ1mjT93JPI=" />
@@ -159,7 +159,7 @@
     <item>
       <title>Version1.1.0</title>
       <sparkle:releaseNotesLink>
-        https://github.com/mtjo/MacStroke/releases/tag/1.1.0
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/1.1.0.html
       </sparkle:releaseNotesLink>
       <pubDate>2020-09-24 11:57:06 +8</pubDate>
       <enclosure url="https://github.com/mtjo/MacStroke/releases/download/1.1.0/MacStroke.zip" sparkle:version="1.1.1" length="2379507" type="application/octet-stream" sparkle:dsaSignature="MCwCFH83kLC3ZhBNe2GpcAiymnamj6ImAhRi2yg/JUMg2Cdrx7oaFfq+HnTtqw==" />
@@ -174,7 +174,7 @@
     <item>
       <title>Version2.0.0</title>
       <sparkle:releaseNotesLink>
-        https://github.com/mtjo/MacStroke/releases/tag/2.0.0
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/2.0.0.html
       </sparkle:releaseNotesLink>
       <pubDate>2021-01-13 18:31:43 +8</pubDate>
       <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.0/MacStroke.zip" sparkle:version="2.0.0" length="3131896" type="application/octet-stream" sparkle:dsaSignature="MCwCFCRSmOtG2G6MBsnw95OU8mMu2x3xAhQKrhlpYHJz5xZNfKJHMimsU6l6BA==" />
@@ -189,7 +189,7 @@
     <item>
       <title>Version2.0.1</title>
       <sparkle:releaseNotesLink>
-        https://github.com/mtjo/MacStroke/releases/tag/2.0.1
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/2.0.1.html
       </sparkle:releaseNotesLink>
       <pubDate>2021-06-02 14:14:46 +8</pubDate>
       <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.1/MacStroke.zip" sparkle:version="2.0.1" length="3177678" type="application/octet-stream" sparkle:dsaSignature="MC0CFQCHavLu5lh1UYY7hpMD1wc3350azgIUIymepetoA+OsyxX/lIlcunJETcw=" />
@@ -204,10 +204,25 @@
     <item>
       <title>Version2.0.2</title>
       <sparkle:releaseNotesLink>
-        https://github.com/mtjo/MacStroke/releases/tag/2.0.2
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/2.0.2.html
       </sparkle:releaseNotesLink>
       <pubDate>2021-06-16 10:25:56 +8</pubDate>
       <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.2/MacStroke.zip" sparkle:version="2.0.2" length="3218478" type="application/octet-stream" sparkle:dsaSignature="MCwCFHr+RNLjPg2j0AANyCXWXgEMbrHwAhQLIJkhzHOR3eintN3wpqeAaK39EA==" />
+      <sparkle:minimumSystemVersion>10.10</sparkle:minimumSystemVersion>
+    </item>
+  </channel>
+  <channel>
+    <title>MacStroke Changelog</title>
+    <link>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</link>
+    <description>Most recent changes with links to updates.</description>
+    <language>en</language>
+    <item>
+      <title>Version2.0.3</title>
+      <sparkle:releaseNotesLink>
+        https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/2.0.3.html
+      </sparkle:releaseNotesLink>
+      <pubDate>2021-07-16 10:18:27 +8</pubDate>
+      <enclosure url="https://github.com/mtjo/MacStroke/releases/download/2.0.3/MacStroke.zip" sparkle:version="2.0.3" length="3218595" type="application/octet-stream" sparkle:dsaSignature="MCwCFCOk4/ckc068GhQnCe7131JVwiF0AhQVGD+/bZk1Eip+U96Qwvi6Vy0W6g==" />
       <sparkle:minimumSystemVersion>10.10</sparkle:minimumSystemVersion>
     </item>
   </channel>
