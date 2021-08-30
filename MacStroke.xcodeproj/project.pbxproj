@@ -187,7 +187,6 @@
 		4D14392B26D79C2A00CADD5C /* LSQLiteDB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LSQLiteDB.h; sourceTree = "<group>"; };
 		4D14392C26D79C2A00CADD5C /* LSQLiteDB.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LSQLiteDB.m; sourceTree = "<group>"; };
 		4D14392E26D79C7D00CADD5C /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
-		4D195C0E25AEF45A007C640C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
@@ -212,6 +211,7 @@
 		4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipboard.h; sourceTree = "<group>"; };
 		4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipboard.m; sourceTree = "<group>"; };
 		4D95A90426DCA827000D131C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
+		4D95A90626DCD772000D131C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DA281722678569A00CA13AC /* AppleScript.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppleScript.png; sourceTree = "<group>"; };
@@ -886,7 +886,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4D195C0E25AEF45A007C640C /* zh-Hans */,
+				4D95A90626DCD772000D131C /* zh-Hans */,
 			);
 			name = Preferences.xib;
 			sourceTree = "<group>";

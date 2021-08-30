@@ -1378,32 +1378,13 @@
                                 </connections>
                             </popUpButton>
                             <box title="Storage limit" translatesAutoresizingMaskIntoConstraints="NO" id="6mQ-De-QqJ">
-                                <rect key="frame" x="17" y="258" width="755" height="90"/>
+                                <rect key="frame" x="17" y="237" width="755" height="111"/>
                                 <view key="contentView" id="YCv-RP-yMV">
-                                    <rect key="frame" x="3" y="3" width="749" height="72"/>
+                                    <rect key="frame" x="3" y="3" width="749" height="93"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
-                                        <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lKP-Z3-FTd">
-                                            <rect key="frame" x="5" y="41" width="140" height="18"/>
-                                            <buttonCell key="cell" type="check" title="Limit total records:" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="RbU-gH-DC2">
-                                                <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                                <font key="font" metaFont="system"/>
-                                            </buttonCell>
-                                            <connections>
-                                                <binding destination="72" name="enabled2" keyPath="values.clipoardStroageLocal" previousBinding="PUe-Di-OS0" id="Y5f-cv-H4i">
-                                                    <dictionary key="options">
-                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
-                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
-                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
-                                                        <integer key="NSNullPlaceholder" value="-1"/>
-                                                    </dictionary>
-                                                </binding>
-                                                <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="PUe-Di-OS0"/>
-                                                <binding destination="72" name="value" keyPath="values.limitHistoryListCount" id="oDp-Sj-HQa"/>
-                                            </connections>
-                                        </button>
                                         <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="mCV-6e-Or8">
-                                            <rect key="frame" x="5" y="13" width="123" height="18"/>
+                                            <rect key="frame" x="5" y="11" width="123" height="20"/>
                                             <buttonCell key="cell" type="check" title="Limit save days:" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="FpD-kV-uYN">
                                                 <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                 <font key="font" metaFont="system"/>
@@ -1421,41 +1402,10 @@
                                                 <binding destination="72" name="value" keyPath="values.enableLimitSaveDays" id="5T1-1u-GOk"/>
                                             </connections>
                                         </button>
-                                        <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="JA6-Wb-uAK">
-                                            <rect key="frame" x="136" y="12" width="80" height="21"/>
-                                            <constraints>
-                                                <constraint firstAttribute="width" constant="80" id="tjc-6s-eYv"/>
-                                            </constraints>
-                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="eLN-sM-D54">
-                                                <font key="font" metaFont="system"/>
-                                                <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
-                                                <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
-                                            </textFieldCell>
-                                            <connections>
-                                                <binding destination="72" name="enabled2" keyPath="values.enableHistoryClipboard" previousBinding="kuP-7L-8PO" id="x6m-BF-Spv">
-                                                    <dictionary key="options">
-                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
-                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
-                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
-                                                        <integer key="NSNullPlaceholder" value="-1"/>
-                                                    </dictionary>
-                                                </binding>
-                                                <binding destination="72" name="enabled3" keyPath="values.clipoardStroageLocal" previousBinding="x6m-BF-Spv" id="z4n-Sn-3dq">
-                                                    <dictionary key="options">
-                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
-                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
-                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
-                                                        <integer key="NSNullPlaceholder" value="-1"/>
-                                                    </dictionary>
-                                                </binding>
-                                                <binding destination="72" name="enabled" keyPath="values.enableLimitSaveDays" id="kuP-7L-8PO"/>
-                                                <binding destination="72" name="value" keyPath="values.limitSaveDays" id="caT-VG-8wm"/>
-                                            </connections>
-                                        </textField>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="8Iq-iT-zC4" userLabel="history count">
-                                            <rect key="frame" x="153" y="40" width="80" height="21"/>
+                                            <rect key="frame" x="153" y="39" width="60" height="21"/>
                                             <constraints>
-                                                <constraint firstAttribute="width" constant="80" id="PJy-89-qmC"/>
+                                                <constraint firstAttribute="width" constant="60" id="hKg-Ac-S90"/>
                                             </constraints>
                                             <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="FmP-AU-jq7" userLabel="history count">
                                                 <font key="font" metaFont="system"/>
@@ -1492,20 +1442,132 @@
                                                 <binding destination="72" name="value" keyPath="values.historyClipoardList" id="j60-KG-mnn"/>
                                             </connections>
                                         </textField>
+                                        <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Btx-sh-Pn9">
+                                            <rect key="frame" x="5" y="67" width="133" height="18"/>
+                                            <constraints>
+                                                <constraint firstAttribute="height" constant="16" id="jXA-qL-3OM"/>
+                                            </constraints>
+                                            <buttonCell key="cell" type="check" title="Limit top records:" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cVV-UQ-yye">
+                                                <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                                <font key="font" metaFont="system"/>
+                                            </buttonCell>
+                                            <connections>
+                                                <binding destination="72" name="enabled2" keyPath="values.enableHistoryClipboard" previousBinding="IsG-zm-V4Z" id="CAl-8b-K5Q">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled" keyPath="values.clipoardStroageLocal" id="IsG-zm-V4Z"/>
+                                                <binding destination="72" name="value" keyPath="values.enableLimitTop" id="c8x-95-Bxj"/>
+                                            </connections>
+                                        </button>
+                                        <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="uu6-WC-upO">
+                                            <rect key="frame" x="146" y="66" width="40" height="21"/>
+                                            <constraints>
+                                                <constraint firstAttribute="width" constant="40" id="g0C-m9-eZT"/>
+                                            </constraints>
+                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="ujx-rW-znY">
+                                                <font key="font" metaFont="system"/>
+                                                <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                            </textFieldCell>
+                                            <connections>
+                                                <binding destination="72" name="enabled2" keyPath="values.clipoardStroageLocal" previousBinding="ELs-xw-1kD" id="qAX-wR-M6L">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled3" keyPath="values.enableLimitTop" previousBinding="qAX-wR-M6L" id="niy-pG-ryF">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="ELs-xw-1kD"/>
+                                                <binding destination="72" name="value" keyPath="values.limitTop" id="Oih-rj-9Pt"/>
+                                            </connections>
+                                        </textField>
+                                        <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lKP-Z3-FTd">
+                                            <rect key="frame" x="5" y="40" width="140" height="18"/>
+                                            <constraints>
+                                                <constraint firstAttribute="height" constant="16" id="Sfb-9u-WZP"/>
+                                            </constraints>
+                                            <buttonCell key="cell" type="check" title="Limit total records:" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="RbU-gH-DC2">
+                                                <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                                <font key="font" metaFont="system"/>
+                                            </buttonCell>
+                                            <connections>
+                                                <binding destination="72" name="enabled2" keyPath="values.clipoardStroageLocal" previousBinding="PUe-Di-OS0" id="Y5f-cv-H4i">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="PUe-Di-OS0"/>
+                                                <binding destination="72" name="value" keyPath="values.limitHistoryListCount" id="oDp-Sj-HQa"/>
+                                            </connections>
+                                        </button>
+                                        <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="JA6-Wb-uAK">
+                                            <rect key="frame" x="136" y="11" width="40" height="20"/>
+                                            <constraints>
+                                                <constraint firstAttribute="width" constant="40" id="LBd-eB-uUe"/>
+                                            </constraints>
+                                            <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="eLN-sM-D54">
+                                                <font key="font" metaFont="system"/>
+                                                <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                                <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                            </textFieldCell>
+                                            <connections>
+                                                <binding destination="72" name="enabled2" keyPath="values.enableHistoryClipboard" previousBinding="kuP-7L-8PO" id="x6m-BF-Spv">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled3" keyPath="values.clipoardStroageLocal" previousBinding="x6m-BF-Spv" id="z4n-Sn-3dq">
+                                                    <dictionary key="options">
+                                                        <integer key="NSMultipleValuesPlaceholder" value="-1"/>
+                                                        <integer key="NSNoSelectionPlaceholder" value="-1"/>
+                                                        <integer key="NSNotApplicablePlaceholder" value="-1"/>
+                                                        <integer key="NSNullPlaceholder" value="-1"/>
+                                                    </dictionary>
+                                                </binding>
+                                                <binding destination="72" name="enabled" keyPath="values.enableLimitSaveDays" id="kuP-7L-8PO"/>
+                                                <binding destination="72" name="value" keyPath="values.limitSaveDays" id="caT-VG-8wm"/>
+                                            </connections>
+                                        </textField>
                                     </subviews>
                                     <constraints>
-                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="leading" secondItem="lKP-Z3-FTd" secondAttribute="trailing" constant="8" symbolic="YES" id="1YV-su-H22"/>
-                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="centerY" secondItem="lKP-Z3-FTd" secondAttribute="centerY" id="3rJ-m7-5xg"/>
-                                        <constraint firstItem="mCV-6e-Or8" firstAttribute="top" secondItem="lKP-Z3-FTd" secondAttribute="bottom" constant="12" id="Q1B-tp-cKx"/>
-                                        <constraint firstItem="JA6-Wb-uAK" firstAttribute="leading" secondItem="mCV-6e-Or8" secondAttribute="trailing" constant="8" symbolic="YES" id="VJn-Ms-MKA"/>
-                                        <constraint firstItem="mCV-6e-Or8" firstAttribute="leading" secondItem="lKP-Z3-FTd" secondAttribute="leading" id="VVC-b5-AKG"/>
-                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="leading" secondItem="YCv-RP-yMV" secondAttribute="leading" constant="7" id="kKE-he-SaM"/>
-                                        <constraint firstItem="JA6-Wb-uAK" firstAttribute="centerY" secondItem="mCV-6e-Or8" secondAttribute="centerY" id="rMg-xZ-j3T"/>
-                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="top" secondItem="YCv-RP-yMV" secondAttribute="top" constant="14" id="wR5-mY-ix1"/>
+                                        <constraint firstItem="JA6-Wb-uAK" firstAttribute="leading" secondItem="mCV-6e-Or8" secondAttribute="trailing" constant="8" symbolic="YES" id="64U-mj-iO6"/>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="centerY" secondItem="8Iq-iT-zC4" secondAttribute="centerY" id="8D7-rl-gA3"/>
+                                        <constraint firstItem="Btx-sh-Pn9" firstAttribute="top" secondItem="YCv-RP-yMV" secondAttribute="top" constant="9" id="JY5-a8-8wF"/>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="top" secondItem="Btx-sh-Pn9" secondAttribute="bottom" constant="11" id="O3C-vl-Fzf"/>
+                                        <constraint firstItem="Btx-sh-Pn9" firstAttribute="centerY" secondItem="uu6-WC-upO" secondAttribute="centerY" id="QYD-1k-ldX"/>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="leading" secondItem="Btx-sh-Pn9" secondAttribute="leading" id="Rfg-G1-P8b"/>
+                                        <constraint firstAttribute="bottom" secondItem="mCV-6e-Or8" secondAttribute="bottom" constant="12" id="eVB-Kz-YTJ"/>
+                                        <constraint firstItem="mCV-6e-Or8" firstAttribute="centerY" secondItem="JA6-Wb-uAK" secondAttribute="centerY" id="ebq-7T-EHw"/>
+                                        <constraint firstItem="mCV-6e-Or8" firstAttribute="leading" secondItem="lKP-Z3-FTd" secondAttribute="leading" id="hKV-vM-oDN"/>
+                                        <constraint firstItem="lKP-Z3-FTd" firstAttribute="leading" secondItem="YCv-RP-yMV" secondAttribute="leading" constant="7" id="hhh-kq-4GX"/>
+                                        <constraint firstItem="uu6-WC-upO" firstAttribute="leading" secondItem="Btx-sh-Pn9" secondAttribute="trailing" constant="8" symbolic="YES" id="hlw-mz-guY"/>
+                                        <constraint firstItem="JA6-Wb-uAK" firstAttribute="top" secondItem="lKP-Z3-FTd" secondAttribute="bottom" constant="10" id="pV7-jN-5vu"/>
+                                        <constraint firstItem="mCV-6e-Or8" firstAttribute="top" secondItem="lKP-Z3-FTd" secondAttribute="bottom" constant="11" id="r9i-as-mMP"/>
+                                        <constraint firstItem="8Iq-iT-zC4" firstAttribute="leading" secondItem="lKP-Z3-FTd" secondAttribute="trailing" constant="8" symbolic="YES" id="xe1-MX-jq6"/>
                                     </constraints>
                                 </view>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="86" id="FOZ-um-DJR"/>
+                                    <constraint firstAttribute="height" constant="107" id="FOZ-um-DJR"/>
                                     <constraint firstAttribute="width" constant="749" id="uLf-8Q-0iV"/>
                                 </constraints>
                             </box>
@@ -1518,7 +1580,7 @@
                                 </textFieldCell>
                             </textField>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="fvb-Wh-zUM">
-                                <rect key="frame" x="13" y="170" width="172" height="32"/>
+                                <rect key="frame" x="13" y="112" width="172" height="32"/>
                                 <buttonCell key="cell" type="push" title="show history clipboard" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="bT0-SV-Om8">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1529,7 +1591,7 @@
                                 </connections>
                             </button>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Lbj-k7-enf">
-                                <rect key="frame" x="18" y="214" width="119" height="16"/>
+                                <rect key="frame" x="18" y="156" width="119" height="16"/>
                                 <textFieldCell key="cell" lineBreakMode="clipping" title="keyboard shortcut:" id="Dlc-Zp-mj2">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -1537,7 +1599,7 @@
                                 </textFieldCell>
                             </textField>
                             <customView translatesAutoresizingMaskIntoConstraints="NO" id="xaf-C0-GNB">
-                                <rect key="frame" x="143" y="211" width="178" height="22"/>
+                                <rect key="frame" x="143" y="153" width="178" height="22"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="178" id="jLx-tF-sb9"/>
                                     <constraint firstAttribute="height" constant="22" id="l2R-5S-iNa"/>
@@ -1551,7 +1613,7 @@
                             <constraint firstItem="6mQ-De-QqJ" firstAttribute="leading" secondItem="0Bd-Ns-Tnr" secondAttribute="leading" id="9ra-5t-gWQ"/>
                             <constraint firstItem="fvb-Wh-zUM" firstAttribute="top" secondItem="Lbj-k7-enf" secondAttribute="bottom" constant="17" id="AqU-hI-MsI"/>
                             <constraint firstItem="fvb-Wh-zUM" firstAttribute="leading" secondItem="0Bd-Ns-Tnr" secondAttribute="leading" id="CIf-aE-gZ9"/>
-                            <constraint firstItem="Lbj-k7-enf" firstAttribute="top" secondItem="6mQ-De-QqJ" secondAttribute="bottom" constant="32" id="CQl-Xi-wNj"/>
+                            <constraint firstItem="Lbj-k7-enf" firstAttribute="top" secondItem="6mQ-De-QqJ" secondAttribute="bottom" constant="69" id="CQl-Xi-wNj"/>
                             <constraint firstItem="0Bd-Ns-Tnr" firstAttribute="top" secondItem="8aT-R7-a2Q" secondAttribute="top" constant="11" id="Dvg-Jw-9b8"/>
                             <constraint firstItem="xaf-C0-GNB" firstAttribute="centerY" secondItem="Lbj-k7-enf" secondAttribute="centerY" id="E35-Yh-b2G"/>
                             <constraint firstItem="0Bd-Ns-Tnr" firstAttribute="leading" secondItem="8aT-R7-a2Q" secondAttribute="leading" constant="20" symbolic="YES" id="Kt9-U8-rfw"/>

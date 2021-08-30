@@ -62,5 +62,9 @@
 	<false/>
 	<key>limitSaveDays</key>
 	<integer>7</integer>
+	<key>enableLimitTop</key>
+	<true/>
+	<key>limitTop</key>
+	<integer>20</integer>
 </dict>
 </plist>

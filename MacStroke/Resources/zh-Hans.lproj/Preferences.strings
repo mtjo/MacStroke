@@ -53,6 +53,9 @@
 /* Class = "NSTextFieldCell"; title = "Language:"; ObjectID = "5rs-3N-RX4"; */
 "5rs-3N-RX4.title" = "语言：";
 
+/* Class = "NSBox"; title = "Storage limit"; ObjectID = "6mQ-De-QqJ"; */
+"6mQ-De-QqJ.title" = "本地存储限制";
+
 /* Class = "NSButtonCell"; title = "Go bigger"; ObjectID = "7xg-Hp-Yhw"; */
 "7xg-Hp-Yhw.title" = "放大窗口";
 
@@ -85,6 +88,9 @@
 
 /* Class = "NSTextFieldCell"; title = "keyboard shortcut:"; ObjectID = "Dlc-Zp-mj2"; */
 "Dlc-Zp-mj2.title" = "快捷键:";
+
+/* Class = "NSButtonCell"; title = "Limit save days:"; ObjectID = "FpD-kV-uYN"; */
+"FpD-kV-uYN.title" = "限制保存天数:";
 
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "GG1-Up-WoA"; */
 "GG1-Up-WoA.title" = "Table View Cell";
@@ -137,8 +143,8 @@
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "RUf-9S-74q"; */
 "RUf-9S-74q.title" = "Table View Cell";
 
-/* Class = "NSButtonCell"; title = "Limit history list count: "; ObjectID = "RbU-gH-DC2"; */
-"RbU-gH-DC2.title" = "限制记录数量: ";
+/* Class = "NSButtonCell"; title = "Limit total records:"; ObjectID = "RbU-gH-DC2"; */
+"RbU-gH-DC2.title" = "限制记录数量:";
 
 /* Class = "NSMenuItem"; title = "Terminal"; ObjectID = "SzU-lR-VcI"; */
 "SzU-lR-VcI.title" = "Terminal";
