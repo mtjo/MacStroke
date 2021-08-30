@@ -9,18 +9,20 @@
 #import <Cocoa/Cocoa.h>
 #import "AppDelegate.h"
 #import "HistoryClipboard.h"
+#import "DMRefreshTableView.h"
 NS_ASSUME_NONNULL_BEGIN
 
-@interface HistoryClipoardListWindowController : NSWindowController <NSTableViewDelegate, NSTableViewDataSource>
+@interface HistoryClipoardListWindowController : NSWindowController <NSTableViewDelegate,DMRefreshTableViewDelegate, NSTableViewDataSource>
 {
     NSMutableArray<NSMutableDictionary* > * _dataArray;
-    NSMutableArray<NSMutableDictionary* > * _topArray;
-    IBOutlet NSTableView *tableOutlet;
     HistoryClipboard * historyClipboard;
 }
 - (IBAction)clearAllTop:(id)sender;
 - (IBAction)clearHistoryList:(id)sender;
-@property (assign) IBOutlet NSTableView *tableOutlet;
+@property (assign) IBOutlet DMRefreshTableView *tableOutlet;
+
+@property (nonatomic, assign) DMRefreshTableViewState state;
+@property (nonatomic, weak) id<DMRefreshTableViewDelegate> refreshDelegate;
 
 - (void)doubleClick:(id)nid;
 

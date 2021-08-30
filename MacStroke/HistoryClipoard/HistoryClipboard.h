@@ -9,24 +9,34 @@
 #import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
-
+static NSString *CONTENT = @"content";
+static NSString *ISTOP = @"is_top";
+static int pageSize = 30;
 @interface HistoryClipboard : NSObject
 {
- 
+    
 }
 
 - (void) enableHistoryClipboard;
 
 - (BOOL) isEnable;
 
-- (NSMutableArray *) getHistoryClipboardList;
-
-- (void) saveTop: (NSMutableArray<NSMutableDictionary*>*) saveList;
+- (NSMutableArray *) getHistoryClipboardList:(bool)firstPage;
 
 - (NSMutableArray *) getTopList;
 
 -(BOOL) clearHistoryList;
 
+-(NSMutableDictionary*) insertlocalHistoryClipoard:(NSString* )content isTop:(int)isTop;
+-(NSInteger)topCount;
+
+- (bool)addTop:(NSString*) top;
+
+- (bool)removeTop:(NSInteger) topRow;
+- (void) nextPage;
+- (void) setPage:(int)pageNum;
+- (BOOL) clearTop;
+- (BOOL) clearAll;
 @end
 
 NS_ASSUME_NONNULL_END
