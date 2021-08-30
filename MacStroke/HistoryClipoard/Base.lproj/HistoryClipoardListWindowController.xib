@@ -49,10 +49,10 @@
                         <buttonCell key="cell" type="push" title="clearAll" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="b1k-aH-BDa">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="system"/>
+                            <connections>
+                                <action selector="clearAll:" target="-2" id="aq5-Yn-HdH"/>
+                            </connections>
                         </buttonCell>
-                        <connections>
-                            <action selector="clearHistoryList:" target="-2" id="HS8-re-sXx"/>
-                        </connections>
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nah-hW-kLe">
                         <rect key="frame" x="560" y="0.0" width="86" height="32"/>

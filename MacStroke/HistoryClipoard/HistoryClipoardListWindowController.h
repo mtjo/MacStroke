@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak) id<DMRefreshTableViewDelegate> refreshDelegate;
 
 - (void)doubleClick:(id)nid;
+- (IBAction)clearAll:(id)sender;
 
 @end
 

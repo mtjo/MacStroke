@@ -139,6 +139,40 @@
     
 }
 
+- (IBAction)clearAll:(id)sender {
+    
+    NSAlert *alert = [[NSAlert alloc] init];
+    NSString *title1 =NSLocalizedString(@"Ok", nil);
+    NSString *title2 =NSLocalizedString(@"Cancel", nil);
+    NSString *messagetext =NSLocalizedString(@"warning!", nil);
+    NSString *informativetext =NSLocalizedString(@"Are you sure to clear all top records and history clipboard records?", nil);
+    [alert addButtonWithTitle:title1];
+    [alert addButtonWithTitle:title2];
+    
+    [alert setMessageText:messagetext];
+    [alert setInformativeText:informativetext];
+    [alert setAlertStyle:NSAlertStyleInformational];
+    
+    [[[alert window] contentView] autoresizesSubviews];
+    
+    [alert beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+        
+        if (result == NSAlertFirstButtonReturn) {
+            [self->historyClipboard clearAll];
+            [self windowDidLoad];
+        }
+        
+        if (result == NSAlertSecondButtonReturn) {
+#ifdef DEBUG
+            NSLog(@"Cancel");
+#endif
+            
+        }
+    }];
+    
+
+}
+
 - (void)doubleClick:(id)object {
     // This gets called after following steps 1-3.
     NSInteger row = [_tableOutlet clickedRow];
@@ -165,7 +199,7 @@
     NSString *title1 =NSLocalizedString(@"Ok", nil);
     NSString *title2 =NSLocalizedString(@"Cancel", nil);
     NSString *messagetext =NSLocalizedString(@"warning!", nil);
-    NSString *informativetext =NSLocalizedString(@"Are you sure to clear all records?", nil);
+    NSString *informativetext =NSLocalizedString(@"Are you sure to clear all history clipboard records?", nil);
     [alert addButtonWithTitle:title1];
     [alert addButtonWithTitle:title2];
     
@@ -178,11 +212,7 @@
     [alert beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
         
         if (result == NSAlertFirstButtonReturn) {
-            [self->_dataArray removeAllObjects];
-            if ([[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]) {
-                NSLog(@"clipoardStroageLocal:%hhd",[[NSUserDefaults standardUserDefaults] boolForKey:@"clipoardStroageLocal"]);
-                [self->historyClipboard clearHistoryList];
-            }
+            [self->historyClipboard clearHistoryList];
             [self windowDidLoad];
             
         }

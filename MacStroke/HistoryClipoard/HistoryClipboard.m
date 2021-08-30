@@ -18,6 +18,7 @@ static long maxListCount = 0;
 static bool limitHistoryListCount = false;
 NSUserDefaults *sharedDefaults;
 static  bool enable = false;
+static  bool STROAGE_LOCAL = false;
 static NSString *HISTORY_CLIPOARD_LIST=@"historyClipoardList";
 static NSString *LOCAL_HISTORY_CLIPOARD_LIST = @"localHistoryClipoardList";
 static NSString *LOCAL_TOP_HISTORY_CLIPOARD_LIST = @"localTopHistoryClipoardList";
@@ -41,10 +42,12 @@ int page = 0;
             NSString *s = [pasteboard stringForType:NSPasteboardTypeString];
             NSMutableDictionary *item = [[NSMutableDictionary alloc] init];
             
-            if([sharedDefaults boolForKey:CLIPOARD_STROAGE_LOCAL]){
+//            if([sharedDefaults boolForKey:CLIPOARD_STROAGE_LOCAL]){
+//                item = [self insertlocalHistoryClipoard:s isTop:0];
+//            }else{
                 item = [self insertlocalHistoryClipoard:s isTop:0];
-            }
-            
+//            }
+            item = [self insertlocalHistoryClipoard:s isTop:0];
             [historyList insertObject:item atIndex:0];
             maxListCount = [sharedDefaults integerForKey:HISTORY_CLIPOARD_LIST];
             if (maxListCount > 0 && limitHistoryListCount) {
@@ -68,8 +71,12 @@ int page = 0;
 {
     sharedDefaults = [NSUserDefaults standardUserDefaults];
     bool enableHistoryClipboard =  [sharedDefaults boolForKey:@"enableHistoryClipboard"];
+    STROAGE_LOCAL =[[NSUserDefaults standardUserDefaults] boolForKey:CLIPOARD_STROAGE_LOCAL];
     topList = [self getTopList];
-    sqlite = [LSQLiteDB new];
+    if (sqlite == nil){
+        sqlite = [LSQLiteDB new];
+    }
+        
     if (![sqlite tableIsExists:HISTORY_CLIPOARD_TABLES]) {
         [sqlite execBySQL:createTable];
     }
@@ -85,10 +92,13 @@ int page = 0;
         if (timer != nil) {
             [timer invalidate];
         }
+        if (topList == nil) {
+            topList = [[NSMutableArray alloc] init];
+        }
         if (historyList == nil) {
             historyList = [[NSMutableArray alloc] init];
         }
-        if([[NSUserDefaults standardUserDefaults] boolForKey:CLIPOARD_STROAGE_LOCAL]){
+        if(STROAGE_LOCAL){
             @try {
                 topList = [self selectLocalHistoryClipoardIsTop:YES start:0 end: 200];
                 historyList = [self selectLocalHistoryClipoardIsTop:NO start:page end:pageSize];
@@ -106,7 +116,6 @@ int page = 0;
                                                selector: @selector(handleTimer:)
                                                userInfo: nil
                                                 repeats: YES];
-        
     }else{
         maxListCount = 0;
         enable = false;
@@ -116,14 +125,15 @@ int page = 0;
 
 - (NSMutableArray<NSMutableDictionary*> *) getHistoryClipboardList:(bool)firstPage{
     NSMutableArray<NSMutableDictionary*> * list = [[NSMutableArray alloc] init];
-    topList = [self getTopList];
-    if (firstPage) {
-        page = 0;
-        historyList = [self selectLocalHistoryClipoardIsTop:NO start:page end:pageSize];
-    }else{
-        [self nextPage];
-    }
-    
+    if(STROAGE_LOCAL){
+        topList = [self getTopList];
+        if (firstPage) {
+            page = 0;
+            historyList = [self selectLocalHistoryClipoardIsTop:NO start:page end:pageSize];
+        }else{
+            [self nextPage];
+        }
+    }    
     [list addObjectsFromArray:topList];
     [list addObjectsFromArray:historyList];
     return list;
@@ -157,16 +167,18 @@ int page = 0;
     return [sqlite execBySQL:sql];
 }
 
--(BOOL) clearTop{
+-(void) clearTop{
     [topList removeAllObjects];
     NSString *sql= [NSString stringWithFormat:@"DELETE FROM '%@' where is_top = 1;",HISTORY_CLIPOARD_TABLES];
 #ifdef DEBUG
     NSLog(@"clearTop: %@", sql);
 #endif
-    return [sqlite execBySQL:sql];
+    if (STROAGE_LOCAL) {
+        [sqlite execBySQL:sql];
+    }
 }
 
--(BOOL) clearAll{
+-(void) clearAll{
     [historyList removeAllObjects];
     [topList removeAllObjects];
     NSString *sql= [NSString stringWithFormat:@"DELETE FROM '%@';",HISTORY_CLIPOARD_TABLES];
@@ -180,12 +192,11 @@ int page = 0;
 #ifdef DEBUG
         NSLog(@"clearAll sql2: %@", sql);
 #endif
-        return [sqlite execBySQL:sql2];
+        if (STROAGE_LOCAL) {
+            [sqlite execBySQL:sql2];
+        }
     }
-    return 0;
 }
-
-
 
 -(BOOL) isEnable{
     return enable;
@@ -225,7 +236,6 @@ int page = 0;
     return [sqlite queryBySQL:sql];
 }
 
-
 -(NSMutableDictionary*)insertlocalHistoryClipoard:(NSString* )content isTop:(int)isTop{
     UInt64 recordTime = [[NSDate date] timeIntervalSince1970];
     //    NSString *content = [array valueForKey:CONTENT];
@@ -235,22 +245,28 @@ int page = 0;
     //    NSString *decodedString = [[NSString alloc] initWithData:decodedData encoding:NSUTF8StringEncoding];
     //    NSLog(@"decodedString: %@", decodedString);
     
-    NSString *sql= [NSString stringWithFormat:@"INSERT INTO local_history_clipoard (content, is_top, create_time, modify_time) VALUES ('%@', %d, %llu, %llu);"
-                    ,base64String
-                    ,isTop
-                    ,recordTime
-                    ,recordTime];
-#ifdef DEBUG
-    NSLog(@"insertlocalHistoryClipoard :%@", sql);
-#endif
-    if ([sqlite execBySQL:sql]) {
-        NSString *sql2= @"SELECT * FROM local_history_clipoard where id = last_insert_rowid();";
-#ifdef DEBUG
-        NSLog(@"insertlocalHistoryClipoard2 :%@", sql2);
-#endif
-        return [[sqlite queryBySQL:sql2] lastObject];
+    if (STROAGE_LOCAL) {
+        NSString *sql= [NSString stringWithFormat:@"INSERT INTO local_history_clipoard (content, is_top, create_time, modify_time) VALUES ('%@', %d, %llu, %llu);"
+                        ,base64String
+                        ,isTop
+                        ,recordTime
+                        ,recordTime];
+    #ifdef DEBUG
+        NSLog(@"insertlocalHistoryClipoard :%@", sql);
+    #endif
+        if ([sqlite execBySQL:sql]) {
+            NSString *sql2= @"SELECT * FROM local_history_clipoard where id = last_insert_rowid();";
+    #ifdef DEBUG
+            NSLog(@"insertlocalHistoryClipoard2 :%@", sql2);
+    #endif
+            return [[sqlite queryBySQL:sql2] lastObject];
+        }
+    }else{
+        NSMutableDictionary *item = [[NSMutableDictionary alloc]init];
+        [item setValue:@(isTop) forKey:ISTOP];
+        [item setValue:base64String forKey:CONTENT];
+        return item;
     }
-    
     return nil;
 }
 
@@ -268,16 +284,18 @@ int page = 0;
     NSMutableDictionary *item = [[NSMutableDictionary alloc] init];
     item = [self insertlocalHistoryClipoard:top isTop:YES];
     [topList insertObject:item atIndex:0];
+
     return 1;
 }
-- (bool)removeTop:(NSInteger) topRow{
-    NSMutableDictionary *dictionary = topList[topRow];
+- (void)removeTop:(NSInteger) rowNum{
+    NSMutableDictionary *dictionary = topList[rowNum];
     NSNumber *removeId =( NSNumber *)[dictionary valueForKey:@"id"];
-    
+#ifdef DEBUG
     NSLog(@"item: %@ , \nrowId:%ld, \nremoveId:%@",topList[topRow],topRow,removeId);
+#endif
+    [topList removeObjectAtIndex:rowNum];
+    [self delByRowID:[removeId longValue]];
     
-    [topList removeObjectAtIndex:topRow];
-    return [self delByRowID:[removeId longValue] ];
 }
 
 - (void) nextPage {
@@ -285,10 +303,5 @@ int page = 0;
     NSMutableArray<NSMutableDictionary *> *dblist = [self selectLocalHistoryClipoardIsTop:NO start:(pageSize*page) end:pageSize];
     [historyList addObjectsFromArray:dblist];
 }
-
-- (void) setPage:(int)pageNum {
-    page = pageNum;
-}
-
 
 @end

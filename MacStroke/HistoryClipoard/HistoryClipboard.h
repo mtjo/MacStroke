@@ -32,11 +32,10 @@ static int pageSize = 30;
 
 - (bool)addTop:(NSString*) top;
 
-- (bool)removeTop:(NSInteger) topRow;
+- (void)removeTop:(NSInteger) rowNum;
 - (void) nextPage;
-- (void) setPage:(int)pageNum;
-- (BOOL) clearTop;
-- (BOOL) clearAll;
+- (void) clearTop;
+- (void) clearAll;
 @end
 
 NS_ASSUME_NONNULL_END
