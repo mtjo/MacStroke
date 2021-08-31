@@ -47,23 +47,39 @@ static sqlite3 * db = nil;
 @implementation LSQLiteDB
 
 -(LSQLiteDB*) init {
-    NSArray *test = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     /*
      directory 目录类型 比如Documents目录 就是NSDocumentDirectory
      domainMask 在iOS的程序中这个取NSUserDomainMask
      expandTilde YES，表示将~展开成完整路径
      */
-    NSString * fileName = [[test lastObject]stringByAppendingPathComponent:@"DB_ichampion.sqlite"];
-    // lastObject 取NSSearchPathForDirectoriesInDomains数组最后一个元素
+    //NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths lastObject];
+    NSFileManager* fm=[NSFileManager defaultManager];
+    NSString *dic = [documentsDirectory stringByAppendingPathComponent:@"MacStroke"];
+    if(![fm fileExistsAtPath:dic]){
+        //创建目录
+        NSDictionary *attributes;
+        [attributes setValue:[NSString stringWithFormat:@"%d", 0777]
+                      forKey:@"NSFilePosixPermissions"];
+        [fm createDirectoryAtPath:dic withIntermediateDirectories:YES attributes:attributes error:nil];
+    }
     
+    NSString * fileName = [dic stringByAppendingPathComponent:@"DB_ichampion.sqlite"];
+#ifdef DEBUG
     NSLog(@"%@",fileName);
+#endif
     //打开数据库 如果没有打开的数据库就建立一个
     //第一个参数是数据库的路径 注意要转换为c的字符串
     if (sqlite3_open(fileName.UTF8String, &db) == SQLITE_OK) {
         //[self initTables];
+#ifdef DEBUG
         NSLog(@"打开数据库成功");
+#endif
     }else{
+#ifdef DEBUG
         NSLog(@"打开数据库失败");
+#endif
     }
     
     return self;
@@ -156,12 +172,12 @@ static sqlite3 * db = nil;
     return result;
 }
 // 判断表是否存在
--(int) tableIsExists:(NSString*) tableName
+-(BOOL) tableIsExists:(NSString*) tableName
 {
-    NSString *sql = [NSString stringWithFormat:@"SELECT count(*) as count_num FROM sqlite_master WHERE type=\"table\" AND name = \"%@\"", tableName ];
+    NSString *sql = [NSString stringWithFormat:@"SELECT count(*) as count_num FROM sqlite_master WHERE type='table' AND name = '%@';", tableName ];
     NSMutableArray *arr = [self queryBySQL: sql];
     NSMutableDictionary *dic = [arr objectAtIndex:0];
-    bool isExists =[dic valueForKey:@"count_num"];
-    return isExists;
+    NSNumber *count = (NSNumber*)[dic valueForKey:@"count_num"];
+    return [count intValue]>0;
 }
 @end

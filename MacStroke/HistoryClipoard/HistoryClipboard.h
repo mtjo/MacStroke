@@ -36,6 +36,7 @@ static int pageSize = 30;
 - (void) nextPage;
 - (void) clearTop;
 - (void) clearAll;
+-(void)deleteExpired;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(LSQLiteDB*)init;
 - (int) execBySQL: (NSString *) _sql;
 -(NSMutableArray*) queryBySQL:(NSString *) sql;
--(int) tableIsExists:(NSString*) tableName;
+-(BOOL) tableIsExists:(NSString*) tableName;
 @end
 
 NS_ASSUME_NONNULL_END

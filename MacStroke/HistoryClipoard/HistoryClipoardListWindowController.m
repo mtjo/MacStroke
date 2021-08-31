@@ -25,7 +25,7 @@
     [super windowDidLoad];
     historyClipboard = [[AppDelegate appDelegate] getHistoryClipboard];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
-    
+    [historyClipboard deleteExpired];
     _dataArray = [historyClipboard getHistoryClipboardList:YES];
     [_tableOutlet reloadData];
 #ifdef DEBUG
@@ -130,8 +130,9 @@
     [_tableOutlet setDoubleAction:@selector(doubleClick:)];
     [_tableOutlet awakeFromNib];
     self.state = DMRefreshTableViewStateDefault;
+#ifdef DEBUG
     NSLog(@"self.state : %d",self.state);
-    
+#endif
     if(!isAddObserverNotify) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(prepareForNewDisplay:) name:NSViewBoundsDidChangeNotification object:[[_tableOutlet enclosingScrollView] contentView]];
         isAddObserverNotify = YES;
@@ -170,7 +171,7 @@
         }
     }];
     
-
+    
 }
 
 - (void)doubleClick:(id)object {
@@ -351,8 +352,6 @@
         self.state = DMRefreshTableViewStateDefault;
     }
     
-    //NSLog(@"self.state : %d",self.state);
-    
     if(!isperformSelector) {
         lastRect = clipView.documentVisibleRect;
         /** 0.5s 后执行滑动停止*/
@@ -365,8 +364,10 @@
 
 - (void)setState:(DMRefreshTableViewState)state
 {
-    NSLog(@"setState : %d",self.state);
     
+#ifdef DEBUG
+    NSLog(@"setState : %d",self.state);
+#endif
     if (_isLastPage) {
         return;
     }
@@ -376,13 +377,18 @@
     switch (state) {
         case DMRefreshTableViewStateDefault:
         {
+#ifdef DEBUG
             NSLog(@"DMRefreshTableViewStateDefault : %d",self.state);
+#endif
             
             break;
         }
         case DMRefreshTableViewStateTriggered:
         {
+            
+#ifdef DEBUG
             NSLog(@"DMRefreshTableViewStateTriggered : %d",self.state);
+#endif
             
             _dataArray = [historyClipboard getHistoryClipboardList:NO];
             [_tableOutlet reloadData];
@@ -392,8 +398,9 @@
         }
         case DMRefreshTableViewStateLoading:
         {
+#ifdef DEBUG
             NSLog(@"DMRefreshTableViewStateLoading : %d",self.state);
-            
+#endif
             if ([self.refreshDelegate respondsToSelector:@selector(refreshViewDidLoading:)]) {
                 //[self.refreshDelegate refreshViewDidLoading:weakSelf];
             }

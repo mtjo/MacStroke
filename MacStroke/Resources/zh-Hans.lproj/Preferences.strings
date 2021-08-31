@@ -206,6 +206,9 @@
 /* Class = "NSButtonCell"; title = "enable history clipboard"; ObjectID = "cAV-oO-NQz"; */
 "cAV-oO-NQz.title" = "启用历史粘贴板";
 
+/* Class = "NSButtonCell"; title = "Limit top records:"; ObjectID = "cVV-UQ-yye"; */
+"cVV-UQ-yye.title" = "限制置顶数量：";
+
 /* Class = "NSButtonCell"; title = "Edit in External Editor"; ObjectID = "cl6-Yg-6iY"; */
 "cl6-Yg-6iY.title" = "在外部编辑器编辑";
 

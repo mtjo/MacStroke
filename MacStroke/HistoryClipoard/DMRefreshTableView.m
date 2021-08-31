@@ -32,15 +32,17 @@
 -(void)awakeFromNib{
     
     self.state = DMRefreshTableViewStateDefault;
+#ifdef DEBUG
     NSLog(@"self.state : %d",self.state);
-
+#endif
+    
     if(!isAddObserverNotify) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(prepareForNewDisplay:) name:NSViewBoundsDidChangeNotification object:[[self enclosingScrollView] contentView]];
         isAddObserverNotify = YES;
     }
     
 }
- 
+
 - (void) prepareForNewDisplay:(NSNotification *)notificaition{
     
     if(isperformSelector) {
@@ -78,8 +80,9 @@
     } else if (originSizeAndOffSize < clipView.documentRect.size.height && self.state != DMRefreshTableViewStateDefault && self.state == DMRefreshTableViewStateLoading){
         self.state = DMRefreshTableViewStateDefault;
     }
-    
+#ifdef DEBUG
     NSLog(@"self.state : %d",self.state);
+#endif
     
     if(!isperformSelector) {
         lastRect = clipView.documentVisibleRect;
@@ -90,8 +93,8 @@
     
     
 }
- 
- 
+
+
 //- (void)setState:(DMRefreshTableViewState)state
 //{
 //    _state = state;
@@ -99,11 +102,14 @@
 //        [self.refreshDelegate refreshView:self didChangeState:self.state];
 //    }
 //}
- 
+
 - (void)setState:(DMRefreshTableViewState)state
 {
-    NSLog(@"self.state : %d",self.state);
 
+#ifdef DEBUG
+    NSLog(@"self.state : %d",self.state);
+#endif
+    
     if (_isLastPage) {
         return;
     }
@@ -113,7 +119,7 @@
     switch (state) {
         case DMRefreshTableViewStateDefault:
         {
-//            self.titleLabel.stringValue =  footStr1;
+            //            self.titleLabel.stringValue =  footStr1;
             break;
         }
         case DMRefreshTableViewStateTriggered:
@@ -123,8 +129,9 @@
         }
         case DMRefreshTableViewStateLoading:
         {
-            NSLog(@"self.state : %d",self.state);
-
+#ifdef DEBUG
+    NSLog(@"self.state : %d",self.state);
+#endif
             
             if ([self.refreshDelegate respondsToSelector:@selector(refreshViewDidLoading:)]) {
                 //[self.refreshDelegate refreshViewDidLoading:weakSelf];
@@ -134,12 +141,12 @@
         }
     }
 }
- 
+
 - (void)finishedLoading
 {
     [self setState:DMRefreshTableViewStateDefault];
 }
- 
+
 - (void) stopScrollAnimated {
     isperformSelector = isScrollAnimated = NO;
     if ([self.refreshDelegate respondsToSelector:@selector(setTableViewIsScrollAnimated:endRect:)]) {
