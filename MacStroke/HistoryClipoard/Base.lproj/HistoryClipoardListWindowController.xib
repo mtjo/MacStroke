@@ -111,7 +111,7 @@
                                                 </tableCellView>
                                             </prototypeCellViews>
                                         </tableColumn>
-                                        <tableColumn identifier="content" width="650" minWidth="40" maxWidth="9999" id="7PW-cd-Irs">
+                                        <tableColumn identifier="content" width="670" minWidth="40" maxWidth="9999" id="7PW-cd-Irs">
                                             <tableHeaderCell key="headerCell" lineBreakMode="truncatingTail" borderStyle="border" title="content">
                                                 <color key="textColor" name="headerTextColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="backgroundColor" name="headerColor" catalog="System" colorSpace="catalog"/>
@@ -124,11 +124,11 @@
                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                             <prototypeCellViews>
                                                 <tableCellView id="FOI-z0-EAS" userLabel="content">
-                                                    <rect key="frame" x="51" y="1" width="650" height="17"/>
+                                                    <rect key="frame" x="51" y="1" width="670" height="17"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                     <subviews>
                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="3DE-Dy-Re5">
-                                                            <rect key="frame" x="0.0" y="0.0" width="650" height="17"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="670" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="content" id="p7k-95-mpc">
                                                                 <font key="font" metaFont="system"/>
@@ -155,7 +155,7 @@
                                             </textFieldCell>
                                             <prototypeCellViews>
                                                 <button verticalHuggingPriority="750" id="0cr-ak-FfO">
-                                                    <rect key="frame" x="704" y="1" width="74" height="32"/>
+                                                    <rect key="frame" x="724" y="1" width="54" height="32"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                                     <buttonCell key="cell" type="push" title="top" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zab-yZ-32M">
                                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>

@@ -25,6 +25,8 @@
     [super windowDidLoad];
     historyClipboard = [[AppDelegate appDelegate] getHistoryClipboard];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
+    
+    // delete expired item
     [historyClipboard deleteExpired];
     _dataArray = [historyClipboard getHistoryClipboardList:YES];
     [_tableOutlet reloadData];

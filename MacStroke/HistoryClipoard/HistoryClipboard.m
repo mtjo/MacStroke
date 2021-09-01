@@ -62,14 +62,8 @@ int page = 0;
                     if ([self getCount:NO] > maxListCount) {
                         [historyList removeLastObject];
                         [self deleteEarliestItem:NO];
-                        
                     }
                     
-                }
-                
-                if ([sharedDefaults boolForKey:ENABLE_LIMIT_SAVE_DAYS]) {
-                    NSInteger day = [sharedDefaults integerForKey:LIMIT_SAVE_DAYS];
-                    [self deleteExpiredHistory:(int)day];
                 }
             }
             
@@ -119,6 +113,8 @@ int page = 0;
                 topList = [self selectLocalHistoryClipoardIsTop:YES start:0 end: maxTopCount>0&& [sharedDefaults integerForKey:ENABLE_LIMIT_TOP]?maxTopCount:1000];
                 historyList = [self selectLocalHistoryClipoardIsTop:NO start:page end:pageSize];
                 
+                // delete expired item
+                [self deleteExpired];
             } @catch (NSException *exception) {
                 NSLog(@"LOCAL_HISTORY_CLIPOARD_LIST exception:%@", exception);
             }
@@ -348,26 +344,35 @@ int page = 0;
 
 -(void)deleteExpired{
     //delete Expired Top
-    long limitTop = [sharedDefaults integerForKey:LIMIT_TOP];
-    if ([sharedDefaults boolForKey:ENABLE_LIMIT_TOP] && limitTop>0) {
-        long jj =[self getCount:YES] - limitTop;
-        if (jj > 0) {
-            for (long j=0; j<jj; j++) {
-                [self deleteEarliestItem:YES];
-            }
-        }
-    }
-    if(STROAGE_LOCAL){
-        long limitTotal = [sharedDefaults integerForKey:LIMIT_TOTAL];
-        if ([sharedDefaults boolForKey:ENABLE_LIMIT_TOTAL] && limitTotal>0) {
-            long ii =[self getCount:NO]-limitTotal;
-            if (ii > 0) {
-                for (long i=0; i<ii; i++) {
-                    [self deleteEarliestItem:NO];
+    @try {
+        long limitTop = [sharedDefaults integerForKey:LIMIT_TOP];
+        if ([sharedDefaults boolForKey:ENABLE_LIMIT_TOP] && limitTop>0) {
+            long jj =[self getCount:YES] - limitTop;
+            if (jj > 0) {
+                for (long j=0; j<jj; j++) {
+                    [self deleteEarliestItem:YES];
                 }
             }
         }
+        if(STROAGE_LOCAL){
+            long limitTotal = [sharedDefaults integerForKey:LIMIT_TOTAL];
+            if ([sharedDefaults boolForKey:ENABLE_LIMIT_TOTAL] && limitTotal>0) {
+                long ii =[self getCount:NO]-limitTotal;
+                if (ii > 0) {
+                    for (long i=0; i<ii; i++) {
+                        [self deleteEarliestItem:NO];
+                    }
+                }
+            }
+            if ([sharedDefaults boolForKey:ENABLE_LIMIT_SAVE_DAYS]) {
+                NSInteger day = [sharedDefaults integerForKey:LIMIT_SAVE_DAYS];
+                [self deleteExpiredHistory:(int)day];
+            }
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"deleteExpired: %@",exception);
     }
+    
 }
 
 @end

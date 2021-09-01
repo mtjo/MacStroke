@@ -65,7 +65,7 @@ static sqlite3 * db = nil;
         [fm createDirectoryAtPath:dic withIntermediateDirectories:YES attributes:attributes error:nil];
     }
     
-    NSString * fileName = [dic stringByAppendingPathComponent:@"DB_ichampion.sqlite"];
+    NSString * fileName = [dic stringByAppendingPathComponent:@"database.sqlite"];
 #ifdef DEBUG
     NSLog(@"%@",fileName);
 #endif

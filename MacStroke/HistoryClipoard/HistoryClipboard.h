@@ -30,13 +30,13 @@ static int pageSize = 30;
 -(NSMutableDictionary*) insertlocalHistoryClipoard:(NSString* )content isTop:(int)isTop;
 -(NSInteger)topCount;
 
-- (bool)addTop:(NSString*) top;
+- (bool) addTop:(NSString*) top;
 
-- (void)removeTop:(NSInteger) rowNum;
+- (void) removeTop:(NSInteger) rowNum;
 - (void) nextPage;
 - (void) clearTop;
 - (void) clearAll;
--(void)deleteExpired;
+- (void) deleteExpired;
 @end
 
 NS_ASSUME_NONNULL_END
