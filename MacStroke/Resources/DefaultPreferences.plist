@@ -57,7 +57,7 @@
 	<key>showNoteIcon</key>
 	<true/>
 	<key>enableLimitSaveDays</key>
-	<false/>
+	<true/>
 	<key>limitSaveDays</key>
 	<integer>7</integer>
 	<key>enableLimitTop</key>
