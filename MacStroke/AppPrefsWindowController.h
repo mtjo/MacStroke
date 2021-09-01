@@ -57,6 +57,10 @@
 @property(weak) IBOutlet NSTextField *score;
 @property(weak) IBOutlet NSColorWell *lineColorWell;
 
+@property(weak) IBOutlet NSTextField *limitTop;
+@property(weak) IBOutlet NSTextField *limitTotal;
+@property(weak) IBOutlet NSTextField *limitSaveDays;
+
 @property(assign) IBOutlet WebView *webView;
 
 @property(assign) IBOutlet NSView *keyboardShortcut;

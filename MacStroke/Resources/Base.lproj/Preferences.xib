@@ -9,6 +9,7 @@
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="AppPrefsWindowController">
             <connections>
+                <outlet property="_limitTop" destination="uu6-WC-upO" id="aZP-2M-poq"/>
                 <outlet property="aboutPreferenceView" destination="100" id="125"/>
                 <outlet property="addAppleScriptButton" destination="x4V-6H-HqX" id="xYa-jU-mJ3"/>
                 <outlet property="appleScriptPreferenceView" destination="AaE-W0-Z9W" id="8kZ-v1-baJ"/>
@@ -28,6 +29,8 @@
                 <outlet property="generalPreferenceView" destination="99" id="126"/>
                 <outlet property="keyboardShortcut" destination="xaf-C0-GNB" id="hyj-d5-R3M"/>
                 <outlet property="languageComboBox" destination="0fU-Oh-h2G" id="hS4-zl-2V8"/>
+                <outlet property="limitSaveDays" destination="JA6-Wb-uAK" id="W7b-sc-Uyj"/>
+                <outlet property="limitTotal" destination="8Iq-iT-zC4" id="BAN-QW-McZ"/>
                 <outlet property="lineColorWell" destination="lVi-qT-AYg" id="gA9-SQ-9iB"/>
                 <outlet property="loadAppleScriptExampleButton" destination="q9F-62-ePq" id="tXa-pa-dLn"/>
                 <outlet property="removeAppleScriptButton" destination="UOw-ZI-7c4" id="bKb-nE-UBD"/>
