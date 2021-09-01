@@ -538,7 +538,7 @@
                     <rect key="frame" x="0.0" y="34" width="800" height="490"/>
                     <clipView key="contentView" id="dRt-B1-99d">
                         <rect key="frame" x="1" y="1" width="798" height="488"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" rowHeight="18" headerView="287" viewBased="YES" id="289">
                                 <rect key="frame" x="0.0" y="0.0" width="798" height="465"/>
@@ -1421,7 +1421,7 @@
                                                         <integer key="NSNullPlaceholder" value="-1"/>
                                                     </dictionary>
                                                 </binding>
-                                                <binding destination="72" name="enabled3" keyPath="values.enableLimitTotal" previousBinding="2dD-49-2zx" id="Li3-Nr-UGi">
+                                                <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="azn-Qq-KeS">
                                                     <dictionary key="options">
                                                         <integer key="NSMultipleValuesPlaceholder" value="-1"/>
                                                         <integer key="NSNoSelectionPlaceholder" value="-1"/>
@@ -1429,7 +1429,7 @@
                                                         <integer key="NSNullPlaceholder" value="-1"/>
                                                     </dictionary>
                                                 </binding>
-                                                <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="azn-Qq-KeS">
+                                                <binding destination="72" name="enabled3" keyPath="values.enableLimitTotal" previousBinding="2dD-49-2zx" id="Li3-Nr-UGi">
                                                     <dictionary key="options">
                                                         <integer key="NSMultipleValuesPlaceholder" value="-1"/>
                                                         <integer key="NSNoSelectionPlaceholder" value="-1"/>
@@ -1466,7 +1466,6 @@
                                                 <font key="font" metaFont="system"/>
                                             </buttonCell>
                                             <connections>
-                                                <binding destination="72" name="value" keyPath="values.enableLimitTotal" id="gcQ-N5-YEP"/>
                                                 <binding destination="72" name="enabled2" keyPath="values.clipoardStroageLocal" previousBinding="PUe-Di-OS0" id="Y5f-cv-H4i">
                                                     <dictionary key="options">
                                                         <integer key="NSMultipleValuesPlaceholder" value="-1"/>
@@ -1476,6 +1475,7 @@
                                                     </dictionary>
                                                 </binding>
                                                 <binding destination="72" name="enabled" keyPath="values.enableHistoryClipboard" id="PUe-Di-OS0"/>
+                                                <binding destination="72" name="value" keyPath="values.enableLimitTotal" id="gcQ-N5-YEP"/>
                                             </connections>
                                         </button>
                                         <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="uu6-WC-upO">
