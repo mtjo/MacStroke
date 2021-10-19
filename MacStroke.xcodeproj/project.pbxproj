@@ -24,6 +24,10 @@
 		3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CDC55835ADD1CA85B9CCC91 /* BlackWhiteFilter.m */; };
 		4D03F1431E3F335C007AA1B1 /* DrawGesture.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D03F1421E3F335C007AA1B1 /* DrawGesture.m */; };
 		4D0EA07724EFC67F004CCC85 /* HistoryClipoardListWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D0EA07524EFC67F004CCC85 /* HistoryClipoardListWindowController.m */; };
+		4D14392826D7826600CADD5C /* DMRefreshTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D14392526D7826600CADD5C /* DMRefreshTableView.m */; };
+		4D14392926D7826600CADD5C /* DMTableRowView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D14392726D7826600CADD5C /* DMTableRowView.m */; };
+		4D14392D26D79C2A00CADD5C /* LSQLiteDB.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D14392C26D79C2A00CADD5C /* LSQLiteDB.m */; };
+		4D14392F26D79C8F00CADD5C /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D14392E26D79C7D00CADD5C /* libsqlite3.tbd */; };
 		4D34FC5F23B4EC9900604D13 /* RightClickMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */; };
 		4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D42B1FB22A753D100FC3699 /* BtDelegate.m */; };
 		4D6270C223B3650B00AC8745 /* FinderSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D6270C123B3650B00AC8745 /* FinderSync.m */; };
@@ -176,12 +180,17 @@
 		4D03F1421E3F335C007AA1B1 /* DrawGesture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DrawGesture.m; sourceTree = "<group>"; };
 		4D0EA07424EFC67F004CCC85 /* HistoryClipoardListWindowController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipoardListWindowController.h; sourceTree = "<group>"; };
 		4D0EA07524EFC67F004CCC85 /* HistoryClipoardListWindowController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipoardListWindowController.m; sourceTree = "<group>"; };
-		4D195C0E25AEF45A007C640C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
+		4D14392426D7826600CADD5C /* DMRefreshTableView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DMRefreshTableView.h; sourceTree = "<group>"; };
+		4D14392526D7826600CADD5C /* DMRefreshTableView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DMRefreshTableView.m; sourceTree = "<group>"; };
+		4D14392626D7826600CADD5C /* DMTableRowView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DMTableRowView.h; sourceTree = "<group>"; };
+		4D14392726D7826600CADD5C /* DMTableRowView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DMTableRowView.m; sourceTree = "<group>"; };
+		4D14392B26D79C2A00CADD5C /* LSQLiteDB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LSQLiteDB.h; sourceTree = "<group>"; };
+		4D14392C26D79C2A00CADD5C /* LSQLiteDB.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LSQLiteDB.m; sourceTree = "<group>"; };
+		4D14392E26D79C7D00CADD5C /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		4D34FC5E23B4EC9900604D13 /* RightClickMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RightClickMenu.png; sourceTree = "<group>"; };
 		4D350E5023B2151D0043447D /* MacStroke.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacStroke.entitlements; sourceTree = "<group>"; };
 		4D42B1FA22A753D000FC3699 /* BtDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BtDelegate.h; sourceTree = "<group>"; };
 		4D42B1FB22A753D100FC3699 /* BtDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BtDelegate.m; sourceTree = "<group>"; };
-		4D574AA626798EA400C78767 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
 		4D6270C023B3650B00AC8745 /* FinderSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinderSync.h; sourceTree = "<group>"; };
 		4D6270C123B3650B00AC8745 /* FinderSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FinderSync.m; sourceTree = "<group>"; };
 		4D6270C323B3650B00AC8745 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -201,6 +210,8 @@
 		4D88EE1A24EA87B800BDCD6D /* Clipboard.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Clipboard.png; sourceTree = "<group>"; };
 		4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HistoryClipboard.h; sourceTree = "<group>"; };
 		4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HistoryClipboard.m; sourceTree = "<group>"; };
+		4D95A90426DCA827000D131C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HistoryClipoardListWindowController.strings"; sourceTree = "<group>"; };
+		4D95A90826DCE4EB000D131C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Preferences.strings"; sourceTree = "<group>"; };
 		4D97909922CAFE110047A70C /* RightClicksList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RightClicksList.h; sourceTree = "<group>"; };
 		4D97909A22CAFE110047A70C /* RightClicksList.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RightClicksList.m; sourceTree = "<group>"; };
 		4DA281722678569A00CA13AC /* AppleScript.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppleScript.png; sourceTree = "<group>"; };
@@ -261,6 +272,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D14392F26D79C8F00CADD5C /* libsqlite3.tbd in Frameworks */,
 				9A77D45C7EDD2261444C856F /* Pods_MacStroke.framework in Frameworks */,
 				4DC1444625B010F9001E6D77 /* CoolToast.framework in Frameworks */,
 			);
@@ -309,6 +321,7 @@
 		1381E4B11824E7E800E815F5 /* MacStroke */ = {
 			isa = PBXGroup;
 			children = (
+				4D14392A26D79BFC00CADD5C /* Sqlite */,
 				4DC3138024EF9ECC0004CF3A /* HistoryClipoard */,
 				1381E4BD1824E7E800E815F5 /* AppDelegate.h */,
 				1381E4BE1824E7E800E815F5 /* AppDelegate.m */,
@@ -410,6 +423,15 @@
 			path = Model;
 			sourceTree = "<group>";
 		};
+		4D14392A26D79BFC00CADD5C /* Sqlite */ = {
+			isa = PBXGroup;
+			children = (
+				4D14392B26D79C2A00CADD5C /* LSQLiteDB.h */,
+				4D14392C26D79C2A00CADD5C /* LSQLiteDB.m */,
+			);
+			path = Sqlite;
+			sourceTree = "<group>";
+		};
 		4D6270BF23B3650B00AC8745 /* FinderSyncExtension */ = {
 			isa = PBXGroup;
 			children = (
@@ -427,6 +449,10 @@
 		4DC3138024EF9ECC0004CF3A /* HistoryClipoard */ = {
 			isa = PBXGroup;
 			children = (
+				4D14392426D7826600CADD5C /* DMRefreshTableView.h */,
+				4D14392526D7826600CADD5C /* DMRefreshTableView.m */,
+				4D14392626D7826600CADD5C /* DMTableRowView.h */,
+				4D14392726D7826600CADD5C /* DMTableRowView.m */,
 				4D88EE2424EA938400BDCD6D /* HistoryClipboard.h */,
 				4D88EE2524EA938400BDCD6D /* HistoryClipboard.m */,
 				4D0EA07424EFC67F004CCC85 /* HistoryClipoardListWindowController.h */,
@@ -474,6 +500,7 @@
 		4DF4D61A25AD49E700BC6E08 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4D14392E26D79C7D00CADD5C /* libsqlite3.tbd */,
 				3E1FB7F2DD21284E896F7509 /* Pods_MacStroke.framework */,
 			);
 			name = Frameworks;
@@ -761,13 +788,16 @@
 				264183EEE694EB7761D6066B /* CanvasWindowController.m in Sources */,
 				26418E623E410EF207EFA2A8 /* RulesList.m in Sources */,
 				B6F75AE31BD65BDD00A8CF63 /* AppPickerWindowController.m in Sources */,
+				4D14392826D7826600CADD5C /* DMRefreshTableView.m in Sources */,
 				264183DA0542C17E1932F696 /* SRRecorderControlWithTagid.m in Sources */,
+				4D14392926D7826600CADD5C /* DMTableRowView.m in Sources */,
 				2641813EC194C60DC1B1806D /* utils.m in Sources */,
 				4D42B1FC22A753D100FC3699 /* BtDelegate.m in Sources */,
 				4DA281772678596600CA13AC /* AppPrefsWindowController.m in Sources */,
 				3CDC5543D4E5BD248515F7CA /* BlackWhiteFilter.m in Sources */,
 				4D7A39102519C8BF00DFB194 /* SearchInWeb.applescript in Sources */,
 				4DEC5E341E5F40F000DF37EB /* AppleScriptCommand.m in Sources */,
+				4D14392D26D79C2A00CADD5C /* LSQLiteDB.m in Sources */,
 				4D6270D523B37F2100AC8745 /* RightClickMenu.m in Sources */,
 				3CDC524D2930406CB9272085 /* MGOptionsDefine.m in Sources */,
 			);
@@ -847,7 +877,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				4DE22E6324F50E820046248A /* Base */,
-				4D574AA626798EA400C78767 /* zh-Hans */,
+				4D95A90426DCA827000D131C /* zh-Hans */,
 			);
 			name = HistoryClipoardListWindowController.xib;
 			sourceTree = "<group>";
@@ -856,7 +886,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				880AA77C1CA64E88006E7A74 /* Base */,
-				4D195C0E25AEF45A007C640C /* zh-Hans */,
+				4D95A90826DCE4EB000D131C /* zh-Hans */,
 			);
 			name = Preferences.xib;
 			sourceTree = "<group>";
@@ -1018,7 +1048,7 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.0.3;
+				CURRENT_PROJECT_VERSION = 2.0.4;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1030,7 +1060,7 @@
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				MARKETING_VERSION = 2.0.3;
+				MARKETING_VERSION = 2.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -1045,7 +1075,7 @@
 				CODE_SIGN_ENTITLEMENTS = MacStroke/MacStroke.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.0.3;
+				CURRENT_PROJECT_VERSION = 2.0.4;
 				DEVELOPMENT_TEAM = 6H594KH8XS;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1057,7 +1087,7 @@
 				INFOPLIST_FILE = "MacStroke/MacStroke-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				MARKETING_VERSION = 2.0.3;
+				MARKETING_VERSION = 2.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "net.mtjo.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

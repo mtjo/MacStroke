@@ -45,6 +45,8 @@
 "Copy file path" = "复制路径";
 "top" = "置顶";
 "remove top" = "取消置顶";
-"Are you sure to clear all records?" = "确认清除全部记录吗?";
-"Are you sure to clear all top records?" = "确认清除全部置顶记录吗?";
+"Are you sure to clear all history clipboard records?" = "您确定清除历史剪贴板记录吗?";
+"Are you sure to clear all top records?" = "您确定清除全部置顶记录吗?";
+"Are you sure to clear all top records and history clipboard records?" = "您确定清除所有置顶记录和历史剪贴板记录吗？";
+
 

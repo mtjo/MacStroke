@@ -46,17 +46,23 @@
 	<true/>
 	<key>clipoardStroageRam</key>
 	<false/>
-	<key>historyClipoardList</key>
-	<integer>200</integer>
 	<key>historyCilpboardListShortcut</key>
 	<data>YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGoCwwZGhscHR5VJG51bGzWDQ4PEBESExQVFhcYXW1vZGlmaWVyRmxhZ3NfEBtjaGFyYWN0ZXJzSWdub3JpbmdNb2RpZmllcnNWJGNsYXNzWmNoYXJhY3RlcnNXa2V5Q29kZVd2ZXJzaW9ugASABoAHgAWAA4ACUTEQCRIAGAAAYSIaUXbSHyAhIlokY2xhc3NuYW1lWCRjbGFzc2VzWlNSU2hvcnRjdXSiISNYTlNPYmplY3QACAARABoAJAApADIANwBJAEwAUQBTAFwAYgBvAH0AmwCiAK0AtQC9AL8AwQDDAMUAxwDJAMsAzQDSANUA1wDcAOcA8AD7AP4AAAAAAAACAQAAAAAAAAAkAAAAAAAAAAAAAAAAAAABBw==</data>
+	<key>enableLimitTotal</key>
+	<false/>
+	<key>limitTotal</key>
+	<integer>200</integer>
 	<key>notePostion</key>
 	<integer>1</integer>
 	<key>showNoteIcon</key>
 	<true/>
-	<key>localTopHistoryClipoardList</key>
-	<data></data>
-	<key>localHistoryClipoardList</key>
-	<data></data>
+	<key>enableLimitSaveDays</key>
+	<true/>
+	<key>limitSaveDays</key>
+	<integer>7</integer>
+	<key>enableLimitTop</key>
+	<true/>
+	<key>limitTop</key>
+	<integer>15</integer>
 </dict>
 </plist>

@@ -159,7 +159,7 @@
 - (void) openInTerminal:(NSString*) path{
     NSString *terminal =[[NSUserDefaults standardUserDefaults] stringForKey:@"userTerminal"];
     
-    NSString *cmd =  [NSString stringWithFormat:@"open -a %@ %@", terminal,path];
+    NSString *cmd =  [NSString stringWithFormat:@"open -a %@ '%@'", terminal,path];
     system([cmd UTF8String]);
 }
 

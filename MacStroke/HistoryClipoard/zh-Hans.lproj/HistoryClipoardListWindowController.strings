@@ -20,10 +20,13 @@
 /* Class = "NSTableColumn"; headerCell.title = "id"; ObjectID = "W4X-5N-Z8l"; */
 "W4X-5N-Z8l.headerCell.title" = "序号";
 
+/* Class = "NSButtonCell"; title = "clearAll"; ObjectID = "b1k-aH-BDa"; */
+"b1k-aH-BDa.title" = "全部清除";
+
 /* Class = "NSTextFieldCell"; title = "centent"; ObjectID = "b1k-dp-BaL"; */
 "b1k-dp-BaL.title" = "内容";
 
-/* Class = "NSButtonCell"; title = " clear"; ObjectID = "ccl-zD-bEl"; */
+/* Class = "NSButtonCell"; title = "clear"; ObjectID = "ccl-zD-bEl"; */
 "ccl-zD-bEl.title" = "清除";
 
 /* Class = "NSTextFieldCell"; title = "id"; ObjectID = "p6o-gw-fvF"; */

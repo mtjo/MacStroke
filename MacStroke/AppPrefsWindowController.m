@@ -135,9 +135,51 @@ static NSArray *exampleAppleScripts;
     [self initCilpboardShotCut];
     
     [_score setIntValue:(int)[[NSUserDefaults standardUserDefaults] integerForKey:@"minScore"]];
+    NSNumberFormatter * formatterTop = [[NSNumberFormatter alloc] init];
+    [formatterTop setNumberStyle:NSNumberFormatterNoStyle];
+    [formatterTop setMinimum:@1];
+    [formatterTop setMaximum:@9999];
+
+    NSNumberFormatter * formatterTotal = [[NSNumberFormatter alloc] init];
+    [formatterTotal setNumberStyle:NSNumberFormatterNoStyle];
+    [formatterTotal setMinimum:@1];
+    [formatterTotal setMaximum:@999999];
+    
+    NSNumberFormatter * formatterSaveDays = [[NSNumberFormatter alloc] init];
+    [formatterSaveDays setNumberStyle:NSNumberFormatterNoStyle];
+    [formatterSaveDays setMinimum:@1];
+    [formatterSaveDays setMaximum:@9999];
+    
+
+    [_limitTop setFormatter:formatterTop];
+    [_limitTotal setFormatter:formatterTotal];
+    [_limitSaveDays setFormatter:formatterSaveDays];
     
     
 }
+
+// 需要使用的textfield遵循代理
+- (BOOL)textField:(NSTextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string{
+    return [self validateNumber:string];
+}
+
+
+- (BOOL)validateNumber:(NSString*)number {
+    BOOL res = YES;
+    NSCharacterSet* tmpSet = [NSCharacterSet characterSetWithCharactersInString:@"0123456789"];
+    int i = 0;
+    while (i < number.length) {
+        NSString * string = [number substringWithRange:NSMakeRange(i, 1)];
+        NSRange range = [string rangeOfCharacterFromSet:tmpSet];
+        if (range.length == 0) {
+            res = NO;
+            break;
+        }
+        i++;
+    }
+    return res;
+}
+
 
 - (BOOL)windowShouldClose:(id)sender {
     [[self window] orderOut:self];
@@ -1225,5 +1267,4 @@ static NSString *currentScriptId = nil;
     NSURL *yourURL = [NSURL URLWithString:@"https://github.com/mtjo/MacStroke/issues"];
     [[NSWorkspace sharedWorkspace]openURL:yourURL];
     }
-
 @end
