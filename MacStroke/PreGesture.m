@@ -364,15 +364,30 @@
 
             break;
         case 18://S
-            x=200;y=200;
-            for (int i=0; i<20; i++) {
-                y--;
+            
+            x=220;y=200;
+            for (int i=0; i<=40; i++) {
+                if(i>1)
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+                x--;
+                y=200+sqrt(20*20-(20-i)*(20-i));
             }
-            for (int i=0; i<15; i++) {
+            for (int i=0; i<=20; i++) {
                 x++;
+                y=200-sqrt(20*20-(20-i)*(20-i));
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
+            for (int i=0; i<=20; i++) {
+                y--;
+                x=200+sqrt(20*20-(20-i)*(20-i));
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+            }
+            for (int i=0; i<=40; i++) {
+                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+                x--;
+                y=160-sqrt(20*20-(20-i)*(20-i));
+            }
+        
             break;
         case 19://T
             x=200;y=200;
