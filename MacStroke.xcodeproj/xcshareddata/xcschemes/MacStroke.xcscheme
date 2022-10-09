@@ -50,6 +50,10 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
+      <PathRunnable
+         runnableDebuggingMode = "0"
+         FilePath = "/Users/mtjo/Library/Developer/Xcode/DerivedData/MacStroke-cfkmtiopopiztlgiyajuntmgkxni/Build/Products/Release/MacStroke.app">
+      </PathRunnable>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
