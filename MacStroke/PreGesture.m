@@ -13,7 +13,7 @@
 + (NSMutableArray*)getGestureByLetter:(NSString*)Letter IsRevered:(BOOL)Revered;
 {
     NSArray *Letters = [NSArray arrayWithObjects:@"A",@"B",@"C",@"D",@"E",@"F",@"G",@"H",@"I",@"J",@"K",@"L",@"M",@"N",@"O",@"P",@"Q",@"R",@"S",@"T",@"U",@"V",@"W",@"X",@"Y",@"Z",@"↙",@"↘",@"↖",@"↗",@"┏",@"┓",@"┗",@"┛",@"←",@"↑",@"→",@"↓",nil];
-
+    
     long index = [Letters indexOfObject:Letter];
     NSMutableArray *GestureData = [[NSMutableArray alloc]init];
     double x,y,_x,_y;
@@ -42,7 +42,7 @@
             x=230;//y=240;
             [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             for (int i=0; i<=40; i++) {
-
+                
                 x=200+30+sqrt(20*20-(20-i)*(20-i));
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y--;
@@ -62,7 +62,7 @@
             x=220;y=200;
             for (int i=0; i<40; i++) {
                 if(i>2)
-                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+                    [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 x=x-1;
                 y=200+sqrt(20*20-(20-i)*(20-i));
             }
@@ -84,12 +84,12 @@
             for (int i=0; i<=40; i++) {
                 y=y+1;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-
+                
             }
             x=210;//y=240;
             [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             for (int i=0; i<=40; i++) {
-
+                
                 x=200+10+sqrt(20*20-(20-i)*(20-i));
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y--;
@@ -138,7 +138,7 @@
             //[GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             for (int i=0; i<40; i++) {
                 if(i>3)
-                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+                    [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 x=x-1;
                 y=200+sqrt(20*20-(20-i)*(20-i));
             }
@@ -160,7 +160,7 @@
         case 7://H
             x=220;y=200;
             for (int i=0; i<80; i++) {
-
+                
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y--;
             }
@@ -181,7 +181,7 @@
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y--;
             }
-
+            
             break;
         case 8://I
             x=220;y=200;
@@ -199,12 +199,12 @@
             }
             _y=y;
             for (int i=0; i<=40; i++) {
-
+                
                 
                 y=_y-sqrt(20*20-(20-i)*(20-i));
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-                                x=x-1;
-
+                x=x-1;
+                
             }
             break;
         case 10://K
@@ -287,7 +287,7 @@
                 x=199+sqrt(20*20-(20-i)*(20-i));
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y++;
-
+                
             }
             
             break;
@@ -335,7 +335,7 @@
                 y--;
                 x++;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
-
+                
                 
             }
             break;
@@ -361,14 +361,14 @@
                 x++;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
-
+            
             break;
         case 18://S
             
             x=220;y=200;
             for (int i=0; i<=40; i++) {
                 if(i>1)
-                [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
+                    [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 x--;
                 y=200+sqrt(20*20-(20-i)*(20-i));
             }
@@ -387,7 +387,7 @@
                 x--;
                 y=160-sqrt(20*20-(20-i)*(20-i));
             }
-        
+            
             break;
         case 19://T
             x=200;y=200;
@@ -399,12 +399,12 @@
                 y--;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
-
+            
             break;
         case 20://U
             x=220;y=240;
             for (int i=0; i<=40; i++) {
-
+                
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
                 y--;
             }
@@ -420,7 +420,7 @@
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
             break;
-
+            
         case 21://V
             x=200;y=200;
             for (int i=0; i<20; i++) {
@@ -486,14 +486,14 @@
                 x=x+0.6;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
-
+            
             for (int i=0; i<20; i++) {
                 y--;
                 x=x-0.6;
                 [GestureData addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
             }
-
-
+            
+            
             break;
         case 25://Z
             x=200;y=200;
@@ -624,7 +624,7 @@
             break;
     }
     return Revered?[[NSMutableArray alloc] initWithArray:[[GestureData reverseObjectEnumerator] allObjects]]:GestureData;
-
+    
 }
 
 @end
