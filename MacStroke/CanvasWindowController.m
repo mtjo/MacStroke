@@ -14,7 +14,7 @@
 @implementation CanvasWindowController
 
 - (void)reinitWindow {
-
+    
     NSRect frame = NSScreen.mainScreen.frame;
     //[NSScreen mainScreen]
     NSNumber *longNumber = [NSNumber numberWithLong:[[NSScreen mainScreen] hash]];
@@ -28,7 +28,7 @@
     [view releaseGState];
     
     view = [[CanvasView alloc] initWithFrame:frame];
-
+    
     [viewList addObject:view];
     window.contentView = view;
     window.level = CGShieldingWindowLevel();
@@ -130,7 +130,7 @@
                 break;
         }
         
-
+        
         
         //toastWindow.maxWidth=250;
         //toastWindow.delegate=self;

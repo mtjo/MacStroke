@@ -10,7 +10,7 @@
 #import "RulesList.h"
 
 @interface FilterData : NSObject {
-
+    
 }
 
 @property(strong) NSString *text;
@@ -23,11 +23,11 @@
 
 - (instancetype)initFilterData:(NSString *)text icon:(NSImage *)icon checkedState:(NSInteger)checkedState {
     self = [super init];
-
+    
     self.text = text;
     self.icon = icon;
     self.checkedState = checkedState;
-
+    
     return self;
 }
 
@@ -140,7 +140,7 @@ NSMutableString *_filter;
             [checkBox setTag:row];
             [checkBox setAction:@selector(selectOne:)];
         }
-         [checkBox setButtonType:NSSwitchButton];
+        [checkBox setButtonType:NSSwitchButton];
         
         [checkBox setState:[_filters[row] checkedState]];
         [checkBox setTitle:@""];
@@ -159,15 +159,15 @@ NSMutableString *_filter;
         [textField setStringValue:[_filters[row] text]];
         result = textField;
     }
-
+    
     return result;
 }
 
 - (void)showDialog {
-//    NSWindow *win = [self window];
-//    [NSApp runModalForWindow:win];
-//    [NSApp endSheet:win];
-//    [win orderOut:self];    // show dialog
+    //    NSWindow *win = [self window];
+    //    [NSApp runModalForWindow:win];
+    //    [NSApp endSheet:win];
+    //    [win orderOut:self];    // show dialog
 }
 
 - (IBAction)okBtnDidClick:(id)sender {
@@ -175,8 +175,8 @@ NSMutableString *_filter;
     _filter = [[NSMutableString alloc] initWithString:@""];
     for (NSButton *btn in _checkBoxs) {
         if ([btn state] == NSOnState) { // YES
-//            [_filter appendString:((NSRunningApplication *)(_runningApps[btn.tag])).bundleIdentifier];
-//            [_filter appendString:@"|"];
+            //            [_filter appendString:((NSRunningApplication *)(_runningApps[btn.tag])).bundleIdentifier];
+            //            [_filter appendString:@"|"];
             if (self.addedToTextView) {
                 [self.addedToTextView setString:[NSString stringWithFormat:@"%@\n%@", [self.addedToTextView string], [_filters[[btn tag]] text]]];
             }else if(self.selectOne){
@@ -187,20 +187,20 @@ NSMutableString *_filter;
             }
         }
     }
-
+    
     if (!self.addedToTextView && self.parentWindow &&!self.selectOne) {
         [self.parentWindow rulePickCallback:_filter atIndex:self.indexForParentWindow];
     }
     if (!self.addedToTextView && self.parentWindow&& self.selectOne) {
         [self.parentWindow rightClickPickCallback:_filter atIndex:self.indexForParentWindow];
     }
-
-//    [NSApp stopModal];
+    
+    //    [NSApp stopModal];
     [self close];
 }
 
 - (IBAction)cancelBtnDidClick:(id)sender {
-//    [NSApp stopModal];
+    //    [NSApp stopModal];
     [self close];
 }
 
