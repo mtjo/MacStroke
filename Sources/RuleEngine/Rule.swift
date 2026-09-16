@@ -229,6 +229,11 @@ public final class RuleEngine {
     ///   - bundleID: The current application's bundle ID (optional)
     /// - Returns: The matching rule and its similarity score, or nil if no match.
     public func match(stroke: Stroke, bundleID: String? = nil) -> (rule: Rule, score: Double)? {
+        // Check BlackWhiteFilter first: if the app is blocked, no rules match
+        if let bundleID = bundleID, !BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID) {
+            return nil
+        }
+
         var normalizedStroke = stroke
         normalizedStroke.normalize()
 

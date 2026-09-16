@@ -37,6 +37,9 @@ public final class UserPreferences: ObservableObject {
     @Published public var whiteList: String {
         didSet { storage.setString(whiteList, forKey: .whiteList) }
     }
+    @Published public var language: String {
+        didSet { storage.setString(language, forKey: .language) }
+    }
 
     // MARK: - Gesture recognition
     @Published public var minimumPoints: Int {
@@ -107,6 +110,9 @@ public final class UserPreferences: ObservableObject {
     @Published public var clipboardSaveDays: Int {
         didSet { storage.setInt(clipboardSaveDays, forKey: .clipboardSaveDays) }
     }
+    @Published public var enableHistoryClipboard: Bool {
+        didSet { storage.setBool(enableHistoryClipboard, forKey: .enableHistoryClipboard) }
+    }
 
     // MARK: - Updates
     @Published public var autoCheckUpdates: Bool {
@@ -130,6 +136,7 @@ public final class UserPreferences: ObservableObject {
         self.blockFilter = storage.getStringOptional(forKey: .blockFilter) ?? StorageDefaults.blockFilter
         self.whiteListMode = storage.getBoolOptional(forKey: .whiteListMode) ?? StorageDefaults.whiteListMode
         self.whiteList = storage.getStringOptional(forKey: .whiteList) ?? StorageDefaults.whiteList
+        self.language = storage.getStringOptional(forKey: .language) ?? "en"
         self.minimumPoints = storage.getIntOptional(forKey: .minimumPoints) ?? StorageDefaults.minimumPoints
         self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
         self.enableGestureMinScore = storage.getBoolOptional(forKey: .enableGestureMinScore) ?? StorageDefaults.enableGestureMinScore
@@ -150,6 +157,7 @@ public final class UserPreferences: ObservableObject {
         self.clipboardLimitTop = storage.getIntOptional(forKey: .clipboardLimitTop) ?? StorageDefaults.clipboardLimitTop
         self.clipboardLimitTotal = storage.getIntOptional(forKey: .clipboardLimitTotal) ?? StorageDefaults.clipboardLimitTotal
         self.clipboardSaveDays = storage.getIntOptional(forKey: .clipboardSaveDays) ?? StorageDefaults.clipboardSaveDays
+        self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
         self.autoCheckUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
@@ -169,6 +177,7 @@ public final class UserPreferences: ObservableObject {
         storage.setString(StorageDefaults.blockFilter, forKey: .blockFilter)
         storage.setBool(StorageDefaults.whiteListMode, forKey: .whiteListMode)
         storage.setString(StorageDefaults.whiteList, forKey: .whiteList)
+        storage.setString("en", forKey: .language)
         storage.setInt(StorageDefaults.minimumPoints, forKey: .minimumPoints)
         storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
         storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
@@ -189,6 +198,7 @@ public final class UserPreferences: ObservableObject {
         storage.setInt(StorageDefaults.clipboardLimitTop, forKey: .clipboardLimitTop)
         storage.setInt(StorageDefaults.clipboardLimitTotal, forKey: .clipboardLimitTotal)
         storage.setInt(StorageDefaults.clipboardSaveDays, forKey: .clipboardSaveDays)
+        storage.setBool(true, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.autoCheckUpdates, forKey: .autoCheckUpdates)
         storage.setBool(StorageDefaults.showToast, forKey: .showToast)
         storage.setInt(StorageDefaults.clipboardHistoryLimit, forKey: .clipboardHistoryLimit)
@@ -211,13 +221,14 @@ public final class PreferencesWindowController: NSWindowController {
         self.contentViewController = hostingController
 
         self.window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 650),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         self.window?.contentView = hostingController.view
         self.window?.center()
+        self.window?.title = "MacStroke Preferences"
     }
 
     @available(*, unavailable)

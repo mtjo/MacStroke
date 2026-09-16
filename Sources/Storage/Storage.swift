@@ -18,6 +18,7 @@ public enum StorageKey: String {
     case blockFilter = "blockFilter"
     case whiteListMode = "whiteListMode"
     case whiteList = "whiteList"
+    case language = "language"
 
     // Gesture recognition
     case minimumPoints = "minimumPoints"
@@ -48,6 +49,7 @@ public enum StorageKey: String {
     case clipboardLimitTop = "clipboardLimitTop"
     case clipboardLimitTotal = "clipboardLimitTotal"
     case clipboardSaveDays = "clipboardSaveDays"
+    case enableHistoryClipboard = "enableHistoryClipboard"
 
     // Updates
     case autoCheckUpdates = "autoCheckUpdates"
@@ -138,6 +140,7 @@ public enum StorageDefaults {
     public static let blockFilter: String = ""
     public static let whiteListMode: Bool = false
     public static let whiteList: String = ""
+    public static let language: String = "en"
 
     // Gesture recognition
     public static let minimumPoints: Int = 10
@@ -165,6 +168,7 @@ public enum StorageDefaults {
     public static let enableCopyFilePath: Bool = true
 
     // Clipboard
+    public static let enableHistoryClipboard: Bool = true
     public static let clipboardLimitTop: Int = 50
     public static let clipboardLimitTotal: Int = 500
     public static let clipboardSaveDays: Int = 7

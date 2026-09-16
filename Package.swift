@@ -62,7 +62,7 @@ let package = Package(
         // ============ Preferences management (SwiftUI + AppKit) ============
         .target(
             name: "Preferences",
-            dependencies: ["Storage"]),
+            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu"]),
         // ============ Window management (status bar, canvas, toast) ============
         .target(
             name: "WindowManager",
