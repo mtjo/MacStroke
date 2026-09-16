@@ -41,12 +41,12 @@ public final class UserPreferences: ObservableObject {
 
     public init(storage: PreferencesStorage = PreferencesStorage()) {
         self.storage = storage
-        self.isEnabled = storage.getBool(forKey: .isEnabled)
-        self.showToast = storage.getBool(forKey: .showToast)
-        self.launchAtLogin = storage.getBool(forKey: .launchAtLogin)
-        self.minimumPoints = storage.getInt(forKey: .minimumPoints)
-        self.minSimilarityScore = storage.getDouble(forKey: .minSimilarityScore)
-        self.clipboardHistoryLimit = storage.getInt(forKey: .clipboardHistoryLimit)
+        self.isEnabled = storage.getBoolOptional(forKey: .isEnabled) ?? StorageDefaults.isEnabled
+        self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
+        self.launchAtLogin = storage.getBoolOptional(forKey: .launchAtLogin) ?? StorageDefaults.launchAtLogin
+        self.minimumPoints = storage.getIntOptional(forKey: .minimumPoints) ?? StorageDefaults.minimumPoints
+        self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
+        self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }
 
     /// Save current preferences to storage immediately.

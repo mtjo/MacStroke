@@ -38,6 +38,24 @@ public struct PreferencesStorage {
         defaults.double(forKey: key.rawValue)
     }
 
+    /// Returns the boolean value for the given key, or nil if the key does not exist.
+    public func getBoolOptional(forKey key: StorageKey) -> Bool? {
+        guard defaults.object(forKey: key.rawValue) != nil else { return nil }
+        return defaults.bool(forKey: key.rawValue)
+    }
+
+    /// Returns the integer value for the given key, or nil if the key does not exist.
+    public func getIntOptional(forKey key: StorageKey) -> Int? {
+        guard defaults.object(forKey: key.rawValue) != nil else { return nil }
+        return defaults.integer(forKey: key.rawValue)
+    }
+
+    /// Returns the double value for the given key, or nil if the key does not exist.
+    public func getDoubleOptional(forKey key: StorageKey) -> Double? {
+        guard defaults.object(forKey: key.rawValue) != nil else { return nil }
+        return defaults.double(forKey: key.rawValue)
+    }
+
     public func setBool(_ value: Bool, forKey key: StorageKey) {
         defaults.set(value, forKey: key.rawValue)
     }

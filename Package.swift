@@ -52,7 +52,7 @@ let package = Package(
         // ============ Rule engine and action execution ============
         .target(
             name: "RuleEngine",
-            dependencies: ["GestureEngine"]),
+            dependencies: ["GestureEngine", "AppleScriptRunner"]),
         // ============ Persistence layer ============
         .target(
             name: "Storage",
@@ -102,6 +102,9 @@ let package = Package(
             dependencies: ["Storage"]),
         .testTarget(
             name: "WindowManagerTests",
-            dependencies: ["WindowManager"])
+            dependencies: ["WindowManager"]),
+        .testTarget(
+            name: "AppleScriptRunnerTests",
+            dependencies: ["AppleScriptRunner"])
     ]
 )

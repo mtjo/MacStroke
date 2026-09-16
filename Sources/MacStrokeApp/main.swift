@@ -12,6 +12,7 @@ import GestureEngine
 import RuleEngine
 import Storage
 import Preferences
+import WindowManager
 
 @main
 struct MacStrokeApp {
@@ -86,7 +87,15 @@ extension AppDelegate: CanvasManagerDelegate {
         // Match the stroke against rules
         if let (rule, score) = ruleEngine?.match(stroke: stroke) {
             print("[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
-            // In a full implementation, execute the rule action here
+
+            // Execute the action
+            if let executedAction = ruleEngine?.executeAction(for: stroke) {
+                // Show toast with rule note
+                if !rule.note.isEmpty {
+                    let toast = Toast(message: rule.note, duration: 2.0)
+                    ToastManager.shared.show(toast)
+                }
+            }
         }
     }
 }

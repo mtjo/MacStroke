@@ -102,6 +102,8 @@ public struct Rule: Codable {
     public let name: String
     /// Description of what this rule does
     public let description: String
+    /// Optional toast note shown after the rule matches.
+    public let note: String
     /// The gesture template to match against
     public let template: GestureTemplate
     /// The minimum similarity score (0..100) required for a match
@@ -125,6 +127,7 @@ public struct Rule: Codable {
         template: GestureTemplate,
         minSimilarityScore: Double = 30.0,
         action: RuleAction,
+        note: String = "",
         isEnabled: Bool = true
     ) {
         self.name = name
@@ -132,6 +135,7 @@ public struct Rule: Codable {
         self.template = template
         self.minSimilarityScore = minSimilarityScore
         self.action = action
+        self.note = note
         self.isEnabled = isEnabled
     }
 }
@@ -180,8 +184,8 @@ public final class RuleEngine {
     public func executeAction(for stroke: Stroke) -> RuleAction? {
         if let (rule, _) = match(stroke: stroke) {
             let action = rule.action
-            // In a full implementation, we would execute the action here.
-            // For now, just return the action.
+            let executor = ActionExecutor()
+            executor.execute(action, for: rule)
             return action
         }
         return nil
