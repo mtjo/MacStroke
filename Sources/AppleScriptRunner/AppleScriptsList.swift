@@ -53,10 +53,21 @@ public final class AppleScriptsList: @unchecked Sendable {
 
     /// Private initializer for singleton pattern
     private init() {
-        let appSupportURL = FileManager.default.urls(
+        guard let appSupportURL = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
-        ).first!
+        ).first else {
+            // Fallback to temporary directory if Application Support is unavailable
+            let tempDir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("MacStroke", isDirectory: true)
+            self.storageURL = tempDir.appendingPathComponent("appleScripts.json")
+            try? FileManager.default.createDirectory(
+                at: tempDir,
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+            return
+        }
         let macStrokeDir = appSupportURL.appendingPathComponent("MacStroke", isDirectory: true)
         self.storageURL = macStrokeDir.appendingPathComponent("appleScripts.json")
 
@@ -68,6 +79,19 @@ public final class AppleScriptsList: @unchecked Sendable {
         )
 
         // Load existing scripts
+        load()
+    }
+
+    /// Internal initializer for testing with custom storage URL
+    /// - Parameter storageURL: Custom file URL for persistence (used in tests)
+    internal init(storageURL: URL) {
+        self.storageURL = storageURL
+        let directory = storageURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
         load()
     }
 
@@ -88,8 +112,8 @@ public final class AppleScriptsList: @unchecked Sendable {
         let item = AppleScriptItem(name: name, source: source)
         lock.lock()
         scripts.append(item)
-        lock.unlock()
         save()
+        lock.unlock()
         return item
     }
 
@@ -102,10 +126,10 @@ public final class AppleScriptsList: @unchecked Sendable {
         let initialCount = scripts.count
         scripts.removeAll { $0.id == id }
         let removed = scripts.count < initialCount
-        lock.unlock()
         if removed {
             save()
         }
+        lock.unlock()
         return removed
     }
 
@@ -127,10 +151,9 @@ public final class AppleScriptsList: @unchecked Sendable {
     }
 
     /// Persist the current scripts to disk
-    public func save() {
-        lock.lock()
+    /// Must be called with lock held
+    private func save() {
         let scriptsToSave = scripts
-        lock.unlock()
 
         do {
             let encoder = JSONEncoder()
