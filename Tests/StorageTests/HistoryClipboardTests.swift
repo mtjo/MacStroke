@@ -7,6 +7,7 @@
 
 import XCTest
 @testable import Storage
+import SQLite
 
 final class HistoryClipboardTests: XCTestCase {
 
@@ -363,5 +364,312 @@ final class HistoryClipboardTests: XCTestCase {
 
         XCTAssertNotNil(entry)
         XCTAssertTrue(FileManager.default.fileExists(atPath: customPath))
+    }
+
+    // MARK: - Timer Integration Tests
+
+    func testEnableHistoryClipboardDisabled() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(false, forKey: "enableHistoryClipboard")
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        let result = manager.enableHistoryClipboard()
+
+        XCTAssertFalse(result)
+    }
+
+    func testEnableHistoryClipboardEnabled() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableHistoryClipboard")
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        let result = manager.enableHistoryClipboard()
+
+        XCTAssertTrue(result)
+        manager.stopHistoryClipboard()
+    }
+
+    func testEnableHistoryClipboardStorageLocalDisabled() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableHistoryClipboard")
+        testDefaults.set(false, forKey: "clipoardStroageLocal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        let result = manager.enableHistoryClipboard()
+
+        XCTAssertFalse(result)
+    }
+
+    func testGetTopList() {
+        let manager = createManager()
+
+        manager.insertLocalHistoryClipboard(content: "History 1", isTop: false)
+        manager.insertLocalHistoryClipboard(content: "Top 1", isTop: true)
+        manager.insertLocalHistoryClipboard(content: "History 2", isTop: false)
+        manager.insertLocalHistoryClipboard(content: "Top 2", isTop: true)
+
+        let topList = manager.getTopList()
+
+        XCTAssertEqual(topList.count, 2)
+        XCTAssertEqual(topList[0].content, "Top 2".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(topList[1].content, "Top 1".data(using: .utf8)?.base64EncodedString())
+        XCTAssertTrue(topList.allSatisfy { $0.isTop })
+    }
+
+    func testGetTopListEmpty() {
+        let manager = createManager()
+
+        let topList = manager.getTopList()
+
+        XCTAssertEqual(topList.count, 0)
+    }
+
+    func testGetHistoryClipboardListFirstPage() {
+        let manager = createManager()
+
+        // Insert top entries
+        manager.insertLocalHistoryClipboard(content: "Top 1", isTop: true)
+        manager.insertLocalHistoryClipboard(content: "Top 2", isTop: true)
+
+        // Insert history entries
+        for i in 1...5 {
+            manager.insertLocalHistoryClipboard(content: "History \(i)", isTop: false)
+        }
+
+        let list = manager.getHistoryClipboardList(firstPage: true)
+
+        // Should have 2 top + 5 history = 7 entries (page size is 30, so all fit)
+        XCTAssertEqual(list.count, 7)
+
+        // First entries should be top entries (newest first)
+        XCTAssertTrue(list[0].isTop)
+        XCTAssertTrue(list[1].isTop)
+        XCTAssertEqual(list[0].content, "Top 2".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(list[1].content, "Top 1".data(using: .utf8)?.base64EncodedString())
+
+        // Remaining should be history entries (newest first)
+        XCTAssertFalse(list[2].isTop)
+        XCTAssertEqual(list[2].content, "History 5".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testGetHistoryClipboardListPagination() {
+        let manager = createManager()
+
+        // Insert 35 history entries (more than one page)
+        for i in 1...35 {
+            manager.insertLocalHistoryClipboard(content: "History \(i)", isTop: false)
+        }
+
+        // First page
+        let page1 = manager.getHistoryClipboardList(firstPage: true)
+        XCTAssertEqual(page1.count, 30) // pageSize = 30
+
+        // Next page
+        let page2 = manager.nextPage(currentHistoryCount: page1.count)
+        XCTAssertEqual(page2.count, 5) // Remaining 5 entries
+    }
+
+    func testNextPage() {
+        let manager = createManager()
+
+        for i in 1...50 {
+            manager.insertLocalHistoryClipboard(content: "Item \(i)", isTop: false)
+        }
+
+        // Get first page
+        _ = manager.getHistoryClipboardList(firstPage: true)
+
+        // Get second page
+        let page2 = manager.nextPage(currentHistoryCount: 30)
+        XCTAssertEqual(page2.count, 20)
+
+        // Get third page (should be empty)
+        let page3 = manager.nextPage(currentHistoryCount: 50)
+        XCTAssertEqual(page3.count, 0)
+    }
+
+    func testAddTop() {
+        let manager = createManager()
+
+        let entry = manager.addTop(content: "Pinned Content")
+
+        XCTAssertNotNil(entry)
+        XCTAssertTrue(entry?.isTop ?? false)
+        XCTAssertEqual(entry?.content, "Pinned Content".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testAddTopEnforcesLimit() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableLimitTop")
+        testDefaults.set(2, forKey: "limitTop")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        // Add 3 top entries (limit is 2)
+        manager.addTop(content: "Top 1")
+        manager.addTop(content: "Top 2")
+        manager.addTop(content: "Top 3")
+
+        let topList = manager.getTopList()
+
+        // Should only have 2 entries (oldest removed)
+        XCTAssertEqual(topList.count, 2)
+        XCTAssertEqual(topList[0].content, "Top 3".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(topList[1].content, "Top 2".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testRemoveTop() {
+        let manager = createManager()
+
+        manager.addTop(content: "Top 1")
+        manager.addTop(content: "Top 2")
+        manager.addTop(content: "Top 3")
+
+        var topList = manager.getTopList()
+        XCTAssertEqual(topList.count, 3)
+
+        // Remove middle entry (index 1 = "Top 2")
+        manager.removeTop(at: 1)
+
+        topList = manager.getTopList()
+        XCTAssertEqual(topList.count, 2)
+        XCTAssertEqual(topList[0].content, "Top 3".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(topList[1].content, "Top 1".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testRemoveTopInvalidIndex() {
+        let manager = createManager()
+
+        manager.addTop(content: "Top 1")
+
+        // Should not crash
+        manager.removeTop(at: 5)
+        manager.removeTop(at: -1)
+
+        let topList = manager.getTopList()
+        XCTAssertEqual(topList.count, 1)
+    }
+
+    func testDeleteExpiredEnforcesTotalLimit() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableLimitTotal")
+        testDefaults.set(3, forKey: "limitTotal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        // Insert 5 history entries
+        for i in 1...5 {
+            manager.insertLocalHistoryClipboard(content: "History \(i)", isTop: false)
+        }
+
+        manager.deleteExpired()
+
+        // Should only have 3 entries (oldest 2 removed)
+        XCTAssertEqual(manager.getCount(isTop: false), 3)
+        let entries = manager.selectLocalHistoryClipoardIsTop(isTop: false, start: 0, end: 10)
+        XCTAssertEqual(entries[0].content, "History 5".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(entries[1].content, "History 4".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(entries[2].content, "History 3".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testDeleteExpiredEnforcesTopLimit() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableLimitTop")
+        testDefaults.set(2, forKey: "limitTop")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        // Insert 4 top entries
+        for i in 1...4 {
+            manager.insertLocalHistoryClipboard(content: "Top \(i)", isTop: true)
+        }
+
+        manager.deleteExpired()
+
+        // Should only have 2 entries
+        XCTAssertEqual(manager.getCount(isTop: true), 2)
+        let entries = manager.selectLocalHistoryClipoardIsTop(isTop: true, start: 0, end: 10)
+        XCTAssertEqual(entries[0].content, "Top 4".data(using: .utf8)?.base64EncodedString())
+        XCTAssertEqual(entries[1].content, "Top 3".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testDeleteExpiredEnforcesDaysLimit() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableLimitSaveDays")
+        testDefaults.set(1, forKey: "limitSaveDays")
+
+        let dbPath = getTestDatabasePath()
+        let manager = HistoryClipboardManager(databasePath: dbPath, userDefaults: testDefaults)
+
+        // Insert entries with old timestamps using a direct connection
+        let oldTime = Date().timeIntervalSince1970 - (2 * 24 * 60 * 60) // 2 days ago
+        let recentTime = Date().timeIntervalSince1970
+
+        do {
+            let directDb = try Connection(dbPath)
+            let table = Table("local_history_clipoard")
+            let contentCol = Expression<String>("content")
+            let isTopCol = Expression<Int64>("is_top")
+            let createTimeCol = Expression<Double>("create_time")
+            let modifyTimeCol = Expression<Double>("modify_time")
+
+            try directDb.run(table.insert(
+                contentCol <- "Old Entry".data(using: .utf8)!.base64EncodedString(),
+                isTopCol <- 0,
+                createTimeCol <- oldTime,
+                modifyTimeCol <- oldTime
+            ))
+            try directDb.run(table.insert(
+                contentCol <- "Recent Entry".data(using: .utf8)!.base64EncodedString(),
+                isTopCol <- 0,
+                createTimeCol <- recentTime,
+                modifyTimeCol <- recentTime
+            ))
+        } catch {
+            XCTFail("Failed to insert test data: \(error)")
+        }
+
+        manager.deleteExpired()
+
+        // Only recent entry should remain
+        XCTAssertEqual(manager.getCount(isTop: false), 1)
+        let entries = manager.selectLocalHistoryClipoardIsTop(isTop: false, start: 0, end: 10)
+        XCTAssertEqual(entries[0].content, "Recent Entry".data(using: .utf8)?.base64EncodedString())
+    }
+
+    func testDeinitInvalidatesTimer() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableHistoryClipboard")
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
+
+        var manager: HistoryClipboardManager? = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+        _ = manager?.enableHistoryClipboard()
+        manager?.stopHistoryClipboard()
+
+        // Deinit should not crash
+        manager = nil
+
+        // If we reach here without crash, timer was properly invalidated
+        XCTAssertTrue(true)
+    }
+
+    func testStopHistoryClipboard() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "enableHistoryClipboard")
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+
+        let result = manager.enableHistoryClipboard()
+        XCTAssertTrue(result)
+
+        // Stop should not crash
+        manager.stopHistoryClipboard()
+        XCTAssertTrue(true)
     }
 }

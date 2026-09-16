@@ -3,11 +3,11 @@
 //  MacStroke
 //
 //  Clipboard history storage using SQLite with top/favorites support.
-//  Data layer only - no pasteboard timer logic.
 //
 
 import Foundation
 import SQLite
+import AppKit
 
 /// A single clipboard history entry.
 public struct HistoryClipboardEntry: Codable, Equatable {
@@ -58,6 +58,11 @@ public final class HistoryClipboardManager {
     private let db: Connection?
     private let lock = NSLock()
     private let userDefaults: UserDefaults
+
+    // Timer for pasteboard monitoring
+    private var timer: Timer?
+    private var changeCount: Int = 0
+    private var currentPage: Int = 0
 
     // MARK: - SQLite Expressions
 
@@ -114,21 +119,11 @@ public final class HistoryClipboardManager {
         }
     }
 
-    // MARK: - Public Methods
+    // MARK: - Internal Methods (lock-free, assume lock is held by caller)
 
-    /// Insert a new clipboard entry
-    /// - Parameters:
-    ///   - content: The clipboard content (will be base64 encoded)
-    ///   - isTop: Whether this is a pinned/top entry
-    /// - Returns: The created HistoryClipboardEntry, or nil if failed
-    @discardableResult
-    public func insertLocalHistoryClipboard(content: String, isTop: Bool) -> HistoryClipboardEntry? {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func insertLocalHistoryClipboardInternal(content: String, isTop: Bool) -> HistoryClipboardEntry? {
         guard let db = db else { return nil }
 
-        // Base64 encode the content
         let base64Content = content.data(using: .utf8)?.base64EncodedString() ?? ""
         let now = Date().timeIntervalSince1970
         let isTopValue = isTop ? Int64(1) : Int64(0)
@@ -154,16 +149,7 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Select clipboard entries filtered by isTop flag with pagination
-    /// - Parameters:
-    ///   - isTop: Filter by top/pinned status
-    ///   - start: Offset (0-based)
-    ///   - end: Limit (number of items to return)
-    /// - Returns: Array of HistoryClipboardEntry ordered by id DESC
-    public func selectLocalHistoryClipoardIsTop(isTop: Bool, start: Int, end: Int) -> [HistoryClipboardEntry] {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func selectLocalHistoryClipoardIsTopInternal(isTop: Bool, start: Int, end: Int) -> [HistoryClipboardEntry] {
         guard let db = db else { return [] }
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
@@ -192,13 +178,7 @@ public final class HistoryClipboardManager {
         return entries
     }
 
-    /// Get count of entries filtered by isTop flag
-    /// - Parameter isTop: Filter by top/pinned status
-    /// - Returns: Number of entries
-    public func getCount(isTop: Bool) -> Int {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func getCountInternal(isTop: Bool) -> Int {
         guard let db = db else { return 0 }
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
@@ -211,14 +191,8 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Delete the earliest (oldest) entry for the given isTop filter
-    /// - Parameter isTop: Filter by top/pinned status
-    /// - Returns: true if an entry was deleted
     @discardableResult
-    public func deleteEarliestItem(isTop: Bool) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func deleteEarliestItemInternal(isTop: Bool) -> Bool {
         guard let db = db else { return false }
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
@@ -236,14 +210,8 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Delete entries older than the specified number of days
-    /// - Parameter days: Number of days to keep (entries older than this will be deleted)
-    /// - Returns: true if any entries were deleted
     @discardableResult
-    public func deleteExpiredHistory(days: Int) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func deleteExpiredHistoryInternal(days: Int) -> Bool {
         guard let db = db else { return false }
 
         let cutoffTime = Date().timeIntervalSince1970 - TimeInterval(days * 24 * 60 * 60)
@@ -257,13 +225,8 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Clear all non-top (history) entries
-    /// - Returns: true if any entries were deleted
     @discardableResult
-    public func clearHistoryList() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func clearHistoryListInternal() -> Bool {
         guard let db = db else { return false }
 
         do {
@@ -275,11 +238,7 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Clear all top/pinned entries
-    public func clearTop() {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func clearTopInternal() {
         guard let db = db else { return }
 
         do {
@@ -289,24 +248,300 @@ public final class HistoryClipboardManager {
         }
     }
 
-    /// Clear all entries and reset autoincrement sequence
-    public func clearAll() {
-        lock.lock()
-        defer { lock.unlock() }
-
+    private func clearAllInternal() {
         guard let db = db else { return }
 
         do {
             try db.run(table.delete())
-            // Reset the autoincrement sequence
             try db.run("DELETE FROM sqlite_sequence WHERE name = ?", Self.tableName)
         } catch {
             print("[HistoryClipboard] Failed to clear all: \(error)")
         }
     }
 
+    private var topCountInternal: Int {
+        return getCountInternal(isTop: true)
+    }
+
+    /// Internal: enforce all limits (assumes lock is held)
+    private func enforceLimits() {
+        let enableLimitTotal = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTotal.rawValue)
+        let limitTotal = userDefaults.integer(forKey: UserDefaultsKey.limitTotal.rawValue)
+        let enableLimitTop = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTop.rawValue)
+        let limitTop = userDefaults.integer(forKey: UserDefaultsKey.limitTop.rawValue)
+        let enableLimitSaveDays = userDefaults.bool(forKey: UserDefaultsKey.enableLimitSaveDays.rawValue)
+        let limitSaveDays = userDefaults.integer(forKey: UserDefaultsKey.limitSaveDays.rawValue)
+
+        // Enforce total count limit
+        if enableLimitTotal && limitTotal > 0 {
+            let totalCount = getCountInternal(isTop: false)
+            if totalCount > limitTotal {
+                let excess = totalCount - limitTotal
+                for _ in 0..<excess {
+                    guard deleteEarliestItemInternal(isTop: false) else { break }
+                }
+            }
+        }
+
+        // Enforce top count limit
+        if enableLimitTop && limitTop > 0 {
+            let topCount = getCountInternal(isTop: true)
+            if topCount > limitTop {
+                let excess = topCount - limitTop
+                for _ in 0..<excess {
+                    guard deleteEarliestItemInternal(isTop: true) else { break }
+                }
+            }
+        }
+
+        // Enforce expiry by days
+        if enableLimitSaveDays && limitSaveDays > 0 {
+            _ = deleteExpiredHistoryInternal(days: limitSaveDays)
+        }
+    }
+
+    /// Internal: get top list (assumes lock is held)
+    private func getTopListInternal() -> [HistoryClipboardEntry] {
+        return selectLocalHistoryClipoardIsTopInternal(isTop: true, start: 0, end: 1000)
+    }
+
+    // MARK: - Public Methods (lock around internal methods)
+
+    /// Insert a new clipboard entry
+    @discardableResult
+    public func insertLocalHistoryClipboard(content: String, isTop: Bool) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        return insertLocalHistoryClipboardInternal(content: content, isTop: isTop)
+    }
+
+    /// Select clipboard entries filtered by isTop flag with pagination
+    public func selectLocalHistoryClipoardIsTop(isTop: Bool, start: Int, end: Int) -> [HistoryClipboardEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return selectLocalHistoryClipoardIsTopInternal(isTop: isTop, start: start, end: end)
+    }
+
+    /// Get count of entries filtered by isTop flag
+    public func getCount(isTop: Bool) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return getCountInternal(isTop: isTop)
+    }
+
+    /// Delete the earliest (oldest) entry for the given isTop filter
+    @discardableResult
+    public func deleteEarliestItem(isTop: Bool) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return deleteEarliestItemInternal(isTop: isTop)
+    }
+
+    /// Delete entries older than the specified number of days
+    @discardableResult
+    public func deleteExpiredHistory(days: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return deleteExpiredHistoryInternal(days: days)
+    }
+
+    /// Clear all non-top (history) entries
+    @discardableResult
+    public func clearHistoryList() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return clearHistoryListInternal()
+    }
+
+    /// Clear all top/pinned entries
+    public func clearTop() {
+        lock.lock()
+        defer { lock.unlock() }
+        clearTopInternal()
+    }
+
+    /// Clear all entries and reset autoincrement sequence
+    public func clearAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        clearAllInternal()
+    }
+
     /// Get the count of top/pinned entries
     public var topCount: Int {
-        return getCount(isTop: true)
+        lock.lock()
+        defer { lock.unlock() }
+        return topCountInternal
+    }
+
+    // MARK: - Pasteboard Timer Integration
+
+    /// Enable/disable clipboard history monitoring
+    @discardableResult
+    public func enableHistoryClipboard() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let enabled = userDefaults.bool(forKey: UserDefaultsKey.enableHistoryClipboard.rawValue)
+        let storageLocal = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
+
+        if enabled && storageLocal {
+            // Invalidate existing timer if running
+            timer?.invalidate()
+
+            // Initialize change count from pasteboard
+            changeCount = NSPasteboard.general.changeCount
+
+            // Create and start timer (0.5s interval)
+            timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+                self?.handleTimer()
+            }
+
+            // Ensure timer runs in common modes
+            if let timer = timer {
+                RunLoop.main.add(timer, forMode: .common)
+            }
+
+            // Run initial expiry cleanup (lock already held)
+            enforceLimits()
+
+            return true
+        } else {
+            timer?.invalidate()
+            timer = nil
+            return false
+        }
+    }
+
+    /// Timer callback to check for pasteboard changes (assumes lock NOT held; acquires it)
+    private func handleTimer() {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let pasteboard = NSPasteboard.general
+        let currentChangeCount = pasteboard.changeCount
+
+        guard currentChangeCount > changeCount else { return }
+
+        guard let content = pasteboard.string(forType: .string), !content.isEmpty else {
+            changeCount = currentChangeCount
+            return
+        }
+
+        if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
+            enforceLimits()
+        }
+
+        changeCount = currentChangeCount
+    }
+
+    /// Get combined history list (top entries + history entries) with pagination
+    public func getHistoryClipboardList(firstPage: Bool) -> [HistoryClipboardEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        var result: [HistoryClipboardEntry] = []
+
+        let topEntries = getTopListInternal()
+        result.append(contentsOf: topEntries)
+
+        if firstPage {
+            currentPage = 0
+        }
+
+        let historyEntries = selectLocalHistoryClipoardIsTopInternal(
+            isTop: false,
+            start: currentPage * Self.pageSize,
+            end: Self.pageSize
+        )
+        result.append(contentsOf: historyEntries)
+
+        return result
+    }
+
+    /// Get all top/pinned entries
+    public func getTopList() -> [HistoryClipboardEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return getTopListInternal()
+    }
+
+    /// Load next page of history entries
+    public func nextPage(currentHistoryCount: Int) -> [HistoryClipboardEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        currentPage += 1
+        return selectLocalHistoryClipoardIsTopInternal(
+            isTop: false,
+            start: currentPage * Self.pageSize,
+            end: Self.pageSize
+        )
+    }
+
+    /// Add a new top/pinned entry
+    @discardableResult
+    public func addTop(content: String) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let entry = insertLocalHistoryClipboardInternal(content: content, isTop: true) else {
+            return nil
+        }
+
+        let enableLimitTop = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTop.rawValue)
+        let limitTop = userDefaults.integer(forKey: UserDefaultsKey.limitTop.rawValue)
+
+        if enableLimitTop && limitTop > 0 {
+            let topCount = getCountInternal(isTop: true)
+            if topCount > limitTop {
+                let excess = topCount - limitTop
+                for _ in 0..<excess {
+                    guard deleteEarliestItemInternal(isTop: true) else { break }
+                }
+            }
+        }
+
+        return entry
+    }
+
+    /// Remove a top/pinned entry by its index in the top list
+    public func removeTop(at index: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let topEntries = getTopListInternal()
+        guard index >= 0 && index < topEntries.count else { return }
+
+        let entryToRemove = topEntries[index]
+        guard let db = db else { return }
+
+        do {
+            try db.run(table.filter(idCol == entryToRemove.id).delete())
+        } catch {
+            print("[HistoryClipboard] Failed to remove top entry: \(error)")
+        }
+    }
+
+    /// Delete expired entries based on all limit settings (lock already held by caller; public wrapper acquires it)
+    public func deleteExpired() {
+        lock.lock()
+        defer { lock.unlock() }
+        enforceLimits()
+    }
+
+    /// Stop clipboard history monitoring and invalidate timer
+    public func stopHistoryClipboard() {
+        lock.lock()
+        defer { lock.unlock() }
+
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// Clean up timer on deinit
+    deinit {
+        timer?.invalidate()
+        timer = nil
     }
 }
