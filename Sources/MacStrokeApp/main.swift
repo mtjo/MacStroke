@@ -89,7 +89,7 @@ extension AppDelegate: CanvasManagerDelegate {
             print("[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
 
             // Execute the action
-            if let executedAction = ruleEngine?.executeAction(for: stroke) {
+            if ruleEngine?.executeAction(for: stroke) != nil {
                 // Show toast with rule note
                 if !rule.note.isEmpty {
                     let toast = Toast(message: rule.note, duration: 2.0)
