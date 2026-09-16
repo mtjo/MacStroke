@@ -11,9 +11,11 @@ final class CanvasManagerTests: XCTestCase {
 
     private final class RecordingDelegate: CanvasManagerDelegate {
         private(set) var completedStrokes: [Stroke] = []
+        private(set) var completedBundleIDs: [String] = []
 
-        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke) {
+        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) {
             completedStrokes.append(stroke)
+            completedBundleIDs.append(bundleID)
         }
     }
 

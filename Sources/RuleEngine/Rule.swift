@@ -112,6 +112,10 @@ public struct Rule: Codable {
     public let action: RuleAction
     /// Whether the rule is enabled
     public let isEnabled: Bool
+    /// Optional bundle ID filter (wildcard or regex) for app-specific rules
+    public let filter: String
+    /// Filter type: "wildcard" or "regex"
+    public let filterType: String
 
     /// Create a new rule.
     /// - Parameters:
@@ -120,7 +124,10 @@ public struct Rule: Codable {
     ///   - template: The gesture template to match against
     ///   - minSimilarityScore: DTW score threshold (0..100) for matching
     ///   - action: Action to execute when matched
+    ///   - note: Toast note shown after match
     ///   - isEnabled: Whether the rule is enabled
+    ///   - filter: Bundle ID filter (wildcard or regex)
+    ///   - filterType: "wildcard" or "regex"
     public init(
         name: String,
         description: String,
@@ -128,7 +135,9 @@ public struct Rule: Codable {
         minSimilarityScore: Double = 30.0,
         action: RuleAction,
         note: String = "",
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        filter: String = "",
+        filterType: String = "wildcard"
     ) {
         self.name = name
         self.description = description
@@ -137,6 +146,8 @@ public struct Rule: Codable {
         self.action = action
         self.note = note
         self.isEnabled = isEnabled
+        self.filter = filter
+        self.filterType = filterType
     }
 }
 
@@ -154,6 +165,12 @@ public final class RuleEngine {
     /// - Parameter rule: The rule to add.
     public func add(_ rule: Rule) {
         rules.append(rule)
+    }
+
+    /// Load multiple rules into the engine.
+    /// - Parameter newRules: The rules to add.
+    public func add(contentsOf newRules: [Rule]) {
+        rules.append(contentsOf: newRules)
     }
 
     /// Check if a stroke matches any of the defined rules.
@@ -204,5 +221,61 @@ public final class RuleEngine {
     /// Remove all rules.
     public func removeAll() {
         rules.removeAll()
+    }
+
+    /// Match a stroke against rules, optionally filtered by bundle ID.
+    /// - Parameters:
+    ///   - stroke: The stroke to test
+    ///   - bundleID: The current application's bundle ID (optional)
+    /// - Returns: The matching rule and its similarity score, or nil if no match.
+    public func match(stroke: Stroke, bundleID: String? = nil) -> (rule: Rule, score: Double)? {
+        var normalizedStroke = stroke
+        normalizedStroke.normalize()
+
+        for rule in rules where rule.isEnabled {
+            // Apply bundle filter if specified
+            if let bundleID = bundleID, !rule.filter.isEmpty {
+                if !matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) {
+                    continue
+                }
+            }
+
+            let score = compare(
+                template: rule.template.stroke,
+                candidate: normalizedStroke
+            )
+            if score >= rule.minSimilarityScore {
+                return (rule, score)
+            }
+        }
+
+        return nil
+    }
+
+    /// Check if a bundle ID matches a filter (wildcard or regex).
+    private func matchesFilter(filter: String, type: String, bundleID: String) -> Bool {
+        guard !filter.isEmpty else { return true }
+
+        if type == "regex" {
+            do {
+                let regex = try NSRegularExpression(pattern: filter)
+                let range = NSRange(location: 0, length: bundleID.utf16.count)
+                return regex.firstMatch(in: bundleID, range: range) != nil
+            } catch {
+                return false
+            }
+        } else {
+            // Wildcard matching
+            let pattern = NSRegularExpression.escapedPattern(for: filter)
+                .replacingOccurrences(of: "\\*", with: ".*")
+                .replacingOccurrences(of: "\\?", with: ".")
+            do {
+                let regex = try NSRegularExpression(pattern: "^\(pattern)$")
+                let range = NSRange(location: 0, length: bundleID.utf16.count)
+                return regex.firstMatch(in: bundleID, range: range) != nil
+            } catch {
+                return false
+            }
+        }
     }
 }

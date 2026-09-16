@@ -7,6 +7,8 @@
 
 import Foundation
 import AppKit
+import Cocoa
+import CoreFoundation
 import EventCapture
 import GestureEngine
 import RuleEngine
@@ -20,6 +22,9 @@ struct MacStrokeApp {
         // Set up the application
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
+
+        // Check accessibility permissions before starting
+        AccessibilityHelper.checkAndRequestAccess()
 
         // Create status bar item
         let statusBar = NSStatusBar.system
@@ -83,9 +88,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension AppDelegate: CanvasManagerDelegate {
-    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke) {
+    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) {
         // Match the stroke against rules
-        if let (rule, score) = ruleEngine?.match(stroke: stroke) {
+        if let (rule, score) = ruleEngine?.match(stroke: stroke, bundleID: bundleID) {
             print("[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
 
             // Execute the action
@@ -97,5 +102,54 @@ extension AppDelegate: CanvasManagerDelegate {
                 }
             }
         }
+    }
+}
+
+/// Helper for accessibility permission checking and user guidance.
+final class AccessibilityHelper {
+    static func checkAndRequestAccess() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let trusted = AXIsProcessTrustedWithOptions(options)
+
+        if !trusted {
+            // Show a modal alert to guide user to System Settings
+            DispatchQueue.main.async {
+                showAccessibilityAlert()
+            }
+        }
+    }
+
+    static func showAccessibilityAlert() {
+        let alert = NSAlert()
+        alert.messageText = "需要辅助功能权限"
+        alert.informativeText = """
+        MacStroke 需要辅助功能权限来捕获全局鼠标事件并识别手势。
+
+        请点击"打开系统设置"，在"隐私与安全性" → "辅助功能"中勾选 MacStroke。
+
+        授权后请重新启动应用。
+        """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "打开系统设置")
+        alert.addButton(withTitle: "稍后")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            openAccessibilitySettings()
+        }
+    }
+
+    static func openAccessibilitySettings() {
+        if #available(macOS 13.0, *) {
+            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            NSWorkspace.shared.open(url)
+        } else {
+            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    static func isAccessibilityTrusted() -> Bool {
+        return AXIsProcessTrusted()
     }
 }

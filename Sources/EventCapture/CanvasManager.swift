@@ -13,8 +13,11 @@ import GestureEngine
 /// Delegate for CanvasManager to notify when a stroke is complete.
 public protocol CanvasManagerDelegate: AnyObject {
     /// Called when a gesture stroke is completed and ready for recognition.
-    /// - Parameter stroke: The completed stroke (normalized, ready for comparison)
-    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke)
+    /// - Parameters:
+    ///   - manager: The canvas manager
+    ///   - stroke: The completed stroke (normalized, ready for comparison)
+    ///   - bundleID: The bundle ID of the frontmost application (for filtering)
+    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String)
 }
 
 /// Manages the gesture drawing canvas.
@@ -77,7 +80,8 @@ public class CanvasManager: EventCaptureDelegate {
 
         // Only notify if we have enough points for a valid gesture
         if stroke.count >= minimumPointsForGesture {
-            delegate?.canvasManager(self, didCompleteStroke: stroke)
+            let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+            delegate?.canvasManager(self, didCompleteStroke: stroke, bundleID: bundleID)
         }
 
         currentStroke = nil
