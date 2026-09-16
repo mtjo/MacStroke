@@ -87,6 +87,10 @@ let package = Package(
         .target(
             name: "FinderSyncExtension",
             dependencies: ["RuleEngine"]),
+        // ============ Right-click menu management ============
+        .target(
+            name: "RightClickMenu",
+            dependencies: []),
         // ============ Test targets ============
         .testTarget(
             name: "GestureEngineTests",
@@ -105,6 +109,9 @@ let package = Package(
             dependencies: ["WindowManager"]),
         .testTarget(
             name: "AppleScriptRunnerTests",
-            dependencies: ["AppleScriptRunner"])
+            dependencies: ["AppleScriptRunner"]),
+        .testTarget(
+            name: "RightClickMenuTests",
+            dependencies: ["RightClickMenu"])
     ]
 )
