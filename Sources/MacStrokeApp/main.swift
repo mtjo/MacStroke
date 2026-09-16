@@ -79,6 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let viewModel = UserPreferences()
         let windowController = PreferencesWindowController(viewModel: viewModel)
         windowController.showWindow(nil)
+        windowController.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         preferencesWindow = windowController
     }
 
