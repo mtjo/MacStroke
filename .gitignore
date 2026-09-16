@@ -1,0 +1,60 @@
+# SwiftPM
+.build/
+Package.responder
+
+# Xcode
+.xcodeproj/
+.xcworkspace/
+xcuserdata/
+project.xcworkspace/
+*.xcuserstate
+*.hmap
+*.ipa
+*.dSYM/
+*.su
+
+# Derived Data
+DerivedData/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.NetworkTrashFolder
+.apdisk
+
+# Build artifacts
+*.o
+*.lo
+*.la
+*.pc
+.libs/
+*.so
+*.dylib
+*.exe
+*.out
+*.app
+
+# Testing
+/test_results
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# fastlane
+fastlane/Report.xml
+fastlane/Preview.html
+fastlane/screenshots
+**/fastlane.json
