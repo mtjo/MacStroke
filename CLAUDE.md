@@ -43,6 +43,13 @@ swift test --list-tests
 
 外部依赖：`SQLite.swift`（剪贴板历史）、`Sparkle`（自动更新）。
 
+
+## Git Commit 规范
+
+- 绝对不要在 commit message 中添加 `Co-Authored-By: Claude ...` 或任何 AI 署名/尾缀（trailer）
+
+
+
 ### 关键组件
 
 - **Sources/MacStrokeApp/main.swift** — 应用入口。设置 `NSApplication.shared.setActivationPolicy(.accessory)`。创建 `AppDelegate`，其职责包括：
