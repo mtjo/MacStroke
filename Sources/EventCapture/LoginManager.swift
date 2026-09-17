@@ -57,4 +57,22 @@ public final class LoginManager {
             return true
         }
     }
+
+    /// Synchronize the login item state with the stored user preference.
+    /// Called when the user changes the "Launch at login" toggle in preferences.
+    /// - Parameter enabled: The desired state.
+    /// - Returns: true if the operation succeeded, false otherwise.
+    public func syncWithPreference(_ enabled: Bool) -> Bool {
+        if enabled {
+            return enableLoginItem()
+        } else {
+            return disableLoginItem()
+        }
+    }
+
+    /// Check if the app is currently registered as a login item.
+    /// - Returns: true if the app is registered as a login item.
+    public func isRegistered() -> Bool {
+        return isLoginItem
+    }
 }
