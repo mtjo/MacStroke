@@ -15,6 +15,7 @@ import RuleEngine
 import Storage
 import Preferences
 import WindowManager
+import Sparkle
 
 @main
 struct MacStrokeApp {
@@ -56,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var ruleEngine: RuleEngine?
     private var preferencesWindow: PreferencesWindowController?
     private let storage = PreferencesStorage()
+    private var updaterController: SPUStandardUpdaterController?
 
     func startCapture() {
         let capture = EventCapture()
@@ -73,6 +75,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Initialize rule engine
         ruleEngine = RuleEngine()
+
+        // Initialize Sparkle updater
+        initSparkleUpdater()
+    }
+
+    private func initSparkleUpdater() {
+        // Use SPUStandardUpdaterController for automatic update checking and UI
+        let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        // Placeholder feed URL - replace with your actual appcast URL
+        if let feedURL = URL(string: "https://example.com/updates/feed.xml") {
+            controller.updater.setFeedURL(feedURL)
+        }
+        controller.updater.automaticallyChecksForUpdates = true
+        // Optionally check for updates on launch (in background)
+        controller.updater.checkForUpdates()
+        self.updaterController = controller
+        print("[AppDelegate] Sparkle updater initialized")
     }
 
     @objc func togglePreferences() {

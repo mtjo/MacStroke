@@ -38,7 +38,11 @@ let package = Package(
         // SQLite.swift for clipboard history and rule storage
         .package(
             url: "https://github.com/stephencelis/SQLite.swift.git",
-            .upToNextMajor(from: "0.14.0"))
+            .upToNextMajor(from: "0.14.0")),
+        // Sparkle for automatic updates
+        .package(
+            url: "https://github.com/sparkle-project/Sparkle",
+            .upToNextMajor(from: "2.5.0"))
     ],
     targets: [
         // ============ Core gesture recognition algorithms (pure Swift, fully testable) ============
@@ -78,7 +82,8 @@ let package = Package(
                 "EventCapture",
                 "WindowManager",
                 "Preferences",
-                "AppleScriptRunner"
+                "AppleScriptRunner",
+                "Sparkle"
             ],
             resources: [
                 .process("Resources")

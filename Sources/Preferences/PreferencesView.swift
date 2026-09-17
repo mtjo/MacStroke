@@ -12,6 +12,7 @@ import RuleEngine
 import AppleScriptRunner
 import RightClickMenu
 import GestureEngine
+import EventCapture
 
 // MARK: - Identifiable Conformance
 
@@ -204,6 +205,8 @@ struct TabButton: View {
 
 struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
+    // Use the shared LaunchAtLoginController singleton from EventCapture
+    @StateObject private var launchController = LaunchAtLoginController.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -212,7 +215,13 @@ struct GeneralTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle("Enable MacStroke", isOn: $viewModel.isEnabled)
                 Toggle("Show icon in status bar", isOn: $viewModel.showIconInStatusBar)
-                Toggle("Launch at login", isOn: $viewModel.launchAtLogin)
+                Toggle("Launch at login", isOn: Binding(
+                    get: { launchController.isEnabled },
+                    set: { enabled in
+                        launchController.setEnabled(enabled)
+                        viewModel.launchAtLogin = enabled
+                    }
+                ))
                 Toggle("Show UI in any application", isOn: $viewModel.showUIInWhateverApp)
             }
 
