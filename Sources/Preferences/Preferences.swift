@@ -38,7 +38,7 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(whiteList, forKey: .whiteList) }
     }
     @Published public var language: String {
-        didSet { storage.setString(language, forKey: .language) }
+        didSet { storage.setString(language, forKey: .language); applyUserLanguage(language) }
     }
 
     // MARK: - Gesture recognition
@@ -209,6 +209,7 @@ public final class UserPreferences: ObservableObject {
 // MARK: - AppKit bridge for SwiftUI preferences window.
 public final class PreferencesWindowController: NSWindowController {
     private let viewModel: UserPreferences
+    private var languageObserver: NSObjectProtocol?
 
     public init(viewModel: UserPreferences) {
         self.viewModel = viewModel
@@ -217,7 +218,7 @@ public final class PreferencesWindowController: NSWindowController {
         let hostingController = NSHostingController(
             rootView: PreferencesView(viewModel: viewModel)
         )
-        hostingController.title = "MacStroke Preferences"
+        hostingController.title = L("MacStroke Preferences")
         self.contentViewController = hostingController
 
         self.window = NSWindow(
@@ -228,7 +229,21 @@ public final class PreferencesWindowController: NSWindowController {
         )
         self.window?.contentView = hostingController.view
         self.window?.center()
-        self.window?.title = "MacStroke Preferences"
+        self.window?.title = L("MacStroke Preferences")
+
+        languageObserver = NotificationCenter.default.addObserver(
+            forName: .languageDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.window?.title = L("MacStroke Preferences")
+        }
+    }
+
+    deinit {
+        if let observer = languageObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     @available(*, unavailable)

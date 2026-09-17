@@ -1,0 +1,10 @@
+/*
+  Localizable.strings
+  MacStroke FinderSyncExtension
+*/
+
+"MacStroke" = "MacStroke";
+"FinderSyncToolbarTooltip" = "MacStroke";
+"Recognize Gesture" = "识别手势";
+"Preset Gestures" = "预设手势";
+"Open Preferences" = "打开偏好设置";

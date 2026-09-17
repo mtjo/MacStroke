@@ -44,9 +44,18 @@ public final class WindowManager {
 
     /// Toggle the preferences window.
     @objc private func togglePreferences() {
+        if let existing = preferencesWindowController,
+           existing.window?.isVisible == true {
+            existing.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
         let viewModel = UserPreferences()
         let controller = PreferencesWindowController(viewModel: viewModel)
         controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         preferencesWindowController = controller
     }
 

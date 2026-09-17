@@ -11,6 +11,7 @@ import SwiftUI
 import AppKit
 import GestureEngine
 import EventCapture
+import Storage
 
 /// Coordinator that bridges DrawGestureDelegate to SwiftUI callbacks.
 final class DrawGestureCoordinator: NSObject, DrawGestureDelegate {
@@ -71,7 +72,7 @@ struct GestureTemplatePreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if points.isEmpty {
-                Text("No gesture template set")
+                Text(L("No gesture template set"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -84,7 +85,7 @@ struct GestureTemplatePreview: View {
             )
             .frame(width: 60, height: 60)
 
-            Button("Draw Gesture") {
+            Button(L("Draw Gesture")) {
                 onRequestPresetGesture(ruleIndex)
             }
             .buttonStyle(.bordered)

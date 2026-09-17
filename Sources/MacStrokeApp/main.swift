@@ -1,4 +1,3 @@
-//
 //  main.swift
 //  MacStroke
 //
@@ -17,7 +16,6 @@ import Preferences
 import WindowManager
 import Sparkle
 
-@main
 struct MacStrokeApp {
     static func main() {
         // Set up the application
@@ -27,31 +25,23 @@ struct MacStrokeApp {
         // Check accessibility permissions before starting
         AccessibilityHelper.checkAndRequestAccess()
 
-        // Create status bar item
-        let statusBar = NSStatusBar.system
-        let statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem.button {
-            button.title = "🖐"
-            button.action = #selector(AppDelegate.togglePreferences)
-            button.target = AppDelegate.shared
-        }
-
-        // Create app delegate
-        let delegate = AppDelegate()
+        // Use the shared AppDelegate instance for consistent state
+        let delegate = AppDelegate.shared
         app.delegate = delegate
 
         // Start event capture
         delegate.startCapture()
 
-        // Run the application
+        // Run the application (applicationDidFinishLaunching is called automatically)
         app.run()
     }
 }
 
 /// Application delegate managing global event capture and preferences.
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     static let shared = AppDelegate()
 
+    private var statusItem: NSStatusItem?
     private var eventCapture: EventCapture?
     private var canvasManager: CanvasManager?
     private var ruleEngine: RuleEngine?
@@ -80,6 +70,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         initSparkleUpdater()
     }
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Sync the stored language preference with the process locale
+        // so the UI uses the correct language immediately on launch.
+        if let savedLanguage = storage.getStringOptional(forKey: .language) {
+            applyUserLanguage(savedLanguage)
+        }
+
+        setupStatusBar()
+        observeNotifications()
+    }
+
+    private func observeNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(macStrokeEnabledDidChange(_:)),
+            name: .macStrokeEnabledDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(showIconInStatusBarDidChange(_:)),
+            name: .showIconInStatusBarDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(languageDidChange(_:)),
+            name: .languageDidChange,
+            object: nil
+        )
+    }
+
+    @objc private func languageDidChange(_ notification: Notification) {
+        // Update status menu titles when the language changes
+        if statusItem != nil {
+            statusItem?.menu = statusMenu()
+        }
+        // Update the preferences window title if it's open
+        if let window = preferencesWindow?.window {
+            window.title = L("MacStroke Preferences")
+        }
+    }
+
+    @objc func macStrokeEnabledDidChange(_ notification: Notification) {
+        guard let enabled = notification.object as? Bool else { return }
+        setEnabled(enabled)
+    }
+
+    @objc func showIconInStatusBarDidChange(_ notification: Notification) {
+        guard let showIcon = notification.object as? Bool else { return }
+        if showIcon {
+            setupStatusBar()
+        } else if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
+    }
+
     private func initSparkleUpdater() {
         // Use SPUStandardUpdaterController for automatic update checking and UI
         let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
@@ -94,17 +142,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         print("[AppDelegate] Sparkle updater initialized")
     }
 
-    @objc func togglePreferences() {
-        let viewModel = UserPreferences()
-        let windowController = PreferencesWindowController(viewModel: viewModel)
-        windowController.showWindow(nil)
-        windowController.window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        preferencesWindow = windowController
+    /// Create the status bar item on app launch if "Show icon in status bar" is enabled.
+    private func setupStatusBar() {
+        let showIcon = storage.getBoolOptional(forKey: .showIconInStatusBar) ?? StorageDefaults.showIconInStatusBar
+        guard showIcon else { return }
+
+        // Remove any existing status item before creating a new one
+        if statusItem != nil {
+            NSStatusBar.system.removeStatusItem(statusItem!)
+            statusItem = nil
+        }
+
+        let statusBar = NSStatusBar.system
+        statusItem = statusBar.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem?.button {
+            button.image = menuIcon(enabled: true)
+        }
+        statusItem?.menu = statusMenu()
+        statusItem?.highlightMode = true
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        eventCapture?.stop()
+    private func statusMenu() -> NSMenu {
+        let menu = NSMenu(title: "MacStroke")
+        menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
+        menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        return menu
+    }
+
+    private func menuIcon(enabled: Bool) -> NSImage? {
+        let resourceName = enabled ? "menu_icon_16x16" : "menu_icon_disabled_16x16"
+        let url = appResourceBundle().url(forResource: resourceName, withExtension: "png")
+        guard let url else { return nil }
+        guard let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    @objc func togglePreferences() {
+        // If we already have a preferences window that is visible, just bring it to front
+        if let existing = preferencesWindow,
+           existing.window?.isVisible == true {
+            existing.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let viewModel = UserPreferences()
+        let controller = PreferencesWindowController(viewModel: viewModel)
+        // Set the window delegate so we can clear the reference on close
+        controller.window?.delegate = self
+        preferencesWindow = controller
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        guard let statusItem = statusItem else { return }
+        guard let image = menuIcon(enabled: enabled) else { return }
+        statusItem.button?.image = image
     }
 }
 
@@ -142,17 +239,17 @@ final class AccessibilityHelper {
 
     static func showAccessibilityAlert() {
         let alert = NSAlert()
-        alert.messageText = "需要辅助功能权限"
+        alert.messageText = L("Needs Accessibility Permission")
         alert.informativeText = """
-        MacStroke 需要辅助功能权限来捕获全局鼠标事件并识别手势。
+        \(L("MacStroke needs accessibility permission to capture global mouse events and recognize gestures."))
 
-        请点击"打开系统设置"，在"隐私与安全性" → "辅助功能"中勾选 MacStroke。
+        \(L("Open System Settings"))
 
-        授权后请重新启动应用。
+        \(L("Please restart the application after granting permission."))
         """
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "打开系统设置")
-        alert.addButton(withTitle: "稍后")
+        alert.addButton(withTitle: L("Open System Settings"))
+        alert.addButton(withTitle: L("Later"))
 
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
@@ -174,3 +271,5 @@ final class AccessibilityHelper {
         return AXIsProcessTrusted()
     }
 }
+
+MacStrokeApp.main()

@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "MacStroke",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
@@ -91,7 +92,10 @@ let package = Package(
         // ============ Finder Sync Extension ============
         .target(
             name: "FinderSyncExtension",
-            dependencies: ["RuleEngine"]),
+            dependencies: ["RuleEngine"],
+            resources: [
+                .process("Resources")
+            ]),
         // ============ Right-click menu management ============
         .target(
             name: "RightClickMenu",

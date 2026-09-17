@@ -56,9 +56,9 @@ public final class RightClickMenuManager {
     /// Sync enable flags and menu items to the FinderSync extension via distributed notification
     public func syncSharedDefaultsToFinderSyncExtension() {
         let array = [
-            NSLocalizedString("New text file", comment: ""),
-            NSLocalizedString("Open in Terminal", comment: ""),
-            NSLocalizedString("Copy file path", comment: "")
+            Bundle.main.localizedString(forKey: "New text file", value: nil, table: nil),
+            Bundle.main.localizedString(forKey: "Open in Terminal", value: nil, table: nil),
+            Bundle.main.localizedString(forKey: "Copy file path", value: nil, table: nil)
         ]
         let items = array.joined(separator: ",")
 
@@ -115,7 +115,7 @@ public final class RightClickMenuManager {
     /// Falls back to an AppleScript `do shell script` if direct creation fails.
     public func newFile(path: String) {
         let fileManager = FileManager.default
-        var filepath = path + NSLocalizedString("newTextFile", comment: "")
+        var filepath = path + Bundle.main.localizedString(forKey: "newTextFile", value: nil, table: nil)
         var i = 1
         while fileManager.fileExists(atPath: filepath) {
             filepath = filepath + "\(i)"
@@ -134,7 +134,7 @@ public final class RightClickMenuManager {
         var errorInfo: NSDictionary?
         _ = appleScript.executeAndReturnError(&errorInfo)
         if errorInfo != nil {
-            let msg = String(format: NSLocalizedString("The current directory: %@ does not have write permission!", comment: ""), path)
+            let msg = String(format: Bundle.main.localizedString(forKey: "The current directory: %@ does not have write permission!", value: nil, table: nil), path)
             let alert = NSAlert()
             alert.messageText = msg
             alert.runModal()

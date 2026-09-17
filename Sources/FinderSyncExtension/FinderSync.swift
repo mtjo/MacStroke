@@ -14,10 +14,10 @@ import FinderSync
 public final class FinderMenuProvider: NSObject {
 
     public func contextMenu() -> NSMenu {
-        let menu = NSMenu(title: "MacStroke")
+        let menu = NSMenu(title: Bundle.main.localizedString(forKey: "MacStroke", value: nil, table: nil))
 
         let recognizerItem = NSMenuItem(
-            title: NSLocalizedString("Recognize Gesture", comment: ""),
+            title: Bundle.main.localizedString(forKey: "Recognize Gesture", value: nil, table: nil),
             action: #selector(handleRecognizeGesture),
             keyEquivalent: ""
         )
@@ -25,7 +25,7 @@ public final class FinderMenuProvider: NSObject {
         menu.addItem(recognizerItem)
 
         let presetsItem = NSMenuItem(
-            title: NSLocalizedString("Preset Gestures", comment: ""),
+            title: Bundle.main.localizedString(forKey: "Preset Gestures", value: nil, table: nil),
             action: #selector(handlePresets),
             keyEquivalent: ""
         )
@@ -35,7 +35,7 @@ public final class FinderMenuProvider: NSObject {
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(
-            title: NSLocalizedString("Open Preferences", comment: ""),
+            title: Bundle.main.localizedString(forKey: "Open Preferences", value: nil, table: nil),
             action: #selector(handleOpenPreferences),
             keyEquivalent: ","
         )
@@ -111,9 +111,15 @@ public final class FinderSyncExtensionController: FIFinderSync {
 
     // MARK: - Toolbar item
 
-    override public var toolbarItemName: String { "MacStroke" }
-    override public var toolbarItemToolTip: String { "MacStroke: Click the toolbar item for a menu." }
-    override public var toolbarItemImage: NSImage { NSImage(named: "newFile.png")! }
+    override public var toolbarItemName: String {
+        Bundle.main.localizedString(forKey: "MacStroke", value: "MacStroke", table: nil)
+    }
+    override public var toolbarItemToolTip: String {
+        Bundle.main.localizedString(forKey: "FinderSyncToolbarTooltip", value: "MacStroke", table: nil)
+    }
+    override public var toolbarItemImage: NSImage {
+        NSImage(named: "toolbarIcon.png")!
+    }
 
     // MARK: - Menu
 

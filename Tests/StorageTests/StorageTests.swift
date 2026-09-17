@@ -54,4 +54,5 @@ final class StorageTests: XCTestCase {
 
         XCTAssertEqual(manager.entryCount, 0)
     }
+
 }

@@ -36,6 +36,9 @@ public struct PreferencesView: View {
     @State private var editingScript: AppleScriptItem?
     @State private var rightClickApps: [String] = []
     @State private var newRightClickApp = ""
+    /// Bumped whenever the UI language changes so the whole view tree
+    /// re-renders with the new localized strings.
+    @State private var languageRevision = 0
 
     public init(viewModel: UserPreferences) {
         self.viewModel = viewModel
@@ -97,6 +100,10 @@ public struct PreferencesView: View {
                 .padding(24)
             }
             .frame(minWidth: 600, minHeight: 550)
+        }
+        .id(languageRevision)
+        .onReceive(NotificationCenter.default.publisher(for: .languageDidChange)) { _ in
+            languageRevision += 1
         }
         .frame(minWidth: 780, minHeight: 600)
         .sheet(isPresented: $showingRuleEditor) {
@@ -210,38 +217,38 @@ struct GeneralTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SectionHeader("General")
+            SectionHeader(L("General"))
 
             VStack(alignment: .leading, spacing: 16) {
-                Toggle("Enable MacStroke", isOn: $viewModel.isEnabled)
-                Toggle("Show icon in status bar", isOn: $viewModel.showIconInStatusBar)
-                Toggle("Launch at login", isOn: Binding(
+                Toggle(L("Enable MacStroke"), isOn: $viewModel.isEnabled)
+                Toggle(L("Show icon in status bar"), isOn: $viewModel.showIconInStatusBar)
+                Toggle(L("Launch at login"), isOn: Binding(
                     get: { launchController.isEnabled },
                     set: { enabled in
                         launchController.setEnabled(enabled)
                         viewModel.launchAtLogin = enabled
                     }
                 ))
-                Toggle("Show UI in any application", isOn: $viewModel.showUIInWhateverApp)
+                Toggle(L("Show UI in any application"), isOn: $viewModel.showUIInWhateverApp)
             }
 
-            SectionHeader("Language")
+            SectionHeader(L("Language"))
 
-            Picker("Language", selection: $viewModel.language) {
-                Text("English").tag("en")
-                Text("简体中文").tag("zh-Hans")
+            Picker(L("Language"), selection: $viewModel.language) {
+                Text(L("English")).tag("en")
+                Text(L("简体中文")).tag("zh-Hans")
             }
             .pickerStyle(.segmented)
             .frame(width: 200)
 
-            SectionHeader("Version")
+            SectionHeader(L("Version"))
 
             HStack {
-                Text("Version")
+                Text(L("Version"))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                     .foregroundColor(.secondary)
-                Text("Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
+                Text(L("Build") + " \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
                     .foregroundColor(.secondary)
             }
         }
@@ -260,21 +267,21 @@ struct RulesTabView: View {
         VStack(alignment: .leading, spacing: 20) {
             // Header with buttons
             HStack {
-                SectionHeader("Gesture Rules")
+                SectionHeader(L("Gesture Rules"))
                 Spacer()
-                Button("Add Rule") {
+                Button(L("Add Rule")) {
                     editingRule = nil
                     showingRuleEditor = true
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Reset to Defaults") {
+                Button(L("Reset to Defaults")) {
                     ruleStore.rules = []
                     ruleStore.save()
                 }
                 .buttonStyle(.bordered)
 
-                Button("Clear All") {
+                Button(L("Clear All")) {
                     ruleStore.rules.removeAll()
                     ruleStore.save()
                 }
@@ -288,17 +295,17 @@ struct RulesTabView: View {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
-                    Text("No rules defined")
+                    Text(L("No rules defined"))
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text("Click \"Add Rule\" to create your first gesture rule")
+                    Text(L("Click \"Add Rule\" to create your first gesture rule"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 300)
             } else {
                 Table(ruleStore.rules) {
-                    TableColumn("Enabled") { rule in
+                    TableColumn(L("Enabled")) { rule in
                         Toggle("", isOn: Binding(
                             get: { rule.isEnabled },
                             set: { newValue in
@@ -320,13 +327,13 @@ struct RulesTabView: View {
                     }
                     .width(60)
 
-                    TableColumn("Name") { rule in
+                    TableColumn(L("Name")) { rule in
                         Text(rule.name)
                             .font(.system(size: 13))
                     }
                     .width(min: 150, max: 200)
 
-                    TableColumn("Description") { rule in
+                    TableColumn(L("Description")) { rule in
                         Text(rule.description)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
@@ -334,21 +341,21 @@ struct RulesTabView: View {
                     }
                     .width(min: 200, max: 300)
 
-                    TableColumn("Gesture") { rule in
+                    TableColumn(L("Gesture")) { rule in
                         Text(rule.template.name)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
                     .width(120)
 
-                    TableColumn("Action") { rule in
+                    TableColumn(L("Action")) { rule in
                         ActionBadge(action: rule.action)
                     }
                     .width(140)
 
-                    TableColumn("App Filter") { rule in
+                    TableColumn(L("App Filter")) { rule in
                         if rule.filter.isEmpty {
-                            Text("All Apps")
+                            Text(L("All Apps"))
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         } else {
@@ -405,11 +412,11 @@ struct ActionBadge: View {
 
     private var actionLabelAndColor: (String, Color) {
         switch action {
-        case .applescript: return ("AppleScript", .orange)
-        case .keyPress: return ("Shortcut", .blue)
-        case .mouseClick: return ("Mouse Click", .purple)
-        case .copyToClipboard: return ("Copy Text", .green)
-        case .none: return ("None", .gray)
+        case .applescript: return (L("AppleScript"), .orange)
+        case .keyPress: return (L("Shortcut"), .blue)
+        case .mouseClick: return (L("Mouse Click"), .purple)
+        case .copyToClipboard: return (L("Copy Text"), .green)
+        case .none: return (L("None"), .gray)
         }
     }
 }
@@ -443,6 +450,10 @@ struct RuleEditorView: View {
         case mouseClick = "Mouse Click"
         case none = "None"
 
+        var label: String {
+            L(rawValue)
+        }
+
         var icon: String {
             switch self {
             case .shortcut: return "keyboard"
@@ -457,31 +468,31 @@ struct RuleEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(editingRule == nil ? "Add Rule" : "Edit Rule")
+            Text(editingRule == nil ? L("Add Rule") : L("Edit Rule"))
                 .font(.title2)
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 20) {
-                GroupBox("Basic Info") {
+                GroupBox(L("Basic Info")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        LabeledContent("Rule Name") {
-                            TextField("Rule Name", text: $name)
+                        LabeledContent(L("Rule Name")) {
+                            TextField(L("Rule Name"), text: $name)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 300)
                         }
-                        LabeledContent("Description") {
-                            TextField("Description", text: $description)
+                        LabeledContent(L("Description")) {
+                            TextField(L("Description"), text: $description)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 300)
                         }
                     }
                 }
 
-                GroupBox("Gesture Trigger") {
+                GroupBox(L("Gesture Trigger")) {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            LabeledContent("Gesture") {
-                                Picker("Gesture", selection: $gestureName) {
+                            LabeledContent(L("Gesture")) {
+                                Picker(L("Gesture"), selection: $gestureName) {
                                     ForEach(availableGestures, id: \.name) { gesture in
                                         Text(gesture.name).tag(gesture.name)
                                     }
@@ -491,7 +502,7 @@ struct RuleEditorView: View {
                             }
 
                             if availableGestures.isEmpty {
-                                Text("No templates")
+                                Text(L("No templates"))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             } else {
@@ -507,7 +518,7 @@ struct RuleEditorView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Min Similarity Score")
+                            Text(L("Min Similarity Score"))
                             Slider(value: $minSimilarityScore, in: 0...100, step: 1)
                             Text("\(Int(minSimilarityScore))%")
                                 .frame(width: 40)
@@ -515,25 +526,25 @@ struct RuleEditorView: View {
                     }
                 }
 
-                GroupBox("App Filter (optional)") {
+                GroupBox(L("App Filter (optional)")) {
                     HStack {
-                        TextField("Bundle ID filter (e.g. com.apple.*)", text: $filter)
+                        TextField(L("Bundle ID filter (e.g. com.apple.*)"), text: $filter)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 300)
                         Picker("", selection: $filterType) {
-                            Text("Wildcard").tag("wildcard")
-                            Text("Regex").tag("regex")
+                            Text(L("Wildcard")).tag("wildcard")
+                            Text(L("Regex")).tag("regex")
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 140)
                     }
                 }
 
-                GroupBox("Action") {
+                GroupBox(L("Action")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Picker("Action Type", selection: $actionType) {
+                        Picker(L("Action Type"), selection: $actionType) {
                             ForEach(RuleActionType.allCases, id: \.self) { type in
-                                Label(type.rawValue, systemImage: type.icon).tag(type)
+                                Label(type.label, systemImage: type.icon).tag(type)
                             }
                         }
                         .pickerStyle(.segmented)
@@ -542,14 +553,14 @@ struct RuleEditorView: View {
                             switch actionType {
                             case .shortcut:
                                 HStack {
-                                    Text("Key Combination")
+                                    Text(L("Key Combination"))
                                     TextField("e.g. ⌘⇧N", text: $shortcutKey)
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 150)
                                 }
                             case .applescript:
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("AppleScript Source")
+                                    Text(L("AppleScript Source"))
                                     TextEditor(text: $appleScriptSource)
                                         .font(.system(.body, design: .monospaced))
                                         .frame(minHeight: 120)
@@ -557,25 +568,25 @@ struct RuleEditorView: View {
                                 }
                             case .text:
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Text to Copy")
+                                    Text(L("Text to Copy"))
                                     TextEditor(text: $copyText)
                                         .frame(minHeight: 80)
                                         .border(Color.secondary.opacity(0.2))
                                 }
                             case .password:
                                 HStack {
-                                    Text("Password (will be masked)")
-                                    SecureField("Password", text: $copyText)
+                                    Text(L("Password (will be masked)"))
+                                    SecureField(L("Password"), text: $copyText)
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 200)
                                 }
                             case .mouseClick:
                                 HStack {
-                                    Text("X:")
+                                    Text(L("X:"))
                                     TextField("X", value: $mouseClickX, formatter: NumberFormatter())
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 80)
-                                    Text("Y:")
+                                    Text(L("Y:"))
                                     TextField("Y", value: $mouseClickY, formatter: NumberFormatter())
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 80)
@@ -587,11 +598,11 @@ struct RuleEditorView: View {
                     }
                 }
 
-                GroupBox("Notification") {
+                GroupBox(L("Notification")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle("Show notification on match", isOn: $isEnabled)
-                        LabeledContent("Notification text") {
-                            TextField("Notification text", text: $note)
+                        Toggle(L("Show notification on match"), isOn: $isEnabled)
+                        LabeledContent(L("Notification text")) {
+                            TextField(L("Notification text"), text: $note)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 300)
                         }
@@ -601,8 +612,8 @@ struct RuleEditorView: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", action: onDismiss)
-                Button(editingRule == nil ? "Add" : "Save") {
+                Button(L("Cancel"), action: onDismiss)
+                Button(editingRule == nil ? L("Add") : L("Save")) {
                     saveRule()
                     onDismiss()
                 }
@@ -709,9 +720,9 @@ struct AppleScriptTabView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                SectionHeader("AppleScripts")
+                SectionHeader(L("AppleScripts"))
                 Spacer()
-                Button("Add Script") {
+                Button(L("Add Script")) {
                     editingScript = nil
                     showingScriptEditor = true
                 }
@@ -725,7 +736,7 @@ struct AppleScriptTabView: View {
                         }
                     }
                 } label: {
-                    Label("Add Example", systemImage: "plus.square.on.square")
+                    Label(L("Add Example"), systemImage: "plus.square.on.square")
                 }
                 .menuStyle(.borderlessButton)
             }
@@ -735,23 +746,23 @@ struct AppleScriptTabView: View {
                     Image(systemName: "curlybraces")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
-                    Text("No AppleScripts defined")
+                    Text(L("No AppleScripts defined"))
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text("Click \"Add Script\" or \"Add Example\" to get started")
+                    Text(L("Click \"Add Script\" or \"Add Example\" to get started"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 300)
             } else {
                 Table(scripts) {
-                    TableColumn("Name") { script in
+                    TableColumn(L("Name")) { script in
                         Text(script.name)
                             .font(.system(size: 13))
                     }
                     .width(min: 200, max: 300)
 
-                    TableColumn("Source Preview") { script in
+                    TableColumn(L("Source Preview")) { script in
                         Text(script.source.prefix(80).replacingOccurrences(of: "\n", with: " ") + "…")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.secondary)
@@ -759,7 +770,7 @@ struct AppleScriptTabView: View {
                     }
                     .width(min: 250, max: 400)
 
-                    TableColumn("Created") { script in
+                    TableColumn(L("Created")) { script in
                         Text(script.createTime, style: .date)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
@@ -804,22 +815,22 @@ struct ScriptEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(editingScript == nil ? "Add AppleScript" : "Edit AppleScript")
+            Text(editingScript == nil ? L("Add AppleScript") : L("Edit AppleScript"))
                 .font(.title2)
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 20) {
-                GroupBox("Script Info") {
+                GroupBox(L("Script Info")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        LabeledContent("Name") {
-                            TextField("Name", text: $name)
+                        LabeledContent(L("Name")) {
+                            TextField(L("Name"), text: $name)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 400)
                         }
                     }
                 }
 
-                GroupBox("Source Code") {
+                GroupBox(L("Source Code")) {
                     VStack(alignment: .leading, spacing: 8) {
                         TextEditor(text: $source)
                             .font(.system(.body, design: .monospaced))
@@ -831,8 +842,8 @@ struct ScriptEditorView: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", action: onDismiss)
-                Button(editingScript == nil ? "Add" : "Save") {
+                Button(L("Cancel"), action: onDismiss)
+                Button(editingScript == nil ? L("Add") : L("Save")) {
                     if let editingScript = editingScript {
                         AppleScriptsList.sharedAppleScriptsList.removeScript(id: editingScript.id)
                         AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
@@ -877,19 +888,19 @@ struct FiltersTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SectionHeader("Application Filters")
+            SectionHeader(L("Application Filters"))
 
             VStack(alignment: .leading, spacing: 12) {
-                Picker("Filter Mode", selection: $viewModel.whiteListMode) {
-                    Text("Blacklist Mode (block listed apps)").tag(false)
-                    Text("Whitelist Mode (only allow listed apps)").tag(true)
+                Picker(L("Filter Mode"), selection: $viewModel.whiteListMode) {
+                    Text(L("Blacklist Mode (block listed apps)")).tag(false)
+                    Text(L("Whitelist Mode (only allow listed apps)")).tag(true)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
             }
 
-            SectionHeader("Blocklist")
-            Text("Enter bundle identifiers to block (one per line). Supports wildcards (e.g. com.jetbrains.*)")
+            SectionHeader(L("Blocklist"))
+            Text(L("Enter bundle identifiers to block (one per line). Supports wildcards (e.g. com.jetbrains.*)"))
                 .font(.caption)
                 .foregroundColor(.secondary)
             TextEditor(text: $blockFilterText)
@@ -898,8 +909,8 @@ struct FiltersTabView: View {
                 .border(Color.secondary.opacity(0.2))
                 .onChange(of: blockFilterText) { newValue in viewModel.blockFilter = newValue }
 
-            SectionHeader("Allowlist")
-            Text("Enter bundle identifiers to allow (one per line). Only used in whitelist mode.")
+            SectionHeader(L("Allowlist"))
+            Text(L("Enter bundle identifiers to allow (one per line). Only used in whitelist mode."))
                 .font(.caption)
                 .foregroundColor(.secondary)
             TextEditor(text: $whiteListText)
@@ -909,12 +920,12 @@ struct FiltersTabView: View {
                 .onChange(of: whiteListText) { newValue in viewModel.whiteList = newValue }
 
             HStack {
-                Button("Add Running App…") {
+                Button(L("Add Running App…")) {
                     // TODO: Show running apps picker
                 }
                 .buttonStyle(.bordered)
 
-                Button("Apply") {
+                Button(L("Apply")) {
                     viewModel.save()
                 }
                 .buttonStyle(.borderedProminent)
@@ -922,8 +933,8 @@ struct FiltersTabView: View {
                 Spacer()
             }
 
-            SectionHeader("Preview")
-            Text("Current mode: \(viewModel.whiteListMode ? "Whitelist" : "Blacklist")")
+            SectionHeader(L("Preview"))
+            Text(L("Current mode: \(viewModel.whiteListMode ? "Whitelist" : "Blacklist")"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -952,17 +963,17 @@ struct RightClickTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SectionHeader("Right Click Menu - App List")
+            SectionHeader(L("Right Click Menu - App List"))
 
-            Text("Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)")
+            Text(L("Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)"))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
             HStack {
-                TextField("Bundle ID (e.g. com.apple.finder)", text: $newRightClickApp)
+                TextField(L("Bundle ID (e.g. com.apple.finder)"), text: $newRightClickApp)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 300)
-                Button("Add") {
+                Button(L("Add")) {
                     if !newRightClickApp.isEmpty {
                         RightClicksList.shared.add(newRightClickApp)
                         rightClickApps = RightClicksList.shared.allApps()
@@ -978,14 +989,14 @@ struct RightClickTabView: View {
                     Image(systemName: "mouse")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
-                    Text("No applications configured")
+                    Text(L("No applications configured"))
                         .font(.headline)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 200)
             } else {
                 Table(items) {
-                    TableColumn("Bundle ID / Pattern") { item in
+                    TableColumn(L("Bundle ID / Pattern")) { item in
                         Text(item.bundleId)
                             .font(.system(size: 13, design: .monospaced))
                     }
@@ -1007,13 +1018,13 @@ struct RightClickTabView: View {
             }
 
             HStack {
-                Button("Reset to Defaults") {
+                Button(L("Reset to Defaults")) {
                     RightClicksList.shared.reInit()
                     rightClickApps = RightClicksList.shared.allApps()
                 }
                 .buttonStyle(.bordered)
 
-                Button("Clear All") {
+                Button(L("Clear All")) {
                     RightClicksList.shared.clear()
                     rightClickApps = RightClicksList.shared.allApps()
                 }
@@ -1033,28 +1044,28 @@ struct RightClickMenuTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SectionHeader("Finder Right-Click Menu")
+            SectionHeader(L("Finder Right-Click Menu"))
 
-            Toggle("Enable Finder right-click menu extension", isOn: $viewModel.enableRightClickMenu)
+            Toggle(L("Enable Finder right-click menu extension"), isOn: $viewModel.enableRightClickMenu)
 
             if viewModel.enableRightClickMenu {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Menu Items")
+                    Text(L("Menu Items"))
                         .font(.headline)
 
-                    Toggle("New Text File", isOn: $viewModel.enableNewFile)
-                    Toggle("Open in Terminal", isOn: $viewModel.enableOpenInTerminal)
-                    Toggle("Copy File Path", isOn: $viewModel.enableCopyFilePath)
+                    Toggle(L("New Text File"), isOn: $viewModel.enableNewFile)
+                    Toggle(L("Open in Terminal"), isOn: $viewModel.enableOpenInTerminal)
+                    Toggle(L("Copy File Path"), isOn: $viewModel.enableCopyFilePath)
 
                     Divider()
 
                     HStack {
-                        Button("Re-enable Extension") {
+                        Button(L("Re-enable Extension")) {
                             RightClickMenuManager.shared.reEnableFinderExtension()
                         }
                         .buttonStyle(.bordered)
 
-                        Button("Delayed Re-enable") {
+                        Button(L("Delayed Re-enable")) {
                             RightClickMenuManager.shared.delayedEnableFinderExtension()
                         }
                         .buttonStyle(.bordered)
@@ -1063,10 +1074,10 @@ struct RightClickMenuTabView: View {
                 .padding(.leading, 16)
             }
 
-            SectionHeader("Terminal Preference")
+            SectionHeader(L("Terminal Preference"))
             HStack {
-                Text("Default Terminal App:")
-                TextField("Terminal", text: Binding(
+                Text(L("Default Terminal App:"))
+                TextField(L("Terminal"), text: Binding(
                     get: { UserDefaults.standard.string(forKey: "userTerminal") ?? "Terminal" },
                     set: { UserDefaults.standard.set($0, forKey: "userTerminal") }
                 ))
@@ -1084,14 +1095,14 @@ struct ClipboardTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SectionHeader("Clipboard History")
+            SectionHeader(L("Clipboard History"))
 
-            Toggle("Enable clipboard history", isOn: $viewModel.enableHistoryClipboard)
+            Toggle(L("Enable clipboard history"), isOn: $viewModel.enableHistoryClipboard)
 
             if viewModel.enableHistoryClipboard {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("Pinned items limit")
+                        Text(L("Pinned items limit"))
                         Spacer()
                         Stepper(value: $viewModel.clipboardLimitTop, in: 1...200) {
                             Text("\(viewModel.clipboardLimitTop)")
@@ -1100,7 +1111,7 @@ struct ClipboardTabView: View {
                     }
 
                     HStack {
-                        Text("Total history limit")
+                        Text(L("Total history limit"))
                         Spacer()
                         Stepper(value: $viewModel.clipboardLimitTotal, in: 10...5000, step: 10) {
                             Text("\(viewModel.clipboardLimitTotal)")
@@ -1109,7 +1120,7 @@ struct ClipboardTabView: View {
                     }
 
                     HStack {
-                        Text("Keep history for (days)")
+                        Text(L("Keep history for (days)"))
                         Spacer()
                         Stepper(value: $viewModel.clipboardSaveDays, in: 1...365) {
                             Text("\(viewModel.clipboardSaveDays)")
@@ -1120,19 +1131,19 @@ struct ClipboardTabView: View {
                     Divider()
 
                     HStack {
-                        Button("Clear History") {
+                        Button(L("Clear History")) {
                             HistoryClipboardManager().clearHistoryList()
                         }
                         .buttonStyle(.bordered)
                         .foregroundColor(.red)
 
-                        Button("Clear Pinned") {
+                        Button(L("Clear Pinned")) {
                             HistoryClipboardManager().clearTop()
                         }
                         .buttonStyle(.bordered)
                         .foregroundColor(.red)
 
-                        Button("Clear All") {
+                        Button(L("Clear All")) {
                             HistoryClipboardManager().clearAll()
                         }
                         .buttonStyle(.bordered)
@@ -1144,7 +1155,7 @@ struct ClipboardTabView: View {
                 .padding(.leading, 16)
             }
 
-            SectionHeader("Current Status")
+            SectionHeader(L("Current Status"))
             let manager = HistoryClipboardManager()
             HStack {
                 Text("Pinned items: \(manager.topCount)")
@@ -1166,15 +1177,15 @@ struct AboutTabView: View {
                 Image(nsImage: NSApp.applicationIconImage)
                     .frame(width: 128, height: 128)
 
-                Text("MacStroke")
+                Text(L("MacStroke"))
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
+                Text(L("Version") + " \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
                     .font(.title3)
                     .foregroundColor(.secondary)
 
-                Text("Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
+                Text(L("Build") + " \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1182,18 +1193,18 @@ struct AboutTabView: View {
 
             Divider()
 
-            SectionHeader("About")
-            Text("MacStroke is a gesture recognition utility for macOS that lets you trigger actions by drawing mouse gestures.")
+            SectionHeader(L("About"))
+            Text(L("MacStroke is a gesture recognition utility for macOS that lets you trigger actions by drawing mouse gestures."))
                 .font(.body)
 
-            SectionHeader("Links")
+            SectionHeader(L("Links"))
             HStack(spacing: 20) {
-                Link("GitHub Repository", destination: URL(string: "https://github.com/mtjo/MacStroke")!)
-                Link("Report an Issue", destination: URL(string: "https://github.com/mtjo/MacStroke/issues")!)
+                Link(L("GitHub Repository"), destination: URL(string: "https://github.com/mtjo/MacStroke")!)
+                Link(L("Report an Issue"), destination: URL(string: "https://github.com/mtjo/MacStroke/issues")!)
             }
 
-            SectionHeader("License")
-            Text("MIT License - Copyright © 2024")
+            SectionHeader(L("License"))
+            Text(L("MIT License - Copyright © 2024"))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
