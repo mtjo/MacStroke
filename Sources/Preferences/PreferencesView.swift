@@ -478,18 +478,35 @@ struct RuleEditorView: View {
                 }
 
                 GroupBox("Gesture Trigger") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        LabeledContent("Gesture") {
-                            Picker("Gesture", selection: $gestureName) {
-                                ForEach(availableGestures, id: \.name) { gesture in
-                                    Text(gesture.name).tag(gesture.name)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            LabeledContent("Gesture") {
+                                Picker("Gesture", selection: $gestureName) {
+                                    ForEach(availableGestures, id: \.name) { gesture in
+                                        Text(gesture.name).tag(gesture.name)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .frame(width: 200)
                             }
-                            .pickerStyle(.menu)
-                            .frame(width: 300)
+
+                            if availableGestures.isEmpty {
+                                Text("No templates")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                GestureTemplatePreview(
+                                    stroke: gestureFromTemplate(named: gestureName),
+                                    ruleIndex: availableGestures.firstIndex(where: { $0.name == gestureName }) ?? 0,
+                                    onRequestPresetGesture: { index in
+                                        // Handle preset gesture request
+                                    }
+                                )
+                                .frame(width: 60, height: 60)
+                            }
                         }
 
-                        HStack {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("Min Similarity Score")
                             Slider(value: $minSimilarityScore, in: 0...100, step: 1)
                             Text("\(Int(minSimilarityScore))%")
@@ -636,6 +653,13 @@ struct RuleEditorView: View {
         case .none:
             actionType = .none
         }
+    }
+
+    /// Returns the Stroke for the gesture template with the given name.
+    /// - Parameter name: The name of the gesture template.
+    /// - Returns: The Stroke if found, nil otherwise.
+    private func gestureFromTemplate(named name: String) -> Stroke? {
+        return availableGestures.first { $0.name == name }?.stroke
     }
 
     private func saveRule() {
