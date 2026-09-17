@@ -22,6 +22,12 @@ struct MacStrokeApp {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
+        // Apply the saved language preference before any localized UI is displayed.
+        let storage = PreferencesStorage()
+        if let savedLanguage = storage.getStringOptional(forKey: .language) {
+            applyUserLanguage(savedLanguage)
+        }
+
         // Check accessibility permissions before starting
         AccessibilityHelper.checkAndRequestAccess()
 

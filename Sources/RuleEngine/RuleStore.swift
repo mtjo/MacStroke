@@ -9,6 +9,7 @@
 import Foundation
 import GestureEngine
 import RuleEngine
+import Storage
 
 /// A rule store that manages gesture rules with persistence.
 @available(macOS 13.0, *)
@@ -117,10 +118,153 @@ public final class RuleStore: ObservableObject {
         do {
             let data = try Data(contentsOf: storageURL)
             rules = try JSONDecoder().decode([Rule].self, from: data)
+            if rules.isEmpty {
+                print("[RuleStore] Existing rules file is empty, loading default rules")
+                rules = RuleStore.defaultRules()
+                save()
+            }
         } catch {
-            print("[RuleStore] No existing rules file found, starting fresh: \(error)")
-            rules = []
+            print("[RuleStore] No existing rules file found, starting with default rules: \(error)")
+            rules = RuleStore.defaultRules()
+            save()
         }
+    }
+
+    /// Default rules matching the original MacStroke preset configuration.
+    public static func defaultRules() -> [Rule] {
+        let gestures = GestureTemplateProvider.shared.allTemplates()
+        let templateByName = Dictionary(uniqueKeysWithValues: gestures.map { ($0.name, $0.stroke) })
+
+        func rule(
+            name: String,
+            description: String,
+            gesture: String,
+            action: RuleAction,
+            note: String,
+            filter: String = "",
+            filterType: String = "wildcard"
+        ) -> Rule {
+            let stroke = templateByName[gesture] ?? templateByName["A Shape"]!
+            return Rule(
+                name: name,
+                description: description,
+                template: GestureTemplate(from: stroke, name: gesture),
+                minSimilarityScore: 30.0,
+                action: action,
+                note: note,
+                isEnabled: true,
+                filter: filter,
+                filterType: filterType
+            )
+        }
+
+        return [
+            rule(
+                name: "Password",
+                description: "Input password",
+                gesture: "P Shape",
+                action: .copyToClipboard("12345678"),
+                note: "Input password"
+            ),
+            rule(
+                name: "Email",
+                description: "Input e-mail",
+                gesture: "M Shape",
+                action: .copyToClipboard("mtjo.net@gmail.com"),
+                note: "Input e-mail"
+            ),
+            rule(
+                name: "Back",
+                description: "Navigate back",
+                gesture: "←",
+                action: .keyPress("←"),
+                note: "Back"
+            ),
+            rule(
+                name: "Next",
+                description: "Navigate next",
+                gesture: "→",
+                action: .keyPress("→"),
+                note: "Next"
+            ),
+            rule(
+                name: "Min Size All Windows",
+                description: "Minimize all windows",
+                gesture: "↘",
+                action: .keyPress("m"),
+                note: "Min Size All Windows"
+            ),
+            rule(
+                name: "Min Size Windows",
+                description: "Minimize window",
+                gesture: "↙",
+                action: .keyPress("m"),
+                note: "Min Size Windows"
+            ),
+            rule(
+                name: "Full Screen",
+                description: "Toggle full screen",
+                gesture: "↗",
+                action: .keyPress("f"),
+                note: "Full screen"
+            ),
+            rule(
+                name: "Exit",
+                description: "Exit app",
+                gesture: "L Shape",
+                action: .keyPress("q"),
+                note: "Exit App"
+            ),
+            rule(
+                name: "Close Tab",
+                description: "Close tab",
+                gesture: "L Shape",
+                action: .keyPress("w"),
+                note: "Close Tab"
+            ),
+            rule(
+                name: "Paste",
+                description: "Paste",
+                gesture: "V Shape",
+                action: .keyPress("v"),
+                note: "Paste"
+            ),
+            rule(
+                name: "Select All",
+                description: "Select all",
+                gesture: "A Shape",
+                action: .keyPress("a"),
+                note: "SelectALL"
+            ),
+            rule(
+                name: "Page Up",
+                description: "Page up",
+                gesture: "I Shape",
+                action: .keyPress("pageup"),
+                note: "PageUp"
+            ),
+            rule(
+                name: "Page Down",
+                description: "Page down",
+                gesture: "I Shape",
+                action: .keyPress("pagedown"),
+                note: "PageDown"
+            ),
+            rule(
+                name: "Previous Tab",
+                description: "Previous tab",
+                gesture: "T Shape",
+                action: .keyPress("["),
+                note: "Prev Tab"
+            ),
+            rule(
+                name: "Next Tab",
+                description: "Next tab",
+                gesture: "F Shape",
+                action: .keyPress("]"),
+                note: "Next Tab"
+            ),
+        ]
     }
 
     /// Check if a rule name already exists.

@@ -118,7 +118,7 @@ public final class FinderSyncExtensionController: FIFinderSync {
         Bundle.main.localizedString(forKey: "FinderSyncToolbarTooltip", value: "MacStroke", table: nil)
     }
     override public var toolbarItemImage: NSImage {
-        NSImage(named: "toolbarIcon.png")!
+        NSImage(named: "toolbarIcon") ?? NSImage()
     }
 
     // MARK: - Menu
@@ -127,13 +127,16 @@ public final class FinderSyncExtensionController: FIFinderSync {
         let menu = NSMenu(title: "")
         if enableRightClickMenu {
             if enableNewFile, !items.isEmpty {
-                menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
+                let item = menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
+                item.image = NSImage(named: "newFile")
             }
             if enableOpenInTerminal, items.count > 1 {
-                menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
+                let item = menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
+                item.image = NSImage(named: "newFile")
             }
             if enableCopyFilePath, items.count > 2 {
-                menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
+                let item = menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
+                item.image = NSImage(named: "newFile")
             }
         }
         return menu

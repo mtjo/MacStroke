@@ -81,6 +81,14 @@ public final class ActionExecutor {
         case "delete": return 0x33
         case "tab": return 0x30
         case "escape": return 0x35
+        case "left", "leftarrow": return 0x25
+        case "right", "rightarrow": return 0x27
+        case "up", "keyup": return 0x2E
+        case "down", "keydown": return 0x28
+        case "pageup", "pageupkey": return 0x21
+        case "pagedown", "pagedownkey": return 0x22
+        case "[", "leftbracket": return 0x2A
+        case "]", "rightbracket": return 0x2D
         case "a": return 0x00
         case "b": return 0x01
         case "c": return 0x02

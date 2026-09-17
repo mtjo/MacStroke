@@ -16,15 +16,15 @@ import Storage
 /// Coordinator that bridges DrawGestureDelegate to SwiftUI callbacks.
 final class DrawGestureCoordinator: NSObject, DrawGestureDelegate {
     var ruleIndex: Int
-    var onRequestPresetGesture: (Int) -> Void
+    var onRequestPresetGesture: ((Int) -> Void)?
 
-    init(ruleIndex: Int, onRequestPresetGesture: @escaping (Int) -> Void) {
+    init(ruleIndex: Int, onRequestPresetGesture: ((Int) -> Void)?) {
         self.ruleIndex = ruleIndex
         self.onRequestPresetGesture = onRequestPresetGesture
     }
 
     func drawGesture(_ drawGesture: DrawGesture, didRequestPresetGestureForRuleAt ruleIndex: Int) {
-        onRequestPresetGesture(ruleIndex)
+        onRequestPresetGesture?(ruleIndex)
     }
 }
 
@@ -32,11 +32,13 @@ final class DrawGestureCoordinator: NSObject, DrawGestureDelegate {
 struct DrawGestureView: NSViewRepresentable {
     var points: [GesturePoint]
     var ruleIndex: Int = 0
-    var onRequestPresetGesture: (Int) -> Void
+    var onRequestPresetGesture: ((Int) -> Void)?
+    var showsAddButton: Bool = true
 
     func makeNSView(context: Context) -> DrawGesture {
         let view = DrawGesture(frame: NSRect(x: 0, y: 0, width: 60, height: 60))
         view.ruleIndex = ruleIndex
+        view.showsAddButton = showsAddButton
         view.delegate = context.coordinator
         view.setPoints(points)
         return view
@@ -44,12 +46,16 @@ struct DrawGestureView: NSViewRepresentable {
 
     func updateNSView(_ nsView: DrawGesture, context: Context) {
         nsView.ruleIndex = ruleIndex
+        nsView.showsAddButton = showsAddButton
         nsView.setPoints(points)
         nsView.setNeedsDisplay(nsView.bounds)
     }
 
     func makeCoordinator() -> DrawGestureCoordinator {
-        DrawGestureCoordinator(ruleIndex: ruleIndex, onRequestPresetGesture: onRequestPresetGesture)
+        DrawGestureCoordinator(
+            ruleIndex: ruleIndex,
+            onRequestPresetGesture: onRequestPresetGesture ?? { _ in }
+        )
     }
 }
 
@@ -58,11 +64,11 @@ struct DrawGestureView: NSViewRepresentable {
 struct GestureTemplatePreview: View {
     let stroke: Stroke?
     let ruleIndex: Int
-    let onRequestPresetGesture: (Int) -> Void
+    let onRequestPresetGesture: ((Int) -> Void)?
 
     @State private var points: [GesturePoint] = []
 
-    init(stroke: Stroke?, ruleIndex: Int = 0, onRequestPresetGesture: @escaping (Int) -> Void = { _ in }) {
+    init(stroke: Stroke?, ruleIndex: Int = 0, onRequestPresetGesture: ((Int) -> Void)? = nil) {
         self.stroke = stroke
         self.ruleIndex = ruleIndex
         self.onRequestPresetGesture = onRequestPresetGesture
@@ -86,7 +92,7 @@ struct GestureTemplatePreview: View {
             .frame(width: 60, height: 60)
 
             Button(L("Draw Gesture")) {
-                onRequestPresetGesture(ruleIndex)
+                onRequestPresetGesture?(ruleIndex)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)

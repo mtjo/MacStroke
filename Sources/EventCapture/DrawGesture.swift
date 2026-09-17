@@ -59,13 +59,15 @@ public final class DrawGesture: NSView {
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 0.5).cgColor
+        layer?.backgroundColor = NSColor.clear.cgColor
+        clipsToBounds = true
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 0.5).cgColor
+        layer?.backgroundColor = NSColor.clear.cgColor
+        clipsToBounds = true
     }
 
     /// Sets the points from an array of GesturePoint values.
@@ -106,16 +108,15 @@ public final class DrawGesture: NSView {
 
         let width = abs(maxX - minX)
         let height = abs(maxY - minY)
-
-        let xZoom = width / DrawGesture.canvasWidth
-        let yZoom = height / DrawGesture.canvasHeight
-        let zoom = max(xZoom, yZoom)
+        let canvasWidth = bounds.width
+        let canvasHeight = bounds.height
+        let zoom = max(width / canvasWidth, height / canvasHeight)
 
         let fixX: CGFloat = width < height
-            ? (DrawGesture.canvasWidth - (width / zoom)) / 2 + 12
+            ? (canvasWidth - (width / zoom)) / 2 + 12
             : 12
         let fixY: CGFloat = width > height
-            ? (DrawGesture.canvasHeight - (height / zoom)) / 2 + 12
+            ? (canvasHeight - (height / zoom)) / 2 + 12
             : 12
 
         var result: [NSPoint] = []
@@ -126,6 +127,12 @@ public final class DrawGesture: NSView {
             result.append(NSPoint(x: scaledX, y: scaledY))
         }
         return result
+    }
+
+    public override func layout() {
+        super.layout()
+        scaledPoints = computeScaledPoints(points)
+        setNeedsDisplay(bounds)
     }
 
     public override func draw(_ dirtyRect: NSRect) {

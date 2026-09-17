@@ -155,14 +155,14 @@ enum PreferencesTab: CaseIterable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .rules: return "Rules"
-        case .appleScript: return "AppleScript"
-        case .filters: return "Filters"
-        case .rightClick: return "Right Click"
-        case .rightClickMenu: return "RightClickMenu"
-        case .clipboard: return "Clipboard"
-        case .about: return "About"
+        case .general: return L("General")
+        case .rules: return L("Rules")
+        case .appleScript: return L("AppleScript")
+        case .filters: return L("Filters")
+        case .rightClick: return L("Right Click")
+        case .rightClickMenu: return L("RightClickMenu")
+        case .clipboard: return L("Clipboard")
+        case .about: return L("About")
         }
     }
 
@@ -262,6 +262,9 @@ struct RulesTabView: View {
     @ObservedObject var ruleStore: RuleStore
     @Binding var showingRuleEditor: Bool
     @Binding var editingRule: Rule?
+    @State private var selectedPresetGesture: PresetGesture? = nil
+    @State private var selectedRuleForPreset: String? = nil
+    @State private var showingPresetPicker: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -269,6 +272,42 @@ struct RulesTabView: View {
             HStack {
                 SectionHeader(L("Gesture Rules"))
                 Spacer()
+
+                Picker(L("Preset Gesture"), selection: $selectedPresetGesture) {
+                    Text(L("None")).tag(PresetGesture?.none)
+                    ForEach(PresetGesture.allCases, id: \.self) { gesture in
+                        Text(gesture.rawValue).tag(gesture as PresetGesture?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 200)
+
+                Button(L("Apply to Selected")) {
+                    if let gesture = selectedPresetGesture, let ruleName = selectedRuleForPreset,
+                       let idx = ruleStore.rules.firstIndex(where: { $0.name == ruleName }) {
+                        let oldRule = ruleStore.rules[idx]
+                        let provider = GestureTemplateProvider.shared
+                        let stroke = provider.template(for: gesture)
+                        let newTemplate = GestureTemplate(from: stroke, name: gesture.rawValue)
+                        let newRule = Rule(
+                            name: oldRule.name,
+                            description: oldRule.description,
+                            template: newTemplate,
+                            minSimilarityScore: oldRule.minSimilarityScore,
+                            action: oldRule.action,
+                            note: oldRule.note,
+                            isEnabled: oldRule.isEnabled,
+                            filter: oldRule.filter,
+                            filterType: oldRule.filterType
+                        )
+                        ruleStore.update(newRule)
+                        selectedRuleForPreset = nil
+                        selectedPresetGesture = nil
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedPresetGesture == nil || selectedRuleForPreset == nil)
+
                 Button(L("Add Rule")) {
                     editingRule = nil
                     showingRuleEditor = true
@@ -327,6 +366,20 @@ struct RulesTabView: View {
                     }
                     .width(60)
 
+                    TableColumn(L("Gesture")) { rule in
+                        DrawGestureView(
+                            points: rule.template.points,
+                            ruleIndex: ruleStore.rules.firstIndex(where: { $0.name == rule.name }) ?? 0,
+                            showsAddButton: false
+                        )
+                        .frame(width: 56, height: 56)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedRuleForPreset = rule.name
+                        }
+                    }
+                    .width(80)
+
                     TableColumn(L("Name")) { rule in
                         Text(rule.name)
                             .font(.system(size: 13))
@@ -340,13 +393,6 @@ struct RulesTabView: View {
                             .lineLimit(1)
                     }
                     .width(min: 200, max: 300)
-
-                    TableColumn(L("Gesture")) { rule in
-                        Text(rule.template.name)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-                    .width(120)
 
                     TableColumn(L("Action")) { rule in
                         ActionBadge(action: rule.action)
@@ -390,7 +436,7 @@ struct RulesTabView: View {
                     .width(80)
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(minHeight: 400)
+                .frame(minHeight: 400, maxHeight: .infinity)
             }
         }
     }
@@ -622,7 +668,7 @@ struct RuleEditorView: View {
             }
         }
         .padding(24)
-        .frame(width: 600, height: 700)
+        .frame(minWidth: 600)
         .onAppear {
             availableGestures = GestureTemplateProvider.shared.allTemplates()
             if let rule = editingRule {
@@ -1053,9 +1099,15 @@ struct RightClickMenuTabView: View {
                     Text(L("Menu Items"))
                         .font(.headline)
 
-                    Toggle(L("New Text File"), isOn: $viewModel.enableNewFile)
-                    Toggle(L("Open in Terminal"), isOn: $viewModel.enableOpenInTerminal)
-                    Toggle(L("Copy File Path"), isOn: $viewModel.enableCopyFilePath)
+                    Toggle(isOn: $viewModel.enableNewFile) {
+                        Label(L("New Text File"), systemImage: "doc.badge.plus")
+                    }
+                    Toggle(isOn: $viewModel.enableOpenInTerminal) {
+                        Label(L("Open in Terminal"), systemImage: "terminal.fill")
+                    }
+                    Toggle(isOn: $viewModel.enableCopyFilePath) {
+                        Label(L("Copy File Path"), systemImage: "doc.on.doc")
+                    }
 
                     Divider()
 
