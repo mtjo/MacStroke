@@ -19,7 +19,7 @@ final class WindowManagerTests: XCTestCase {
         let prefs = UserPreferences()
         XCTAssertNotNil(prefs)
         XCTAssertEqual(prefs.minimumPoints, 10)
-        XCTAssertEqual(prefs.minSimilarityScore, 30.0)
+        XCTAssertEqual(prefs.minSimilarityScore, 85.0)
     }
 
     func testUserPreferencesSaveAndLoad() {

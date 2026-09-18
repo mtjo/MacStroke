@@ -221,8 +221,17 @@ extension AppDelegate: CanvasManagerDelegate {
             if ruleEngine?.executeAction(for: stroke) != nil {
                 // Show toast with rule note
                 if !rule.note.isEmpty {
-                    let toast = Toast(message: rule.note, duration: 2.0)
-                    ToastManager.shared.show(toast)
+                    let preferences = UserPreferences()
+                    let positionIndex = preferences.notePosition
+                    let pos = ToastPosition(rawValue: positionIndex) ?? ToastPosition.bottom
+                    let toast = Toast(
+                        message: rule.note,
+                        duration: TimeInterval(preferences.noteRetentionTime),
+                        position: pos
+                    )
+                    if preferences.showToast {
+                        ToastManager.shared.show(toast)
+                    }
                 }
             }
         }

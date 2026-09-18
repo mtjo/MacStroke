@@ -37,7 +37,25 @@ public class CanvasManager: EventCaptureDelegate {
     private var canvasWindows: [String: CanvasWindow] = [:]
 
     /// Create a new canvas manager.
-    public init() {}
+    public init() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersDidChange),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+    }
+
+    /// Update canvas window frames when screen layout changes (e.g. display added/removed/resized).
+    @objc private func screenParametersDidChange() {
+        for (_, window) in canvasWindows {
+            let newFrame = window.screen?.frame ?? NSScreen.main?.frame ?? .zero
+            if window.frame != newFrame {
+                window.setFrame(newFrame, display: false)
+                window.canvasView.resize(to: newFrame)
+            }
+        }
+    }
 
     /// Handle mouse event from EventCapture.
     public func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent) {

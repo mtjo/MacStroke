@@ -23,11 +23,17 @@ public enum RuleAction: Codable {
     case mouseClick(x: Int, y: Int)
     /// Copy text to clipboard
     case copyToClipboard(String)
+    /// Trigger a keyboard shortcut (key code + modifier flags)
+    case shortcut(keyCode: UInt16, flags: UInt)
+    /// Plain text action (insert text via key equivalents)
+    case text(String)
+    /// Password action (secure text, e.g. typed into frontmost app)
+    case password(String)
     /// No action (for rules that only trigger state changes)
     case none
 
     private enum CodingKeys: String, CodingKey {
-        case type, applescript, keyPress, mouseClickX, mouseClickY, copyToClipboard
+        case type, applescript, keyPress, mouseClickX, mouseClickY, copyToClipboard, keyCode, flags, text, password
     }
 
     public init(from decoder: Decoder) throws {
@@ -47,6 +53,16 @@ public enum RuleAction: Codable {
         case "copyToClipboard":
             let text = try container.decode(String.self, forKey: .copyToClipboard)
             self = .copyToClipboard(text)
+        case "shortcut":
+            let kc = try container.decode(UInt16.self, forKey: .keyCode)
+            let fl = try container.decode(UInt.self, forKey: .flags)
+            self = .shortcut(keyCode: kc, flags: fl)
+        case "text":
+            let t = try container.decode(String.self, forKey: .text)
+            self = .text(t)
+        case "password":
+            let p = try container.decode(String.self, forKey: .password)
+            self = .password(p)
         case "none":
             self = .none
         default:
@@ -74,6 +90,16 @@ public enum RuleAction: Codable {
         case .copyToClipboard(let text):
             try container.encode("copyToClipboard", forKey: .type)
             try container.encode(text, forKey: .copyToClipboard)
+        case .shortcut(let keyCode, let flags):
+            try container.encode("shortcut", forKey: .type)
+            try container.encode(keyCode, forKey: .keyCode)
+            try container.encode(flags, forKey: .flags)
+        case .text(let t):
+            try container.encode("text", forKey: .type)
+            try container.encode(t, forKey: .text)
+        case .password(let p):
+            try container.encode("password", forKey: .type)
+            try container.encode(p, forKey: .password)
         case .none:
             try container.encode("none", forKey: .type)
         }
@@ -90,6 +116,12 @@ public enum RuleAction: Codable {
             return "Mouse click at (\(x), \(y))"
         case .copyToClipboard(let text):
             return "Copy to clipboard: \(text)"
+        case .shortcut(let keyCode, let flags):
+            return "Shortcut: key=\(keyCode), flags=\(flags)"
+        case .text(let t):
+            return "Text: \(t)"
+        case .password(let p):
+            return "Password: ****"
         case .none:
             return "No action"
         }
@@ -112,6 +144,8 @@ public struct Rule: Codable {
     public let action: RuleAction
     /// Whether the rule is enabled
     public let isEnabled: Bool
+    /// Whether the rule should keep triggering on every match while the gesture is held.
+    public let triggerOnEveryMatch: Bool
     /// Optional bundle ID filter (wildcard or regex) for app-specific rules
     public let filter: String
     /// Filter type: "wildcard" or "regex"
@@ -126,6 +160,7 @@ public struct Rule: Codable {
     ///   - action: Action to execute when matched
     ///   - note: Toast note shown after match
     ///   - isEnabled: Whether the rule is enabled
+    ///   - triggerOnEveryMatch: Whether to keep triggering while gesture is held
     ///   - filter: Bundle ID filter (wildcard or regex)
     ///   - filterType: "wildcard" or "regex"
     public init(
@@ -136,6 +171,7 @@ public struct Rule: Codable {
         action: RuleAction,
         note: String = "",
         isEnabled: Bool = true,
+        triggerOnEveryMatch: Bool = false,
         filter: String = "",
         filterType: String = "wildcard"
     ) {
@@ -146,6 +182,7 @@ public struct Rule: Codable {
         self.action = action
         self.note = note
         self.isEnabled = isEnabled
+        self.triggerOnEveryMatch = triggerOnEveryMatch
         self.filter = filter
         self.filterType = filterType
     }

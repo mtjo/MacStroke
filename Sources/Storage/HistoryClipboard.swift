@@ -44,6 +44,7 @@ public final class HistoryClipboardManager {
 
     public enum UserDefaultsKey: String {
         case clipoardStroageLocal = "clipoardStroageLocal"
+        case clipoardStroageRam = "clipoardStroageRam"
         case enableLimitTop = "enableLimitTop"
         case limitTop = "limitTop"
         case enableLimitTotal = "enableLimitTotal"
@@ -77,7 +78,9 @@ public final class HistoryClipboardManager {
 
     /// Initialize with default database path
     public convenience init() {
-        self.init(databasePath: Self.defaultDatabasePath, userDefaults: .standard)
+        let useRAM = UserDefaults.standard.bool(forKey: UserDefaultsKey.clipoardStroageRam.rawValue)
+        let databasePath = useRAM ? "file::memory:?cache=shared" : Self.defaultDatabasePath
+        self.init(databasePath: databasePath, userDefaults: UserDefaults.standard)
     }
 
     /// Initialize with custom database path (for testing)
@@ -384,8 +387,9 @@ public final class HistoryClipboardManager {
 
         let enabled = userDefaults.bool(forKey: UserDefaultsKey.enableHistoryClipboard.rawValue)
         let storageLocal = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
+        let storageRAM = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageRam.rawValue)
 
-        if enabled && storageLocal {
+        if enabled && (storageLocal || storageRAM) {
             // Invalidate existing timer if running
             timer?.invalidate()
 

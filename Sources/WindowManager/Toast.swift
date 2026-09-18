@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import Preferences
 
 /// A toast notification shown briefly on screen.
 public struct Toast {
@@ -22,10 +23,14 @@ public struct Toast {
 }
 
 /// Position for toast notifications.
-public enum ToastPosition {
-    case top
-    case bottom
-    case center
+public enum ToastPosition: Int {
+    case top = 0
+    case center = 1
+    case bottom = 2
+    case topRight = 3
+    case bottomRight = 4
+    case topLeft = 5
+    case bottomLeft = 6
 }
 
 /// Manages toast notifications displayed on screen.
@@ -34,14 +39,24 @@ public final class ToastManager {
 
     private var currentToastWindow: NSWindow?
     private var toastTimer: Timer?
+    private let preferences: UserPreferences
 
-    private init() {}
+    private init() {
+        self.preferences = UserPreferences()
+    }
 
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
         // Cancel any existing toast
         toastTimer?.invalidate()
+
+        // Read preferences for display
+        let fontSize = CGFloat(preferences.noteFontSize)
+        let bgAlpha = preferences.noteBackgroundAlpha
+        let fontName = preferences.noteFontName
+        let retention = preferences.noteRetentionTime
+        let positionIndex = preferences.notePosition
 
         // Create window for toast
         let window = NSWindow(
@@ -51,20 +66,20 @@ public final class ToastManager {
             defer: false
         )
         window.level = .statusBar
-        window.backgroundColor = .black.withAlphaComponent(0.8)
+        window.backgroundColor = .black.withAlphaComponent(bgAlpha)
         window.hasShadow = true
         window.isOpaque = false
 
         // Create content view
         let contentView = NSView(frame: window.frame)
         contentView.wantsLayer = true
-        contentView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.8).cgColor
+        contentView.layer?.backgroundColor = NSColor.black.withAlphaComponent(bgAlpha).cgColor
         contentView.layer?.cornerRadius = 8
 
         // Add label
         let label = NSTextField(labelWithString: toast.message)
         label.textColor = .white
-        label.font = NSFont.systemFont(ofSize: 13)
+        label.font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
         label.frame = NSRect(x: 16, y: 16, width: 248, height: 28)
         contentView.addSubview(label)
 
@@ -75,8 +90,9 @@ public final class ToastManager {
         let frame = screen.frame
         let x: CGFloat
         let y: CGFloat
+        let toastPosition = ToastPosition(rawValue: positionIndex) ?? ToastPosition.bottom
 
-        switch toast.position {
+        switch toastPosition {
         case .top:
             x = (frame.width - 280) / 2
             y = frame.height - 80
@@ -86,6 +102,18 @@ public final class ToastManager {
         case .center:
             x = (frame.width - 280) / 2
             y = (frame.height - 60) / 2
+        case .topRight:
+            x = frame.width - 280 - 16
+            y = frame.height - 80
+        case .bottomRight:
+            x = frame.width - 280 - 16
+            y = 40
+        case .topLeft:
+            x = 16
+            y = frame.height - 80
+        case .bottomLeft:
+            x = 16
+            y = 40
         }
 
         window.setFrameOrigin(NSPoint(x: x, y: y))
@@ -93,8 +121,8 @@ public final class ToastManager {
 
         currentToastWindow = window
 
-        // Auto-dismiss after duration
-        toastTimer = Timer.scheduledTimer(withTimeInterval: toast.duration, repeats: false) { [weak self] _ in
+        // Auto-dismiss after duration (use retention time in seconds)
+        toastTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(retention), repeats: false) { [weak self] _ in
             self?.hide()
         }
     }

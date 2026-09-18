@@ -2,7 +2,10 @@
 //  FinderSync.swift
 //  FinderSyncExtension
 //
-//  Finder Sync Extension providing right-click menu integration.
+//  Finder Sync extension providing right-click menu integration.
+//
+//  Menu matches the original MacStroke FinderSync: New File,
+//  Open in Terminal, Copy File Path, Re-enable Extension, Quit.
 //
 
 import Foundation
@@ -21,6 +24,7 @@ public final class FinderMenuProvider: NSObject {
             action: #selector(handleRecognizeGesture),
             keyEquivalent: ""
         )
+        recognizerItem.image = NSImage(systemSymbolName: "cursor.arrow.down.angled", accessibilityDescription: nil)
         recognizerItem.target = self
         menu.addItem(recognizerItem)
 
@@ -29,6 +33,7 @@ public final class FinderMenuProvider: NSObject {
             action: #selector(handlePresets),
             keyEquivalent: ""
         )
+        presetsItem.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: nil)
         presetsItem.target = self
         menu.addItem(presetsItem)
 
@@ -39,6 +44,7 @@ public final class FinderMenuProvider: NSObject {
             action: #selector(handleOpenPreferences),
             keyEquivalent: ","
         )
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
 
@@ -118,7 +124,12 @@ public final class FinderSyncExtensionController: FIFinderSync {
         Bundle.main.localizedString(forKey: "FinderSyncToolbarTooltip", value: "MacStroke", table: nil)
     }
     override public var toolbarItemImage: NSImage {
-        NSImage(named: "toolbarIcon") ?? NSImage()
+        if let url = Bundle.main.url(forResource: "toolbarIcon", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            image.isTemplate = true
+            return image
+        }
+        return NSImage(systemSymbolName: "gesture", accessibilityDescription: nil) ?? NSImage()
     }
 
     // MARK: - Menu
@@ -128,15 +139,15 @@ public final class FinderSyncExtensionController: FIFinderSync {
         if enableRightClickMenu {
             if enableNewFile, !items.isEmpty {
                 let item = menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
-                item.image = NSImage(named: "newFile")
+                item.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
             }
             if enableOpenInTerminal, items.count > 1 {
                 let item = menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
-                item.image = NSImage(named: "newFile")
+                item.image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: nil)
             }
             if enableCopyFilePath, items.count > 2 {
                 let item = menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
-                item.image = NSImage(named: "newFile")
+                item.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
             }
         }
         return menu

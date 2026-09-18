@@ -9,6 +9,7 @@ import Foundation
 import AppKit
 import EventCapture
 import Preferences
+import Storage
 
 /// Manages the status bar item for the MacStroke app.
 public final class WindowManager {
@@ -18,8 +19,24 @@ public final class WindowManager {
     private var statusItem: NSStatusItem?
     private var statusButton: NSButton?
     private var preferencesWindowController: PreferencesWindowController?
+    private var clipboardListWindowController: HistoryClipboardListWindowController?
+    private var shortcutMonitor: ShortcutMonitor?
+    private var historyShortcutNeedsUpdate = true
 
-    private init() {}
+    private init() {
+        // Initialize clipboard history monitoring when WindowManager is created
+        initializeClipboardHistory()
+    }
+
+    /// Initialize clipboard history and global shortcut monitoring.
+    private func initializeClipboardHistory() {
+        // Enable clipboard history monitoring if enabled in preferences
+        let manager = HistoryClipboardManager()
+        _ = manager.enableHistoryClipboard()
+
+        // Start monitoring the global shortcut for clipboard history list
+        startMonitoringHistoryShortcut()
+    }
 
     /// Create and show the status bar item.
     /// - Parameter buttonTitle: The text to display in the status bar
@@ -63,5 +80,57 @@ public final class WindowManager {
     public func hidePreferences() {
         preferencesWindowController?.close()
         preferencesWindowController = nil
+    }
+
+    /// Show the clipboard history list window.
+    @objc public func showClipboardHistory() {
+        if clipboardListWindowController == nil {
+            clipboardListWindowController = HistoryClipboardListWindowController()
+        }
+        clipboardListWindowController?.showWindow(nil)
+    }
+
+    /// Update the global shortcut monitor based on current preferences.
+    /// - Parameter shortcutString: Shortcut string in format "keyCode=X, flags=Y"
+    public func updateGlobalShortcut(_ shortcutString: String) {
+        let wasMonitoring = shortcutMonitor?.isMonitoring ?? false
+
+        if shortcutMonitor == nil {
+            shortcutMonitor = ShortcutMonitor()
+        }
+
+        if let parsed = ShortcutMonitor.parseShortcut(shortcutString) {
+            shortcutMonitor?.keyCode = parsed.0
+            shortcutMonitor?.flags = parsed.1
+            if wasMonitoring {
+                _ = shortcutMonitor?.start()
+            }
+        } else {
+            if wasMonitoring {
+                shortcutMonitor?.stop()
+            }
+        }
+    }
+
+    /// Start monitoring the clipboard history global shortcut.
+    public func startMonitoringHistoryShortcut() {
+        let defaults = UserDefaults.standard
+        let shortcutString = defaults.string(forKey: "historyCilpboardListShortcut") ?? ""
+        updateGlobalShortcut(shortcutString)
+
+        // Setup observer for changes to the shortcut string
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(shortcutChanged),
+                                               name: UserDefaults.didChangeNotification,
+                                               object: nil)
+    }
+
+    @objc private func shortcutChanged() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let defaults = UserDefaults.standard
+            let shortcutString = defaults.string(forKey: "historyCilpboardListShortcut") ?? ""
+            self.updateGlobalShortcut(shortcutString)
+        }
     }
 }

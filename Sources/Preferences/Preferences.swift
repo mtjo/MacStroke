@@ -40,6 +40,18 @@ public final class UserPreferences: ObservableObject {
     @Published public var language: String {
         didSet { storage.setString(language, forKey: .language); applyUserLanguage(language) }
     }
+    @Published public var openPrefOnStartup: Bool {
+        didSet { storage.setBool(openPrefOnStartup, forKey: .openPrefOnStartup) }
+    }
+    @Published public var mergeConsecutiveIdenticalGestures: Bool {
+        didSet { storage.setBool(mergeConsecutiveIdenticalGestures, forKey: .mergeConsecutiveIdenticalGestures) }
+    }
+    @Published public var defaultLineColor: String {
+        didSet { storage.setString(defaultLineColor, forKey: .defaultLineColor) }
+    }
+    @Published public var defaultNoteColor: String {
+        didSet { storage.setString(defaultNoteColor, forKey: .defaultNoteColor) }
+    }
 
     // MARK: - Gesture recognition
     @Published public var minimumPoints: Int {
@@ -86,6 +98,18 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setDouble(lineWidth, forKey: .lineWidth) }
     }
 
+    /// Computed Color wrapper for lineColorHex, used by ColorPicker.
+    public var lineColor: Color {
+        get { Color(hex: lineColorHex) }
+        set { lineColorHex = newValue.hexString }
+    }
+
+    /// Computed Color wrapper for defaultNoteColor, used by ColorPicker.
+    public var defaultNoteColorHex: String {
+        get { defaultNoteColor }
+        set { defaultNoteColor = newValue }
+    }
+
     // MARK: - Right-click menu
     @Published public var enableRightClickMenu: Bool {
         didSet { storage.setBool(enableRightClickMenu, forKey: .enableRightClickMenu) }
@@ -113,6 +137,21 @@ public final class UserPreferences: ObservableObject {
     @Published public var enableHistoryClipboard: Bool {
         didSet { storage.setBool(enableHistoryClipboard, forKey: .enableHistoryClipboard) }
     }
+    @Published public var clipoardStroageLocal: Bool {
+        didSet { storage.setBool(clipoardStroageLocal, forKey: .clipoardStroageLocal) }
+    }
+    @Published public var clipoardStroageRam: Bool {
+        didSet { storage.setBool(clipoardStroageRam, forKey: .clipoardStroageRam) }
+    }
+    @Published public var historyCilpboardListShortcut: String {
+        didSet { storage.setString(historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut) }
+    }
+    @Published public var enableLimitTotal: Bool {
+        didSet { storage.setBool(enableLimitTotal, forKey: .enableLimitTotal) }
+    }
+    @Published public var limitTotal: Int {
+        didSet { storage.setInt(limitTotal, forKey: .limitTotal) }
+    }
 
     // MARK: - Updates
     @Published public var autoCheckUpdates: Bool {
@@ -137,6 +176,10 @@ public final class UserPreferences: ObservableObject {
         self.whiteListMode = storage.getBoolOptional(forKey: .whiteListMode) ?? StorageDefaults.whiteListMode
         self.whiteList = storage.getStringOptional(forKey: .whiteList) ?? StorageDefaults.whiteList
         self.language = storage.getStringOptional(forKey: .language) ?? "en"
+        self.openPrefOnStartup = storage.getBoolOptional(forKey: .openPrefOnStartup) ?? StorageDefaults.openPrefOnStartup
+        self.mergeConsecutiveIdenticalGestures = storage.getBoolOptional(forKey: .mergeConsecutiveIdenticalGestures) ?? StorageDefaults.mergeConsecutiveIdenticalGestures
+        self.defaultLineColor = storage.getStringOptional(forKey: .defaultLineColor) ?? StorageDefaults.defaultLineColor
+        self.defaultNoteColor = storage.getStringOptional(forKey: .defaultNoteColor) ?? StorageDefaults.defaultNoteColor
         self.minimumPoints = storage.getIntOptional(forKey: .minimumPoints) ?? StorageDefaults.minimumPoints
         self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
         self.enableGestureMinScore = storage.getBoolOptional(forKey: .enableGestureMinScore) ?? StorageDefaults.enableGestureMinScore
@@ -158,6 +201,11 @@ public final class UserPreferences: ObservableObject {
         self.clipboardLimitTotal = storage.getIntOptional(forKey: .clipboardLimitTotal) ?? StorageDefaults.clipboardLimitTotal
         self.clipboardSaveDays = storage.getIntOptional(forKey: .clipboardSaveDays) ?? StorageDefaults.clipboardSaveDays
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
+        self.clipoardStroageLocal = storage.getBoolOptional(forKey: .clipoardStroageLocal) ?? StorageDefaults.clipoardStroageLocal
+        self.clipoardStroageRam = storage.getBoolOptional(forKey: .clipoardStroageRam) ?? StorageDefaults.clipoardStroageRam
+        self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? ""
+        self.enableLimitTotal = storage.getBoolOptional(forKey: .enableLimitTotal) ?? StorageDefaults.enableLimitTotal
+        self.limitTotal = storage.getIntOptional(forKey: .limitTotal) ?? StorageDefaults.limitTotal
         self.autoCheckUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
@@ -178,6 +226,10 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.whiteListMode, forKey: .whiteListMode)
         storage.setString(StorageDefaults.whiteList, forKey: .whiteList)
         storage.setString("en", forKey: .language)
+        storage.setBool(StorageDefaults.openPrefOnStartup, forKey: .openPrefOnStartup)
+        storage.setBool(StorageDefaults.mergeConsecutiveIdenticalGestures, forKey: .mergeConsecutiveIdenticalGestures)
+        storage.setString(StorageDefaults.defaultLineColor, forKey: .defaultLineColor)
+        storage.setString(StorageDefaults.defaultNoteColor, forKey: .defaultNoteColor)
         storage.setInt(StorageDefaults.minimumPoints, forKey: .minimumPoints)
         storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
         storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
@@ -199,10 +251,55 @@ public final class UserPreferences: ObservableObject {
         storage.setInt(StorageDefaults.clipboardLimitTotal, forKey: .clipboardLimitTotal)
         storage.setInt(StorageDefaults.clipboardSaveDays, forKey: .clipboardSaveDays)
         storage.setBool(true, forKey: .enableHistoryClipboard)
+        storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
+        storage.setBool(StorageDefaults.clipoardStroageRam, forKey: .clipoardStroageRam)
+        storage.setString("", forKey: .historyCilpboardListShortcut)
+        storage.setBool(StorageDefaults.enableLimitTotal, forKey: .enableLimitTotal)
+        storage.setInt(StorageDefaults.limitTotal, forKey: .limitTotal)
         storage.setBool(StorageDefaults.autoCheckUpdates, forKey: .autoCheckUpdates)
         storage.setBool(StorageDefaults.showToast, forKey: .showToast)
         storage.setInt(StorageDefaults.clipboardHistoryLimit, forKey: .clipboardHistoryLimit)
         storage.synchronize()
+    }
+}
+
+// MARK: - Color helpers
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB
+            (r, g, b) = ((int >> 8) & 0xFF, (int >> 4) & 0xFF, int & 0xFF)
+        case 6: // RRGGBB
+            (r, g, b) = ((int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        case 8: // RRGGBBAA
+            (r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF)
+        default:
+            (r, g, b) = (0, 0, 0)
+        }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255
+        )
+    }
+
+    /// Returns a hex string representation of the color (e.g. "#FF0000").
+    var hexString: String {
+        let cgColor = NSColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        cgColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(
+            format: "#%02lX%02lX%02lX",
+            lround(r * 255),
+            lround(g * 255),
+            lround(b * 255)
+        )
     }
 }
 
@@ -223,7 +320,7 @@ public final class PreferencesWindowController: NSWindowController {
 
         self.window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 650),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )

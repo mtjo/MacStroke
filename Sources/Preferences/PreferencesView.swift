@@ -20,20 +20,98 @@ extension Rule: Identifiable {
     public var id: String { name }
 }
 
-extension AppleScriptItem: Identifiable {
-    // Already has UUID id
+extension AppleScriptItem: Identifiable { }
+
+// MARK: - Preferences Tab Enumeration
+
+/// Original MacStroke preferences tab enumeration (7 tabs).
+enum PreferencesTab: CaseIterable {
+    case general
+    case gesture
+    case note
+    case drawing
+    case rightClick
+    case clipboard
+    case updates
+
+    var title: String {
+        switch self {
+        case .general: return L("General")
+        case .gesture: return L("Gesture")
+        case .note: return L("Note")
+        case .drawing: return L("Drawing")
+        case .rightClick: return L("Right Click")
+        case .clipboard: return L("Clipboard")
+        case .updates: return L("Updates")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: return "gearshape"
+        case .gesture: return "waveform"
+        case .note: return "note.text"
+        case .drawing: return "pencil.line"
+        case .rightClick: return "mouse"
+        case .clipboard: return "doc.on.clipboard"
+        case .updates: return "arrow.clockwise"
+        }
+    }
 }
 
-/// Preferences window content with tabbed interface.
+// MARK: - Updates Tab View
+
+struct UpdatesTabView: View {
+    @ObservedObject var viewModel: UserPreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SectionHeader(L("Updates"))
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(L("Auto-check updates"), isOn: $viewModel.autoCheckUpdates)
+
+                if viewModel.autoCheckUpdates {
+                    HStack {
+                        Text(L("Feed URL"))
+                        Spacer()
+                        TextField(L("Enter update feed URL"), text: .constant("https://example.com/updates/feed.xml"))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .frame(width: 250)
+                            .border(Color.secondary.opacity(0.2))
+                    }
+                    .padding(.leading, 8)
+                }
+            }
+            .padding(.leading, 16)
+        }
+    }
+}
+
+// MARK: - Shortcut Recorder SwiftUI Wrapper
+
+struct ShortcutRecorder: NSViewRepresentable {
+    @Binding var text: String
+    var onShortcutChanged: ((String) -> Void)?
+
+    func makeNSView(context: Context) -> ShortcutRecorderView {
+        let view = ShortcutRecorderView()
+        view.onShortcutChanged = { code, flags in
+            text = "keyCode=\(code), flags=\(flags)"
+            onShortcutChanged?(text)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {}
+}
 public struct PreferencesView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var selectedTab: PreferencesTab = .general
     @StateObject private var ruleStore = RuleStore()
     @State private var showingRuleEditor = false
     @State private var editingRule: Rule?
-    @State private var scripts: [AppleScriptItem] = []
-    @State private var showingScriptEditor = false
-    @State private var editingScript: AppleScriptItem?
     @State private var rightClickApps: [String] = []
     @State private var newRightClickApp = ""
     /// Bumped whenever the UI language changes so the whole view tree
@@ -68,33 +146,27 @@ public struct PreferencesView: View {
                     switch selectedTab {
                     case .general:
                         GeneralTabView(viewModel: viewModel)
-                    case .rules:
+                    case .gesture:
                         RulesTabView(
                             viewModel: viewModel,
                             ruleStore: ruleStore,
                             showingRuleEditor: $showingRuleEditor,
                             editingRule: $editingRule
                         )
-                    case .appleScript:
-                        AppleScriptTabView(
-                            scripts: $scripts,
-                            showingScriptEditor: $showingScriptEditor,
-                            editingScript: $editingScript
-                        )
-                    case .filters:
-                        FiltersTabView(viewModel: viewModel)
+                    case .note:
+                        NoteTabView(viewModel: viewModel)
+                    case .drawing:
+                        DrawingTabView(viewModel: viewModel)
                     case .rightClick:
                         RightClickTabView(
                             viewModel: viewModel,
                             rightClickApps: $rightClickApps,
                             newRightClickApp: $newRightClickApp
                         )
-                    case .rightClickMenu:
-                        RightClickMenuTabView(viewModel: viewModel)
                     case .clipboard:
                         ClipboardTabView(viewModel: viewModel)
-                    case .about:
-                        AboutTabView()
+                    case .updates:
+                        UpdatesTabView(viewModel: viewModel)
                     }
                 }
                 .padding(24)
@@ -103,7 +175,7 @@ public struct PreferencesView: View {
         }
         .id(languageRevision)
         .onReceive(NotificationCenter.default.publisher(for: .languageDidChange)) { _ in
-            languageRevision += 1
+            languageRevision += 2
         }
         .frame(minWidth: 780, minHeight: 600)
         .sheet(isPresented: $showingRuleEditor) {
@@ -113,69 +185,8 @@ public struct PreferencesView: View {
                 onDismiss: { showingRuleEditor = false; editingRule = nil }
             )
         }
-        .sheet(isPresented: $showingScriptEditor) {
-            ScriptEditorView(
-                scripts: $scripts,
-                editingScript: editingScript,
-                onDismiss: { showingScriptEditor = false; editingScript = nil }
-            )
-        }
         .onAppear {
-            loadScripts()
-            loadRightClickApps()
-        }
-        .onChange(of: selectedTab) { newTab in
-            if newTab == .appleScript {
-                loadScripts()
-            } else if newTab == .rightClick {
-                loadRightClickApps()
-            }
-        }
-    }
-
-    private func loadScripts() {
-        scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-    }
-
-    private func loadRightClickApps() {
-        rightClickApps = RightClicksList.shared.allApps()
-    }
-}
-
-/// Tab enumeration for the preferences window.
-enum PreferencesTab: CaseIterable {
-    case general
-    case rules
-    case appleScript
-    case filters
-    case rightClick
-    case rightClickMenu
-    case clipboard
-    case about
-
-    var title: String {
-        switch self {
-        case .general: return L("General")
-        case .rules: return L("Rules")
-        case .appleScript: return L("AppleScript")
-        case .filters: return L("Filters")
-        case .rightClick: return L("Right Click")
-        case .rightClickMenu: return L("RightClickMenu")
-        case .clipboard: return L("Clipboard")
-        case .about: return L("About")
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .general: return "gearshape"
-        case .rules: return "list.bullet.rectangle"
-        case .appleScript: return "curlybraces"
-        case .filters: return "line.3.horizontal.decrease.circle"
-        case .rightClick: return "mouse"
-        case .rightClickMenu: return "menubar.rectangle"
-        case .clipboard: return "doc.on.clipboard"
-        case .about: return "info.circle"
+            rightClickApps = RightClicksList.shared.allApps()
         }
     }
 }
@@ -230,6 +241,8 @@ struct GeneralTabView: View {
                     }
                 ))
                 Toggle(L("Show UI in any application"), isOn: $viewModel.showUIInWhateverApp)
+                Toggle(L("Open preferences on startup"), isOn: $viewModel.openPrefOnStartup)
+                Toggle(L("Merge consecutive identical gestures"), isOn: $viewModel.mergeConsecutiveIdenticalGestures)
             }
 
             SectionHeader(L("Language"))
@@ -297,6 +310,7 @@ struct RulesTabView: View {
                             action: oldRule.action,
                             note: oldRule.note,
                             isEnabled: oldRule.isEnabled,
+                            triggerOnEveryMatch: oldRule.triggerOnEveryMatch,
                             filter: oldRule.filter,
                             filterType: oldRule.filterType
                         )
@@ -326,6 +340,16 @@ struct RulesTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .foregroundColor(.red)
+
+                Button(L("Export Rules…")) {
+                    exportRules()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L("Import Rules…")) {
+                    importRules()
+                }
+                .buttonStyle(.bordered)
             }
 
             // Rules list
@@ -356,6 +380,7 @@ struct RulesTabView: View {
                                     action: rule.action,
                                     note: rule.note,
                                     isEnabled: newValue,
+                                    triggerOnEveryMatch: rule.triggerOnEveryMatch,
                                     filter: rule.filter,
                                     filterType: rule.filterType
                                 )
@@ -365,6 +390,34 @@ struct RulesTabView: View {
                         .labelsHidden()
                     }
                     .width(60)
+
+                    TableColumn(L("Trigger on Every Match")) { rule in
+                        Toggle("", isOn: Binding(
+                            get: { rule.triggerOnEveryMatch },
+                            set: { newValue in
+                                let newRule = Rule(
+                                    name: rule.name,
+                                    description: rule.description,
+                                    template: rule.template,
+                                    minSimilarityScore: rule.minSimilarityScore,
+                                    action: rule.action,
+                                    note: rule.note,
+                                    isEnabled: rule.isEnabled,
+                                    triggerOnEveryMatch: newValue,
+                                    filter: rule.filter,
+                                    filterType: rule.filterType
+                                )
+                                ruleStore.update(newRule)
+                            }
+                        ))
+                        .labelsHidden()
+                    }
+                    .width(110)
+
+                    TableColumn(L("Type")) { rule in
+                        ActionBadge(action: rule.action)
+                    }
+                    .width(110)
 
                     TableColumn(L("Gesture")) { rule in
                         DrawGestureView(
@@ -442,6 +495,112 @@ struct RulesTabView: View {
     }
 }
 
+// MARK: - Rule Import/Export Helpers
+
+extension RulesTabView {
+    private func exportRules() {
+        let panel = NSSavePanel()
+        panel.title = L("Export Rules")
+        panel.allowedContentTypes = [.json]
+        panel.allowedFileTypes = ["json"]
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let data = try JSONEncoder().encode(ruleStore.rules)
+                try data.write(to: url, options: .atomic)
+            } catch {
+                NSAlert.showError(NSError(domain: "MacStroke", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
+            }
+        }
+    }
+
+    private func importRules() {
+        let panel = NSOpenPanel()
+        panel.title = L("Import Rules")
+        panel.allowedContentTypes = [.json]
+        panel.allowedFileTypes = ["json"]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let data = try Data(contentsOf: url)
+                let importedRules = try JSONDecoder().decode([Rule].self, from: data)
+                ruleStore.rules = importedRules
+                ruleStore.save()
+            } catch {
+                NSAlert.showError(NSError(domain: "MacStroke", code: 2, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
+            }
+        }
+    }
+}
+
+extension NSAlert {
+    static func showError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = error.localizedDescription
+        if let nsError = error as? NSError {
+            alert.informativeText = nsError.localizedFailureReason ?? ""
+        }
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: L("OK"))
+        alert.runModal()
+    }
+}
+
+extension AppleScriptTabView {
+    private func exportScripts() {
+        let panel = NSSavePanel()
+        panel.title = L("Export Scripts")
+        panel.allowedContentTypes = [.json]
+        panel.allowedFileTypes = ["json"]
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(AppleScriptsList.sharedAppleScriptsList.getAllScripts())
+                try data.write(to: url, options: .atomic)
+            } catch {
+                NSAlert.showError(NSError(domain: "MacStroke", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
+            }
+        }
+    }
+
+    private func importScripts() {
+        let panel = NSOpenPanel()
+        panel.title = L("Import Scripts")
+        panel.allowedContentTypes = [.json]
+        panel.allowedFileTypes = ["json"]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let data = try Data(contentsOf: url)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let importedScripts = try decoder.decode([AppleScriptItem].self, from: data)
+                for script in importedScripts {
+                    _ = AppleScriptsList.sharedAppleScriptsList.addScript(name: script.name, source: script.source)
+                }
+                scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+            } catch {
+                NSAlert.showError(NSError(domain: "MacStroke", code: 2, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
+            }
+        }
+    }
+}
+
 struct ActionBadge: View {
     let action: RuleAction
 
@@ -459,9 +618,10 @@ struct ActionBadge: View {
     private var actionLabelAndColor: (String, Color) {
         switch action {
         case .applescript: return (L("AppleScript"), .orange)
-        case .keyPress: return (L("Shortcut"), .blue)
+        case .keyPress, .shortcut: return (L("Shortcut"), .blue)
         case .mouseClick: return (L("Mouse Click"), .purple)
-        case .copyToClipboard: return (L("Copy Text"), .green)
+        case .copyToClipboard, .text: return (L("Copy Text"), .green)
+        case .password: return (L("Password"), .red)
         case .none: return (L("None"), .gray)
         }
     }
@@ -486,6 +646,7 @@ struct RuleEditorView: View {
     @State private var isEnabled = true
     @State private var filter = ""
     @State private var filterType = "wildcard"
+    @State private var triggerOnEveryMatch = false
     @State private var availableGestures: [(name: String, stroke: Stroke)] = []
 
     enum RuleActionType: String, CaseIterable {
@@ -600,9 +761,8 @@ struct RuleEditorView: View {
                             case .shortcut:
                                 HStack {
                                     Text(L("Key Combination"))
-                                    TextField("e.g. ⌘⇧N", text: $shortcutKey)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 150)
+                                    ShortcutRecorder(text: $shortcutKey, onShortcutChanged: { shortcutKey = $0 })
+                                        .frame(width: 150, height: 24)
                                 }
                             case .applescript:
                                 VStack(alignment: .leading, spacing: 8) {
@@ -647,6 +807,7 @@ struct RuleEditorView: View {
                 GroupBox(L("Notification")) {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle(L("Show notification on match"), isOn: $isEnabled)
+                        Toggle(L("Trigger on every match"), isOn: $triggerOnEveryMatch)
                         LabeledContent(L("Notification text")) {
                             TextField(L("Notification text"), text: $note)
                                 .textFieldStyle(.roundedBorder)
@@ -686,6 +847,7 @@ struct RuleEditorView: View {
         minSimilarityScore = rule.minSimilarityScore
         note = rule.note
         isEnabled = rule.isEnabled
+        triggerOnEveryMatch = rule.triggerOnEveryMatch
         filter = rule.filter
         filterType = rule.filterType
 
@@ -693,15 +855,21 @@ struct RuleEditorView: View {
         case .keyPress(let key):
             actionType = .shortcut
             shortcutKey = key
+        case .shortcut(let keyCode, let flags):
+            actionType = .shortcut
+            shortcutKey = "keyCode=\(keyCode), flags=\(flags)"
         case .applescript(let source):
             actionType = .applescript
             appleScriptSource = source
-        case .copyToClipboard(let text):
+        case .copyToClipboard(let text), .text(let text):
             if text.contains("password") || text.count > 20 {
                 actionType = .password
             } else {
                 actionType = .text
             }
+            copyText = text
+        case .password(let text):
+            actionType = .password
             copyText = text
         case .mouseClick(let x, let y):
             actionType = .mouseClick
@@ -725,11 +893,17 @@ struct RuleEditorView: View {
         let action: RuleAction
         switch actionType {
         case .shortcut:
-            action = .keyPress(shortcutKey)
+            if let combined = parseShortcutKey(shortcutKey) {
+                action = .shortcut(keyCode: combined.keyCode, flags: combined.flags)
+            } else {
+                action = .keyPress(shortcutKey)
+            }
         case .applescript:
             action = .applescript(appleScriptSource)
-        case .text, .password:
-            action = .copyToClipboard(copyText)
+        case .text:
+            action = .text(copyText)
+        case .password:
+            action = .password(copyText)
         case .mouseClick:
             action = .mouseClick(x: mouseClickX, y: mouseClickY)
         case .none:
@@ -744,6 +918,7 @@ struct RuleEditorView: View {
             action: action,
             note: note,
             isEnabled: isEnabled,
+            triggerOnEveryMatch: triggerOnEveryMatch,
             filter: filter,
             filterType: filterType
         )
@@ -753,6 +928,20 @@ struct RuleEditorView: View {
         } else {
             ruleStore.add(rule)
         }
+    }
+
+    private func parseShortcutKey(_ raw: String) -> (keyCode: UInt16, flags: UInt)? {
+        // Expect format "keyCode=X, flags=Y"
+        let cleaned = raw.trimmingCharacters(in: .whitespaces)
+        let pattern = #"keyCode=(\d+),\s*flags=(\d+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: cleaned, range: NSRange(cleaned.startIndex..., in: cleaned)),
+              let keyCodeRange = Range(match.range(at: 1), in: cleaned),
+              let flagsRange = Range(match.range(at: 2), in: cleaned),
+              let keyCodeInt = Int(String(cleaned[keyCodeRange])),
+              let flagsInt = Int(String(cleaned[flagsRange]))
+        else { return nil }
+        return (UInt16(keyCodeInt), UInt(flagsInt))
     }
 }
 
@@ -785,6 +974,16 @@ struct AppleScriptTabView: View {
                     Label(L("Add Example"), systemImage: "plus.square.on.square")
                 }
                 .menuStyle(.borderlessButton)
+
+                Button(L("Export Scripts…")) {
+                    exportScripts()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L("Import Scripts…")) {
+                    importScripts()
+                }
+                .buttonStyle(.bordered)
             }
 
             if scripts.isEmpty {
@@ -833,6 +1032,13 @@ struct AppleScriptTabView: View {
                             }
                             .buttonStyle(.borderless)
 
+                            Button {
+                                openInExternalEditor(script: script)
+                            } label: {
+                                Image(systemName: "square.and.pencil")
+                            }
+                            .buttonStyle(.borderless)
+
                             Button(role: .destructive) {
                                 AppleScriptsList.sharedAppleScriptsList.removeScript(id: script.id)
                                 scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
@@ -842,13 +1048,27 @@ struct AppleScriptTabView: View {
                             .buttonStyle(.borderless)
                         }
                     }
-                    .width(80)
+                    .width(120)
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
                 .frame(minHeight: 400)
             }
         }
     }
+}
+
+private func openInExternalEditor(script: AppleScriptItem) {
+    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("MacStrokeExternalEditor", isDirectory: true)
+    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
+    let fileURL = tempDir.appendingPathComponent("\(script.name).scpt")
+    // Write source as plain text for the editor
+    do {
+        try script.source.write(to: fileURL, atomically: true, encoding: .utf8)
+    } catch {
+        NSAlert.showError(NSError(domain: "MacStroke", code: 3, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
+        return
+    }
+    NSWorkspace.shared.open(fileURL)
 }
 
 struct ScriptEditorView: View {
@@ -922,6 +1142,11 @@ struct AppleScriptExamples {
         (name: "Activate App", source: "tell application \"Finder\" to activate"),
         (name: "Get Clipboard", source: "the clipboard as text"),
         (name: "Set Clipboard", source: "set the clipboard to \"Hello World\""),
+        (name: "Hide Application", source: "tell application \"Finder\" to hide"),
+        (name: "Minimize Window", source: "tell application \"System Events\" to keystroke \"m\" using {command down}"),
+        (name: "Close Window", source: "tell application \"System Events\" to keystroke \"w\" using {command down}"),
+        (name: "Take Screenshot", source: "do shell script \"screencapture ~/Desktop/screenshot.png\""),
+        (name: "Get Selected Finder Items", source: "tell application \"Finder\" to selection"),
     ]
 }
 
@@ -931,6 +1156,8 @@ struct FiltersTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var blockFilterText = ""
     @State private var whiteListText = ""
+    @State private var showingRunningApps = false
+    @State private var selectedRunningApp: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -967,7 +1194,7 @@ struct FiltersTabView: View {
 
             HStack {
                 Button(L("Add Running App…")) {
-                    // TODO: Show running apps picker
+                    showRunningAppsPicker()
                 }
                 .buttonStyle(.bordered)
 
@@ -987,6 +1214,57 @@ struct FiltersTabView: View {
         .onAppear {
             blockFilterText = viewModel.blockFilter
             whiteListText = viewModel.whiteList
+        }
+
+        }
+}
+
+extension FiltersTabView {
+    /// Present a list of running applications and add the selected bundle ID
+    /// to the current filter list (blocklist in blacklist mode, allowlist in
+    /// whitelist mode).
+    private func showRunningAppsPicker() {
+        let apps = NSWorkspace.shared.runningApplications
+            .filter { $0.bundleIdentifier != nil && !$0.bundleIdentifier!.isEmpty }
+            .sorted { $0.localizedName?.caseInsensitiveCompare($1.localizedName ?? "") ?? .orderedAscending == .orderedAscending }
+
+        let alert = NSAlert()
+        alert.messageText = L("Add Running App…")
+        alert.informativeText = L("Select an application to add its bundle identifier to the current filter list.")
+        alert.alertStyle = .informational
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
+        for app in apps {
+            let title = "\(app.localizedName ?? app.bundleIdentifier ?? "Unknown") (\(app.bundleIdentifier ?? "Unknown"))"
+            popup.addItem(withTitle: title)
+        }
+        if popup.numberOfItems > 0 {
+            popup.selectItem(at: 0)
+        }
+        alert.accessoryView = popup
+
+        alert.addButton(withTitle: L("Add"))
+        alert.addButton(withTitle: L("Cancel"))
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn && popup.indexOfSelectedItem != -1 {
+            let selected = apps[popup.indexOfSelectedItem]
+            let bundleID = selected.bundleIdentifier ?? ""
+            if !bundleID.isEmpty {
+                if viewModel.whiteListMode {
+                    let lines = whiteListText
+                        .components(separatedBy: "\n")
+                        .filter { !$0.isEmpty && $0 != bundleID }
+                    whiteListText = (lines + [bundleID]).joined(separator: "\n")
+                    viewModel.whiteList = whiteListText
+                } else {
+                    let lines = blockFilterText
+                        .components(separatedBy: "\n")
+                        .filter { !$0.isEmpty && $0 != bundleID }
+                    blockFilterText = (lines + [bundleID]).joined(separator: "\n")
+                    viewModel.blockFilter = blockFilterText
+                }
+            }
         }
     }
 }
@@ -1153,20 +1431,41 @@ struct ClipboardTabView: View {
 
             if viewModel.enableHistoryClipboard {
                 VStack(alignment: .leading, spacing: 16) {
+                    // Storage mode: local file vs RAM
+                    HStack {
+                        Text(L("Storage"))
+                        Spacer()
+                        Picker("", selection: $viewModel.clipoardStroageLocal) {
+                            Text(L("Local")).tag(true)
+                            Text(L("RAM")).tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                    .frame(height: 30)
+
+                    HStack {
+                        Text(L("Enable total history limit"))
+                        Spacer()
+                        Toggle("", isOn: $viewModel.enableLimitTotal)
+                    }
+
+                    if viewModel.enableLimitTotal {
+                        HStack {
+                            Text(L("Total history limit"))
+                            Spacer()
+                            Stepper(value: $viewModel.limitTotal, in: 10...5000, step: 10) {
+                                Text("\(viewModel.limitTotal)")
+                                    .frame(width: 50, alignment: .trailing)
+                            }
+                        }
+                    }
+
                     HStack {
                         Text(L("Pinned items limit"))
                         Spacer()
                         Stepper(value: $viewModel.clipboardLimitTop, in: 1...200) {
                             Text("\(viewModel.clipboardLimitTop)")
-                                .frame(width: 50, alignment: .trailing)
-                        }
-                    }
-
-                    HStack {
-                        Text(L("Total history limit"))
-                        Spacer()
-                        Stepper(value: $viewModel.clipboardLimitTotal, in: 10...5000, step: 10) {
-                            Text("\(viewModel.clipboardLimitTotal)")
                                 .frame(width: 50, alignment: .trailing)
                         }
                     }
@@ -1203,6 +1502,25 @@ struct ClipboardTabView: View {
 
                         Spacer()
                     }
+
+                    Divider()
+
+                    // Global shortcut to show clipboard history list
+                    HStack {
+                        Text(L("Show clipboard history shortcut"))
+                        Spacer()
+                        Text(viewModel.historyCilpboardListShortcut.isEmpty ? L("Not set") : viewModel.historyCilpboardListShortcut)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text(L("Click the button below to record a global shortcut."))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    ShortcutRecorder(
+                        text: $viewModel.historyCilpboardListShortcut,
+                        onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
+                    )
                 }
                 .padding(.leading, 16)
             }
@@ -1261,6 +1579,141 @@ struct AboutTabView: View {
                 .foregroundColor(.secondary)
 
             Spacer()
+        }
+    }
+}
+
+// MARK: - Note Tab
+
+struct NoteTabView: View {
+    @ObservedObject var viewModel: UserPreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SectionHeader(L("Note"))
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(L("Show note icon"), isOn: $viewModel.showNoteIcon)
+                Toggle(L("Default Note Color"), isOn: .constant(false)) // placeholder
+            }
+        }
+    }
+}
+
+// MARK: - Toast Tab
+
+struct ToastTabView: View {
+    @ObservedObject var viewModel: UserPreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SectionHeader(L("Toast"))
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(L("Show toast on match"), isOn: $viewModel.showToast)
+
+                HStack {
+                    Text(L("Toast position"))
+                    Spacer()
+                    Picker("", selection: $viewModel.notePosition) {
+                        Text(L("Top")).tag(0)
+                        Text(L("Center")).tag(1)
+                        Text(L("Bottom")).tag(2)
+                        Text(L("Top Right")).tag(3)
+                        Text(L("Bottom Right")).tag(4)
+                        Text(L("Top Left")).tag(5)
+                        Text(L("Bottom Left")).tag(6)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 200)
+                }
+
+                HStack {
+                    Text(L("Toast font"))
+                    Spacer()
+                    Text(viewModel.noteFontName)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(width: 200, alignment: .leading)
+                    Button(L("Font Panel")) {
+                        // Show font panel
+                        NSFontPanel.shared.orderFront(nil)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                HStack {
+                    Text(L("Toast font size"))
+                    Spacer()
+                    Stepper(value: $viewModel.noteFontSize, in: 8...72, step: 1) {
+                        Text("\(Int(viewModel.noteFontSize))")
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                }
+
+                HStack {
+                    Text(L("Toast background opacity"))
+                    Spacer()
+                    Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
+                    Text(String(format: "%.0f%%", viewModel.noteBackgroundAlpha * 100))
+                        .frame(width: 50, alignment: .trailing)
+                }
+
+                HStack {
+                    Text(L("Retention time (seconds)"))
+                    Spacer()
+                    Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
+                        Text("\(viewModel.noteRetentionTime)")
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                }
+            }
+            .padding(.leading, 16)
+        }
+    }
+}
+
+// MARK: - Drawing Tab
+
+struct DrawingTabView: View {
+    @ObservedObject var viewModel: UserPreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SectionHeader(L("Drawing"))
+
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(L("Disable mouse path"), isOn: $viewModel.disableMousePath)
+
+                HStack {
+                    Text(L("Line width"))
+                    Spacer()
+                    Stepper(value: $viewModel.lineWidth, in: 1...20, step: 1) {
+                        Text("\(Int(viewModel.lineWidth))")
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                }
+
+                HStack {
+                    Text(L("Line color"))
+                    Spacer()
+                    ColorPicker("", selection: $viewModel.lineColor)
+                        .frame(width: 80)
+                    Text(viewModel.lineColorHex)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+
+                HStack {
+                    Text(L("Default Note Color"))
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { Color(hex: viewModel.defaultNoteColorHex) },
+                        set: { viewModel.defaultNoteColorHex = $0.hexString }
+                    ))
+                    .frame(width: 80)
+                }
+            }
+            .padding(.leading, 16)
         }
     }
 }

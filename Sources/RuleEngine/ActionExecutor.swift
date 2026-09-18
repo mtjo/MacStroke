@@ -38,6 +38,12 @@ public final class ActionExecutor {
             clickMouse(x: x, y: y)
         case .copyToClipboard(let text):
             copyToClipboard(text)
+        case .shortcut(let keyCode, let flags):
+            pressKey(keyCode: keyCode, flags: flags)
+        case .text(let text):
+            typeText(text)
+        case .password(let password):
+            typeText(password)
         case .none:
             break
         }
@@ -50,10 +56,17 @@ public final class ActionExecutor {
             print("[ActionExecutor] Unknown key: \(key)")
             return
         }
+        pressKey(keyCode: keyCode, flags: 0)
+    }
+
+    private func pressKey(keyCode: UInt16, flags: UInt) {
+        let flagMask: CGEventFlags = CGEventFlags(rawValue: UInt64(flags))
         if let down = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true) {
+            down.flags = flagMask
             down.post(tap: .cghidEventTap)
         }
         if let up = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) {
+            up.flags = flagMask
             up.post(tap: .cghidEventTap)
         }
     }
@@ -66,6 +79,14 @@ public final class ActionExecutor {
         if let upEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) {
             upEvent.post(tap: .cghidEventTap)
         }
+    }
+
+    private func typeText(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        // Simulate paste command (cmd+v)
+        pressKey(keyCode: 0x09, flags: 0x08) // cmd+v
     }
 
     private func copyToClipboard(_ text: String) {

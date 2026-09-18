@@ -19,6 +19,10 @@ public enum StorageKey: String {
     case whiteListMode = "whiteListMode"
     case whiteList = "whiteList"
     case language = "language"
+    case openPrefOnStartup = "openPrefOnStartup"
+    case mergeConsecutiveIdenticalGestures = "mergeConsecutiveIdenticalGestures"
+    case defaultLineColor = "defaultLineColor"
+    case defaultNoteColor = "defaultNoteColor"
 
     // Gesture recognition
     case minimumPoints = "minimumPoints"
@@ -50,6 +54,11 @@ public enum StorageKey: String {
     case clipboardLimitTotal = "clipboardLimitTotal"
     case clipboardSaveDays = "clipboardSaveDays"
     case enableHistoryClipboard = "enableHistoryClipboard"
+    case clipoardStroageLocal = "clipoardStroageLocal"
+    case clipoardStroageRam = "clipoardStroageRam"
+    case historyCilpboardListShortcut = "historyCilpboardListShortcut"
+    case enableLimitTotal = "enableLimitTotal"
+    case limitTotal = "limitTotal"
 
     // Updates
     case autoCheckUpdates = "autoCheckUpdates"
@@ -141,19 +150,23 @@ public enum StorageDefaults {
     public static let whiteListMode: Bool = false
     public static let whiteList: String = ""
     public static let language: String = "en"
+    public static let openPrefOnStartup: Bool = true
+    public static let mergeConsecutiveIdenticalGestures: Bool = false
+    public static let defaultLineColor: String = "#0000ff"
+    public static let defaultNoteColor: String = "#000000"
 
     // Gesture recognition
     public static let minimumPoints: Int = 10
-    public static let minSimilarityScore: Double = 30.0
+    public static let minSimilarityScore: Double = 85.0
     public static let enableGestureMinScore: Bool = true
     public static let showGestureNote: Bool = true
 
     // Note/Toast
-    public static let noteRetentionTime: Int = 2
+    public static let noteRetentionTime: Int = 1
     public static let notePosition: Int = 1              // 0鼠标 1屏幕中心 2右上...
-    public static let noteBackgroundAlpha: Double = 0.7
-    public static let noteFontName: String = "Helvetica"
-    public static let noteFontSize: Double = 14
+    public static let noteBackgroundAlpha: Double = 0.5
+    public static let noteFontName: String = "Monaco"
+    public static let noteFontSize: Double = 40
     public static let showNoteIcon: Bool = true
 
     // Drawing
@@ -169,9 +182,13 @@ public enum StorageDefaults {
 
     // Clipboard
     public static let enableHistoryClipboard: Bool = true
-    public static let clipboardLimitTop: Int = 50
-    public static let clipboardLimitTotal: Int = 500
+    public static let clipboardLimitTop: Int = 15
+    public static let clipboardLimitTotal: Int = 200
     public static let clipboardSaveDays: Int = 7
+    public static let clipoardStroageLocal: Bool = true
+    public static let clipoardStroageRam: Bool = false
+    public static let enableLimitTotal: Bool = false
+    public static let limitTotal: Int = 200
 
     // Updates
     public static let autoCheckUpdates: Bool = true
