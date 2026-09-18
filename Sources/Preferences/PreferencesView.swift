@@ -1,9 +1,12 @@
 //
- //  PreferencesView.swift
- //  MacStroke
- //
- //  SwiftUI-based tabbed preferences UI for MacStroke.
- //
+//  PreferencesView.swift
+//  MacStroke
+//
+//  SwiftUI-based tabbed preferences UI for MacStroke.
+//  Tab layout mirrors the original AppPrefsWindowController.setupToolbar:
+//  General, Rules, Filters, AppleScript, RightClick, RightClickMenu,
+//  Clipboard, About.
+//
 
 import SwiftUI
 import AppKit
@@ -24,69 +27,55 @@ extension AppleScriptItem: Identifiable { }
 
 // MARK: - Preferences Tab Enumeration
 
-/// Original MacStroke preferences tab enumeration (7 tabs).
+/// Original MacStroke preferences tab enumeration (8 tabs, matching
+/// AppPrefsWindowController.setupToolbar).
 enum PreferencesTab: CaseIterable {
     case general
-    case gesture
-    case note
-    case drawing
+    case rules
+    case filters
+    case appleScript
     case rightClick
+    case rightClickMenu
     case clipboard
-    case updates
+    case about
 
     var title: String {
         switch self {
         case .general: return L("General")
-        case .gesture: return L("Gesture")
-        case .note: return L("Note")
-        case .drawing: return L("Drawing")
-        case .rightClick: return L("Right Click")
+        case .rules: return L("Rules")
+        case .filters: return L("Filters")
+        case .appleScript: return L("AppleScript")
+        case .rightClick: return L("RightClick")
+        case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
-        case .updates: return L("Updates")
+        case .about: return L("About")
         }
     }
 
     var systemImage: String {
         switch self {
         case .general: return "gearshape"
-        case .gesture: return "waveform"
-        case .note: return "note.text"
-        case .drawing: return "pencil.line"
+        case .rules: return "waveform"
+        case .filters: return "line.3.horizontal.decrease"
+        case .appleScript: return "curlybraces"
         case .rightClick: return "mouse"
+        case .rightClickMenu: return "contextualmenu.and.cursor"
         case .clipboard: return "doc.on.clipboard"
-        case .updates: return "arrow.clockwise"
+        case .about: return "info.circle"
         }
     }
 }
 
-// MARK: - Updates Tab View
+// MARK: - Check-for-updates notification (handled by the AppDelegate)
 
-struct UpdatesTabView: View {
-    @ObservedObject var viewModel: UserPreferences
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Updates"))
-
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle(L("Auto-check updates"), isOn: $viewModel.autoCheckUpdates)
-
-                if viewModel.autoCheckUpdates {
-                    HStack {
-                        Text(L("Feed URL"))
-                        Spacer()
-                        TextField(L("Enter update feed URL"), text: .constant("https://example.com/updates/feed.xml"))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .frame(width: 250)
-                            .border(Color.secondary.opacity(0.2))
-                    }
-                    .padding(.leading, 8)
-                }
-            }
-            .padding(.leading, 16)
-        }
-    }
+public extension Notification.Name {
+    /// Ask the AppDelegate (which owns the Sparkle updater) to check for updates.
+    static let macStrokeCheckForUpdates = Notification.Name("MacStrokeCheckForUpdates")
+    /// Ask the AppDelegate to enter gesture-recording mode for the named rule
+    /// (userInfo: ["ruleName": String]).
+    static let macStrokeRecordGesture = Notification.Name("MacStrokeRecordGesture")
+    /// Leave gesture-recording mode without storing anything.
+    static let macStrokeCancelRecordGesture = Notification.Name("MacStrokeCancelRecordGesture")
 }
 
 // MARK: - Shortcut Recorder SwiftUI Wrapper
@@ -97,6 +86,11 @@ struct ShortcutRecorder: NSViewRepresentable {
 
     func makeNSView(context: Context) -> ShortcutRecorderView {
         let view = ShortcutRecorderView()
+        // Show the persisted shortcut (e.g. the ^⇧V default) right away.
+        if let parsed = Self.parse(text) {
+            view.keyCode = parsed.keyCode
+            view.flags = parsed.flags
+        }
         view.onShortcutChanged = { code, flags in
             text = "keyCode=\(code), flags=\(flags)"
             onShortcutChanged?(text)
@@ -104,14 +98,44 @@ struct ShortcutRecorder: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {}
+    func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {
+        // Sync external changes (reset to defaults etc.) into the view
+        // while the user is not actively recording.
+        if !nsView.isRecording, let parsed = Self.parse(text) {
+            if nsView.keyCode != parsed.keyCode || nsView.flags != parsed.flags {
+                nsView.keyCode = parsed.keyCode
+                nsView.flags = parsed.flags
+            }
+        }
+    }
+
+    /// Parse a "keyCode=X, flags=Y" string.
+    static func parse(_ raw: String) -> (keyCode: UInt16, flags: UInt)? {
+        let cleaned = raw.trimmingCharacters(in: .whitespaces)
+        guard !cleaned.isEmpty else { return nil }
+        let pattern = #"keyCode=(\d+),\s*flags=(\d+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: cleaned, range: NSRange(cleaned.startIndex..., in: cleaned)),
+              let keyCodeRange = Range(match.range(at: 1), in: cleaned),
+              let flagsRange = Range(match.range(at: 2), in: cleaned),
+              let keyCodeInt = Int(String(cleaned[keyCodeRange])),
+              let flagsInt = Int(String(cleaned[flagsRange]))
+        else { return nil }
+        return (UInt16(keyCodeInt), UInt(flagsInt))
+    }
 }
+
+// MARK: - Root View
+
 public struct PreferencesView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var selectedTab: PreferencesTab = .general
     @StateObject private var ruleStore = RuleStore()
     @State private var showingRuleEditor = false
     @State private var editingRule: Rule?
+    @State private var scripts: [AppleScriptItem] = []
+    @State private var showingScriptEditor = false
+    @State private var editingScript: AppleScriptItem?
     @State private var rightClickApps: [String] = []
     @State private var newRightClickApp = ""
     /// Bumped whenever the UI language changes so the whole view tree
@@ -146,27 +170,33 @@ public struct PreferencesView: View {
                     switch selectedTab {
                     case .general:
                         GeneralTabView(viewModel: viewModel)
-                    case .gesture:
+                    case .rules:
                         RulesTabView(
                             viewModel: viewModel,
                             ruleStore: ruleStore,
                             showingRuleEditor: $showingRuleEditor,
                             editingRule: $editingRule
                         )
-                    case .note:
-                        NoteTabView(viewModel: viewModel)
-                    case .drawing:
-                        DrawingTabView(viewModel: viewModel)
+                    case .filters:
+                        FiltersTabView(viewModel: viewModel)
+                    case .appleScript:
+                        AppleScriptTabView(
+                            scripts: $scripts,
+                            showingScriptEditor: $showingScriptEditor,
+                            editingScript: $editingScript
+                        )
                     case .rightClick:
                         RightClickTabView(
                             viewModel: viewModel,
                             rightClickApps: $rightClickApps,
                             newRightClickApp: $newRightClickApp
                         )
+                    case .rightClickMenu:
+                        RightClickMenuTabView(viewModel: viewModel)
                     case .clipboard:
                         ClipboardTabView(viewModel: viewModel)
-                    case .updates:
-                        UpdatesTabView(viewModel: viewModel)
+                    case .about:
+                        AboutTabView(viewModel: viewModel)
                     }
                 }
                 .padding(24)
@@ -177,7 +207,7 @@ public struct PreferencesView: View {
         .onReceive(NotificationCenter.default.publisher(for: .languageDidChange)) { _ in
             languageRevision += 2
         }
-        .frame(minWidth: 780, minHeight: 600)
+        .frame(minWidth: 820, minHeight: 620)
         .sheet(isPresented: $showingRuleEditor) {
             RuleEditorView(
                 ruleStore: ruleStore,
@@ -185,8 +215,24 @@ public struct PreferencesView: View {
                 onDismiss: { showingRuleEditor = false; editingRule = nil }
             )
         }
+        .sheet(isPresented: $showingScriptEditor) {
+            ScriptEditorView(
+                scripts: $scripts,
+                editingScript: editingScript,
+                onDismiss: {
+                    showingScriptEditor = false
+                    editingScript = nil
+                    scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+                }
+            )
+        }
         .onAppear {
             rightClickApps = RightClicksList.shared.allApps()
+            scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macStrokeRuleStoreDidChange)) { _ in
+            // A screen-drawn gesture was recorded into a rule — refresh.
+            ruleStore.load()
         }
     }
 }
@@ -220,6 +266,8 @@ struct TabButton: View {
 }
 
 // MARK: - General Tab
+// Original General tab: app toggles, language, gesture recognition settings,
+// note (toast) settings, drawing settings, import/export, reset defaults.
 
 struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
@@ -227,12 +275,26 @@ struct GeneralTabView: View {
     @StateObject private var launchController = LaunchAtLoginController.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 20) {
             SectionHeader(L("General"))
 
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle(L("Enable MacStroke"), isOn: $viewModel.isEnabled)
-                Toggle(L("Show icon in status bar"), isOn: $viewModel.showIconInStatusBar)
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(L("Enable MacStroke"), isOn: Binding(
+                    get: { viewModel.isEnabled },
+                    set: { newValue in
+                        viewModel.isEnabled = newValue
+                        NotificationCenter.default.post(
+                            name: .macStrokeEnabledDidChange, object: newValue)
+                    }
+                ))
+                Toggle(L("Show icon in status bar"), isOn: Binding(
+                    get: { viewModel.showIconInStatusBar },
+                    set: { newValue in
+                        viewModel.showIconInStatusBar = newValue
+                        NotificationCenter.default.post(
+                            name: .showIconInStatusBarDidChange, object: newValue)
+                    }
+                ))
                 Toggle(L("Launch at login"), isOn: Binding(
                     get: { launchController.isEnabled },
                     set: { enabled in
@@ -240,31 +302,234 @@ struct GeneralTabView: View {
                         viewModel.launchAtLogin = enabled
                     }
                 ))
-                Toggle(L("Show UI in any application"), isOn: $viewModel.showUIInWhateverApp)
                 Toggle(L("Open preferences on startup"), isOn: $viewModel.openPrefOnStartup)
+                Toggle(L("Show UI in any application"), isOn: $viewModel.showUIInWhateverApp)
+            }
+
+            Divider()
+
+            // MARK: Gesture recognition (original General tab)
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
+                HStack {
+                    Text(L("Min Score:"))
+                    Slider(value: $viewModel.minSimilarityScore, in: 0...100, step: 1)
+                        .frame(width: 260)
+                    Text("\(Int(viewModel.minSimilarityScore))")
+                        .frame(width: 40, alignment: .trailing)
+                }
                 Toggle(L("Merge consecutive identical gestures"), isOn: $viewModel.mergeConsecutiveIdenticalGestures)
             }
 
-            SectionHeader(L("Language"))
+            Divider()
 
-            Picker(L("Language"), selection: $viewModel.language) {
-                Text(L("English")).tag("en")
-                Text(L("简体中文")).tag("zh-Hans")
+            // MARK: Note / toast settings (original General tab)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L("Note")).font(.headline)
+                Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
+                Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
+
+                HStack {
+                    Text(L("Font:"))
+                    Text(viewModel.noteFontName)
+                        .font(.system(.body, design: .monospaced))
+                    Button(L("Choose")) {
+                        openFontPanel()
+                    }
+                    .buttonStyle(.bordered)
+                    Text("Size: \(Int(viewModel.noteFontSize))")
+                        .foregroundColor(.secondary)
+                    Stepper("", value: $viewModel.noteFontSize, in: 8...96, step: 1).labelsHidden()
+                }
+
+                HStack {
+                    Text(L("Background Apha:"))
+                    Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
+                        .frame(width: 220)
+                    Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
+                        .frame(width: 40, alignment: .trailing)
+                }
+
+                HStack {
+                    Text(L("Retention Time:"))
+                    Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
+                        Text("\(viewModel.noteRetentionTime)s")
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                }
+
+                HStack {
+                    Text(L("Postion:"))
+                    Picker("", selection: $viewModel.notePosition) {
+                        Text(L("Follow The Mouse")).tag(0)
+                        Text(L("Center In Screen")).tag(1)
+                        Text(L("Right Top")).tag(2)
+                        Text(L("Right Bottom")).tag(3)
+                        Text(L("Left Top")).tag(4)
+                        Text(L("Left Bottom")).tag(5)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 200)
+                }
+
+                HStack {
+                    Text(L("Note Color"))
+                    ColorPicker("", selection: Binding(
+                        get: { Color(hex: viewModel.defaultNoteColorHex) },
+                        set: { viewModel.defaultNoteColorHex = $0.hexString }
+                    ))
+                    .frame(width: 60)
+                }
             }
-            .pickerStyle(.segmented)
-            .frame(width: 200)
+            .padding(.leading, 8)
 
-            SectionHeader(L("Version"))
+            Divider()
+
+            // MARK: Drawing settings (original General tab)
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
+                HStack {
+                    Text(L("Line color:"))
+                    ColorPicker("", selection: $viewModel.lineColor)
+                        .frame(width: 60)
+                    Text(viewModel.lineColorHex)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Text(L("Line width"))
+                    Stepper(value: $viewModel.lineWidth, in: 1...20, step: 1) {
+                        Text("\(Int(viewModel.lineWidth))")
+                            .frame(width: 30, alignment: .trailing)
+                    }
+                }
+            }
+            .padding(.leading, 8)
+
+            Divider()
+
+            // MARK: Language
+            HStack {
+                Text(L("Language:"))
+                Picker(L("Language"), selection: $viewModel.language) {
+                    Text(L("English")).tag("en")
+                    Text(L("简体中文")).tag("zh-Hans")
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+            }
+
+            Divider()
+
+            // MARK: Import / Export / Reset (original General tab)
+            HStack {
+                Button(L("Import")) { importPreferences() }
+                    .buttonStyle(.bordered)
+                Button(L("Export")) { exportPreferences() }
+                    .buttonStyle(.bordered)
+                Button(L("Reset Defaults")) { resetDefaults() }
+                    .buttonStyle(.bordered)
+            }
 
             HStack {
                 Text(L("Version"))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                     .foregroundColor(.secondary)
-                Text(L("Build") + " \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
-                    .foregroundColor(.secondary)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MacStrokeNoteFontDidChange"))) { _ in
+            // Re-read the font from defaults after the font panel closes.
+            let defaults = UserDefaults.standard
+            if let name = defaults.string(forKey: "noteFontName") {
+                viewModel.noteFontName = name
+            }
+            viewModel.noteFontSize = defaults.double(forKey: "noteFontSize")
+        }
+    }
+
+    /// Show the system font panel and observe font changes (original:
+    /// chooseFont: + changeFont: writing noteFontName / noteFontSize).
+    private func openFontPanel() {
+        let fontManager = NSFontManager.shared
+        fontManager.target = FontPanelObserver.shared
+        if let current = NSFont(name: viewModel.noteFontName, size: CGFloat(viewModel.noteFontSize)) {
+            fontManager.setSelectedFont(current, isMultiple: false)
+        }
+        fontManager.orderFrontFontPanel(self)
+    }
+
+    private func exportPreferences() {
+        let panel = NSSavePanel()
+        panel.title = L("Export")
+        panel.allowedContentTypes = [.propertyList]
+        panel.allowedFileTypes = ["plist"]
+        panel.nameFieldStringValue = "MacStrokePreferences.plist"
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url else { return }
+            let dict = UserDefaults.standard.dictionaryRepresentation()
+            // Only export MacStroke-related keys (skip system keys).
+            let ourKeys = dict.filter { key, _ in
+                StorageKey.allCases.contains { $0.rawValue == key }
+                    || key.hasPrefix("filter") || key == "rules" || key == "rightClicksList"
+            } as [String: Any]
+            do {
+                try (ourKeys as NSDictionary).write(to: url)
+                showNotification(L("Export succeeded"))
+            } catch {
+                NSAlert.showError(error)
+            }
+        }
+    }
+
+    private func importPreferences() {
+        let panel = NSOpenPanel()
+        panel.title = L("Import")
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.propertyList]
+        panel.allowedFileTypes = ["plist"]
+
+        guard let keyWindow = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: keyWindow) { response in
+            guard response == .OK, let url = panel.url,
+                  let imported = NSDictionary(contentsOf: url) as? [String: Any] else { return }
+            let defaults = UserDefaults.standard
+            for (key, value) in imported {
+                defaults.set(value, forKey: key)
+            }
+            defaults.synchronize()
+            showNotification(L("Restart MacStroke to take effect"))
+        }
+    }
+
+    private func resetDefaults() {
+        viewModel.resetToDefaults()
+        BlackWhiteFilter.shared.blackListText = ""
+        BlackWhiteFilter.shared.whiteListText = ""
+        showNotification(L("Restart MacStroke to take effect"))
+    }
+
+    private func showNotification(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "MacStroke"
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.runModal()
+    }
+}
+
+/// Receives font-panel change callbacks and mirrors them into UserDefaults
+/// (original: changeFont: writing noteFontName / noteFontSize).
+final class FontPanelObserver: NSObject {
+    static let shared = FontPanelObserver()
+
+    @objc func changeFont(_ sender: NSFontManager?) {
+        guard let sender = sender else { return }
+        let font = sender.convert(NSFont.systemFont(ofSize: NSFont.systemFontSize))
+        UserDefaults.standard.set(font.fontName, forKey: "noteFontName")
+        UserDefaults.standard.set(Double(font.pointSize), forKey: "noteFontSize")
+        NotificationCenter.default.post(name: NSNotification.Name("MacStrokeNoteFontDidChange"), object: nil)
     }
 }
 
@@ -322,6 +587,12 @@ struct RulesTabView: View {
                 .buttonStyle(.bordered)
                 .disabled(selectedPresetGesture == nil || selectedRuleForPreset == nil)
 
+                Button(L("Draw Gesture")) {
+                    drawGestureForSelectedRule()
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedRuleForPreset == nil)
+
                 Button(L("Add Rule")) {
                     editingRule = nil
                     showingRuleEditor = true
@@ -329,28 +600,30 @@ struct RulesTabView: View {
                 .buttonStyle(.borderedProminent)
 
                 Button(L("Reset to Defaults")) {
-                    ruleStore.rules = []
+                    ruleStore.rules = RuleStore.defaultRules()
                     ruleStore.save()
                 }
                 .buttonStyle(.bordered)
 
                 Button(L("Clear All")) {
-                    ruleStore.rules.removeAll()
-                    ruleStore.save()
+                    let alert = NSAlert()
+                    alert.messageText = L("warning!")
+                    alert.informativeText = L("Are you sure you want to clear all the rules?")
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: L("Ok"))
+                    alert.addButton(withTitle: L("Cancel"))
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        ruleStore.rules.removeAll()
+                        ruleStore.save()
+                    }
                 }
                 .buttonStyle(.bordered)
                 .foregroundColor(.red)
-
-                Button(L("Export Rules…")) {
-                    exportRules()
-                }
-                .buttonStyle(.bordered)
-
-                Button(L("Import Rules…")) {
-                    importRules()
-                }
-                .buttonStyle(.bordered)
             }
+
+            Text(L("tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\"."))
+                .font(.caption)
+                .foregroundColor(.secondary)
 
             // Rules list
             if ruleStore.rules.isEmpty {
@@ -415,9 +688,10 @@ struct RulesTabView: View {
                     .width(110)
 
                     TableColumn(L("Type")) { rule in
-                        ActionBadge(action: rule.action)
+                        Text(actionTypeLabel(for: rule.action))
+                            .font(.system(size: 12))
                     }
-                    .width(110)
+                    .width(100)
 
                     TableColumn(L("Gesture")) { rule in
                         DrawGestureView(
@@ -430,6 +704,10 @@ struct RulesTabView: View {
                         .onTapGesture {
                             selectedRuleForPreset = rule.name
                         }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2)
+                                .stroke(selectedRuleForPreset == rule.name ? Color.accentColor : Color.clear, lineWidth: 2)
+                        )
                     }
                     .width(80)
 
@@ -493,6 +771,39 @@ struct RulesTabView: View {
             }
         }
     }
+
+    /// Plain action-type label for the table's Type column (original combo:
+    /// Hot Key / Apple Script / Text / Password).
+    private func actionTypeLabel(for action: RuleAction) -> String {
+        switch action {
+        case .applescript: return L("Apple Script")
+        case .keyPress, .shortcut: return L("Hot Key")
+        case .text, .copyToClipboard: return L("Text")
+        case .password: return L("Password")
+        case .mouseClick: return L("Mouse Click")
+        case .none: return L("None")
+        }
+    }
+
+    /// Enter screen-recording mode for the selected rule: close the
+    /// preferences window and ask the AppDelegate to capture the next
+    /// right-button gesture (original: preSetRuleGestureAtIndex flow).
+    private func drawGestureForSelectedRule() {
+        guard let ruleName = selectedRuleForPreset else { return }
+        let alert = NSAlert()
+        alert.messageText = L("Draw Gesture!")
+        alert.informativeText = L("You can draw a gesture anywhere on the screen, or select the preset gesture below.")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L("Ok"))
+        alert.addButton(withTitle: L("Cancel"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            NotificationCenter.default.post(
+                name: .macStrokeRecordGesture,
+                object: nil,
+                userInfo: ["ruleName": ruleName]
+            )
+        }
+    }
 }
 
 // MARK: - Rule Import/Export Helpers
@@ -543,7 +854,7 @@ extension NSAlert {
     static func showError(_ error: Error) {
         let alert = NSAlert()
         alert.messageText = error.localizedDescription
-        if let nsError = error as? NSError {
+        if let nsError = error as NSError? {
             alert.informativeText = nsError.localizedFailureReason ?? ""
         }
         alert.alertStyle = .critical
@@ -617,10 +928,11 @@ struct ActionBadge: View {
 
     private var actionLabelAndColor: (String, Color) {
         switch action {
-        case .applescript: return (L("AppleScript"), .orange)
-        case .keyPress, .shortcut: return (L("Shortcut"), .blue)
+        case .applescript: return (L("Apple Script"), .orange)
+        case .keyPress, .shortcut: return (L("Hot Key"), .blue)
         case .mouseClick: return (L("Mouse Click"), .purple)
-        case .copyToClipboard, .text: return (L("Copy Text"), .green)
+        case .copyToClipboard: return (L("Copy Text"), .green)
+        case .text: return (L("Text"), .teal)
         case .password: return (L("Password"), .red)
         case .none: return (L("None"), .gray)
         }
@@ -650,9 +962,9 @@ struct RuleEditorView: View {
     @State private var availableGestures: [(name: String, stroke: Stroke)] = []
 
     enum RuleActionType: String, CaseIterable {
-        case shortcut = "Shortcut"
-        case applescript = "AppleScript"
-        case text = "Copy Text"
+        case shortcut = "Hot Key"
+        case applescript = "Apple Script"
+        case text = "Text"
         case password = "Password"
         case mouseClick = "Mouse Click"
         case none = "None"
@@ -774,7 +1086,7 @@ struct RuleEditorView: View {
                                 }
                             case .text:
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(L("Text to Copy"))
+                                    Text(L("Text to input"))
                                     TextEditor(text: $copyText)
                                         .frame(minHeight: 80)
                                         .border(Color.secondary.opacity(0.2))
@@ -806,7 +1118,7 @@ struct RuleEditorView: View {
 
                 GroupBox(L("Notification")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle(L("Show notification on match"), isOn: $isEnabled)
+                        Toggle(L("Enabled"), isOn: $isEnabled)
                         Toggle(L("Trigger on every match"), isOn: $triggerOnEveryMatch)
                         LabeledContent(L("Notification text")) {
                             TextField(L("Notification text"), text: $note)
@@ -831,7 +1143,7 @@ struct RuleEditorView: View {
         .padding(24)
         .frame(minWidth: 600)
         .onAppear {
-            availableGestures = GestureTemplateProvider.shared.allTemplates()
+            availableGestures = GestureTemplateProvider.shared.allTemplatesIncludingReversed()
             if let rule = editingRule {
                 populateFromRule(rule)
             } else {
@@ -861,12 +1173,11 @@ struct RuleEditorView: View {
         case .applescript(let source):
             actionType = .applescript
             appleScriptSource = source
-        case .copyToClipboard(let text), .text(let text):
-            if text.contains("password") || text.count > 20 {
-                actionType = .password
-            } else {
-                actionType = .text
-            }
+        case .copyToClipboard(let text):
+            actionType = .text
+            copyText = text
+        case .text(let text):
+            actionType = .text
             copyText = text
         case .password(let text):
             actionType = .password
@@ -881,8 +1192,6 @@ struct RuleEditorView: View {
     }
 
     /// Returns the Stroke for the gesture template with the given name.
-    /// - Parameter name: The name of the gesture template.
-    /// - Returns: The Stroke if found, nil otherwise.
     private func gestureFromTemplate(named name: String) -> Stroke? {
         return availableGestures.first { $0.name == name }?.stroke
     }
@@ -971,7 +1280,7 @@ struct AppleScriptTabView: View {
                         }
                     }
                 } label: {
-                    Label(L("Add Example"), systemImage: "plus.square.on.square")
+                    Label(L("Load Example"), systemImage: "plus.square.on.square")
                 }
                 .menuStyle(.borderlessButton)
 
@@ -994,7 +1303,7 @@ struct AppleScriptTabView: View {
                     Text(L("No AppleScripts defined"))
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    Text(L("Click \"Add Script\" or \"Add Example\" to get started"))
+                    Text(L("Click \"Add Script\" or \"Load Example\" to get started"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1008,7 +1317,7 @@ struct AppleScriptTabView: View {
                     .width(min: 200, max: 300)
 
                     TableColumn(L("Source Preview")) { script in
-                        Text(script.source.prefix(80).replacingOccurrences(of: "\n", with: " ") + "…")
+                        Text(script.source.prefix(80).replacingOccurrences(of: "\n", with: " ") + (script.source.count > 80 ? "…" : ""))
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -1060,7 +1369,7 @@ struct AppleScriptTabView: View {
 private func openInExternalEditor(script: AppleScriptItem) {
     let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("MacStrokeExternalEditor", isDirectory: true)
     try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
-    let fileURL = tempDir.appendingPathComponent("\(script.name).scpt")
+    let fileURL = tempDir.appendingPathComponent("\(script.id).applescript")
     // Write source as plain text for the editor
     do {
         try script.source.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -1111,8 +1420,11 @@ struct ScriptEditorView: View {
                 Button(L("Cancel"), action: onDismiss)
                 Button(editingScript == nil ? L("Add") : L("Save")) {
                     if let editingScript = editingScript {
-                        AppleScriptsList.sharedAppleScriptsList.removeScript(id: editingScript.id)
-                        AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
+                        // Replace in place: remove the old entry, keep its id.
+                        let id = editingScript.id
+                        AppleScriptsList.sharedAppleScriptsList.removeScript(id: id)
+                        let added = AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
+                        _ = added
                     } else {
                         AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
                     }
@@ -1134,30 +1446,44 @@ struct ScriptEditorView: View {
     }
 }
 
+/// Example scripts corresponding to the original's bundled .scpt examples
+/// (ChromeCloseTabsToTheRight, OpenMacStrokePreferences, SearchInWeb).
 struct AppleScriptExamples {
     static let examples = [
-        (name: "Show Notification", source: "display notification \"Hello from MacStroke\" with title \"MacStroke\""),
-        (name: "Open URL", source: "open location \"https://github.com\""),
-        (name: "Run Shell Command", source: "do shell script \"echo 'Hello' > ~/Desktop/test.txt\""),
-        (name: "Activate App", source: "tell application \"Finder\" to activate"),
-        (name: "Get Clipboard", source: "the clipboard as text"),
-        (name: "Set Clipboard", source: "set the clipboard to \"Hello World\""),
-        (name: "Hide Application", source: "tell application \"Finder\" to hide"),
-        (name: "Minimize Window", source: "tell application \"System Events\" to keystroke \"m\" using {command down}"),
-        (name: "Close Window", source: "tell application \"System Events\" to keystroke \"w\" using {command down}"),
-        (name: "Take Screenshot", source: "do shell script \"screencapture ~/Desktop/screenshot.png\""),
-        (name: "Get Selected Finder Items", source: "tell application \"Finder\" to selection"),
+        (name: "Close Tabs To The Right In Chrome",
+         source: """
+         tell application "Google Chrome"
+             set windowIndex to 1
+             repeat with w in windows
+                 set activeTabIndex to active tab index of w
+                 set tabCount to count of tabs of w
+                 repeat with i from tabCount to (activeTabIndex + 1) by -1
+                     delete tab i of w
+                 end repeat
+             end repeat
+         end tell
+         """),
+        (name: "Open MacStroke Preferences",
+         source: """
+         tell application "MacStroke" to activate
+         """),
+        (name: "Search in Web",
+         source: """
+         set searchURL to "https://www.google.com/search?q="
+         set theClipboard to the clipboard as text
+         set encodedQuery to do shell script "python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' " & quoted form of theClipboard
+         open location (searchURL & encodedQuery)
+         """),
     ]
 }
 
 // MARK: - Filters Tab
+// Original: black/white list mode radio + two text views + apply + add.
 
 struct FiltersTabView: View {
     @ObservedObject var viewModel: UserPreferences
-    @State private var blockFilterText = ""
+    @State private var blackListText = ""
     @State private var whiteListText = ""
-    @State private var showingRunningApps = false
-    @State private var selectedRunningApp: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -1165,111 +1491,99 @@ struct FiltersTabView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Picker(L("Filter Mode"), selection: $viewModel.whiteListMode) {
-                    Text(L("Blacklist Mode (block listed apps)")).tag(false)
-                    Text(L("Whitelist Mode (only allow listed apps)")).tag(true)
+                    Text(L("Black list mode")).tag(false)
+                    Text(L("White list mode")).tag(true)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
+                .onChange(of: viewModel.whiteListMode) { _ in
+                    persistLists()
+                }
             }
 
-            SectionHeader(L("Blocklist"))
-            Text(L("Enter bundle identifiers to block (one per line). Supports wildcards (e.g. com.jetbrains.*)"))
+            Text(L("Enter bundle identifiers one per line. Supports wildcards (e.g. com.jetbrains.*)"))
                 .font(.caption)
                 .foregroundColor(.secondary)
-            TextEditor(text: $blockFilterText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 150)
-                .border(Color.secondary.opacity(0.2))
-                .onChange(of: blockFilterText) { newValue in viewModel.blockFilter = newValue }
 
-            SectionHeader(L("Allowlist"))
-            Text(L("Enter bundle identifiers to allow (one per line). Only used in whitelist mode."))
-                .font(.caption)
-                .foregroundColor(.secondary)
+            SectionHeader(L("Black List"))
+            TextEditor(text: $blackListText)
+                .font(.system(.body, design: .monospaced))
+                .frame(minHeight: 130)
+                .border(Color.secondary.opacity(0.2))
+
+            SectionHeader(L("White List"))
             TextEditor(text: $whiteListText)
                 .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 150)
+                .frame(minHeight: 130)
                 .border(Color.secondary.opacity(0.2))
-                .onChange(of: whiteListText) { newValue in viewModel.whiteList = newValue }
 
             HStack {
-                Button(L("Add Running App…")) {
-                    showRunningAppsPicker()
-                }
-                .buttonStyle(.bordered)
-
-                Button(L("Apply")) {
-                    viewModel.save()
-                }
-                .buttonStyle(.borderedProminent)
-
+                Button(L("add..")) { addRunningApp(toBlackList: !viewModel.whiteListMode) }
+                    .buttonStyle(.bordered)
+                Button(L("Apply")) { persistLists() }
+                    .buttonStyle(.borderedProminent)
                 Spacer()
             }
 
-            SectionHeader(L("Preview"))
             Text(L("Current mode: \(viewModel.whiteListMode ? "Whitelist" : "Blacklist")"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
         .onAppear {
-            blockFilterText = viewModel.blockFilter
-            whiteListText = viewModel.whiteList
+            blackListText = BlackWhiteFilter.shared.blackListText
+            whiteListText = BlackWhiteFilter.shared.whiteListText
         }
+    }
 
-        }
-}
+    private func persistLists() {
+        BlackWhiteFilter.shared.blackListText = blackListText
+        BlackWhiteFilter.shared.whiteListText = whiteListText
+        viewModel.save()
+    }
 
-extension FiltersTabView {
-    /// Present a list of running applications and add the selected bundle ID
-    /// to the current filter list (blocklist in blacklist mode, allowlist in
-    /// whitelist mode).
-    private func showRunningAppsPicker() {
+    /// Add a running app's bundle ID to the black or white list
+    /// (original: AppPickerWindowController with addedToTextView).
+    private func addRunningApp(toBlackList: Bool) {
         let apps = NSWorkspace.shared.runningApplications
-            .filter { $0.bundleIdentifier != nil && !$0.bundleIdentifier!.isEmpty }
-            .sorted { $0.localizedName?.caseInsensitiveCompare($1.localizedName ?? "") ?? .orderedAscending == .orderedAscending }
+            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil && !($0.bundleIdentifier ?? "").isEmpty }
+            .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
 
         let alert = NSAlert()
-        alert.messageText = L("Add Running App…")
-        alert.informativeText = L("Select an application to add its bundle identifier to the current filter list.")
+        alert.messageText = L("Pick a running app")
         alert.alertStyle = .informational
 
-        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
         for app in apps {
-            let title = "\(app.localizedName ?? app.bundleIdentifier ?? "Unknown") (\(app.bundleIdentifier ?? "Unknown"))"
-            popup.addItem(withTitle: title)
-        }
-        if popup.numberOfItems > 0 {
-            popup.selectItem(at: 0)
+            popup.addItem(withTitle: "\(app.localizedName ?? "") (\(app.bundleIdentifier ?? ""))")
         }
         alert.accessoryView = popup
-
-        alert.addButton(withTitle: L("Add"))
+        alert.addButton(withTitle: L("OK"))
         alert.addButton(withTitle: L("Cancel"))
 
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn && popup.indexOfSelectedItem != -1 {
-            let selected = apps[popup.indexOfSelectedItem]
-            let bundleID = selected.bundleIdentifier ?? ""
-            if !bundleID.isEmpty {
-                if viewModel.whiteListMode {
-                    let lines = whiteListText
-                        .components(separatedBy: "\n")
-                        .filter { !$0.isEmpty && $0 != bundleID }
-                    whiteListText = (lines + [bundleID]).joined(separator: "\n")
-                    viewModel.whiteList = whiteListText
-                } else {
-                    let lines = blockFilterText
-                        .components(separatedBy: "\n")
-                        .filter { !$0.isEmpty && $0 != bundleID }
-                    blockFilterText = (lines + [bundleID]).joined(separator: "\n")
-                    viewModel.blockFilter = blockFilterText
-                }
+        if alert.runModal() == .alertFirstButtonReturn, popup.indexOfSelectedItem >= 0,
+           popup.indexOfSelectedItem < apps.count {
+            let bundleID = apps[popup.indexOfSelectedItem].bundleIdentifier ?? ""
+            if toBlackList {
+                blackListText = appendLine(bundleID, to: blackListText)
+            } else {
+                whiteListText = appendLine(bundleID, to: whiteListText)
             }
+            persistLists()
         }
+    }
+
+    private func appendLine(_ line: String, to text: String) -> String {
+        var lines = text.split(separator: "\n").map(String.init)
+        if !lines.contains(line) {
+            lines.append(line)
+        }
+        return lines.joined(separator: "\n")
     }
 }
 
 // MARK: - Right Click Tab
+// Original RightClick tab: RightClicksList table (apps that keep their
+// native right-click menu) with pick-a-running-app.
 
 struct RightClickAppItem: Identifiable {
     let id = UUID()
@@ -1289,7 +1603,7 @@ struct RightClickTabView: View {
         VStack(alignment: .leading, spacing: 24) {
             SectionHeader(L("Right Click Menu - App List"))
 
-            Text(L("Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)"))
+            Text(L("tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -1297,6 +1611,12 @@ struct RightClickTabView: View {
                 TextField(L("Bundle ID (e.g. com.apple.finder)"), text: $newRightClickApp)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 300)
+                Button {
+                    addRunningApp()
+                } label: {
+                    Label(L("add.."), systemImage: "plus.circle")
+                }
+                .buttonStyle(.bordered)
                 Button(L("Add")) {
                     if !newRightClickApp.isEmpty {
                         RightClicksList.shared.add(newRightClickApp)
@@ -1359,9 +1679,39 @@ struct RightClickTabView: View {
             }
         }
     }
+
+    /// Pick a running app (original: AppPickerWindowController selectOne mode)
+    /// and replace the selected list entry with its bundle ID.
+    private func addRunningApp() {
+        let apps = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil && !($0.bundleIdentifier ?? "").isEmpty }
+            .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
+
+        let alert = NSAlert()
+        alert.messageText = L("Pick a running app")
+        alert.alertStyle = .informational
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
+        for app in apps {
+            popup.addItem(withTitle: "\(app.localizedName ?? "") (\(app.bundleIdentifier ?? ""))")
+        }
+        alert.accessoryView = popup
+        alert.addButton(withTitle: L("OK"))
+        alert.addButton(withTitle: L("Cancel"))
+
+        if alert.runModal() == .alertFirstButtonReturn, popup.indexOfSelectedItem >= 0,
+           popup.indexOfSelectedItem < apps.count {
+            let bundleID = apps[popup.indexOfSelectedItem].bundleIdentifier ?? ""
+            if !bundleID.isEmpty {
+                RightClicksList.shared.add(bundleID)
+                rightClickApps = RightClicksList.shared.allApps()
+            }
+        }
+    }
 }
 
 // MARK: - RightClickMenu Tab
+// Original: enable right click menu + item toggles + terminal picker.
 
 struct RightClickMenuTabView: View {
     @ObservedObject var viewModel: UserPreferences
@@ -1370,24 +1720,55 @@ struct RightClickMenuTabView: View {
         VStack(alignment: .leading, spacing: 24) {
             SectionHeader(L("Finder Right-Click Menu"))
 
-            Toggle(L("Enable Finder right-click menu extension"), isOn: $viewModel.enableRightClickMenu)
+            Toggle(L("enable right click menu"), isOn: Binding(
+                get: { viewModel.enableRightClickMenu },
+                set: { newValue in
+                    viewModel.enableRightClickMenu = newValue
+                    syncToExtension()
+                }
+            ))
 
             if viewModel.enableRightClickMenu {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(L("Menu Items"))
-                        .font(.headline)
-
-                    Toggle(isOn: $viewModel.enableNewFile) {
-                        Label(L("New Text File"), systemImage: "doc.badge.plus")
+                    Toggle(isOn: Binding(
+                        get: { viewModel.enableNewFile },
+                        set: { newValue in
+                            viewModel.enableNewFile = newValue
+                            syncToExtension()
+                        }
+                    )) {
+                        Label(L("new text file"), systemImage: "doc.badge.plus")
                     }
-                    Toggle(isOn: $viewModel.enableOpenInTerminal) {
-                        Label(L("Open in Terminal"), systemImage: "terminal.fill")
+                    Toggle(isOn: Binding(
+                        get: { viewModel.enableOpenInTerminal },
+                        set: { newValue in
+                            viewModel.enableOpenInTerminal = newValue
+                            syncToExtension()
+                        }
+                    )) {
+                        Label(L("open in terminal"), systemImage: "terminal.fill")
                     }
-                    Toggle(isOn: $viewModel.enableCopyFilePath) {
-                        Label(L("Copy File Path"), systemImage: "doc.on.doc")
+                    Toggle(isOn: Binding(
+                        get: { viewModel.enableCopyFilePath },
+                        set: { newValue in
+                            viewModel.enableCopyFilePath = newValue
+                            syncToExtension()
+                        }
+                    )) {
+                        Label(L("copy file path"), systemImage: "doc.on.doc")
                     }
 
                     Divider()
+
+                    HStack {
+                        Text(L("Terminal"))
+                        Picker("", selection: $viewModel.userTerminal) {
+                            Text("Terminal").tag("Terminal")
+                            Text("Iterm").tag("iTerm")
+                        }
+                        .pickerStyle(.radioGroup)
+                        .frame(width: 160)
+                    }
 
                     HStack {
                         Button(L("Re-enable Extension")) {
@@ -1403,22 +1784,18 @@ struct RightClickMenuTabView: View {
                 }
                 .padding(.leading, 16)
             }
-
-            SectionHeader(L("Terminal Preference"))
-            HStack {
-                Text(L("Default Terminal App:"))
-                TextField(L("Terminal"), text: Binding(
-                    get: { UserDefaults.standard.string(forKey: "userTerminal") ?? "Terminal" },
-                    set: { UserDefaults.standard.set($0, forKey: "userTerminal") }
-                ))
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 200)
-            }
         }
+    }
+
+    /// Push the enable flags + localized menu titles to the FinderSync
+    /// extension (original: onToggleRightClickMenu → initRightClickMenu).
+    private func syncToExtension() {
+        RightClickMenuManager.shared.syncSharedDefaultsToFinderSyncExtension()
     }
 }
 
 // MARK: - Clipboard Tab
+// Original: enable + storage mode + storage limits + shortcut + show list.
 
 struct ClipboardTabView: View {
     @ObservedObject var viewModel: UserPreferences
@@ -1427,100 +1804,98 @@ struct ClipboardTabView: View {
         VStack(alignment: .leading, spacing: 24) {
             SectionHeader(L("Clipboard History"))
 
-            Toggle(L("Enable clipboard history"), isOn: $viewModel.enableHistoryClipboard)
+            Toggle(L("enable history clipboard"), isOn: $viewModel.enableHistoryClipboard)
 
             if viewModel.enableHistoryClipboard {
                 VStack(alignment: .leading, spacing: 16) {
                     // Storage mode: local file vs RAM
                     HStack {
-                        Text(L("Storage"))
-                        Spacer()
+                        Text(L("storage:"))
                         Picker("", selection: $viewModel.clipoardStroageLocal) {
-                            Text(L("Local")).tag(true)
-                            Text(L("RAM")).tag(false)
+                            Text(L("local")).tag(true)
+                            Text(L("ram")).tag(false)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 200)
                     }
                     .frame(height: 30)
 
-                    HStack {
-                        Text(L("Enable total history limit"))
-                        Spacer()
-                        Toggle("", isOn: $viewModel.enableLimitTotal)
-                    }
-
-                    if viewModel.enableLimitTotal {
-                        HStack {
-                            Text(L("Total history limit"))
-                            Spacer()
-                            Stepper(value: $viewModel.limitTotal, in: 10...5000, step: 10) {
-                                Text("\(viewModel.limitTotal)")
-                                    .frame(width: 50, alignment: .trailing)
-                            }
-                        }
-                    }
+                    Text(L("Storage limit"))
+                        .font(.headline)
 
                     HStack {
-                        Text(L("Pinned items limit"))
-                        Spacer()
-                        Stepper(value: $viewModel.clipboardLimitTop, in: 1...200) {
-                            Text("\(viewModel.clipboardLimitTop)")
+                        Toggle(L("Limit top records:"), isOn: $viewModel.enableLimitTop)
+                        Stepper(value: $viewModel.limitTop, in: 1...9999) {
+                            Text("\(viewModel.limitTop)")
                                 .frame(width: 50, alignment: .trailing)
                         }
+                        .disabled(!viewModel.enableLimitTop)
                     }
 
                     HStack {
-                        Text(L("Keep history for (days)"))
-                        Spacer()
-                        Stepper(value: $viewModel.clipboardSaveDays, in: 1...365) {
-                            Text("\(viewModel.clipboardSaveDays)")
+                        Toggle(L("Limit total records:"), isOn: $viewModel.enableLimitTotal)
+                        Stepper(value: $viewModel.limitTotal, in: 1...999999) {
+                            Text("\(viewModel.limitTotal)")
+                                .frame(width: 60, alignment: .trailing)
+                        }
+                        .disabled(!viewModel.enableLimitTotal)
+                    }
+
+                    HStack {
+                        Toggle(L("Limit save days:"), isOn: $viewModel.enableLimitSaveDays)
+                        Stepper(value: $viewModel.limitSaveDays, in: 1...9999) {
+                            Text("\(viewModel.limitSaveDays)")
                                 .frame(width: 50, alignment: .trailing)
                         }
-                    }
-
-                    Divider()
-
-                    HStack {
-                        Button(L("Clear History")) {
-                            HistoryClipboardManager().clearHistoryList()
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
-
-                        Button(L("Clear Pinned")) {
-                            HistoryClipboardManager().clearTop()
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
-
-                        Button(L("Clear All")) {
-                            HistoryClipboardManager().clearAll()
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
-
-                        Spacer()
+                        .disabled(!viewModel.enableLimitSaveDays)
                     }
 
                     Divider()
 
                     // Global shortcut to show clipboard history list
                     HStack {
-                        Text(L("Show clipboard history shortcut"))
-                        Spacer()
-                        Text(viewModel.historyCilpboardListShortcut.isEmpty ? L("Not set") : viewModel.historyCilpboardListShortcut)
-                            .foregroundColor(.secondary)
+                        Text(L("keyboard shortcut:"))
+                        ShortcutRecorder(
+                            text: $viewModel.historyCilpboardListShortcut,
+                            onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
+                        )
+                        .frame(width: 200, height: 28)
                     }
 
-                    Text(L("Click the button below to record a global shortcut."))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Button(L("show history clipboard")) {
+                        showHistoryList()
+                    }
+                    .buttonStyle(.bordered)
 
-                    ShortcutRecorder(
-                        text: $viewModel.historyCilpboardListShortcut,
-                        onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
-                    )
+                    Divider()
+
+                    HStack {
+                        Button(L("Clear History")) {
+                            confirmThen(L("Are you sure to clear all history clipboard records?")) {
+                                HistoryClipboardManager().clearHistoryList()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+
+                        Button(L("Clear Pinned")) {
+                            confirmThen(L("Are you sure to clear all top records?")) {
+                                HistoryClipboardManager().clearTop()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+
+                        Button(L("Clear All")) {
+                            confirmThen(L("Are you sure to clear all top records and history clipboard records?")) {
+                                HistoryClipboardManager().clearAll()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
+
+                        Spacer()
+                    }
                 }
                 .padding(.leading, 16)
             }
@@ -1528,19 +1903,41 @@ struct ClipboardTabView: View {
             SectionHeader(L("Current Status"))
             let manager = HistoryClipboardManager()
             HStack {
-                Text("Pinned items: \(manager.topCount)")
+                Text(L("Pinned items") + ": \(manager.topCount)")
                 Spacer()
-                Text("Total items: \(manager.getCount(isTop: false))")
+                Text(L("Total items") + ": \(manager.getCount(isTop: false))")
             }
             .font(.caption)
             .foregroundColor(.secondary)
         }
     }
+
+    private func showHistoryList() {
+        // The window lives in the main app; ask it to open via the distributed
+        // notification channel used by the global shortcut.
+        DistributedNotificationCenter.default().postNotificationName(
+            Notification.Name("MacStrokeOpenHistoryClipboard"), object: nil, userInfo: nil, deliverImmediately: true)
+    }
+
+    private func confirmThen(_ message: String, action: @escaping () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = L("warning!")
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: L("Ok"))
+        alert.addButton(withTitle: L("Cancel"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            action()
+        }
+    }
 }
 
 // MARK: - About Tab
+// Original: version, author, issues link, Sparkle update controls.
 
 struct AboutTabView: View {
+    @ObservedObject var viewModel: UserPreferences
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .center, spacing: 16) {
@@ -1551,11 +1948,11 @@ struct AboutTabView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text(L("Version") + " \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
+                Text(L("Version") + ": \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
                     .font(.title3)
                     .foregroundColor(.secondary)
 
-                Text(L("Build") + " \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")")
+                Text(L("Author: mtjo.net@gmail.com"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -1563,157 +1960,23 @@ struct AboutTabView: View {
 
             Divider()
 
-            SectionHeader(L("About"))
-            Text(L("MacStroke is a gesture recognition utility for macOS that lets you trigger actions by drawing mouse gestures."))
-                .font(.body)
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(L("Automatically Check for Updates"), isOn: $viewModel.autoCheckUpdates)
+                Button(L("Check Now")) {
+                    NotificationCenter.default.post(name: .macStrokeCheckForUpdates, object: nil)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Divider()
 
             SectionHeader(L("Links"))
             HStack(spacing: 20) {
                 Link(L("GitHub Repository"), destination: URL(string: "https://github.com/mtjo/MacStroke")!)
-                Link(L("Report an Issue"), destination: URL(string: "https://github.com/mtjo/MacStroke/issues")!)
+                Link(L("issues"), destination: URL(string: "https://github.com/mtjo/MacStroke/issues")!)
             }
-
-            SectionHeader(L("License"))
-            Text(L("MIT License - Copyright © 2024"))
-                .font(.caption)
-                .foregroundColor(.secondary)
 
             Spacer()
-        }
-    }
-}
-
-// MARK: - Note Tab
-
-struct NoteTabView: View {
-    @ObservedObject var viewModel: UserPreferences
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Note"))
-
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle(L("Show note icon"), isOn: $viewModel.showNoteIcon)
-                Toggle(L("Default Note Color"), isOn: .constant(false)) // placeholder
-            }
-        }
-    }
-}
-
-// MARK: - Toast Tab
-
-struct ToastTabView: View {
-    @ObservedObject var viewModel: UserPreferences
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Toast"))
-
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle(L("Show toast on match"), isOn: $viewModel.showToast)
-
-                HStack {
-                    Text(L("Toast position"))
-                    Spacer()
-                    Picker("", selection: $viewModel.notePosition) {
-                        Text(L("Top")).tag(0)
-                        Text(L("Center")).tag(1)
-                        Text(L("Bottom")).tag(2)
-                        Text(L("Top Right")).tag(3)
-                        Text(L("Bottom Right")).tag(4)
-                        Text(L("Top Left")).tag(5)
-                        Text(L("Bottom Left")).tag(6)
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 200)
-                }
-
-                HStack {
-                    Text(L("Toast font"))
-                    Spacer()
-                    Text(viewModel.noteFontName)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(width: 200, alignment: .leading)
-                    Button(L("Font Panel")) {
-                        // Show font panel
-                        NSFontPanel.shared.orderFront(nil)
-                    }
-                    .buttonStyle(.bordered)
-                }
-
-                HStack {
-                    Text(L("Toast font size"))
-                    Spacer()
-                    Stepper(value: $viewModel.noteFontSize, in: 8...72, step: 1) {
-                        Text("\(Int(viewModel.noteFontSize))")
-                            .frame(width: 50, alignment: .trailing)
-                    }
-                }
-
-                HStack {
-                    Text(L("Toast background opacity"))
-                    Spacer()
-                    Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
-                    Text(String(format: "%.0f%%", viewModel.noteBackgroundAlpha * 100))
-                        .frame(width: 50, alignment: .trailing)
-                }
-
-                HStack {
-                    Text(L("Retention time (seconds)"))
-                    Spacer()
-                    Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
-                        Text("\(viewModel.noteRetentionTime)")
-                            .frame(width: 50, alignment: .trailing)
-                    }
-                }
-            }
-            .padding(.leading, 16)
-        }
-    }
-}
-
-// MARK: - Drawing Tab
-
-struct DrawingTabView: View {
-    @ObservedObject var viewModel: UserPreferences
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Drawing"))
-
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle(L("Disable mouse path"), isOn: $viewModel.disableMousePath)
-
-                HStack {
-                    Text(L("Line width"))
-                    Spacer()
-                    Stepper(value: $viewModel.lineWidth, in: 1...20, step: 1) {
-                        Text("\(Int(viewModel.lineWidth))")
-                            .frame(width: 50, alignment: .trailing)
-                    }
-                }
-
-                HStack {
-                    Text(L("Line color"))
-                    Spacer()
-                    ColorPicker("", selection: $viewModel.lineColor)
-                        .frame(width: 80)
-                    Text(viewModel.lineColorHex)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-
-                HStack {
-                    Text(L("Default Note Color"))
-                    Spacer()
-                    ColorPicker("", selection: Binding(
-                        get: { Color(hex: viewModel.defaultNoteColorHex) },
-                        set: { viewModel.defaultNoteColorHex = $0.hexString }
-                    ))
-                    .frame(width: 80)
-                }
-            }
-            .padding(.leading, 16)
         }
     }
 }

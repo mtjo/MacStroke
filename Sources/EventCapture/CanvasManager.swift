@@ -3,7 +3,12 @@
 //  MacStroke
 //
 //  Manages the gesture drawing canvas - collects mouse events into strokes,
-//  detects gesture start/end, and provides the stroke for recognition.
+//  decides whether a right-click should start a gesture (filters), replays
+//  right-click events when no gesture matched, and forwards right-clicks to
+//  apps that need their native context menu (RightClicksList).
+//
+//  This is the Swift counterpart of the original's
+//  AppDelegate.mouseEventCallback + CanvasWindowController.
 //
 
 import Foundation
@@ -15,22 +20,66 @@ public protocol CanvasManagerDelegate: AnyObject {
     /// Called when a gesture stroke is completed and ready for recognition.
     /// - Parameters:
     ///   - manager: The canvas manager
-    ///   - stroke: The completed stroke (normalized, ready for comparison)
+    ///   - stroke: The completed stroke (ready for comparison)
     ///   - bundleID: The bundle ID of the frontmost application (for filtering)
-    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String)
+    ///   - Returns: true if a rule matched and the action was handled
+    ///             (the right-click is consumed); false if nothing matched
+    ///             (the manager will replay the right-click).
+    @discardableResult
+    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool
 }
 
 /// Manages the gesture drawing canvas.
 ///
-/// Collects mouse events during a gesture (from mouse down to mouse up),
-/// builds a Stroke from the points, notifies the delegate when complete,
-/// and draws the gesture path on a CanvasWindow overlay.
+/// Event flow (mirrors the original):
+/// 1. Right-mouse-down → check filters (black/white list, "show UI in any app",
+///    app has a suited rule). If allowed, begin capture, show the canvas.
+/// 2. Right-mouse-dragged → record points, draw on canvas.
+/// 3. Right-mouse-up → try rule matching via the delegate. If nothing matched:
+///    - If the app is in RightClicksList and the user never dragged,
+///      synthesize a Ctrl+left-click so the app shows its native context menu.
+///    - Otherwise replay the right-mouse-down/up events so the app sees them.
 public class CanvasManager: EventCaptureDelegate {
+
     public weak var delegate: CanvasManagerDelegate?
 
-    private var currentStroke: Stroke?
-    private var isCapturing = false
+    /// App-layer filter deciding whether a gesture may start in the given app.
+    /// Set by the application to combine BlackWhiteFilter, "show UI in any app"
+    /// and "app has a suited rule" checks (mirrors the original's
+    /// `!shouldHookMouseEventForApp(frontBundle) || !(showUIInWhateverApp || appSuitedRule)` gate).
+    public var shouldCaptureGesture: ((String) -> Bool)?
+
+    /// Whether the given app should get its native right-click menu forwarded
+    /// when a click (no drag) doesn't match any gesture (RightClicksList check).
+    public var needsRightClickMenu: ((String) -> Bool)?
+
+    /// Master enable switch (mirrors the original's static `isEnabled`).
+    public var isEnabled = true
+
+    /// When true, the next completed gesture is recorded via
+    /// `onGestureRecorded` instead of being matched against rules
+    /// (the "Draw Gesture" rule-editing flow).
+    public var isRecordingGesture = false
+
+    /// Called with the recorded gesture points when `isRecordingGesture`
+    /// completes. The receiver stores them into the pending rule.
+    public var onGestureRecorded: (([GesturePoint]) -> Void)?
+
+    /// Points below this count are treated as a simple click, not a gesture
+    /// (the original's DTW comparison requires at least 10 points).
     private let minimumPointsForGesture = 10
+
+    // MARK: - Gesture state
+
+    private var currentPoints: [GesturePoint] = []
+    private var isCapturing = false
+    private var hasDragged = false
+    /// The location (AppKit global coords) where the current right-mouse-down happened.
+    private var downLocation: GesturePoint?
+    /// Whether the front app passed the capture filter for the current gesture.
+    private var shouldShow = false
+
+    // MARK: - Canvas windows
 
     /// The canvas overlay window shown during gesture drawing.
     /// Keyed by screen identifier for multi-screen support.
@@ -46,6 +95,10 @@ public class CanvasManager: EventCaptureDelegate {
         )
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     /// Update canvas window frames when screen layout changes (e.g. display added/removed/resized).
     @objc private func screenParametersDidChange() {
         for (_, window) in canvasWindows {
@@ -57,77 +110,202 @@ public class CanvasManager: EventCaptureDelegate {
         }
     }
 
-    /// Handle mouse event from EventCapture.
-    public func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent) {
-        let point = event.point
+    // MARK: - EventCaptureDelegate
 
+    /// Handle a mouse event from EventCapture.
+    /// - Returns: true to consume (swallow) the event; false to pass it through.
+    @discardableResult
+    public func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent) -> Bool {
         switch event.phase {
         case .down:
-            // Start a new stroke on left or right mouse down
-            if event.button == .left || event.button == .right {
-                startStroke(with: point)
+            switch event.button {
+            case .right:
+                return handleRightMouseDown(event)
+            default:
+                // Left mouse down is only observed (original: kCGEventLeftMouseDown
+                // is in the mask but does not start a gesture).
+                return false
             }
 
         case .moved:
-            // Add point to current stroke if capturing
-            if isCapturing, let stroke = currentStroke {
-                var mutableStroke = stroke
-                mutableStroke.addPoint(point)
-                currentStroke = mutableStroke
-                // Add point to canvas view for visual feedback
-                addPointToCanvas(point)
-            }
+            guard shouldShow, isCapturing else { return false }
+            hasDragged = true
+            currentPoints.append(event.point)
+            addPointToCanvas(event.point)
+            return true
 
         case .up:
-            // Add final point and complete the stroke on left or right mouse up
-            if (event.button == .left || event.button == .right) && isCapturing {
-                if let stroke = currentStroke {
-                    var mutableStroke = stroke
-                    mutableStroke.addPoint(point)
-                    currentStroke = mutableStroke
-                }
-                // Add final point to canvas view
-                addPointToCanvas(point)
-                completeStroke()
-            }
+            guard shouldShow, isCapturing, event.button == .right else { return false }
+            return handleRightMouseUp(event)
         }
     }
 
-    private func startStroke(with point: GesturePoint) {
-        guard !isCapturing else { return }
+    // MARK: - Right-mouse handling
 
-        // Hide any existing canvas windows first, then create/show fresh ones
-        hideAllCanvasWindows()
-        showCanvasWindow(for: point)
+    private func handleRightMouseDown(_ event: MouseEvent) -> Bool {
+        guard isEnabled else {
+            shouldShow = false
+            return false
+        }
 
-        var stroke = Stroke(capacity: 256)
-        stroke.addPoint(point)
-        currentStroke = stroke
+        let frontBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+
+        // Filter gate: black/white list + "show UI in whatever app" / suited rule.
+        if let shouldCapture = shouldCaptureGesture, !shouldCapture(frontBundle) {
+            shouldShow = false
+            return false
+        }
+
+        shouldShow = true
+
+        // If a previous gesture was interrupted (down without up, e.g. the tap
+        // was disabled by timeout), finish it off so the app sees its click.
+        if isCapturing {
+            finishInterruptedGesture()
+        }
+
+        currentPoints = [event.point]
+        downLocation = event.point
+        hasDragged = false
         isCapturing = true
+
+        showCanvasWindow(for: event.point)
+        addPointToCanvas(event.point)
+
+        return true
     }
 
-    private func completeStroke() {
-        guard let stroke = currentStroke else { return }
+    private func handleRightMouseUp(_ event: MouseEvent) -> Bool {
+        currentPoints.append(event.point)
+        addPointToCanvas(event.point)
 
-        // Only notify if we have enough points for a valid gesture
-        if stroke.count >= minimumPointsForGesture {
-            let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
-            delegate?.canvasManager(self, didCompleteStroke: stroke, bundleID: bundleID)
+        let frontBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let consumed: Bool
+
+        // Rule-recording mode ("Draw Gesture" from preferences).
+        if isRecordingGesture {
+            isRecordingGesture = false
+            onGestureRecorded?(currentPoints)
+            consumed = true
+        } else if currentPoints.count >= minimumPointsForGesture,
+                  let stroke = completedStroke(),
+                  let delegate = delegate,
+                  delegate.canvasManager(self, didCompleteStroke: stroke, bundleID: frontBundle) {
+            // A rule matched and its action was executed.
+            consumed = true
+        } else {
+            // No gesture matched: give the right-click back to the app.
+            if let needsRightClickMenu = needsRightClickMenu,
+               needsRightClickMenu(frontBundle), !hasDragged {
+                // Apps like JetBrains IDEs: synthesize Ctrl+left-click so the
+                // native context menu appears (original: threadRightClick).
+                if let down = downLocation {
+                    performSyntheticRightClick(at: down)
+                }
+            } else if let down = downLocation {
+                // Replay right-mouse-down + up so the app receives the click.
+                replayRightClick(down: down, up: event.point)
+            }
+            consumed = true
         }
 
-        currentStroke = nil
-        isCapturing = false
+        resetGestureState()
+        return consumed
+    }
 
-        // Hide canvas windows after a short delay so the user sees the drawn path
+    /// Build the completed stroke from the recorded points.
+    private func completedStroke() -> Stroke? {
+        guard currentPoints.count >= 2 else { return nil }
+        var stroke = Stroke(capacity: currentPoints.count)
+        for p in currentPoints {
+            stroke.addPoint(p)
+        }
+        return stroke
+    }
+
+    /// Reset gesture state and hide the canvas after a short delay so the
+    /// user still sees the drawn path (matches original reinitWindow timing).
+    private func resetGestureState() {
+        currentPoints = []
+        isCapturing = false
+        hasDragged = false
+        downLocation = nil
+        shouldShow = false
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.hideAllCanvasWindows()
         }
     }
 
+    /// Replay the pending down + a synthetic up for an interrupted gesture.
+    private func finishInterruptedGesture() {
+        if let down = downLocation {
+            replayRightClick(down: down, up: currentPoints.last ?? down)
+        }
+        resetGestureState()
+    }
+
+    // MARK: - Event replay / synthesis
+
+    /// Replay a right-mouse-down/up pair at the given locations so the
+    /// frontmost application receives the click normally.
+    private func replayRightClick(down: GesturePoint, up: GesturePoint) {
+        postSyntheticMouseEvent(.rightMouseDown, at: down)
+        postSyntheticMouseEvent(.rightMouseUp, at: up)
+    }
+
+    private func postSyntheticMouseEvent(_ type: CGEventType, at point: GesturePoint) {
+        // Convert back from AppKit (bottom-left) to CG (top-left) global coords.
+        let primaryHeight = Double(NSScreen.screens.first?.frame.height ?? 0)
+        let cgPoint = CGPoint(x: point.x, y: primaryHeight - point.y)
+        guard let event = CGEvent(
+            mouseEventSource: nil,
+            mouseType: type,
+            mouseCursorPosition: cgPoint,
+            mouseButton: .right
+        ) else { return }
+        event.post(tap: .cghidEventTap)
+    }
+
+    /// Synthesize Ctrl+left-click at the given point on a background thread,
+    /// mirroring the original's `threadRightClick:` (used for apps whose
+    /// context menus need a synthetic click, e.g. JetBrains IDEs).
+    private func performSyntheticRightClick(at point: GesturePoint) {
+        let primaryHeight = Double(NSScreen.screens.first?.frame.height ?? 0)
+        let cgPoint = CGPoint(x: point.x, y: primaryHeight - point.y)
+
+        Thread.detachNewThread {
+            let controlDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: true)
+            controlDown?.post(tap: .cghidEventTap)
+            usleep(25_000) // improve reliability (matches original)
+
+            let leftDown = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .leftMouseDown,
+                mouseCursorPosition: cgPoint,
+                mouseButton: .left
+            )
+            leftDown?.post(tap: .cghidEventTap)
+            usleep(15_000) // improve reliability (matches original)
+
+            let leftUp = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .leftMouseUp,
+                mouseCursorPosition: cgPoint,
+                mouseButton: .left
+            )
+            leftUp?.post(tap: .cghidEventTap)
+
+            let controlUp = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: false)
+            controlUp?.post(tap: .cghidEventTap)
+        }
+    }
+
+    // MARK: - Public helpers
+
     /// Cancel the current stroke without notifying the delegate.
     public func cancelStroke() {
-        currentStroke = nil
-        isCapturing = false
+        resetGestureState()
         hideAllCanvasWindows()
     }
 
@@ -146,13 +324,14 @@ public class CanvasManager: EventCaptureDelegate {
 
     /// Shows a canvas window covering the screen that contains the given point.
     private func showCanvasWindow(for point: GesturePoint) {
+        hideAllCanvasWindows()
+
         let screen = screenContainingPoint(point)
         let screenKey = String(describing: screen.deviceDescription[NSDeviceDescriptionKey(rawValue: "NSScreenNumber")] as? NSNumber ?? NSNumber(value: 0))
         let screenFrame = screen.frame
 
         let window: CanvasWindow
         if let existing = canvasWindows[screenKey] {
-            // Reuse existing window, update frame if needed
             existing.setEnable(true)
             if existing.frame != screenFrame {
                 existing.setFrame(screenFrame, display: false)
@@ -186,16 +365,13 @@ public class CanvasManager: EventCaptureDelegate {
         return NSScreen.main ?? NSScreen.screens[0]
     }
 
-    /// Converts a GesturePoint (in screen coordinates) to the local coordinate
-    /// system of the given canvas window.
+    /// Converts a GesturePoint (in AppKit global coordinates) to the local
+    /// coordinate system of the given screen-covering canvas window.
     private func convertPointToView(_ point: GesturePoint, for window: CanvasWindow) -> CGPoint {
-        let screenLocation = CGPoint(x: point.x, y: point.y)
         let screenFrame = window.screen?.frame ?? NSScreen.main?.frame ?? .zero
-        // CanvasView coordinates are relative to the window origin,
-        // which is at the top-left of the screen in the original implementation.
         return CGPoint(
-            x: screenLocation.x - screenFrame.origin.x,
-            y: screenLocation.y - screenFrame.origin.y
+            x: point.x - screenFrame.origin.x,
+            y: point.y - screenFrame.origin.y
         )
     }
 }

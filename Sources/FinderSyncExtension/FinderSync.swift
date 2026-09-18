@@ -89,6 +89,18 @@ public final class FinderSyncExtensionController: FIFinderSync {
 
     override public init() {
         super.init()
+        readSharedDefaults()
+        setupCommChannel()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(defaultsChanged),
+            name: UserDefaults.didChangeNotification,
+            object: nil
+        )
+    }
+
+    /// Read the enable flags + menu titles from this extension's defaults.
+    private func readSharedDefaults() {
         sharedDefaults.synchronize()
         enableRightClickMenu = sharedDefaults.bool(forKey: "enableRightClickMenu")
         enableNewFile = sharedDefaults.bool(forKey: "enableNewFile")
@@ -97,12 +109,73 @@ public final class FinderSyncExtensionController: FIFinderSync {
         if let raw = sharedDefaults.string(forKey: "items") {
             items = raw.components(separatedBy: ",")
         }
-        NotificationCenter.default.addObserver(
+    }
+
+    /// Register the distributed-notification listeners and ask the main app
+    /// for the observing root — the original FinderCommChannel.setup flow:
+    /// - SyncSharedDefaultsNotification → persist enable flags into our defaults
+    /// - ObservingPathSetNotification  → set the observed root directory
+    /// - RequestObservingPathNotification (sent) → main app replies + syncs
+    private func setupCommChannel() {
+        let center = DistributedNotificationCenter.default()
+        let mainAppBundleID = Self.mainAppBundleID
+
+        center.addObserver(
             self,
-            selector: #selector(defaultsChanged),
-            name: UserDefaults.didChangeNotification,
-            object: nil
+            selector: #selector(syncSharedDefaults(_:)),
+            name: NSNotification.Name("SyncSharedDefaultsNotification"),
+            object: mainAppBundleID
         )
+        center.addObserver(
+            self,
+            selector: #selector(observingPathSet(_:)),
+            name: NSNotification.Name("ObservingPathSetNotification"),
+            object: mainAppBundleID
+        )
+
+        // The extension is launching: ask the main app which root to observe.
+        center.postNotificationName(
+            NSNotification.Name("RequestObservingPathNotification"),
+            object: mainAppBundleID,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+
+    /// The main app's bundle ID, inferred by dropping the extension's last
+    /// path component (net.mtjo.MacStroke.FinderSyncExtension → net.mtjo.MacStroke).
+    private static var mainAppBundleID: String {
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        var components = bundleID.split(separator: ".").map(String.init)
+        if !components.isEmpty {
+            components.removeLast()
+        }
+        return components.joined(separator: ".")
+    }
+
+    /// Receive enable flags + localized menu titles from the main app and
+    /// persist them into this extension's own UserDefaults (the subsequent
+    /// UserDefaults.didChangeNotification refreshes the flags).
+    @objc private func syncSharedDefaults(_ notification: Notification) {
+        guard let data = notification.userInfo else { return }
+        sharedDefaults.set(Int(data["enableRightClickMenu"] as? String ?? "0") != 0, forKey: "enableRightClickMenu")
+        sharedDefaults.set(Int(data["enableNewFile"] as? String ?? "0") != 0, forKey: "enableNewFile")
+        sharedDefaults.set(Int(data["enableOpenInTerminal"] as? String ?? "0") != 0, forKey: "enableOpenInTerminal")
+        sharedDefaults.set(Int(data["enableCopyFilePath"] as? String ?? "0") != 0, forKey: "enableCopyFilePath")
+        if let items = data["items"] as? String {
+            sharedDefaults.set(items, forKey: "items")
+        }
+        sharedDefaults.synchronize()
+        defaultsChanged()
+    }
+
+    /// Receive the observing root from the main app (original: setRoot).
+    @objc private func observingPathSet(_ notification: Notification) {
+        guard let path = notification.userInfo?["path"] as? String else { return }
+        let root = URL(fileURLWithPath: path)
+        if FIFinderSyncController.default().directoryURLs != [root] {
+            FIFinderSyncController.default().directoryURLs = [root]
+        }
     }
 
     // MARK: - Directory observation
@@ -194,11 +267,17 @@ public final class FinderSyncExtensionController: FIFinderSync {
     // MARK: - Private helpers
 
     private func sendCustomMessage(operation: String, path: String, items: String) {
+        // Mirror the original FinderCommChannel.send: the JSON payload travels
+        // in the notification's `object` field (the main app parses it from
+        // there), with no userInfo.
         let center = DistributedNotificationCenter.default()
+        let payload: [String: String] = ["operation": operation, "path": path, "items": items]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload, options: []),
+              let json = String(data: jsonData, encoding: .utf8) else { return }
         center.postNotificationName(
             NSNotification.Name("CustomMessageReceivedNotification"),
-            object: Bundle.main.bundleIdentifier,
-            userInfo: ["operation": operation, "path": path, "items": items],
+            object: json,
+            userInfo: nil,
             deliverImmediately: true
         )
     }

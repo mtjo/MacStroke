@@ -3,6 +3,9 @@
 //  MacStroke
 //
 //  Toast notification display for gesture recognition feedback.
+//  Position mapping matches the original's notePostion values:
+//  0 = follow mouse, 1 = screen center, 2 = right top, 3 = right bottom,
+//  4 = left top, 5 = left bottom.
 //
 
 import Foundation
@@ -15,7 +18,7 @@ public struct Toast {
     public let duration: TimeInterval
     public let position: ToastPosition
 
-    public init(message: String, duration: TimeInterval = 2.0, position: ToastPosition = .bottom) {
+    public init(message: String, duration: TimeInterval = 2.0, position: ToastPosition = .center) {
         self.message = message
         self.duration = duration
         self.position = position
@@ -23,14 +26,14 @@ public struct Toast {
 }
 
 /// Position for toast notifications.
+/// Raw values match the original `notePostion` preference.
 public enum ToastPosition: Int {
-    case top = 0
+    case mouse = 0
     case center = 1
-    case bottom = 2
-    case topRight = 3
-    case bottomRight = 4
-    case topLeft = 5
-    case bottomLeft = 6
+    case rightTop = 2
+    case rightBottom = 3
+    case leftTop = 4
+    case leftBottom = 5
 }
 
 /// Manages toast notifications displayed on screen.
@@ -51,16 +54,18 @@ public final class ToastManager {
         // Cancel any existing toast
         toastTimer?.invalidate()
 
-        // Read preferences for display
+        // Read preferences for display (original: showNoteTost)
         let fontSize = CGFloat(preferences.noteFontSize)
         let bgAlpha = preferences.noteBackgroundAlpha
         let fontName = preferences.noteFontName
         let retention = preferences.noteRetentionTime
         let positionIndex = preferences.notePosition
 
+        let toastSize = CGSize(width: 280, height: 60)
+
         // Create window for toast
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 60),
+            contentRect: NSRect(x: 0, y: 0, width: toastSize.width, height: toastSize.height),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -80,43 +85,53 @@ public final class ToastManager {
         let label = NSTextField(labelWithString: toast.message)
         label.textColor = .white
         label.font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        label.frame = NSRect(x: 16, y: 16, width: 248, height: 28)
+        label.frame = NSRect(x: 16, y: 16, width: toastSize.width - 32, height: 28)
         contentView.addSubview(label)
 
         window.contentView = contentView
 
-        // Position window
+        // Position window — original notePostion mapping.
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let frame = screen.frame
-        let x: CGFloat
-        let y: CGFloat
-        let toastPosition = ToastPosition(rawValue: positionIndex) ?? ToastPosition.bottom
+        let toastPosition = ToastPosition(rawValue: positionIndex) ?? toast.position
 
+        let origin: NSPoint
         switch toastPosition {
-        case .top:
-            x = (frame.width - 280) / 2
-            y = frame.height - 80
-        case .bottom:
-            x = (frame.width - 280) / 2
-            y = 40
+        case .mouse:
+            // Follow the current mouse location (original: CTPositionMouse).
+            let mouse = NSEvent.mouseLocation
+            origin = NSPoint(
+                x: mouse.x - toastSize.width / 2,
+                y: mouse.y - toastSize.height / 2
+            )
         case .center:
-            x = (frame.width - 280) / 2
-            y = (frame.height - 60) / 2
-        case .topRight:
-            x = frame.width - 280 - 16
-            y = frame.height - 80
-        case .bottomRight:
-            x = frame.width - 280 - 16
-            y = 40
-        case .topLeft:
-            x = 16
-            y = frame.height - 80
-        case .bottomLeft:
-            x = 16
-            y = 40
+            origin = NSPoint(
+                x: frame.midX - toastSize.width / 2,
+                y: frame.midY - toastSize.height / 2
+            )
+        case .rightTop:
+            origin = NSPoint(
+                x: frame.maxX - toastSize.width - 16,
+                y: frame.maxY - toastSize.height - 16
+            )
+        case .rightBottom:
+            origin = NSPoint(
+                x: frame.maxX - toastSize.width - 16,
+                y: frame.minY + 16
+            )
+        case .leftTop:
+            origin = NSPoint(
+                x: frame.minX + 16,
+                y: frame.maxY - toastSize.height - 16
+            )
+        case .leftBottom:
+            origin = NSPoint(
+                x: frame.minX + 16,
+                y: frame.minY + 16
+            )
         }
 
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+        window.setFrameOrigin(origin)
         window.orderFrontRegardless()
 
         currentToastWindow = window

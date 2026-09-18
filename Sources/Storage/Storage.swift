@@ -9,7 +9,7 @@
 import Foundation
 
 /// Storage keys used by the preferences module.
-public enum StorageKey: String {
+public enum StorageKey: String, CaseIterable {
     // General
     case isEnabled = "isEnabled"
     case showIconInStatusBar = "showIconInStatusBar"
@@ -59,6 +59,11 @@ public enum StorageKey: String {
     case historyCilpboardListShortcut = "historyCilpboardListShortcut"
     case enableLimitTotal = "enableLimitTotal"
     case limitTotal = "limitTotal"
+    case enableLimitTop = "enableLimitTop"
+    case limitTop = "limitTop"
+    case enableLimitSaveDays = "enableLimitSaveDays"
+    case limitSaveDays = "limitSaveDays"
+    case userTerminal = "userTerminal"
 
     // Updates
     case autoCheckUpdates = "autoCheckUpdates"
@@ -187,8 +192,14 @@ public enum StorageDefaults {
     public static let clipboardSaveDays: Int = 7
     public static let clipoardStroageLocal: Bool = true
     public static let clipoardStroageRam: Bool = false
+    public static let historyCilpboardListShortcut: String = "keyCode=9, flags=393216" // ^⇧V
     public static let enableLimitTotal: Bool = false
     public static let limitTotal: Int = 200
+    public static let enableLimitTop: Bool = true
+    public static let limitTop: Int = 15
+    public static let enableLimitSaveDays: Bool = true
+    public static let limitSaveDays: Int = 7
+    public static let userTerminal: String = "Terminal"
 
     // Updates
     public static let autoCheckUpdates: Bool = true
@@ -196,4 +207,73 @@ public enum StorageDefaults {
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
+}
+
+/// Registers the default values for every preference key with UserDefaults
+/// (the Swift counterpart of the original's
+/// `registerDefaults: [DefaultPreferences.plist]`).
+///
+/// Must be called at app startup, **before** anything reads UserDefaults
+/// directly (e.g. `HistoryClipboardManager`, `RuleEngine.match` reading
+/// `minScore`) — `UserDefaults.bool`/`integer` return false/0 for keys that
+/// were never written, which would otherwise disable the clipboard monitor
+/// and the gesture score gate on a fresh install.
+public func registerUserDefaultsDefaults() {
+    let defaults: [String: Any] = [
+        StorageKey.isEnabled.rawValue: StorageDefaults.isEnabled,
+        StorageKey.showIconInStatusBar.rawValue: StorageDefaults.showIconInStatusBar,
+        StorageKey.launchAtLogin.rawValue: StorageDefaults.launchAtLogin,
+        StorageKey.showUIInWhateverApp.rawValue: StorageDefaults.showUIInWhateverApp,
+        StorageKey.blockFilter.rawValue: StorageDefaults.blockFilter,
+        StorageKey.whiteListMode.rawValue: StorageDefaults.whiteListMode,
+        StorageKey.whiteList.rawValue: StorageDefaults.whiteList,
+        StorageKey.language.rawValue: StorageDefaults.language,
+        StorageKey.openPrefOnStartup.rawValue: StorageDefaults.openPrefOnStartup,
+        StorageKey.mergeConsecutiveIdenticalGestures.rawValue: StorageDefaults.mergeConsecutiveIdenticalGestures,
+        StorageKey.defaultLineColor.rawValue: StorageDefaults.defaultLineColor,
+        StorageKey.defaultNoteColor.rawValue: StorageDefaults.defaultNoteColor,
+        StorageKey.minimumPoints.rawValue: StorageDefaults.minimumPoints,
+        StorageKey.minSimilarityScore.rawValue: StorageDefaults.minSimilarityScore,
+        StorageKey.enableGestureMinScore.rawValue: StorageDefaults.enableGestureMinScore,
+        StorageKey.showGestureNote.rawValue: StorageDefaults.showGestureNote,
+        StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
+        StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
+        StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,
+        StorageKey.noteFontName.rawValue: StorageDefaults.noteFontName,
+        StorageKey.noteFontSize.rawValue: StorageDefaults.noteFontSize,
+        StorageKey.showNoteIcon.rawValue: StorageDefaults.showNoteIcon,
+        StorageKey.disableMousePath.rawValue: StorageDefaults.disableMousePath,
+        StorageKey.lineColorHex.rawValue: StorageDefaults.lineColorHex,
+        StorageKey.lineWidth.rawValue: StorageDefaults.lineWidth,
+        StorageKey.enableRightClickMenu.rawValue: StorageDefaults.enableRightClickMenu,
+        StorageKey.enableNewFile.rawValue: StorageDefaults.enableNewFile,
+        StorageKey.enableOpenInTerminal.rawValue: StorageDefaults.enableOpenInTerminal,
+        StorageKey.enableCopyFilePath.rawValue: StorageDefaults.enableCopyFilePath,
+        StorageKey.enableHistoryClipboard.rawValue: StorageDefaults.enableHistoryClipboard,
+        StorageKey.clipboardLimitTop.rawValue: StorageDefaults.clipboardLimitTop,
+        StorageKey.clipboardLimitTotal.rawValue: StorageDefaults.clipboardLimitTotal,
+        StorageKey.clipboardSaveDays.rawValue: StorageDefaults.clipboardSaveDays,
+        StorageKey.clipoardStroageLocal.rawValue: StorageDefaults.clipoardStroageLocal,
+        StorageKey.clipoardStroageRam.rawValue: StorageDefaults.clipoardStroageRam,
+        StorageKey.historyCilpboardListShortcut.rawValue: StorageDefaults.historyCilpboardListShortcut,
+        StorageKey.enableLimitTotal.rawValue: StorageDefaults.enableLimitTotal,
+        StorageKey.limitTotal.rawValue: StorageDefaults.limitTotal,
+        StorageKey.enableLimitTop.rawValue: StorageDefaults.enableLimitTop,
+        StorageKey.limitTop.rawValue: StorageDefaults.limitTop,
+        StorageKey.enableLimitSaveDays.rawValue: StorageDefaults.enableLimitSaveDays,
+        StorageKey.limitSaveDays.rawValue: StorageDefaults.limitSaveDays,
+        StorageKey.userTerminal.rawValue: StorageDefaults.userTerminal,
+        StorageKey.autoCheckUpdates.rawValue: StorageDefaults.autoCheckUpdates,
+        StorageKey.showToast.rawValue: StorageDefaults.showToast,
+        StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
+        // Right-click menu keys as read by the FinderSync extension.
+        "newFile": StorageDefaults.enableNewFile,
+        "openInTerminal": StorageDefaults.enableOpenInTerminal,
+        "copyFilePath": StorageDefaults.enableCopyFilePath,
+        // Black/white list mode default (blacklist = not whitelist mode).
+        "filterIsInWhiteMode": false,
+        // Gesture score gate (read with the raw key by RuleEngine.match).
+        "minScore": StorageDefaults.minSimilarityScore,
+    ]
+    UserDefaults.standard.register(defaults: defaults)
 }

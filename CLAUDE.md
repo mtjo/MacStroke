@@ -53,13 +53,19 @@ swift test --list-tests
 ### 关键组件
 
 - **Sources/MacStrokeApp/main.swift** — 应用入口。设置 `NSApplication.shared.setActivationPolicy(.accessory)`。创建 `AppDelegate`，其职责包括：
+  - 单实例检测：二次启动时发送 `MacStrokeOpenPreferences` 分布式通知并退出
   - 在启动时应用已保存的语言偏好
   - 检查/请求无障碍权限（`AXIsProcessTrustedWithOptions`）
-  - 启动 `EventCapture` → `CanvasManager` → `RuleEngine` 处理链
+  - `firstLaunch` 首次启动初始化（默认规则、RightClicksList）
+  - `BlackWhiteFilter.compatibleProcedureWithPreviousVersion()` 旧版 blockFilter 迁移
+  - `openPrefOnStartup` / `applicationShouldHandleReopen` 打开偏好窗口
+  - 启动 `EventCapture` → `CanvasManager` → `RuleEngine` 处理链，并注入 `shouldCaptureGesture` / `needsRightClickMenu` 闭包
+  - `initRightClickMenu`（RightClickMenuManager 分布式通知 + pluginkit 延迟启用）
+  - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ^⇧V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
   - 创建状态栏项目，使用模板图片（`menu_icon_16x16.png` / disabled 版本）
-  - 初始化 Sparkle 更新器（feed URL 为占位符）
+  - 初始化 Sparkle 更新器（feed URL 为占位符；About 页 "Check Now" 通过 `.macStrokeCheckForUpdates` 通知触发）
 
-- **Sources/EventCapture/EventCapture.swift** — 在 `.cgSessionEventTap` / `.headInsertEventTap` 使用 `CGEventTap`。捕获鼠标移动、左键/右键按下和抬起。将事件转换为 `GesturePoint` 并转发给 delegate（`CanvasManager`）。
+- **Sources/EventCapture/EventCapture.swift** — 在 `.cghidEventTap` 使用 `CGEventTap` 拦截右键手势事件（rightMouseDown/Dragged/Up + leftMouseDown）。**只有右键开始手势**；delegate 返回 `true` 时事件被吞掉（返回 NULL），`false` 时放行。坐标在边界处转换为 AppKit 底左原点（`primaryScreenHeight - cgY`），与手势模板坐标系一致。`kCGEventTapDisabledByTimeout` 时自动重新启用 tap。`isEnabled` 主开关对应状态栏"Enable MacStroke"。
 
 - **Sources/GestureEngine/** — 从原始 `GestureCompare.m` 移植的 DTW 算法：
   - `Stroke` / `GesturePoint` — 归一化坐标、`t`（时间）、`alpha`（角度）、`dt`
@@ -68,14 +74,22 @@ swift test --list-tests
 
 - **Sources/RuleEngine/** —
   - `Rule`（不可变 `struct`，所有 `let` 属性）包含 `GestureTemplate`、`RuleAction`、过滤器（通配符/正则 bundle ID）、`minSimilarityScore`
-  - `RuleAction`: `.applescript`、`.keyPress`、`.mouseClick`、`.copyToClipboard`、`.none`
-  - `RuleEngine` 将传入的 `Stroke` 与启用的规则进行匹配（带 bundle 过滤）
-  - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；通过 `GestureTemplateProvider` 提供 15 条默认规则
+  - `RuleAction`: `.shortcut(keyCode:flags:)`、`.applescript`、`.text`、`.password`、`.keyPress`、`.mouseClick`、`.copyToClipboard`、`.none`
+  - `RuleEngine.match` 遍历**所有**过滤匹配的规则取**最高分**（对齐原版 `setActionIndex`），并接入全局 `enableGestureMinScore` / `minScore`（默认 85）门槛；`appSuitedRule(bundleID:)` 判断某 app 是否有适用规则
+  - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；`defaultRules()` 提供与原版 `RulesList.reInit` 相同的 15 条默认规则（带修饰键的 shortcut 动作、Reversed 点序反转模板、text/password 动作）
+  - `ActionExecutor.typeText` 使用 `CGEventKeyboardSetUnicodeString` 模拟键入（对齐原版 `typeSting`）
   - **不可变性**：更新规则时，创建新的 `Rule` 实例并调用 `RuleStore.update()`
+
+- **Sources/GestureEngine/GestureTemplateProvider.swift** — 预设手势（A–Z、方向箭头、方框符号）；`reversedTemplate(for:)` 提供 Reversed（点序反转）变体，`allTemplatesIncludingReversed()` 命名格式为 "X Shape" / "X Shape Revered"
+
+- **Sources/EventCapture/CanvasManager.swift** — 手势状态机（对齐原版 `mouseEventCallback`）：
+  - 右键按下时经 `shouldCaptureGesture` 闭包过滤（main.swift 注入：黑白名单 + showUIInWhateverApp + appSuitedRule）
+  - 手势未匹配时重放右键 down/up 事件；无拖拽且 app 在 RightClicksList 中时合成 Ctrl+左键（`threadRightClick` 等价）
+  - `isRecordingGesture` + `onGestureRecorded` 支持"屏幕绘制录入手势"（通过 `.macStrokeRecordGesture` 通知触发）
 
 - **Sources/Preferences/** —
   - `UserPreferences`（`ObservableObject`）将每个设置绑定到 `PreferencesStorage`（`StorageKey` enum 中的 UserDefaults key）
-  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Gesture、Note、Drawing、Right-Click、Clipboard、Updates
+  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、About（8 个，对齐原版 `AppPrefsWindowController.setupToolbar`；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
   - `DrawGestureView` — 用于在规则表格中渲染手势缩略图的 `NSViewRepresentable` 包装器，内部是 AppKit `DrawGesture`（`NSView`）
   - `GestureTemplatePreview` / `PresetGesturePickerView` — 预设手势选择（A–Z、方向箭头、方框符号）以及 "Apply to Selected" 流程
   - 规则表格列：Enabled、Gesture（DrawGestureView 56×56）、Name、Description、Action、App Filter
@@ -111,8 +125,9 @@ swift test --list-tests
 - **Rule 是不可变的** — 不要修改 `rule.template` 或其他 `let` 属性；始终构造新的 `Rule` 并调用 `RuleStore.update(newRule)`
 - **DrawGesture 缩放** — `computeScaledPoints` 使用 `bounds.width/height`（不是硬编码常量）；`layout()` 覆写会在 bounds 变化时重新计算；`clipsToBounds = true`，背景透明
 - **PreferencesView 规则表格** — Gesture 列使用 `DrawGestureView`（frame 56×56）；表格高度填充可用空间（滚动视图上使用 `maxHeight: .infinity`）
-- **预设手势流程** — 点击手势单元格 → 选择规则 → 打开 `PresetGesturePickerView` sheet → "Apply to Selected" 创建带所选模板的新 `Rule`
-- **FinderSync 通信** — 使用 `DistributedNotificationCenter`，`deliverImmediately: true`；菜单项通过共享 `UserDefaults` key 同步（`enableRightClickMenu`、`enableNewFile` 等）
+- **手势录入** — 点击手势缩略图选中规则 → "Draw Gesture" 弹窗确认 → 发送 `.macStrokeRecordGesture`（userInfo 携带规则名）→ AppDelegate 进入录制模式 → 用户在屏幕上画手势 → `onGestureRecorded` 写入规则并广播 `.macStrokeRuleStoreDidChange`
+- **Toast 位置** — `ToastPosition` 原始值对齐原版 `notePostion`：0=跟随鼠标、1=屏幕中央、2=右上、3=右下、4=左上、5=左下
+- **FinderSync 通信** — 主 app → 扩展：`SyncSharedDefaultsNotification`（object=主 app bundleID，userInfo 带开关与菜单标题，扩展收到后写入自己的 UserDefaults）；扩展启动时发 `RequestObservingPathNotification`，主 app 回 `ObservingPathSetNotification`（根路径 "/"）；扩展 → 主 app：`CustomMessageReceivedNotification`（object=JSON 字符串，解析 operation/path/items）。主 app 端解析在 `RightClickMenuManager.customMessageReceivedFromFinder`
 - **无障碍权限** — 启动时通过 `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` 检查；会显示带 "Open System Settings" 按钮的模态提示
 - **Sparkle** — `SPUStandardUpdaterController` 在 `AppDelegate.initSparkleUpdater()` 中初始化；feed URL 是占位符（`https://example.com/updates/feed.xml`）
 

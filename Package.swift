@@ -81,6 +81,8 @@ let package = Package(
             name: "MacStrokeApp",
             dependencies: [
                 "EventCapture",
+                "RuleEngine",
+                "RightClickMenu",
                 "WindowManager",
                 "Preferences",
                 "AppleScriptRunner",
@@ -112,7 +114,7 @@ let package = Package(
             dependencies: ["RuleEngine"]),
         .testTarget(
             name: "StorageTests",
-            dependencies: ["Storage"]),
+            dependencies: ["Storage", "EventCapture"]),
         .testTarget(
             name: "WindowManagerTests",
             dependencies: ["WindowManager"]),

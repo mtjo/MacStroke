@@ -684,8 +684,31 @@ public final class GestureTemplateProvider {
         gesture.template
     }
 
+    /// Returns the reversed (point-order flipped) template for a preset
+    /// gesture — the original's `IsRevered:YES` variants (same shape drawn
+    /// in the opposite direction).
+    public func reversedTemplate(for gesture: PresetGesture) -> Stroke {
+        let stroke = gesture.template
+        var reversed = Stroke(capacity: max(stroke.count, 1))
+        for point in stroke.points.reversed() {
+            reversed.addPoint(point)
+        }
+        return reversed
+    }
+
     /// Get all templates as (name, stroke) pairs.
     public func allTemplates() -> [(name: String, stroke: Stroke)] {
         PresetGesture.allCases.map { ($0.rawValue, $0.template) }
+    }
+
+    /// Get all templates including reversed variants, named like the original
+    /// preset picker (e.g. "A", "A Revered").
+    public func allTemplatesIncludingReversed() -> [(name: String, stroke: Stroke)] {
+        var result: [(name: String, stroke: Stroke)] = []
+        for gesture in PresetGesture.allCases {
+            result.append((gesture.rawValue, gesture.template))
+            result.append((gesture.rawValue + " Revered", reversedTemplate(for: gesture)))
+        }
+        return result
     }
 }

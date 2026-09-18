@@ -125,15 +125,6 @@ public final class UserPreferences: ObservableObject {
     }
 
     // MARK: - Clipboard
-    @Published public var clipboardLimitTop: Int {
-        didSet { storage.setInt(clipboardLimitTop, forKey: .clipboardLimitTop) }
-    }
-    @Published public var clipboardLimitTotal: Int {
-        didSet { storage.setInt(clipboardLimitTotal, forKey: .clipboardLimitTotal) }
-    }
-    @Published public var clipboardSaveDays: Int {
-        didSet { storage.setInt(clipboardSaveDays, forKey: .clipboardSaveDays) }
-    }
     @Published public var enableHistoryClipboard: Bool {
         didSet { storage.setBool(enableHistoryClipboard, forKey: .enableHistoryClipboard) }
     }
@@ -146,11 +137,27 @@ public final class UserPreferences: ObservableObject {
     @Published public var historyCilpboardListShortcut: String {
         didSet { storage.setString(historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut) }
     }
+    @Published public var enableLimitTop: Bool {
+        didSet { storage.setBool(enableLimitTop, forKey: .enableLimitTop) }
+    }
+    @Published public var limitTop: Int {
+        didSet { storage.setInt(limitTop, forKey: .limitTop) }
+    }
     @Published public var enableLimitTotal: Bool {
         didSet { storage.setBool(enableLimitTotal, forKey: .enableLimitTotal) }
     }
     @Published public var limitTotal: Int {
         didSet { storage.setInt(limitTotal, forKey: .limitTotal) }
+    }
+    @Published public var enableLimitSaveDays: Bool {
+        didSet { storage.setBool(enableLimitSaveDays, forKey: .enableLimitSaveDays) }
+    }
+    @Published public var limitSaveDays: Int {
+        didSet { storage.setInt(limitSaveDays, forKey: .limitSaveDays) }
+    }
+    // MARK: - Right-click menu extras
+    @Published public var userTerminal: String {
+        didSet { storage.setString(userTerminal, forKey: .userTerminal) }
     }
 
     // MARK: - Updates
@@ -197,15 +204,17 @@ public final class UserPreferences: ObservableObject {
         self.enableNewFile = storage.getBoolOptional(forKey: .enableNewFile) ?? StorageDefaults.enableNewFile
         self.enableOpenInTerminal = storage.getBoolOptional(forKey: .enableOpenInTerminal) ?? StorageDefaults.enableOpenInTerminal
         self.enableCopyFilePath = storage.getBoolOptional(forKey: .enableCopyFilePath) ?? StorageDefaults.enableCopyFilePath
-        self.clipboardLimitTop = storage.getIntOptional(forKey: .clipboardLimitTop) ?? StorageDefaults.clipboardLimitTop
-        self.clipboardLimitTotal = storage.getIntOptional(forKey: .clipboardLimitTotal) ?? StorageDefaults.clipboardLimitTotal
-        self.clipboardSaveDays = storage.getIntOptional(forKey: .clipboardSaveDays) ?? StorageDefaults.clipboardSaveDays
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
         self.clipoardStroageLocal = storage.getBoolOptional(forKey: .clipoardStroageLocal) ?? StorageDefaults.clipoardStroageLocal
         self.clipoardStroageRam = storage.getBoolOptional(forKey: .clipoardStroageRam) ?? StorageDefaults.clipoardStroageRam
-        self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? ""
+        self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? StorageDefaults.historyCilpboardListShortcut
+        self.enableLimitTop = storage.getBoolOptional(forKey: .enableLimitTop) ?? StorageDefaults.enableLimitTop
+        self.limitTop = storage.getIntOptional(forKey: .limitTop) ?? StorageDefaults.limitTop
         self.enableLimitTotal = storage.getBoolOptional(forKey: .enableLimitTotal) ?? StorageDefaults.enableLimitTotal
         self.limitTotal = storage.getIntOptional(forKey: .limitTotal) ?? StorageDefaults.limitTotal
+        self.enableLimitSaveDays = storage.getBoolOptional(forKey: .enableLimitSaveDays) ?? StorageDefaults.enableLimitSaveDays
+        self.limitSaveDays = storage.getIntOptional(forKey: .limitSaveDays) ?? StorageDefaults.limitSaveDays
+        self.userTerminal = storage.getStringOptional(forKey: .userTerminal) ?? StorageDefaults.userTerminal
         self.autoCheckUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
@@ -247,15 +256,17 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.enableNewFile, forKey: .enableNewFile)
         storage.setBool(StorageDefaults.enableOpenInTerminal, forKey: .enableOpenInTerminal)
         storage.setBool(StorageDefaults.enableCopyFilePath, forKey: .enableCopyFilePath)
-        storage.setInt(StorageDefaults.clipboardLimitTop, forKey: .clipboardLimitTop)
-        storage.setInt(StorageDefaults.clipboardLimitTotal, forKey: .clipboardLimitTotal)
-        storage.setInt(StorageDefaults.clipboardSaveDays, forKey: .clipboardSaveDays)
-        storage.setBool(true, forKey: .enableHistoryClipboard)
+        storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
         storage.setBool(StorageDefaults.clipoardStroageRam, forKey: .clipoardStroageRam)
-        storage.setString("", forKey: .historyCilpboardListShortcut)
+        storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
+        storage.setBool(StorageDefaults.enableLimitTop, forKey: .enableLimitTop)
+        storage.setInt(StorageDefaults.limitTop, forKey: .limitTop)
         storage.setBool(StorageDefaults.enableLimitTotal, forKey: .enableLimitTotal)
         storage.setInt(StorageDefaults.limitTotal, forKey: .limitTotal)
+        storage.setBool(StorageDefaults.enableLimitSaveDays, forKey: .enableLimitSaveDays)
+        storage.setInt(StorageDefaults.limitSaveDays, forKey: .limitSaveDays)
+        storage.setString(StorageDefaults.userTerminal, forKey: .userTerminal)
         storage.setBool(StorageDefaults.autoCheckUpdates, forKey: .autoCheckUpdates)
         storage.setBool(StorageDefaults.showToast, forKey: .showToast)
         storage.setInt(StorageDefaults.clipboardHistoryLimit, forKey: .clipboardHistoryLimit)

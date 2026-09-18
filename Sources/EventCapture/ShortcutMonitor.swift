@@ -121,6 +121,10 @@ public final class ShortcutMonitor {
         return (UInt16(keyCodeInt), UInt(flagsInt))
     }
 
+    /// Standard keyboard modifier bits (shift/control/option/command), used to
+    /// compare flags while ignoring device-dependent low bits.
+    private static let modifierMask: UInt = 0x1E_0000
+
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         guard type == .keyDown else { return Unmanaged.passRetained(event) }
 
@@ -132,8 +136,8 @@ public final class ShortcutMonitor {
             return Unmanaged.passRetained(event)
         }
 
-        // Check if flags match (if flags is set)
-        if flags != 0 && eventFlags != flags {
+        // Check if modifier flags match, ignoring device-dependent bits
+        if (eventFlags & Self.modifierMask) != (flags & Self.modifierMask) {
             return Unmanaged.passRetained(event)
         }
 

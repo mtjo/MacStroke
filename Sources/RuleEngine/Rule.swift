@@ -261,10 +261,17 @@ public final class RuleEngine {
     }
 
     /// Match a stroke against rules, optionally filtered by bundle ID.
+    ///
+    /// Mirrors the original's `setActionIndex`: iterates **all** filter-matching
+    /// rules and returns the one with the **highest** score (not the first to
+    /// pass a threshold). The global `enableGestureMinScore` / `minScore`
+    /// preferences gate candidate scores, combined with each rule's own
+    /// `minSimilarityScore`.
+    ///
     /// - Parameters:
     ///   - stroke: The stroke to test
     ///   - bundleID: The current application's bundle ID (optional)
-    /// - Returns: The matching rule and its similarity score, or nil if no match.
+    /// - Returns: The best-matching rule and its similarity score, or nil if no match.
     public func match(stroke: Stroke, bundleID: String? = nil) -> (rule: Rule, score: Double)? {
         // Check BlackWhiteFilter first: if the app is blocked, no rules match
         if let bundleID = bundleID, !BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID) {
@@ -273,6 +280,17 @@ public final class RuleEngine {
 
         var normalizedStroke = stroke
         normalizedStroke.normalize()
+
+        // Global score gate (original: enableGestureMinScore + minScore defaults).
+        let defaults = UserDefaults.standard
+        let enableMinScore = defaults.object(forKey: "enableGestureMinScore") == nil
+            ? true
+            : defaults.bool(forKey: "enableGestureMinScore")
+        let storedMinScore = defaults.double(forKey: "minScore")
+        let globalMinScore = storedMinScore > 0 ? storedMinScore : 85.0
+
+        var bestRule: Rule?
+        var bestScore: Double = 0.0
 
         for rule in rules where rule.isEnabled {
             // Apply bundle filter if specified
@@ -286,12 +304,31 @@ public final class RuleEngine {
                 template: rule.template.stroke,
                 candidate: normalizedStroke
             )
-            if score >= rule.minSimilarityScore {
-                return (rule, score)
+
+            let threshold: Double
+            if enableMinScore {
+                threshold = max(globalMinScore, rule.minSimilarityScore)
+            } else {
+                threshold = rule.minSimilarityScore
+            }
+
+            if score > 0 && score > bestScore && score >= threshold {
+                bestRule = rule
+                bestScore = score
             }
         }
 
-        return nil
+        guard let rule = bestRule else { return nil }
+        return (rule, bestScore)
+    }
+
+    /// Whether any enabled rule's filter matches the given bundle ID
+    /// (original: `appSuitedRule:` — used to decide whether the gesture UI
+    /// may be shown in the given app).
+    public func appSuitedRule(bundleID: String) -> Bool {
+        rules.contains { rule in
+            rule.isEnabled && matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID)
+        }
     }
 
     /// Check if a bundle ID matches a filter (wildcard or regex).

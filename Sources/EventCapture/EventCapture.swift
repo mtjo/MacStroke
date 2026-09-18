@@ -3,8 +3,17 @@
 //  MacStroke
 //
 //  Global mouse event capture using CGEventTap.
-//  Captures mouse move, button down/up events and converts them
-//  to GesturePoint values for the GestureEngine to consume.
+//  Captures right-mouse gesture events (down/dragged/up) and left-mouse-down,
+//  converting them to GesturePoint values for the GestureEngine to consume.
+//
+//  Mirrors the original MacStroke behavior:
+//  - Only right-button drags start gestures (left button is observed but passed through)
+//  - The delegate decides whether to consume (swallow) each event; consumed
+//    events do not propagate to other applications (returns NULL from the tap)
+//  - The tap is automatically re-enabled after a timeout disable
+//  - Points are converted to AppKit-style bottom-left-origin coordinates,
+//    matching the original's NSEvent.locationInWindow convention so that
+//    gesture templates and live strokes share the same coordinate space.
 //
 
 import Foundation
@@ -38,7 +47,11 @@ public enum MousePhase {
 
 /// Delegate for receiving captured mouse events.
 public protocol EventCaptureDelegate: AnyObject {
-    func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent)
+    /// Handle a captured mouse event.
+    /// - Returns: `true` to consume (swallow) the event so it does not
+    ///   propagate to other applications; `false` to let it pass through.
+    @discardableResult
+    func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent) -> Bool
 }
 
 /// Global mouse event capture using CGEventTap.
@@ -50,7 +63,7 @@ public protocol EventCaptureDelegate: AnyObject {
 /// capture.start()
 /// ```
 ///
-/// Requires the "Monitor Input" accessibility permission.
+/// Requires the Accessibility ("Monitor Input") permission.
 public class EventCapture: NSObject {
     public weak var delegate: EventCaptureDelegate?
 
@@ -58,15 +71,25 @@ public class EventCapture: NSObject {
     private var runLoopSource: CFRunLoopSource?
     private var isRunning = false
 
-    /// The CGEventMask for mouse events we care about.
+    /// Master enable switch (mirrors the original's static `isEnabled`).
+    /// When false, all events pass through untouched.
+    public var isEnabled = true
+
+    /// The CGEventMask for mouse events we care about — the same set the
+    /// original MacStroke listens for.
     private let mouseEventMask: CGEventMask = {
-        let moveMask = (1 << CGEventType.mouseMoved.rawValue)
-        let leftDownMask = (1 << CGEventType.leftMouseDown.rawValue)
-        let leftUpMask = (1 << CGEventType.leftMouseUp.rawValue)
         let rightDownMask = (1 << CGEventType.rightMouseDown.rawValue)
+        let rightDraggedMask = (1 << CGEventType.rightMouseDragged.rawValue)
         let rightUpMask = (1 << CGEventType.rightMouseUp.rawValue)
-        return CGEventMask(moveMask | leftDownMask | leftUpMask | rightDownMask | rightUpMask)
+        let leftDownMask = (1 << CGEventType.leftMouseDown.rawValue)
+        return CGEventMask(rightDownMask | rightDraggedMask | rightUpMask | leftDownMask)
     }()
+
+    /// Height of the primary screen, used to convert CG (top-left origin)
+    /// global coordinates to AppKit (bottom-left origin) global coordinates.
+    private static var primaryScreenHeight: Double {
+        Double(NSScreen.screens.first?.frame.height ?? 0)
+    }
 
     /// Start capturing global mouse events.
     /// - Returns: true if the event tap was created successfully, false otherwise.
@@ -80,9 +103,8 @@ public class EventCapture: NSObject {
             return capture.handleEvent(type: type, event: event)
         }
 
-        // Create the event tap
         eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
+            tap: .cghidEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: mouseEventMask,
@@ -95,13 +117,11 @@ public class EventCapture: NSObject {
             return false
         }
 
-        // Create a run loop source and add it to the current run loop
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
         if let source = runLoopSource {
             CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         }
 
-        // Enable the event tap
         CGEvent.tapEnable(tap: eventTap, enable: true)
         isRunning = true
         print("[EventCapture] Started")
@@ -130,37 +150,53 @@ public class EventCapture: NSObject {
     public var running: Bool { isRunning }
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        // Get the mouse location in screen coordinates
-        let location = event.location
-
-        // Convert to GesturePoint
-        let gesturePoint = GesturePoint(x: location.x, y: location.y)
-
-        // Determine button and phase
-        let button: MouseButton
-        switch type {
-        case .leftMouseDown, .leftMouseUp:
-            button = .left
-        case .rightMouseDown, .rightMouseUp:
-            button = .right
-        default:
-            button = .other
+        // Re-enable the tap if the system disabled it due to a timeout,
+        // mirroring the original's kCGEventTapDisabledByTimeout handling.
+        if type == .tapDisabledByTimeout {
+            if let tap = eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            return Unmanaged.passRetained(event)
         }
 
+        guard isEnabled else {
+            return Unmanaged.passRetained(event)
+        }
+
+        // Only the event types in our mask reach here; convert to AppKit
+        // bottom-left-origin global coordinates like the original's
+        // [NSEvent eventWithCGEvent:] + locationInWindow convention.
+        let location = event.location
+        let appKitY = Self.primaryScreenHeight - location.y
+        let gesturePoint = GesturePoint(x: location.x, y: appKitY)
+
+        let button: MouseButton
         let phase: MousePhase
         switch type {
-        case .leftMouseDown, .rightMouseDown:
+        case .leftMouseDown:
+            button = .left
             phase = .down
-        case .leftMouseUp, .rightMouseUp:
+        case .rightMouseDown:
+            button = .right
+            phase = .down
+        case .rightMouseUp:
+            button = .right
             phase = .up
+        case .rightMouseDragged:
+            button = .right
+            phase = .moved
         default:
+            button = .other
             phase = .moved
         }
 
         let mouseEvent = MouseEvent(point: gesturePoint, button: button, phase: phase)
-        delegate?.eventCapture(self, didReceive: mouseEvent)
+        let consume = delegate?.eventCapture(self, didReceive: mouseEvent) ?? false
 
-        // Return the event so it continues to propagate normally
+        if consume {
+            // Swallow the event (return NULL) so it does not reach other apps.
+            return nil
+        }
         return Unmanaged.passRetained(event)
     }
 

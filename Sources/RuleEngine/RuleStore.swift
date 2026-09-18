@@ -103,6 +103,14 @@ public final class RuleStore: ObservableObject {
         return engine.match(stroke: stroke, bundleID: bundleID)
     }
 
+    /// Whether any enabled rule's filter matches the given bundle ID
+    /// (original: `appSuitedRule:` — gates whether the gesture UI is shown).
+    public func appSuitedRule(bundleID: String) -> Bool {
+        let engine = RuleEngine()
+        engine.add(contentsOf: rules)
+        return engine.appSuitedRule(bundleID: bundleID)
+    }
+
     /// Save rules to disk.
     public func save() {
         do {
@@ -130,10 +138,31 @@ public final class RuleStore: ObservableObject {
         }
     }
 
-    /// Default rules matching the original MacStroke preset configuration.
+    /// Default rules matching the original MacStroke preset configuration
+    /// (RulesList.m `reInit`). Shortcut key codes are Carbon virtual key codes;
+    /// modifier flags are CGEventFlags raw values.
     public static func defaultRules() -> [Rule] {
-        let gestures = GestureTemplateProvider.shared.allTemplates()
+        let gestures = GestureTemplateProvider.shared.allTemplatesIncludingReversed()
         let templateByName = Dictionary(uniqueKeysWithValues: gestures.map { ($0.name, $0.stroke) })
+
+        // CGEventFlags raw values for keyboard modifiers.
+        let cmd: UInt = 0x100000
+        let shift: UInt = 0x20000
+        let control: UInt = 0x40000
+        let option: UInt = 0x80000
+        // Carbon virtual key codes.
+        let keyLeftArrow: UInt16 = 123
+        let keyRightArrow: UInt16 = 124
+        let keyPageUp: UInt16 = 116
+        let keyPageDown: UInt16 = 121
+        let keyM: UInt16 = 46
+        let keyF: UInt16 = 3
+        let keyQ: UInt16 = 12
+        let keyW: UInt16 = 13
+        let keyV: UInt16 = 9
+        let keyA: UInt16 = 0
+        let keyLeftBracket: UInt16 = 33
+        let keyRightBracket: UInt16 = 30
 
         func rule(
             name: String,
@@ -141,7 +170,7 @@ public final class RuleStore: ObservableObject {
             gesture: String,
             action: RuleAction,
             note: String,
-            filter: String = "",
+            filter: String = "*",
             filterType: String = "wildcard"
         ) -> Rule {
             let stroke = templateByName[gesture] ?? templateByName["A Shape"]!
@@ -153,6 +182,7 @@ public final class RuleStore: ObservableObject {
                 action: action,
                 note: note,
                 isEnabled: true,
+                triggerOnEveryMatch: false,
                 filter: filter,
                 filterType: filterType
             )
@@ -162,106 +192,106 @@ public final class RuleStore: ObservableObject {
             rule(
                 name: "Password",
                 description: "Input password",
-                gesture: "P Shape",
-                action: .copyToClipboard("12345678"),
-                note: "Input password"
+                gesture: "P Shape Revered",
+                action: .password("12345678"),
+                note: "input password"
             ),
             rule(
                 name: "Email",
                 description: "Input e-mail",
                 gesture: "M Shape",
-                action: .copyToClipboard("mtjo.net@gmail.com"),
-                note: "Input e-mail"
+                action: .text("mtjo.net@gmail.com"),
+                note: "input e-mail"
             ),
             rule(
                 name: "Back",
                 description: "Navigate back",
-                gesture: "←",
-                action: .keyPress("←"),
+                gesture: "\u{2190}",
+                action: .shortcut(keyCode: keyLeftArrow, flags: cmd),
                 note: "Back"
             ),
             rule(
                 name: "Next",
                 description: "Navigate next",
-                gesture: "→",
-                action: .keyPress("→"),
+                gesture: "\u{2192}",
+                action: .shortcut(keyCode: keyRightArrow, flags: cmd),
                 note: "Next"
             ),
             rule(
-                name: "Min Size All Windows",
+                name: "MinSizeAll",
                 description: "Minimize all windows",
-                gesture: "↘",
-                action: .keyPress("m"),
+                gesture: "\u{2198}",
+                action: .shortcut(keyCode: keyM, flags: cmd | option),
                 note: "Min Size All Windows"
             ),
             rule(
-                name: "Min Size Windows",
+                name: "MinSize",
                 description: "Minimize window",
-                gesture: "↙",
-                action: .keyPress("m"),
+                gesture: "\u{2199}",
+                action: .shortcut(keyCode: keyM, flags: cmd),
                 note: "Min Size Windows"
             ),
             rule(
-                name: "Full Screen",
+                name: "FullScreen",
                 description: "Toggle full screen",
-                gesture: "↗",
-                action: .keyPress("f"),
+                gesture: "\u{2197}",
+                action: .shortcut(keyCode: keyF, flags: cmd | control),
                 note: "Full screen"
             ),
             rule(
                 name: "Exit",
                 description: "Exit app",
-                gesture: "L Shape",
-                action: .keyPress("q"),
+                gesture: "L Shape Revered",
+                action: .shortcut(keyCode: keyQ, flags: cmd),
                 note: "Exit App"
             ),
             rule(
-                name: "Close Tab",
+                name: "CloseTab",
                 description: "Close tab",
                 gesture: "L Shape",
-                action: .keyPress("w"),
+                action: .shortcut(keyCode: keyW, flags: cmd),
                 note: "Close Tab"
             ),
             rule(
                 name: "Paste",
                 description: "Paste",
                 gesture: "V Shape",
-                action: .keyPress("v"),
+                action: .shortcut(keyCode: keyV, flags: cmd),
                 note: "Paste"
             ),
             rule(
-                name: "Select All",
+                name: "SelectAll",
                 description: "Select all",
                 gesture: "A Shape",
-                action: .keyPress("a"),
+                action: .shortcut(keyCode: keyA, flags: cmd),
                 note: "SelectALL"
             ),
             rule(
-                name: "Page Up",
+                name: "PageUp",
                 description: "Page up",
-                gesture: "I Shape",
-                action: .keyPress("pageup"),
+                gesture: "I Shape Revered",
+                action: .shortcut(keyCode: keyPageUp, flags: 0),
                 note: "PageUp"
             ),
             rule(
-                name: "Page Down",
+                name: "PageDown",
                 description: "Page down",
                 gesture: "I Shape",
-                action: .keyPress("pagedown"),
+                action: .shortcut(keyCode: keyPageDown, flags: 0),
                 note: "PageDown"
             ),
             rule(
-                name: "Previous Tab",
+                name: "PrevTab",
                 description: "Previous tab",
-                gesture: "T Shape",
-                action: .keyPress("["),
+                gesture: "T Shape Revered",
+                action: .shortcut(keyCode: keyLeftBracket, flags: shift | cmd),
                 note: "Prev Tab"
             ),
             rule(
-                name: "Next Tab",
+                name: "NextTab",
                 description: "Next tab",
-                gesture: "F Shape",
-                action: .keyPress("]"),
+                gesture: "F Shape Revered",
+                action: .shortcut(keyCode: keyRightBracket, flags: shift | cmd),
                 note: "Next Tab"
             ),
         ]

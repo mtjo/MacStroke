@@ -13,6 +13,9 @@ public extension Notification.Name {
     static let languageDidChange = Notification.Name("MacStrokeLanguageDidChange")
     static let macStrokeEnabledDidChange = Notification.Name("MacStrokeEnabledDidChange")
     static let showIconInStatusBarDidChange = Notification.Name("ShowIconInStatusBarDidChange")
+    /// Posted after a screen-drawn gesture has been recorded into a rule, so
+    /// the preferences rule table can refresh.
+    static let macStrokeRuleStoreDidChange = Notification.Name("MacStrokeRuleStoreDidChange")
 }
 
 /// Applies the user's language preference to the running process.
