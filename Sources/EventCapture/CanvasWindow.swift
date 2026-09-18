@@ -17,9 +17,10 @@ final class CanvasView: NSView {
     // Stores the points of the current gesture being drawn.
     private var points: [CGPoint] = []
 
-    // Color and width of the gesture path line.
+    // Color of the gesture path line.
     private var lineColor: NSColor = NSColor(red: 0, green: 0, blue: 1, alpha: 1)
-    private var lineWidth: CGFloat = 4.0
+    // Line width (matches original hardcoded radius=2 → lineWidth=4).
+    private let lineWidth: CGFloat = 4.0
 
     /// Initializes the canvas view with default settings from UserDefaults.
     override init(frame frameRect: NSRect) {
@@ -38,14 +39,10 @@ final class CanvasView: NSView {
         updateColorFromDefaults()
     }
 
-    /// Reads line color and width from UserDefaults.
+    /// Reads line color from UserDefaults.
     private func updateColorFromDefaults() {
         let hex = UserDefaults.standard.string(forKey: "lineColorHex") ?? "#0000FFFF"
         lineColor = NSColor(hex: hex) ?? NSColor.blue
-        lineWidth = CGFloat(
-            UserDefaults.standard.double(forKey: "lineWidth")
-        )
-        if lineWidth <= 0 { lineWidth = 4.0 }
     }
 
     /// Adds a point to the gesture path and requests a redraw.

@@ -9,7 +9,6 @@
 import Foundation
 import GestureEngine
 import RuleEngine
-import Storage
 
 /// A rule store that manages gesture rules with persistence.
 @available(macOS 13.0, *)

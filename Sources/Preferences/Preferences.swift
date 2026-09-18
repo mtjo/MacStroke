@@ -87,27 +87,17 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setBool(showNoteIcon, forKey: .showNoteIcon) }
     }
 
-    // MARK: - Drawing
     @Published public var disableMousePath: Bool {
         didSet { storage.setBool(disableMousePath, forKey: .disableMousePath) }
     }
     @Published public var lineColorHex: String {
         didSet { storage.setString(lineColorHex, forKey: .lineColorHex) }
     }
-    @Published public var lineWidth: Double {
-        didSet { storage.setDouble(lineWidth, forKey: .lineWidth) }
-    }
 
     /// Computed Color wrapper for lineColorHex, used by ColorPicker.
     public var lineColor: Color {
         get { Color(hex: lineColorHex) }
         set { lineColorHex = newValue.hexString }
-    }
-
-    /// Computed Color wrapper for defaultNoteColor, used by ColorPicker.
-    public var defaultNoteColorHex: String {
-        get { defaultNoteColor }
-        set { defaultNoteColor = newValue }
     }
 
     // MARK: - Right-click menu
@@ -199,7 +189,6 @@ public final class UserPreferences: ObservableObject {
         self.showNoteIcon = storage.getBoolOptional(forKey: .showNoteIcon) ?? StorageDefaults.showNoteIcon
         self.disableMousePath = storage.getBoolOptional(forKey: .disableMousePath) ?? StorageDefaults.disableMousePath
         self.lineColorHex = storage.getStringOptional(forKey: .lineColorHex) ?? StorageDefaults.lineColorHex
-        self.lineWidth = storage.getDoubleOptional(forKey: .lineWidth) ?? StorageDefaults.lineWidth
         self.enableRightClickMenu = storage.getBoolOptional(forKey: .enableRightClickMenu) ?? StorageDefaults.enableRightClickMenu
         self.enableNewFile = storage.getBoolOptional(forKey: .enableNewFile) ?? StorageDefaults.enableNewFile
         self.enableOpenInTerminal = storage.getBoolOptional(forKey: .enableOpenInTerminal) ?? StorageDefaults.enableOpenInTerminal
@@ -251,7 +240,6 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.showNoteIcon, forKey: .showNoteIcon)
         storage.setBool(StorageDefaults.disableMousePath, forKey: .disableMousePath)
         storage.setString(StorageDefaults.lineColorHex, forKey: .lineColorHex)
-        storage.setDouble(StorageDefaults.lineWidth, forKey: .lineWidth)
         storage.setBool(StorageDefaults.enableRightClickMenu, forKey: .enableRightClickMenu)
         storage.setBool(StorageDefaults.enableNewFile, forKey: .enableNewFile)
         storage.setBool(StorageDefaults.enableOpenInTerminal, forKey: .enableOpenInTerminal)

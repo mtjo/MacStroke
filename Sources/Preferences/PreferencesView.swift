@@ -59,7 +59,7 @@ enum PreferencesTab: CaseIterable {
         case .filters: return "line.3.horizontal.decrease"
         case .appleScript: return "curlybraces"
         case .rightClick: return "mouse"
-        case .rightClickMenu: return "contextualmenu.and.cursor"
+        case .rightClickMenu: return "menubar.arrow.up.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .about: return "info.circle"
         }
@@ -200,6 +200,7 @@ public struct PreferencesView: View {
                     }
                 }
                 .padding(24)
+                .frame(maxWidth: .infinity)
             }
             .frame(minWidth: 600, minHeight: 550)
         }
@@ -269,157 +270,135 @@ struct TabButton: View {
 // Original General tab: app toggles, language, gesture recognition settings,
 // note (toast) settings, drawing settings, import/export, reset defaults.
 
+// MARK: - General Tab
+// Mirrors the original AppPrefsWindowController General tab layout exactly:
+// Box groups (top to bottom): General -> Gesture -> Note -> Import/Export/Reset buttons
+
 struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
-    // Use the shared LaunchAtLoginController singleton from EventCapture
     @StateObject private var launchController = LaunchAtLoginController.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SectionHeader(L("General"))
-
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle(L("Enable MacStroke"), isOn: Binding(
-                    get: { viewModel.isEnabled },
-                    set: { newValue in
-                        viewModel.isEnabled = newValue
-                        NotificationCenter.default.post(
-                            name: .macStrokeEnabledDidChange, object: newValue)
-                    }
-                ))
-                Toggle(L("Show icon in status bar"), isOn: Binding(
-                    get: { viewModel.showIconInStatusBar },
-                    set: { newValue in
-                        viewModel.showIconInStatusBar = newValue
-                        NotificationCenter.default.post(
-                            name: .showIconInStatusBarDidChange, object: newValue)
-                    }
-                ))
-                Toggle(L("Launch at login"), isOn: Binding(
-                    get: { launchController.isEnabled },
-                    set: { enabled in
-                        launchController.setEnabled(enabled)
-                        viewModel.launchAtLogin = enabled
-                    }
-                ))
-                Toggle(L("Open preferences on startup"), isOn: $viewModel.openPrefOnStartup)
-                Toggle(L("Show UI in any application"), isOn: $viewModel.showUIInWhateverApp)
-            }
-
-            Divider()
-
-            // MARK: Gesture recognition (original General tab)
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
-                HStack {
-                    Text(L("Min Score:"))
-                    Slider(value: $viewModel.minSimilarityScore, in: 0...100, step: 1)
-                        .frame(width: 260)
-                    Text("\(Int(viewModel.minSimilarityScore))")
-                        .frame(width: 40, alignment: .trailing)
-                }
-                Toggle(L("Merge consecutive identical gestures"), isOn: $viewModel.mergeConsecutiveIdenticalGestures)
-            }
-
-            Divider()
-
-            // MARK: Note / toast settings (original General tab)
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L("Note")).font(.headline)
-                Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
-                Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
-
-                HStack {
-                    Text(L("Font:"))
-                    Text(viewModel.noteFontName)
-                        .font(.system(.body, design: .monospaced))
-                    Button(L("Choose")) {
-                        openFontPanel()
-                    }
-                    .buttonStyle(.bordered)
-                    Text("Size: \(Int(viewModel.noteFontSize))")
-                        .foregroundColor(.secondary)
-                    Stepper("", value: $viewModel.noteFontSize, in: 8...96, step: 1).labelsHidden()
-                }
-
-                HStack {
-                    Text(L("Background Apha:"))
-                    Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
-                        .frame(width: 220)
-                    Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
-                        .frame(width: 40, alignment: .trailing)
-                }
-
-                HStack {
-                    Text(L("Retention Time:"))
-                    Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
-                        Text("\(viewModel.noteRetentionTime)s")
-                            .frame(width: 50, alignment: .trailing)
-                    }
-                }
-
-                HStack {
-                    Text(L("Postion:"))
-                    Picker("", selection: $viewModel.notePosition) {
-                        Text(L("Follow The Mouse")).tag(0)
-                        Text(L("Center In Screen")).tag(1)
-                        Text(L("Right Top")).tag(2)
-                        Text(L("Right Bottom")).tag(3)
-                        Text(L("Left Top")).tag(4)
-                        Text(L("Left Bottom")).tag(5)
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 200)
-                }
-
-                HStack {
-                    Text(L("Note Color"))
-                    ColorPicker("", selection: Binding(
-                        get: { Color(hex: viewModel.defaultNoteColorHex) },
-                        set: { viewModel.defaultNoteColorHex = $0.hexString }
+        VStack(alignment: .leading, spacing: 16) {
+            // MARK: General Group
+            GroupBox(L("General")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L("Show Icon In Status Bar"), isOn: Binding(
+                        get: { viewModel.showIconInStatusBar },
+                        set: { newValue in
+                            viewModel.showIconInStatusBar = newValue
+                            NotificationCenter.default.post(
+                                name: .showIconInStatusBarDidChange, object: newValue)
+                        }
                     ))
-                    .frame(width: 60)
+                    Toggle(L("Open Preferences Window at Startup"), isOn: $viewModel.openPrefOnStartup)
+                    Toggle(L("Auto Start at Login"), isOn: Binding(
+                        get: { launchController.isEnabled },
+                        set: { enabled in
+                            launchController.setEnabled(enabled)
+                            viewModel.launchAtLogin = enabled
+                        }
+                    ))
+                    Toggle(L("Enable MacStroke"), isOn: Binding(
+                        get: { viewModel.isEnabled },
+                        set: { newValue in
+                            viewModel.isEnabled = newValue
+                            NotificationCenter.default.post(
+                                name: .macStrokeEnabledDidChange, object: newValue)
+                        }
+                    ))
+
+                    HStack {
+                        Text(L("Language:"))
+                        Picker(L("Language"), selection: $viewModel.language) {
+                            Text(L("English")).tag("en")
+                            Text(L("简体中文")).tag("zh-Hans")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
                 }
             }
-            .padding(.leading, 8)
+            .frame(maxWidth: .infinity)
 
-            Divider()
+            // MARK: Gesture Group
+            GroupBox(L("Gesture")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L("Show Gesture In Whatever App"), isOn: $viewModel.showUIInWhateverApp)
+                    Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
 
-            // MARK: Drawing settings (original General tab)
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
-                HStack {
-                    Text(L("Line color:"))
-                    ColorPicker("", selection: $viewModel.lineColor)
-                        .frame(width: 60)
-                    Text(viewModel.lineColorHex)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                    Text(L("Line width"))
-                    Stepper(value: $viewModel.lineWidth, in: 1...20, step: 1) {
-                        Text("\(Int(viewModel.lineWidth))")
+                    HStack {
+                        Text(L("Line color:"))
+                        ColorPicker("", selection: $viewModel.lineColor)
+                            .frame(width: 60)
+                    }
+
+                    HStack {
+                        Text(L("Min Score:"))
+                        Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
+                            .frame(width: 200)
+                        Text("\(Int(viewModel.minSimilarityScore))")
                             .frame(width: 30, alignment: .trailing)
                     }
+
+                    Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
                 }
             }
-            .padding(.leading, 8)
+            .frame(maxWidth: .infinity)
 
-            Divider()
+            // MARK: Note Group
+            GroupBox(L("Note")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
+                    Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
 
-            // MARK: Language
-            HStack {
-                Text(L("Language:"))
-                Picker(L("Language"), selection: $viewModel.language) {
-                    Text(L("English")).tag("en")
-                    Text(L("简体中文")).tag("zh-Hans")
+                    HStack {
+                        Text(L("Font:"))
+                        Text(viewModel.noteFontName)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(width: 120, alignment: .leading)
+                        Button(L("Choose")) { openFontPanel() }
+                            .buttonStyle(.bordered)
+                        Text(L("FontSize"))
+                        Stepper("", value: $viewModel.noteFontSize, in: 8...96, step: 1)
+                            .labelsHidden()
+                            .frame(width: 60)
+                    }
+
+                    HStack {
+                        Text(L("Background Apha:"))
+                        Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
+                            .frame(width: 160)
+                        Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
+                            .frame(width: 40, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text(L("Retention Time:"))
+                        Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
+                            Text("\(viewModel.noteRetentionTime)s")
+                                .frame(width: 50, alignment: .trailing)
+                        }
+                    }
+
+                    HStack {
+                        Text(L("Postion:"))
+                        Picker("", selection: $viewModel.notePosition) {
+                            Text(L("Follow The Mouse")).tag(0)
+                            Text(L("Center In Screen")).tag(1)
+                            Text(L("Right Top")).tag(2)
+                            Text(L("Right Bottom")).tag(3)
+                            Text(L("Left Top")).tag(4)
+                            Text(L("Left Bottom")).tag(5)
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 180)
+                    }
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 220)
             }
+            .frame(maxWidth: .infinity)
 
-            Divider()
-
-            // MARK: Import / Export / Reset (original General tab)
+            // MARK: Bottom Buttons (Import, Export, Reset Defaults)
             HStack {
                 Button(L("Import")) { importPreferences() }
                     .buttonStyle(.bordered)
@@ -428,16 +407,9 @@ struct GeneralTabView: View {
                 Button(L("Reset Defaults")) { resetDefaults() }
                     .buttonStyle(.bordered)
             }
-
-            HStack {
-                Text(L("Version"))
-                Spacer()
-                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
-                    .foregroundColor(.secondary)
-            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MacStrokeNoteFontDidChange"))) { _ in
-            // Re-read the font from defaults after the font panel closes.
             let defaults = UserDefaults.standard
             if let name = defaults.string(forKey: "noteFontName") {
                 viewModel.noteFontName = name
@@ -446,8 +418,6 @@ struct GeneralTabView: View {
         }
     }
 
-    /// Show the system font panel and observe font changes (original:
-    /// chooseFont: + changeFont: writing noteFontName / noteFontSize).
     private func openFontPanel() {
         let fontManager = NSFontManager.shared
         fontManager.target = FontPanelObserver.shared
@@ -468,7 +438,6 @@ struct GeneralTabView: View {
         panel.beginSheetModal(for: keyWindow) { response in
             guard response == .OK, let url = panel.url else { return }
             let dict = UserDefaults.standard.dictionaryRepresentation()
-            // Only export MacStroke-related keys (skip system keys).
             let ourKeys = dict.filter { key, _ in
                 StorageKey.allCases.contains { $0.rawValue == key }
                     || key.hasPrefix("filter") || key == "rules" || key == "rightClicksList"

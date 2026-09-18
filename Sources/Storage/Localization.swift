@@ -3,6 +3,8 @@
 //  MacStroke
 //
 //  Lightweight localization helpers shared across targets.
+//  Supports runtime language switching by loading .strings files directly
+//  (avoids Bundle(url: lproj) which doesn't work for bare .lproj dirs).
 //
 
 import Foundation
@@ -16,18 +18,6 @@ public extension Notification.Name {
     /// Posted after a screen-drawn gesture has been recorded into a rule, so
     /// the preferences rule table can refresh.
     static let macStrokeRuleStoreDidChange = Notification.Name("MacStrokeRuleStoreDidChange")
-}
-
-/// Applies the user's language preference to the running process.
-///
-/// - Note: Changing `AppleLanguages` in `UserDefaults` updates the
-///   language used by `preferredLanguageBundle()`, so subsequent
-///   `L()` / `LFormat()` calls return strings for the new language
-///   immediately without restarting the app.
-public func applyUserLanguage(_ language: String) {
-    UserDefaults.standard.set([language], forKey: "AppleLanguages")
-    UserDefaults.standard.synchronize()
-    NotificationCenter.default.post(name: .languageDidChange, object: nil)
 }
 
 /// Returns the bundle that should be used for localized strings and images.
@@ -59,64 +49,92 @@ public func appResourceBundle() -> Bundle {
     return main
 }
 
-/// Returns the bundle to use for localized strings based on the current
-/// `AppleLanguages` setting.
+/// Cache of loaded string tables: [languageCode: [key: localizedString]]
+private var _stringTablesCache: [String: [String: String]] = [:]
+private let _cacheLock = NSLock()
+
+/// Load a .strings file for the given language from the resource bundle.
+/// Returns the parsed dictionary, or nil if not found.
+private func loadStringTable(for language: String) -> [String: String]? {
+    _cacheLock.lock()
+    defer { _cacheLock.unlock() }
+
+    // Return cached
+    if let cached = _stringTablesCache[language] {
+        return cached
+    }
+
+    let bundle = appResourceBundle()
+    guard let url = bundle.url(forResource: "Localizable", withExtension: "strings", subdirectory: nil, localization: language) else {
+        return nil
+    }
+
+    guard let dict = NSDictionary(contentsOf: url) as? [String: String] else {
+        return nil
+    }
+
+    _stringTablesCache[language] = dict
+    return dict
+}
+
+/// Clear the string tables cache (call when language changes).
+public func clearStringTablesCache() {
+    _cacheLock.lock()
+    defer { _cacheLock.unlock() }
+    _stringTablesCache.removeAll()
+}
+
+/// Applies the user's language preference to the running process.
 ///
-/// This is needed because `Bundle.localizedString` may not refresh
-/// immediately when `AppleLanguages` changes, especially when the app
-/// is launched via `swift run` and resources live in a sibling bundle.
-/// By loading the `.lproj` directory explicitly we ensure the latest
-/// language is used right away.
-@inline(__always)
-public func preferredLanguageBundle() -> Bundle {
-    let fallback = appResourceBundle()
-
-    guard let appleLanguages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") else {
-        return fallback
-    }
-
-    // Build a case-insensitive map of available lproj directories.
-    var available: [String: Bundle] = [:]
-    if let contents = try? FileManager.default.contentsOfDirectory(
-        at: fallback.bundleURL,
-        includingPropertiesForKeys: nil
-    ) {
-        for entry in contents where entry.pathExtension == "lproj" {
-            if let bundle = Bundle(url: entry) {
-                available[entry.deletingPathExtension().lastPathComponent.lowercased()] = bundle
-            }
-        }
-    }
-
-    for language in appleLanguages {
-        let normalized = language.lowercased()
-        if let bundle = available[normalized] {
-            return bundle
-        }
-        // Also try the base language (e.g. "zh-Hans" -> "zh").
-        let base = normalized.components(separatedBy: "-").first ?? normalized
-        if let bundle = available[base] {
-            return bundle
-        }
-    }
-
-    return fallback
+/// - Note: Changing `AppleLanguages` in `UserDefaults` updates the
+///   language used by `preferredLanguageBundle()`, so subsequent
+///   `L()` / `LFormat()` calls return strings for the new language
+///   immediately without restarting the app.
+public func applyUserLanguage(_ language: String) {
+    UserDefaults.standard.set([language], forKey: "AppleLanguages")
+    UserDefaults.standard.synchronize()
+    clearStringTablesCache()
+    NotificationCenter.default.post(name: .languageDidChange, object: nil)
 }
 
 /// Returns the localized string for `key`, falling back to `key` itself.
 ///
-/// This always reads from the **main bundle**, which is important for
-/// extension targets (FinderSync, RightClickMenu) whose own bundle would
-/// not contain the app's `Localizable.strings` table.
+/// This reads from the string table for the current `AppleLanguages` preference,
+/// loading `.strings` files directly (works in both `.app` bundles and `swift run`).
 @inline(__always)
 public func L(_ key: String, comment: String = "") -> String {
-    let bundle = preferredLanguageBundle()
-    return bundle.localizedString(forKey: key, value: nil, table: nil)
+    let defaults = UserDefaults.standard
+    let appleLanguages = defaults.stringArray(forKey: "AppleLanguages") ?? ["en"]
+
+    for language in appleLanguages {
+        let normalized = language.lowercased()
+        // Try exact match first (e.g., "zh-Hans")
+        if let table = loadStringTable(for: normalized),
+           let value = table[key] {
+            return value
+        }
+        // Try base language (e.g., "zh")
+        let base = normalized.components(separatedBy: "-").first ?? normalized
+        if base != normalized,
+           let table = loadStringTable(for: base),
+           let value = table[key] {
+            return value
+        }
+    }
+
+    // Fallback to English
+    if let table = loadStringTable(for: "en"),
+       let value = table[key] {
+        return value
+    }
+
+    // Ultimate fallback: return the key itself
+    return key
 }
 
 /// Convenience wrapper around `String(format:)` + localization.
 @inline(__always)
 public func LFormat(_ key: String, comment: String = "", _ args: CVarArg...) -> String {
-    let format = preferredLanguageBundle().localizedString(forKey: key, value: nil, table: nil)
+    let format = L(key, comment: comment)
     return String(format: format, args)
 }
