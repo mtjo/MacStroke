@@ -303,16 +303,17 @@ struct GeneralTabView: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // MARK: General Group
-            GroupBox(L("General")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(L("Show Icon In Status Bar"), isOn: Binding(
-                        get: { viewModel.showIconInStatusBar },
+        VStack(alignment: .leading, spacing: 8) {
+            // MARK: General Group (original xib order: enable / open prefs /
+            // auto start / status bar icon / language)
+            GroupBox(L("General Settings")) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(L("Enable MacStroke"), isOn: Binding(
+                        get: { viewModel.isEnabled },
                         set: { newValue in
-                            viewModel.showIconInStatusBar = newValue
+                            viewModel.isEnabled = newValue
                             NotificationCenter.default.post(
-                                name: .showIconInStatusBarDidChange, object: newValue)
+                                name: .macStrokeEnabledDidChange, object: newValue)
                         }
                     ))
                     Toggle(L("Open Preferences Window at Startup"), isOn: $viewModel.openPrefOnStartup)
@@ -323,16 +324,16 @@ struct GeneralTabView: View {
                             viewModel.launchAtLogin = enabled
                         }
                     ))
-                    Toggle(L("Enable MacStroke"), isOn: Binding(
-                        get: { viewModel.isEnabled },
+                    Toggle(L("Show Icon In Status Bar"), isOn: Binding(
+                        get: { viewModel.showIconInStatusBar },
                         set: { newValue in
-                            viewModel.isEnabled = newValue
+                            viewModel.showIconInStatusBar = newValue
                             NotificationCenter.default.post(
-                                name: .macStrokeEnabledDidChange, object: newValue)
+                                name: .showIconInStatusBarDidChange, object: newValue)
                         }
                     ))
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         Text(L("Language:"))
                         Picker(L("Language"), selection: $viewModel.language) {
                             Text(L("English")).tag("en")
@@ -344,112 +345,84 @@ struct GeneralTabView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 2)
             }
 
             // MARK: Gesture Group
             GroupBox(L("Gesture")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(L("Show Gesture In Whatever App"), isOn: $viewModel.showUIInWhateverApp)
-                    Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
-
-                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 12) {
-                        GridRow {
-                            Text(L("Line color:"))
-                            ColorPicker("", selection: $viewModel.lineColor)
-                                .labelsHidden()
-                                .frame(width: 44, alignment: .leading)
-                        }
-                        GridRow {
-                            Text(L("Min Score:"))
-                            HStack(spacing: 8) {
-                                Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
-                                    .frame(maxWidth: 260)
-                                Text("\(Int(viewModel.minSimilarityScore))")
-                                    .frame(width: 30, alignment: .trailing)
-                            }
-                        }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
+                            .fixedSize()
+                        Text(L("Min Score:"))
+                        Text("\(Int(viewModel.minSimilarityScore))")
+                            .frame(width: 26, alignment: .trailing)
+                        Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
+                            .frame(width: 210)
                     }
-
-                    Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
+                    Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
+                    Toggle(L("Show Gesture In Whatever App"), isOn: $viewModel.showUIInWhateverApp)
+                    HStack(spacing: 8) {
+                        Text(L("Line color:"))
+                        ColorPicker("", selection: $viewModel.lineColor)
+                            .labelsHidden()
+                            .frame(width: 100, alignment: .leading)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 2)
             }
 
             // MARK: Note Group
             GroupBox(L("Note")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
-                    Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
-
-                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 12) {
-                        GridRow {
-                            Text(L("Font:"))
-                            HStack(spacing: 8) {
-                                Text(viewModel.noteFontName)
-                                    .font(.system(.body, design: .monospaced))
-                                    .frame(width: 120, alignment: .leading)
-                                Button(L("Choose")) { openFontPanel() }
-                                    .buttonStyle(.bordered)
-                                Text(L("FontSize"))
-                                TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(width: 50)
-                            }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
+                            .fixedSize()
+                        Text(L("Font:"))
+                        Text(viewModel.noteFontName)
+                        TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 50)
+                        Button(L("Choose")) { openFontPanel() }
+                    }
+                    HStack(spacing: 8) {
+                        Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
+                            .fixedSize()
+                        Text(L("Postion:"))
+                        Picker("", selection: $viewModel.notePosition) {
+                            Text(L("Follow The Mouse")).tag(0)
+                            Text(L("Center In Screen")).tag(1)
+                            Text(L("Right Top")).tag(2)
+                            Text(L("Right Bottom")).tag(3)
+                            Text(L("Left Top")).tag(4)
+                            Text(L("Left Bottom")).tag(5)
                         }
-                        GridRow {
-                            Text(L("Background Apha:"))
-                            HStack(spacing: 8) {
-                                Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
-                                    .frame(maxWidth: 260)
-                                Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
-                                    .frame(width: 40, alignment: .trailing)
-                            }
-                        }
-                        GridRow {
-                            Text(L("Text Color:"))
-                            ColorPicker("", selection: $viewModel.noteColor)
-                                .labelsHidden()
-                                .frame(width: 44, alignment: .leading)
-                        }
-                        GridRow {
-                            Text(L("Retention Time:"))
-                            HStack(spacing: 8) {
-                                Slider(value: Binding(
-                                    get: { Double(viewModel.noteRetentionTime) },
-                                    set: { viewModel.noteRetentionTime = Int($0) }
-                                ), in: 1...4, step: 1)
-                                    .frame(maxWidth: 260)
-                                Text("\(viewModel.noteRetentionTime)s")
-                                    .frame(width: 50, alignment: .trailing)
-                            }
-                        }
-                        GridRow {
-                            Text(L("Postion:"))
-                            Picker("", selection: $viewModel.notePosition) {
-                                Text(L("Follow The Mouse")).tag(0)
-                                Text(L("Center In Screen")).tag(1)
-                                Text(L("Right Top")).tag(2)
-                                Text(L("Right Bottom")).tag(3)
-                                Text(L("Left Top")).tag(4)
-                                Text(L("Left Bottom")).tag(5)
-                            }
-                            .labelsHidden()
-                            .frame(width: 180, alignment: .leading)
-                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    HStack(spacing: 8) {
+                        Text(L("Background Apha:"))
+                        Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
+                            .frame(width: 100)
+                        Text(L("Retention Time:"))
+                        Slider(value: Binding(
+                            get: { Double(viewModel.noteRetentionTime) },
+                            set: { viewModel.noteRetentionTime = Int($0) }
+                        ), in: 1...4, step: 1)
+                            .frame(width: 100)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 2)
             }
 
-            // MARK: Bottom Buttons (Import, Export, Reset Defaults)
-            HStack(spacing: 10) {
-                Button(L("Import")) { importPreferences() }
-                    .buttonStyle(.bordered)
-                Button(L("Export")) { exportPreferences() }
-                    .buttonStyle(.bordered)
-                Button(L("Reset Defaults")) { resetDefaults() }
-                    .buttonStyle(.bordered)
+            // MARK: Bottom Buttons (original: right-aligned Import/Export/Reset)
+            HStack(spacing: 12) {
                 Spacer()
+                Button(L("Import")) { importPreferences() }
+                Button(L("Export")) { exportPreferences() }
+                Button(L("Reset Defaults")) { resetDefaults() }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -6,7 +6,7 @@
 */
 
 "MacStroke" = "MacStroke";
-"Enable MacStroke" = "启用 MacStroke";
+"Enable MacStroke" = "启用MacStroke";
 "Show icon in status bar" = "在状态栏中显示图标";
 "Launch at login" = "登录时启动";
 "Show UI in any application" = "在任何应用中显示 UI";
@@ -222,28 +222,29 @@
 "History Clipboard" = "剪贴板历史";
 "remove top" = "取消置顶";
 "top" = "置顶";
-"Min Score:" = "最低分数：";
-"Gesture Min Score" = "启用手势最低分数";
+"Min Score:" = "最小分数：";
+"Gesture Min Score" = "手势匹配最小分数";
 "Merge consecutive identical gestures" = "合并连续相同手势";
 "Open preferences on startup" = "启动时打开偏好设置";
 "Show Gesture Note" = "显示手势提示";
 "Show Icon" = "显示图标";
-"Font:" = "字体：";
+"Font:" = "字体:";
+"General Settings" = "通用";
 "Choose" = "选择";
-"Background Apha:" = "背景透明度：";
-"Retention Time:" = "保留时间：";
-"Postion:" = "位置：";
+"Background Apha:" = "背景透明度:";
+"Retention Time:" = "显示时间:";
+"Postion:" = "显示位置:";
 "Follow The Mouse" = "跟随鼠标";
 "Center In Screen" = "屏幕中央";
 "Right Top" = "右上";
 "Right Bottom" = "右下";
 "Left Top" = "左上";
 "Left Bottom" = "左下";
-"Disable Mouse Path" = "禁用鼠标轨迹";
-"Line color:" = "线条颜色：";
+"Disable Mouse Path" = "不绘制鼠标路径";
+"Line color:" = "鼠标路经颜色：";
 "Import" = "导入";
 "Export" = "导出";
-"Reset Defaults" = "恢复默认";
+"Reset Defaults" = "重置到预设";
 "Export succeeded" = "导出成功";
 "Author: mtjo.net@gmail.com" = "作者：mtjo.net@gmail.com";
 "Automatically Check for Updates" = "自动检查更新";
@@ -274,7 +275,6 @@
 "tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule." = "提示：双击手势图片可绘制或修改手势，双击名称编辑规则。";
 "Gesture draw complete!" = "手势绘制完成!";
 "Plase Select" = "请选择";
-"Text Color:" = "文字颜色：";
 "Help" = "帮助";
 "Bundle ID" = "Bundle ID";
 "OK" = "好";
