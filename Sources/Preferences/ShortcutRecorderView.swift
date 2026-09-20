@@ -272,38 +272,67 @@ public final class ShortcutRecorderView: NSView {
         default: break
         }
 
-        // Letters / digits / punctuation via UCKeyTranslate on the current layout.
-        var deadKeyState: UInt32 = 0
-        var chars = [UniChar](repeating: 0, count: 4)
-        var length = 0
-        let source = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
-        let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
-        if let layoutData = layoutData {
-            let layout = unsafeBitCast(layoutData, to: CFData.self) as Data
-            let result = layout.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> OSStatus in
-                let keyboardLayout = ptr.bindMemory(to: UCKeyboardLayout.self).baseAddress
-                return UCKeyTranslate(
-                    keyboardLayout,
-                    keyCode,
-                    UInt16(kUCKeyActionDisplay),
-                    0,
-                    UInt32(LMGetKbdType()),
-                    UInt32(kUCKeyTranslateNoDeadKeysBit),
-                    &deadKeyState,
-                    4,
-                    &length,
-                    &chars
-                )
-            }
-            if result == noErr, length > 0 {
-                let string = String(utf16CodeUnits: chars, count: length)
-                if let first = string.first, !first.isWhitespace {
-                    return first.uppercased()
-                }
-            }
+        // Letters / digits / punctuation via UCKeyTranslate. CJK input
+        // sources (e.g. Pinyin) expose no key-layout data, so fall back to
+        // the ASCII-capable layout and finally to a static US table.
+        if let char = Self.translateKey(keyCode, source: TISCopyCurrentKeyboardInputSource().takeRetainedValue())
+            ?? Self.translateKey(keyCode, source: TISCopyCurrentKeyboardLayoutInputSource().takeRetainedValue()) {
+            return char
+        }
+        if let name = Self.usKeyNames[Int(keyCode)] {
+            return name
         }
 
         // Fallback to the raw numeric code.
         return String(format: "key(%d)", keyCode)
     }
+
+    /// Translate one key code to its display character using the given
+    /// input source's Unicode key layout, or nil when unavailable.
+    private static func translateKey(_ keyCode: UInt16, source: TISInputSource) -> String? {
+        guard let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else {
+            return nil
+        }
+        var deadKeyState: UInt32 = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        var length = 0
+        let layout = unsafeBitCast(layoutData, to: CFData.self) as Data
+        let result = layout.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> OSStatus in
+            let keyboardLayout = ptr.bindMemory(to: UCKeyboardLayout.self).baseAddress
+            return UCKeyTranslate(
+                keyboardLayout,
+                keyCode,
+                UInt16(kUCKeyActionDisplay),
+                0,
+                UInt32(LMGetKbdType()),
+                UInt32(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                4,
+                &length,
+                &chars
+            )
+        }
+        guard result == noErr, length > 0 else { return nil }
+        let string = String(utf16CodeUnits: chars, count: length)
+        guard let first = string.first, !first.isWhitespace else { return nil }
+        return first.uppercased()
+    }
+
+    /// US-layout names for ordinary keys (last-resort display table).
+    private static let usKeyNames: [Int: String] = [
+        kVK_ANSI_A: "A", kVK_ANSI_S: "S", kVK_ANSI_D: "D", kVK_ANSI_F: "F",
+        kVK_ANSI_H: "H", kVK_ANSI_G: "G", kVK_ANSI_Z: "Z", kVK_ANSI_X: "X",
+        kVK_ANSI_C: "C", kVK_ANSI_V: "V", kVK_ANSI_B: "B", kVK_ANSI_Q: "Q",
+        kVK_ANSI_W: "W", kVK_ANSI_E: "E", kVK_ANSI_R: "R", kVK_ANSI_Y: "Y",
+        kVK_ANSI_T: "T", kVK_ANSI_1: "1", kVK_ANSI_2: "2", kVK_ANSI_3: "3",
+        kVK_ANSI_4: "4", kVK_ANSI_5: "5", kVK_ANSI_6: "6", kVK_ANSI_7: "7",
+        kVK_ANSI_8: "8", kVK_ANSI_9: "9", kVK_ANSI_0: "0",
+        kVK_ANSI_Minus: "-", kVK_ANSI_Equal: "=", kVK_ANSI_LeftBracket: "[",
+        kVK_ANSI_RightBracket: "]", kVK_ANSI_Quote: "'", kVK_ANSI_Semicolon: ";",
+        kVK_ANSI_Comma: ",", kVK_ANSI_Period: ".", kVK_ANSI_Slash: "/",
+        kVK_ANSI_Backslash: "\\", kVK_ANSI_Grave: "`",
+        kVK_ANSI_KeypadMultiply: "*", kVK_ANSI_KeypadPlus: "+",
+        kVK_ANSI_KeypadClear: "⌧", kVK_ANSI_KeypadDivide: "/",
+        kVK_ANSI_KeypadMinus: "-", kVK_ANSI_KeypadEquals: "=",
+    ]
 }
