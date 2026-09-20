@@ -332,10 +332,13 @@ public final class RuleEngine {
     }
 
     /// Check if a bundle ID matches a filter (wildcard or regex).
+    /// Mirrors the original `matchFilter:atIndex:`: an empty filter never
+    /// matches (use "*" for all apps); wildcard filters are split on "|" and
+    /// newlines and matched case-insensitively against the whole bundle ID;
+    /// regex filters are case-sensitive substring matches.
     private func matchesFilter(filter: String, type: String, bundleID: String) -> Bool {
-        guard !filter.isEmpty else { return true }
-
         if type == "regex" {
+            guard !filter.isEmpty else { return false }
             do {
                 let regex = try NSRegularExpression(pattern: filter)
                 let range = NSRange(location: 0, length: bundleID.utf16.count)
@@ -343,18 +346,26 @@ public final class RuleEngine {
             } catch {
                 return false
             }
-        } else {
-            // Wildcard matching
-            let pattern = NSRegularExpression.escapedPattern(for: filter)
+        }
+
+        // Wildcard: one pattern per "|"/newline segment, LIKE semantics, ignore case.
+        let patterns = filter
+            .split(whereSeparator: { $0 == "|" || $0 == "\n" || $0 == "\r" })
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .filter { !$0.isEmpty }
+        guard !patterns.isEmpty else { return false }
+
+        let lowercasedBundleID = bundleID.lowercased()
+        for pattern in patterns {
+            let regexPattern = "^" + NSRegularExpression.escapedPattern(for: pattern)
                 .replacingOccurrences(of: "\\*", with: ".*")
-                .replacingOccurrences(of: "\\?", with: ".")
-            do {
-                let regex = try NSRegularExpression(pattern: "^\(pattern)$")
-                let range = NSRange(location: 0, length: bundleID.utf16.count)
-                return regex.firstMatch(in: bundleID, range: range) != nil
-            } catch {
-                return false
+                .replacingOccurrences(of: "\\?", with: ".") + "$"
+            guard let regex = try? NSRegularExpression(pattern: regexPattern) else { continue }
+            let range = NSRange(location: 0, length: lowercasedBundleID.utf16.count)
+            if regex.firstMatch(in: lowercasedBundleID, range: range) != nil {
+                return true
             }
         }
+        return false
     }
 }

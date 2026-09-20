@@ -16,10 +16,6 @@ import Foundation
 /// Matches the original `CGFloat const stroke_infinity = 0.2` constant.
 public let strokeInfinity: Double = 0.2
 
-/// Internal sentinel for unreachable DP cells. Must be larger than any possible
-/// accumulated cost so it doesn't cap valid path costs.
-private let dpInfinity: Double = Double.infinity
-
 /// Small epsilon used to avoid division by zero.
 private let kEPS: Double = 0.000001
 
@@ -69,80 +65,105 @@ public func compare(template: Stroke, candidate: Stroke) -> Double {
 
 /// Compute the DTW path cost between two normalized strokes.
 ///
-/// This is a faithful port of the original `stroke_compareWithStrokeA`
-/// algorithm, implemented as a standard dynamic-time-warping DP with
-/// a slope constraint (2.2x ratio on time deltas).
-///
-/// DP recurrence:
-///   dist[i][j] = min(dist[i-1][j], dist[i][j-1], dist[i-1][j-1])
-///                + angleCost(i, j) * (dt_i + dt_j)
-///
-/// With the slope constraint: a step from (i,j) to (i',j') is only valid
-/// if neither time delta exceeds 2.2x the other.
-private func strokeCompareCost(template: Stroke, candidate: Stroke) -> Double {
-    let M = template.count
-    let N = candidate.count
+/// Faithful port of the original `stroke_compareWithStrokeA` band-DP: cells are
+/// relaxed forward from each reachable (x, y) by up to 4 expansion steps
+/// (`k < 4`), and `step` only accepts moves whose time deltas respect the 2.2x
+/// slope constraint, accumulating the segment-wise squared angle difference
+/// weighted by `d * (dtx + dty)`.
+private func strokeCompareCost(template a: Stroke, candidate b: Stroke) -> Double {
+    let M = a.count
+    let N = b.count
 
     if M < 2 || N < 2 { return strokeInfinity }
 
-    // DP matrix — flat for performance, initialized to infinity
-    var dist = [Double](repeating: dpInfinity, count: M * N)
+    let m = M - 1
+    let n = N - 1
+
+    // Original initializes all cells to `stroke_infinity` except dist[0] = 0;
+    // cells only become finite through `step` relaxations.
+    var dist = [Double](repeating: strokeInfinity, count: M * N)
     dist[0] = 0.0
 
-    // Local cost of aligning template[i] with candidate[j]
-    func localCost(_ i: Int, _ j: Int) -> Double {
-        return squaredAngleDiff(
-            alphaA: template.points[i].alpha,
-            alphaB: candidate.points[j].alpha
-        )
+    /// Relax the transition from cell (x, y) to cell (x2, y2).
+    /// - Parameters:
+    ///   - tx: `a[x].t`, the time origin on stroke a for this relaxation
+    ///   - ty: `b[y].t`, the time origin on stroke b for this relaxation
+    func step(x: Int, y: Int, tx: Double, ty: Double, k: inout Int, x2: Int, y2: Int) {
+        let dtx = a.points[x2].t - tx
+        let dty = b.points[y2].t - ty
+        if dtx >= dty * 2.2 || dty >= dtx * 2.2 || dtx < kEPS || dty < kEPS {
+            return
+        }
+        k += 1
+
+        // Walk the two arcs [tx, tx+dtx] and [ty, ty+dty] in normalized-time
+        // order, integrating the squared angle difference along the path.
+        var d = 0.0
+        var i = x
+        var j = y
+        var nextTx = (a.points[i + 1].t - tx) / dtx
+        var nextTy = (b.points[j + 1].t - ty) / dty
+        var curT = 0.000000001
+
+        while true {
+            let ad = squaredAngleDiff(alphaA: a.points[i].alpha, alphaB: b.points[j].alpha)
+            var nextT = min(nextTx, nextTy)
+            let done = nextT >= 1.0 - kEPS
+            if done { nextT = 1.0 }
+            d += (nextT - curT) * ad
+            if done { break }
+            curT = nextT
+            if nextTx < nextTy {
+                i += 1
+                nextTx = (a.points[i + 1].t - tx) / dtx
+            } else {
+                j += 1
+                nextTy = (b.points[j + 1].t - ty) / dty
+            }
+        }
+
+        let newDist = dist[x * N + y] + d * (dtx + dty)
+        if newDist >= dist[x2 * N + y2] { return }
+        dist[x2 * N + y2] = newDist
     }
 
-    var reachableCount = 0
-    var lastUnreachableRow = -1
-    var lastUnreachableCol = -1
+    for x in 0..<m {
+        for y in 0..<n {
+            if dist[x * N + y] >= strokeInfinity { continue }
 
-    for i in 0..<M {
-        for j in 0..<N {
-            if i == 0 && j == 0 { continue }
+            let tx = a.points[x].t
+            let ty = b.points[y].t
+            var maxX = x
+            var maxY = y
+            var k = 0
 
-            let cost = localCost(i, j)
-            var best = dpInfinity
-
-            // From above (i-1, j): template advances by dtx, candidate stays
-            if i > 0 && dist[(i-1) * N + j] < dpInfinity {
-                let dtx = template.points[i].t - template.points[i-1].t
-                if dtx >= kEPS {
-                    best = min(best, dist[(i-1) * N + j] + cost * dtx)
+            while k < 4 {
+                if a.points[maxX + 1].t - tx > b.points[maxY + 1].t - ty {
+                    maxY += 1
+                    if maxY == n {
+                        step(x: x, y: y, tx: tx, ty: ty, k: &k, x2: m, y2: n)
+                        break
+                    }
+                    var x2 = x + 1
+                    while x2 <= maxX {
+                        step(x: x, y: y, tx: tx, ty: ty, k: &k, x2: x2, y2: maxY)
+                        x2 += 1
+                    }
+                } else {
+                    maxX += 1
+                    if maxX == m {
+                        step(x: x, y: y, tx: tx, ty: ty, k: &k, x2: m, y2: n)
+                        break
+                    }
+                    var y2 = y + 1
+                    while y2 <= maxY {
+                        step(x: x, y: y, tx: tx, ty: ty, k: &k, x2: maxX, y2: y2)
+                        y2 += 1
+                    }
                 }
-            }
-
-            // From left (i, j-1): candidate advances by dty, template stays
-            if j > 0 && dist[i * N + (j-1)] < dpInfinity {
-                let dty = candidate.points[j].t - candidate.points[j-1].t
-                if dty >= kEPS {
-                    best = min(best, dist[i * N + (j-1)] + cost * dty)
-                }
-            }
-
-            // From diagonal (i-1, j-1): both advance
-            if i > 0 && j > 0 && dist[(i-1) * N + (j-1)] < dpInfinity {
-                let dtx = template.points[i].t - template.points[i-1].t
-                let dty = candidate.points[j].t - candidate.points[j-1].t
-                if dtx >= kEPS && dty >= kEPS {
-                    best = min(best, dist[(i-1) * N + (j-1)] + cost * (dtx + dty))
-                }
-            }
-
-            if best < dpInfinity {
-                dist[i * N + j] = best
-                reachableCount += 1
-            } else {
-                lastUnreachableRow = i
-                lastUnreachableCol = j
             }
         }
     }
 
-    let result = dist[(M - 1) * N + (N - 1)]
-    return result
+    return dist[M * N - 1]
 }

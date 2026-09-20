@@ -48,11 +48,35 @@ public final class ToastManager {
         self.preferences = UserPreferences()
     }
 
+    /// Parse "#RRGGBB" / "#RRGGBBAA" into an NSColor.
+    static func color(fromHex hex: String) -> NSColor? {
+        var s = hex
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6 || s.count == 8, let v = UInt64(s, radix: 16) else { return nil }
+        let r, g, b, a: CGFloat
+        if s.count == 8 {
+            r = CGFloat((v >> 24) & 0xFF) / 255
+            g = CGFloat((v >> 16) & 0xFF) / 255
+            b = CGFloat((v >> 8) & 0xFF) / 255
+            a = CGFloat(v & 0xFF) / 255
+        } else {
+            r = CGFloat((v >> 16) & 0xFF) / 255
+            g = CGFloat((v >> 8) & 0xFF) / 255
+            b = CGFloat(v & 0xFF) / 255
+            a = 1
+        }
+        return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
+    }
+
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
         // Cancel any existing toast
         toastTimer?.invalidate()
+        if let old = currentToastWindow {
+            old.close()
+            currentToastWindow = nil
+        }
 
         // Read preferences for display (original: showNoteTost)
         let fontSize = CGFloat(preferences.noteFontSize)
@@ -81,11 +105,20 @@ public final class ToastManager {
         contentView.layer?.backgroundColor = NSColor.black.withAlphaComponent(bgAlpha).cgColor
         contentView.layer?.cornerRadius = 8
 
-        // Add label
+        // Add label — original noteColor (text color, default white).
+        // Icon (original CoolToast: app icon on the left, hidden by showNoteIcon).
+        let showIcon = preferences.showNoteIcon
+        let iconView = NSImageView(frame: NSRect(x: 12, y: (toastSize.height - 40) / 2, width: 40, height: 40))
+        iconView.image = NSApp.applicationIconImage
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.isHidden = !showIcon
+        contentView.addSubview(iconView)
+
         let label = NSTextField(labelWithString: toast.message)
-        label.textColor = .white
+        label.textColor = Self.color(fromHex: preferences.defaultNoteColor) ?? .white
         label.font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        label.frame = NSRect(x: 16, y: 16, width: toastSize.width - 32, height: 28)
+        let labelX: CGFloat = showIcon ? 60 : 16
+        label.frame = NSRect(x: labelX, y: 16, width: toastSize.width - labelX - 16, height: 28)
         contentView.addSubview(label)
 
         window.contentView = contentView
@@ -132,7 +165,14 @@ public final class ToastManager {
         }
 
         window.setFrameOrigin(origin)
+
+        // Fade in (original: CTAnimaterFade, 0.3s).
+        window.alphaValue = 0
         window.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
+            window.animator().alphaValue = 1
+        }
 
         currentToastWindow = window
 
@@ -142,11 +182,17 @@ public final class ToastManager {
         }
     }
 
-    /// Hide the current toast.
+    /// Fade out and hide the current toast (original: dismissWithAnimator).
     public func hide() {
-        currentToastWindow?.close()
-        currentToastWindow = nil
         toastTimer?.invalidate()
         toastTimer = nil
+        guard let window = currentToastWindow else { return }
+        currentToastWindow = nil
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.3
+            window.animator().alphaValue = 0
+        }, completionHandler: {
+            window.close()
+        })
     }
 }

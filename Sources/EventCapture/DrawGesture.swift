@@ -110,16 +110,22 @@ public final class DrawGesture: NSView {
         let height = abs(maxY - minY)
         let canvasWidth = bounds.width
         let canvasHeight = bounds.height
-        let zoom = max(width / canvasWidth, height / canvasHeight)
-
-        let fixX: CGFloat = width < height
-            ? (canvasWidth - (width / zoom)) / 2 + 12
-            : 12
-        let fixY: CGFloat = width > height
-            ? (canvasHeight - (height / zoom)) / 2 + 12
-            : 12
+        // The original xib canvas was ~84pt with a +12 offset; our cells are
+        // 56x56, so scale into the bounds minus a margin and center instead.
+        let margin: CGFloat = 6
+        let availW = max(canvasWidth - margin * 2, 1)
+        let availH = max(canvasHeight - margin * 2, 1)
+        let zoom = max(width / availW, height / availH)
 
         var result: [NSPoint] = []
+        if zoom <= 0 {
+            // Degenerate stroke (single point): draw it centered.
+            let center = NSPoint(x: canvasWidth / 2, y: canvasHeight / 2)
+            result = inputPoints.map { _ in center }
+            return result
+        }
+        let fixX = (canvasWidth - width / zoom) / 2
+        let fixY = (canvasHeight - height / zoom) / 2
         for i in 0..<pcount {
             let p = inputPoints[i]
             let scaledX = (p.x - minX) / zoom + fixX

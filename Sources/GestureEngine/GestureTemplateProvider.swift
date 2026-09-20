@@ -71,12 +71,8 @@ public enum PresetGesture: String, CaseIterable {
 
     /// The template stroke for this preset gesture.
     public var template: Stroke {
-        var stroke = Stroke(capacity: 50)
         let points = Self.points(for: self)
-        for p in points {
-            stroke.addPoint(p)
-        }
-        return stroke
+        return Stroke(points: points, capacity: max(points.count, 1))
     }
 
     /// Generate the points for each preset gesture.

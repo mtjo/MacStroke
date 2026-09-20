@@ -10,6 +10,7 @@
 
 import SwiftUI
 import AppKit
+import WebKit
 import Storage
 import RuleEngine
 import AppleScriptRunner
@@ -38,6 +39,7 @@ enum PreferencesTab: CaseIterable {
     case rightClickMenu
     case clipboard
     case about
+    case help
 
     var title: String {
         switch self {
@@ -49,6 +51,7 @@ enum PreferencesTab: CaseIterable {
         case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
         case .about: return L("About")
+        case .help: return L("Help")
         }
     }
 
@@ -59,9 +62,10 @@ enum PreferencesTab: CaseIterable {
         case .filters: return "line.3.horizontal.decrease"
         case .appleScript: return "curlybraces"
         case .rightClick: return "mouse"
-        case .rightClickMenu: return "menubar.arrow.up.rectangle"
+        case .rightClickMenu: return "list.bullet.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .about: return "info.circle"
+        case .help: return "questionmark.circle"
         }
     }
 }
@@ -76,6 +80,8 @@ public extension Notification.Name {
     static let macStrokeRecordGesture = Notification.Name("MacStrokeRecordGesture")
     /// Leave gesture-recording mode without storing anything.
     static let macStrokeCancelRecordGesture = Notification.Name("MacStrokeCancelRecordGesture")
+    /// Sparkle update settings changed in the About tab.
+    static let macStrokeUpdateSettingsDidChange = Notification.Name("MacStrokeUpdateSettingsDidChange")
 }
 
 // MARK: - Shortcut Recorder SwiftUI Wrapper
@@ -147,68 +153,77 @@ public struct PreferencesView: View {
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar / Tab bar
-            VStack(spacing: 0) {
-                ForEach(PreferencesTab.allCases, id: \.self) { tab in
-                    TabButton(
-                        tab: tab,
-                        isSelected: selectedTab == tab,
-                        action: { selectedTab = tab }
-                    )
-                }
-                Spacer()
-            }
-            .frame(width: 180)
-            .background(Color(NSColor.controlBackgroundColor))
-
-            Divider()
-
-            // Content area
-            ScrollView {
-                Group {
-                    switch selectedTab {
-                    case .general:
-                        GeneralTabView(viewModel: viewModel)
-                    case .rules:
-                        RulesTabView(
-                            viewModel: viewModel,
-                            ruleStore: ruleStore,
-                            showingRuleEditor: $showingRuleEditor,
-                            editingRule: $editingRule
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                // Sidebar / Tab bar
+                VStack(spacing: 0) {
+                    ForEach(PreferencesTab.allCases, id: \.self) { tab in
+                        TabButton(
+                            tab: tab,
+                            isSelected: selectedTab == tab,
+                            action: { selectedTab = tab }
                         )
-                    case .filters:
-                        FiltersTabView(viewModel: viewModel)
-                    case .appleScript:
-                        AppleScriptTabView(
-                            scripts: $scripts,
-                            showingScriptEditor: $showingScriptEditor,
-                            editingScript: $editingScript
-                        )
-                    case .rightClick:
-                        RightClickTabView(
-                            viewModel: viewModel,
-                            rightClickApps: $rightClickApps,
-                            newRightClickApp: $newRightClickApp
-                        )
-                    case .rightClickMenu:
-                        RightClickMenuTabView(viewModel: viewModel)
-                    case .clipboard:
-                        ClipboardTabView(viewModel: viewModel)
-                    case .about:
-                        AboutTabView(viewModel: viewModel)
                     }
+                    Spacer()
                 }
-                .padding(24)
-                .frame(maxWidth: .infinity)
+                .frame(width: 180)
+                .background(Color(NSColor.controlBackgroundColor))
+
+                Divider()
+
+                // Content area
+                ScrollView {
+                    VStack(spacing: 0) {
+                        switch selectedTab {
+                        case .general:
+                            GeneralTabView(viewModel: viewModel)
+                        case .rules:
+                            RulesTabView(
+                                viewModel: viewModel,
+                                ruleStore: ruleStore,
+                                showingRuleEditor: $showingRuleEditor,
+                                editingRule: $editingRule
+                            )
+                        case .filters:
+                            FiltersTabView(viewModel: viewModel)
+                        case .appleScript:
+                            AppleScriptTabView(
+                                scripts: $scripts,
+                                showingScriptEditor: $showingScriptEditor,
+                                editingScript: $editingScript
+                            )
+                        case .rightClick:
+                            RightClickTabView(
+                                viewModel: viewModel,
+                                rightClickApps: $rightClickApps,
+                                newRightClickApp: $newRightClickApp
+                            )
+                        case .rightClickMenu:
+                            RightClickMenuTabView(viewModel: viewModel)
+                        case .clipboard:
+                            ClipboardTabView(viewModel: viewModel)
+                        case .about:
+                            AboutTabView(viewModel: viewModel)
+                        case .help:
+                            HelpTabView()
+                        }
+                    }
+                    .padding(24)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geometry.size.height - 48)
+                }
+                .frame(width: geometry.size.width - 181)
+                .frame(minHeight: 550)
             }
-            .frame(minWidth: 600, minHeight: 550)
+            .frame(minWidth: 820, minHeight: 620)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
         .id(languageRevision)
         .onReceive(NotificationCenter.default.publisher(for: .languageDidChange)) { _ in
             languageRevision += 2
         }
         .frame(minWidth: 820, minHeight: 620)
+        .frame(maxWidth: .infinity, alignment: .top)
         .sheet(isPresented: $showingRuleEditor) {
             RuleEditorView(
                 ruleStore: ruleStore,
@@ -278,6 +293,15 @@ struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @StateObject private var launchController = LaunchAtLoginController.shared
 
+    private static let fontSizeFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.minimum = 8
+        formatter.maximum = 96
+        formatter.allowsFloats = false
+        return formatter
+    }()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // MARK: General Group
@@ -308,18 +332,19 @@ struct GeneralTabView: View {
                         }
                     ))
 
-                    HStack {
+                    HStack(spacing: 10) {
                         Text(L("Language:"))
                         Picker(L("Language"), selection: $viewModel.language) {
                             Text(L("English")).tag("en")
                             Text(L("简体中文")).tag("zh-Hans")
                         }
                         .pickerStyle(.segmented)
-                        .frame(width: 200)
+                        .labelsHidden()
+                        .fixedSize()
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity)
 
             // MARK: Gesture Group
             GroupBox(L("Gesture")) {
@@ -327,24 +352,28 @@ struct GeneralTabView: View {
                     Toggle(L("Show Gesture In Whatever App"), isOn: $viewModel.showUIInWhateverApp)
                     Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
 
-                    HStack {
-                        Text(L("Line color:"))
-                        ColorPicker("", selection: $viewModel.lineColor)
-                            .frame(width: 60)
-                    }
-
-                    HStack {
-                        Text(L("Min Score:"))
-                        Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
-                            .frame(width: 200)
-                        Text("\(Int(viewModel.minSimilarityScore))")
-                            .frame(width: 30, alignment: .trailing)
+                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 12) {
+                        GridRow {
+                            Text(L("Line color:"))
+                            ColorPicker("", selection: $viewModel.lineColor)
+                                .labelsHidden()
+                                .frame(width: 44, alignment: .leading)
+                        }
+                        GridRow {
+                            Text(L("Min Score:"))
+                            HStack(spacing: 8) {
+                                Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
+                                    .frame(maxWidth: 260)
+                                Text("\(Int(viewModel.minSimilarityScore))")
+                                    .frame(width: 30, alignment: .trailing)
+                            }
+                        }
                     }
 
                     Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity)
 
             // MARK: Note Group
             GroupBox(L("Note")) {
@@ -352,60 +381,75 @@ struct GeneralTabView: View {
                     Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
                     Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
 
-                    HStack {
-                        Text(L("Font:"))
-                        Text(viewModel.noteFontName)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(width: 120, alignment: .leading)
-                        Button(L("Choose")) { openFontPanel() }
-                            .buttonStyle(.bordered)
-                        Text(L("FontSize"))
-                        Stepper("", value: $viewModel.noteFontSize, in: 8...96, step: 1)
+                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 12) {
+                        GridRow {
+                            Text(L("Font:"))
+                            HStack(spacing: 8) {
+                                Text(viewModel.noteFontName)
+                                    .font(.system(.body, design: .monospaced))
+                                    .frame(width: 120, alignment: .leading)
+                                Button(L("Choose")) { openFontPanel() }
+                                    .buttonStyle(.bordered)
+                                Text(L("FontSize"))
+                                TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 50)
+                            }
+                        }
+                        GridRow {
+                            Text(L("Background Apha:"))
+                            HStack(spacing: 8) {
+                                Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
+                                    .frame(maxWidth: 260)
+                                Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
+                                    .frame(width: 40, alignment: .trailing)
+                            }
+                        }
+                        GridRow {
+                            Text(L("Text Color:"))
+                            ColorPicker("", selection: $viewModel.noteColor)
+                                .labelsHidden()
+                                .frame(width: 44, alignment: .leading)
+                        }
+                        GridRow {
+                            Text(L("Retention Time:"))
+                            HStack(spacing: 8) {
+                                Slider(value: Binding(
+                                    get: { Double(viewModel.noteRetentionTime) },
+                                    set: { viewModel.noteRetentionTime = Int($0) }
+                                ), in: 1...4, step: 1)
+                                    .frame(maxWidth: 260)
+                                Text("\(viewModel.noteRetentionTime)s")
+                                    .frame(width: 50, alignment: .trailing)
+                            }
+                        }
+                        GridRow {
+                            Text(L("Postion:"))
+                            Picker("", selection: $viewModel.notePosition) {
+                                Text(L("Follow The Mouse")).tag(0)
+                                Text(L("Center In Screen")).tag(1)
+                                Text(L("Right Top")).tag(2)
+                                Text(L("Right Bottom")).tag(3)
+                                Text(L("Left Top")).tag(4)
+                                Text(L("Left Bottom")).tag(5)
+                            }
                             .labelsHidden()
-                            .frame(width: 60)
-                    }
-
-                    HStack {
-                        Text(L("Background Apha:"))
-                        Slider(value: $viewModel.noteBackgroundAlpha, in: 0.1...1.0, step: 0.05)
-                            .frame(width: 160)
-                        Text(String(format: "%.2f", viewModel.noteBackgroundAlpha))
-                            .frame(width: 40, alignment: .trailing)
-                    }
-
-                    HStack {
-                        Text(L("Retention Time:"))
-                        Stepper(value: $viewModel.noteRetentionTime, in: 1...60, step: 1) {
-                            Text("\(viewModel.noteRetentionTime)s")
-                                .frame(width: 50, alignment: .trailing)
+                            .frame(width: 180, alignment: .leading)
                         }
-                    }
-
-                    HStack {
-                        Text(L("Postion:"))
-                        Picker("", selection: $viewModel.notePosition) {
-                            Text(L("Follow The Mouse")).tag(0)
-                            Text(L("Center In Screen")).tag(1)
-                            Text(L("Right Top")).tag(2)
-                            Text(L("Right Bottom")).tag(3)
-                            Text(L("Left Top")).tag(4)
-                            Text(L("Left Bottom")).tag(5)
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 180)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity)
 
             // MARK: Bottom Buttons (Import, Export, Reset Defaults)
-            HStack {
+            HStack(spacing: 10) {
                 Button(L("Import")) { importPreferences() }
                     .buttonStyle(.bordered)
                 Button(L("Export")) { exportPreferences() }
                     .buttonStyle(.bordered)
                 Button(L("Reset Defaults")) { resetDefaults() }
                     .buttonStyle(.bordered)
+                Spacer()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -504,97 +548,58 @@ final class FontPanelObserver: NSObject {
 
 // MARK: - Rules Tab
 
+/// Gesture thumbnail drawn with SwiftUI Canvas (same scaling math as
+/// DrawGesture, but no NSView size-negotiation issues inside Table rows).
+struct GestureThumb: View {
+    let points: [GesturePoint]
+
+    var body: some View {
+        Canvas { context, size in
+            guard points.count > 1 else { return }
+            let xs = points.map(\.x)
+            let ys = points.map(\.y)
+            let minX = xs.min() ?? 0, maxX = xs.max() ?? 0
+            let minY = ys.min() ?? 0, maxY = ys.max() ?? 0
+            let width = maxX - minX
+            let height = maxY - minY
+            let margin: CGFloat = 6
+            let availW = max(size.width - margin * 2, 1)
+            let availH = max(size.height - margin * 2, 1)
+            let zoom = max(width / availW, height / availH)
+            guard zoom > 0 else { return }
+            let fixX = (size.width - width / zoom) / 2
+            let fixY = (size.height - height / zoom) / 2
+            // Template points use bottom-left origin; Canvas is top-left.
+            let scaled = points.map { p in
+                CGPoint(x: (p.x - minX) / zoom + fixX,
+                        y: size.height - ((p.y - minY) / zoom + fixY))
+            }
+            let segments = scaled.count - 1
+            for i in 0..<segments {
+                let t = CGFloat(i) / CGFloat(max(segments, 1))
+                var path = Path()
+                path.move(to: scaled[i])
+                path.addLine(to: scaled[i + 1])
+                context.stroke(
+                    path,
+                    with: .color(Color(red: 0.5 * t, green: 0.47 + 0.53 * t, blue: 0.9)),
+                    lineWidth: 2)
+            }
+        }
+        .frame(width: 56, height: 56)
+    }
+}
+
 struct RulesTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @ObservedObject var ruleStore: RuleStore
     @Binding var showingRuleEditor: Bool
     @Binding var editingRule: Rule?
-    @State private var selectedPresetGesture: PresetGesture? = nil
-    @State private var selectedRuleForPreset: String? = nil
-    @State private var showingPresetPicker: Bool = false
+    @State private var selectedRuleID: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header with buttons
-            HStack {
-                SectionHeader(L("Gesture Rules"))
-                Spacer()
-
-                Picker(L("Preset Gesture"), selection: $selectedPresetGesture) {
-                    Text(L("None")).tag(PresetGesture?.none)
-                    ForEach(PresetGesture.allCases, id: \.self) { gesture in
-                        Text(gesture.rawValue).tag(gesture as PresetGesture?)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 200)
-
-                Button(L("Apply to Selected")) {
-                    if let gesture = selectedPresetGesture, let ruleName = selectedRuleForPreset,
-                       let idx = ruleStore.rules.firstIndex(where: { $0.name == ruleName }) {
-                        let oldRule = ruleStore.rules[idx]
-                        let provider = GestureTemplateProvider.shared
-                        let stroke = provider.template(for: gesture)
-                        let newTemplate = GestureTemplate(from: stroke, name: gesture.rawValue)
-                        let newRule = Rule(
-                            name: oldRule.name,
-                            description: oldRule.description,
-                            template: newTemplate,
-                            minSimilarityScore: oldRule.minSimilarityScore,
-                            action: oldRule.action,
-                            note: oldRule.note,
-                            isEnabled: oldRule.isEnabled,
-                            triggerOnEveryMatch: oldRule.triggerOnEveryMatch,
-                            filter: oldRule.filter,
-                            filterType: oldRule.filterType
-                        )
-                        ruleStore.update(newRule)
-                        selectedRuleForPreset = nil
-                        selectedPresetGesture = nil
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(selectedPresetGesture == nil || selectedRuleForPreset == nil)
-
-                Button(L("Draw Gesture")) {
-                    drawGestureForSelectedRule()
-                }
-                .buttonStyle(.bordered)
-                .disabled(selectedRuleForPreset == nil)
-
-                Button(L("Add Rule")) {
-                    editingRule = nil
-                    showingRuleEditor = true
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button(L("Reset to Defaults")) {
-                    ruleStore.rules = RuleStore.defaultRules()
-                    ruleStore.save()
-                }
-                .buttonStyle(.bordered)
-
-                Button(L("Clear All")) {
-                    let alert = NSAlert()
-                    alert.messageText = L("warning!")
-                    alert.informativeText = L("Are you sure you want to clear all the rules?")
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: L("Ok"))
-                    alert.addButton(withTitle: L("Cancel"))
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        ruleStore.rules.removeAll()
-                        ruleStore.save()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(.red)
-            }
-
-            Text(L("tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\"."))
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            // Rules list
+        VStack(alignment: .leading, spacing: 8) {
+            // Rules list (original: table fills the tab, button bar at bottom)
             if ruleStore.rules.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "list.bullet.rectangle")
@@ -609,136 +614,119 @@ struct RulesTabView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 300)
             } else {
-                Table(ruleStore.rules) {
-                    TableColumn(L("Enabled")) { rule in
-                        Toggle("", isOn: Binding(
-                            get: { rule.isEnabled },
-                            set: { newValue in
-                                let newRule = Rule(
-                                    name: rule.name,
-                                    description: rule.description,
-                                    template: rule.template,
-                                    minSimilarityScore: rule.minSimilarityScore,
-                                    action: rule.action,
-                                    note: rule.note,
-                                    isEnabled: newValue,
-                                    triggerOnEveryMatch: rule.triggerOnEveryMatch,
-                                    filter: rule.filter,
-                                    filterType: rule.filterType
-                                )
-                                ruleStore.update(newRule)
+                Table(ruleStore.rules, selection: $selectedRuleID) {
+                    TableColumn(L("Image")) { rule in
+                        GestureThumb(points: rule.template.points)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .frame(height: 84)   // original heightOfRow: 84
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) {
+                                drawGesture(rule.name)
                             }
-                        ))
-                        .labelsHidden()
                     }
-                    .width(60)
+                    .width(84)
 
-                    TableColumn(L("Trigger on Every Match")) { rule in
-                        Toggle("", isOn: Binding(
-                            get: { rule.triggerOnEveryMatch },
-                            set: { newValue in
-                                let newRule = Rule(
-                                    name: rule.name,
-                                    description: rule.description,
-                                    template: rule.template,
-                                    minSimilarityScore: rule.minSimilarityScore,
-                                    action: rule.action,
-                                    note: rule.note,
-                                    isEnabled: rule.isEnabled,
-                                    triggerOnEveryMatch: newValue,
-                                    filter: rule.filter,
-                                    filterType: rule.filterType
-                                )
-                                ruleStore.update(newRule)
+                    TableColumn(L("Gesture")) { rule in
+                        Text(rule.name)
+                            .font(.system(size: 13))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) {
+                                editingRule = rule
+                                showingRuleEditor = true
                             }
-                        ))
-                        .labelsHidden()
                     }
-                    .width(110)
+                    .width(min: 98, ideal: 120)
 
                     TableColumn(L("Type")) { rule in
                         Text(actionTypeLabel(for: rule.action))
                             .font(.system(size: 12))
                     }
-                    .width(100)
-
-                    TableColumn(L("Gesture")) { rule in
-                        DrawGestureView(
-                            points: rule.template.points,
-                            ruleIndex: ruleStore.rules.firstIndex(where: { $0.name == rule.name }) ?? 0,
-                            showsAddButton: false
-                        )
-                        .frame(width: 56, height: 56)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedRuleForPreset = rule.name
-                        }
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2)
-                                .stroke(selectedRuleForPreset == rule.name ? Color.accentColor : Color.clear, lineWidth: 2)
-                        )
-                    }
-                    .width(80)
-
-                    TableColumn(L("Name")) { rule in
-                        Text(rule.name)
-                            .font(.system(size: 13))
-                    }
-                    .width(min: 150, max: 200)
-
-                    TableColumn(L("Description")) { rule in
-                        Text(rule.description)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    .width(min: 200, max: 300)
+                    .width(96)
 
                     TableColumn(L("Action")) { rule in
-                        ActionBadge(action: rule.action)
+                        Text(actionContentLabel(for: rule.action))
+                            .font(.system(size: 12))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .width(140)
+                    .width(104)
 
-                    TableColumn(L("App Filter")) { rule in
-                        if rule.filter.isEmpty {
-                            Text(L("All Apps"))
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        } else {
-                            HStack(spacing: 4) {
-                                Text(rule.filterType == "regex" ? "🔍" : "✱")
-                                Text(rule.filter)
-                                    .font(.system(size: 11, design: .monospaced))
-                            }
-                            .foregroundColor(.secondary)
-                        }
+                    TableColumn(L("Filter")) { rule in
+                        Text(rule.filter.isEmpty ? L("All Apps") : rule.filter)
+                            .font(.system(size: 12))
+                            .foregroundColor(rule.filter.isEmpty ? .secondary : .primary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                    .width(min: 150, max: 200)
+                    .width(min: 120, ideal: 160)
 
-                    TableColumn("") { rule in
-                        HStack(spacing: 8) {
-                            Button {
-                                editingRule = rule
-                                showingRuleEditor = true
-                            } label: {
-                                Image(systemName: "pencil")
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(role: .destructive) {
-                                ruleStore.remove(named: rule.name)
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                        }
+                    TableColumn(L("Description")) { rule in
+                        Text(rule.note.isEmpty ? rule.description : rule.note)
+                            .font(.system(size: 12))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
-                    .width(80)
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(minHeight: 400, maxHeight: .infinity)
+                .frame(minHeight: 300, maxHeight: .infinity)
+            }
+
+            Text(L("tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule."))
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            // Bottom bar (original: + - Pick a running app ... Defaults Clear)
+            HStack(spacing: 8) {
+                Button {
+                    editingRule = nil
+                    showingRuleEditor = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help(L("Add Rule"))
+
+                Button {
+                    if let id = selectedRuleID {
+                        ruleStore.remove(named: id)
+                        selectedRuleID = nil
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .help(L("Delete Rule"))
+                .disabled(selectedRuleID == nil)
+
+                Button(L("Pick a running app")) {
+                    pickAppForSelectedRule()
+                }
+                .disabled(selectedRuleID == nil)
+
+                Spacer()
+
+                Button(L("Reset to Defaults")) {
+                    ruleStore.rules = RuleStore.defaultRules()
+                    ruleStore.save()
+                }
+
+                Button(L("Clear All")) {
+                    let alert = NSAlert()
+                    alert.messageText = L("warning!")
+                    alert.informativeText = L("Are you sure you want to clear all the rules?")
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: L("Ok"))
+                    alert.addButton(withTitle: L("Cancel"))
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        ruleStore.rules.removeAll()
+                        ruleStore.save()
+                        selectedRuleID = nil
+                    }
+                }
+                .foregroundColor(.red)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// Plain action-type label for the table's Type column (original combo:
@@ -754,24 +742,168 @@ struct RulesTabView: View {
         }
     }
 
-    /// Enter screen-recording mode for the selected rule: close the
-    /// preferences window and ask the AppDelegate to capture the next
-    /// right-button gesture (original: preSetRuleGestureAtIndex flow).
-    private func drawGestureForSelectedRule() {
-        guard let ruleName = selectedRuleForPreset else { return }
+    /// Action column shows the real action content, like the original inline
+    /// cells: shortcut recorder text, script name, text value, password dots.
+    private func actionContentLabel(for action: RuleAction) -> String {
+        switch action {
+        case .shortcut(let keyCode, let flags):
+            var s = ""
+            if flags & 0x100000 != 0 { s += "⌘" }
+            if flags & 0x80000 != 0 { s += "⌥" }
+            if flags & 0x40000 != 0 { s += "⌃" }
+            if flags & 0x20000 != 0 { s += "⇧" }
+            return s + ShortcutRecorderView.keyName(for: keyCode)
+        case .keyPress(let key):
+            return key
+        case .applescript(let reference):
+            if let uuid = UUID(uuidString: reference),
+               let item = AppleScriptsList.sharedAppleScriptsList.getScriptById(id: uuid) {
+                return item.name
+            }
+            if let item = AppleScriptsList.sharedAppleScriptsList.getAllScripts().first(where: { $0.source == reference }) {
+                return item.name
+            }
+            return reference.split(separator: "\n").first.map(String.init) ?? reference
+        case .text(let value), .copyToClipboard(let value):
+            return value
+        case .password(let value):
+            return String(repeating: "•", count: min(max(value.count, 1), 8))
+        case .mouseClick(let x, let y):
+            return "(\(x), \(y))"
+        case .none:
+            return "—"
+        }
+    }
+
+    /// Enter screen-recording mode for the given rule and show the original
+    /// "Draw Gesture!" alert with its preset-gesture combo box
+    /// (AppPrefsWindowController.m preSetRuleGestureAtIndex / alertModal…).
+    private func drawGesture(_ ruleName: String) {
+        NotificationCenter.default.post(
+            name: .macStrokeRecordGesture,
+            object: nil,
+            userInfo: ["ruleName": ruleName]
+        )
+
         let alert = NSAlert()
         alert.messageText = L("Draw Gesture!")
         alert.informativeText = L("You can draw a gesture anywhere on the screen, or select the preset gesture below.")
         alert.alertStyle = .warning
         alert.addButton(withTitle: L("Ok"))
         alert.addButton(withTitle: L("Cancel"))
-        if alert.runModal() == .alertFirstButtonReturn {
-            NotificationCenter.default.post(
-                name: .macStrokeRecordGesture,
-                object: nil,
-                userInfo: ["ruleName": ruleName]
-            )
+
+        let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 160, height: 25))
+        combo.isEditable = false
+        combo.completes = false
+        combo.addItems(withObjectValues: Self.presetGestureTitles())
+        combo.placeholderString = L("Plase Select")
+        alert.accessoryView = combo
+
+        var presetApplied = false
+        let store = ruleStore
+        let obs = NotificationCenter.default.addObserver(
+            forName: NSComboBox.selectionDidChangeNotification,
+            object: combo, queue: .main
+        ) { _ in
+            let idx = combo.indexOfSelectedItem
+            guard idx >= 0, let title = combo.itemObjectValue(at: idx) as? String else { return }
+            guard Self.applyPresetGesture(title, toRuleNamed: ruleName, store: store) else { return }
+            presetApplied = true
+            NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
+            Self.postGestureCompleteNotification()
+            NSApp.stopModal(withCode: .alertFirstButtonReturn)
         }
+        defer { NotificationCenter.default.removeObserver(obs) }
+
+        let response = alert.runModal()
+        if presetApplied { return }
+        if response != .alertFirstButtonReturn {
+            NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
+        }
+    }
+
+    /// Combo entries, verbatim from the original list order.
+    private static func presetGestureTitles() -> [String] {
+        var titles = ["←", "↑", "→", "↓", "↙", "↗", "↘", "↖"]
+        for base in ["┏", "┓", "┗", "┛"] { titles += [base, base + " Revered"] }
+        for scalar in 65...90 {
+            let letter = String(UnicodeScalar(scalar)!)
+            titles += [letter, letter + " Revered"]
+        }
+        return titles
+    }
+
+    /// Map a combo title ("M", "M Revered", "┏"…) to a preset template and
+    /// write it into the rule (original: preGestureSelectionChanged:).
+    private static func applyPresetGesture(
+        _ title: String, toRuleNamed ruleName: String, store ruleStore: RuleStore
+    ) -> Bool {
+        let parts = title.split(separator: " ", maxSplits: 1).map(String.init)
+        let base = parts[0]
+        let reversed = parts.count > 1
+        // Letters are stored as "X Shape"; symbol presets use the symbol itself.
+        let templateName = (base.first?.isLetter ?? false)
+            ? "\(base) Shape" + (reversed ? " Revered" : "")
+            : base + (reversed ? " Revered" : "")
+        guard let entry = GestureTemplateProvider.shared.allTemplatesIncludingReversed()
+            .first(where: { $0.name == templateName }) else { return false }
+        guard let idx = ruleStore.rules.firstIndex(where: { $0.name == ruleName }) else { return false }
+        let old = ruleStore.rules[idx]
+        let template = GestureTemplate(from: entry.stroke, name: templateName)
+        let newRule = Rule(
+            name: old.name,
+            description: old.description,
+            template: template,
+            minSimilarityScore: old.minSimilarityScore,
+            action: old.action,
+            note: old.note,
+            isEnabled: old.isEnabled,
+            triggerOnEveryMatch: old.triggerOnEveryMatch,
+            filter: old.filter,
+            filterType: old.filterType
+        )
+        ruleStore.update(newRule)
+        NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
+        return true
+    }
+
+    private static func postGestureCompleteNotification() {
+        let notification = NSUserNotification()
+        notification.title = "MacStroke"
+        notification.informativeText = L("Gesture draw complete!")
+        notification.soundName = NSUserNotificationDefaultSoundName
+        NSUserNotificationCenter.default.deliver(notification)
+    }
+
+    /// Original bottom-bar button: multi-select running apps (AppPicker-
+    /// WindowController) and join their bundle IDs with "|" as the selected
+    /// rule's wildcard filter.
+    private func pickAppForSelectedRule() {
+        guard let id = selectedRuleID,
+              let idx = ruleStore.rules.firstIndex(where: { $0.name == id }) else { return }
+        let oldRule = ruleStore.rules[idx]
+
+        let preselected = Set(oldRule.filter
+            .split(whereSeparator: { $0 == "|" || $0 == "\n" || $0 == "\r" })
+            .map(String.init)
+            .filter { !$0.isEmpty })
+
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected),
+              !picked.isEmpty else { return }
+
+        let newRule = Rule(
+            name: oldRule.name,
+            description: oldRule.description,
+            template: oldRule.template,
+            minSimilarityScore: oldRule.minSimilarityScore,
+            action: oldRule.action,
+            note: oldRule.note,
+            isEnabled: oldRule.isEnabled,
+            triggerOnEveryMatch: oldRule.triggerOnEveryMatch,
+            filter: picked.joined(separator: "|"),
+            filterType: "wildcard"
+        )
+        ruleStore.update(newRule)
     }
 }
 
@@ -881,33 +1013,6 @@ extension AppleScriptTabView {
     }
 }
 
-struct ActionBadge: View {
-    let action: RuleAction
-
-    var body: some View {
-        let (label, color) = actionLabelAndColor
-        Text(label)
-            .font(.system(size: 11, weight: .medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.15))
-            .foregroundColor(color)
-            .cornerRadius(4)
-    }
-
-    private var actionLabelAndColor: (String, Color) {
-        switch action {
-        case .applescript: return (L("Apple Script"), .orange)
-        case .keyPress, .shortcut: return (L("Hot Key"), .blue)
-        case .mouseClick: return (L("Mouse Click"), .purple)
-        case .copyToClipboard: return (L("Copy Text"), .green)
-        case .text: return (L("Text"), .teal)
-        case .password: return (L("Password"), .red)
-        case .none: return (L("None"), .gray)
-        }
-    }
-}
-
 struct RuleEditorView: View {
     @ObservedObject var ruleStore: RuleStore
     let editingRule: Rule?
@@ -925,7 +1030,7 @@ struct RuleEditorView: View {
     @State private var mouseClickY = 0
     @State private var note = ""
     @State private var isEnabled = true
-    @State private var filter = ""
+    @State private var filter = "*"
     @State private var filterType = "wildcard"
     @State private var triggerOnEveryMatch = false
     @State private var availableGestures: [(name: String, stroke: Stroke)] = []
@@ -1139,9 +1244,9 @@ struct RuleEditorView: View {
         case .shortcut(let keyCode, let flags):
             actionType = .shortcut
             shortcutKey = "keyCode=\(keyCode), flags=\(flags)"
-        case .applescript(let source):
+        case .applescript(let reference):
             actionType = .applescript
-            appleScriptSource = source
+            appleScriptSource = ActionExecutor.resolveAppleScriptSource(reference)
         case .copyToClipboard(let text):
             actionType = .text
             copyText = text
@@ -1177,7 +1282,14 @@ struct RuleEditorView: View {
                 action = .keyPress(shortcutKey)
             }
         case .applescript:
-            action = .applescript(appleScriptSource)
+            // Original stores `apple_script_id`: prefer referencing a stored
+            // script whose source matches verbatim; otherwise inline source.
+            if let match = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+                .first(where: { $0.source == appleScriptSource }) {
+                action = .applescript(match.id.uuidString)
+            } else {
+                action = .applescript(appleScriptSource)
+            }
         case .text:
             action = .text(copyText)
         case .password:
@@ -1510,35 +1622,21 @@ struct FiltersTabView: View {
         viewModel.save()
     }
 
-    /// Add a running app's bundle ID to the black or white list
-    /// (original: AppPickerWindowController with addedToTextView).
+    /// Add running apps' bundle IDs to the black or white list
+    /// (original: AppPickerWindowController with addedToTextView, multi-select).
     private func addRunningApp(toBlackList: Bool) {
-        let apps = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil && !($0.bundleIdentifier ?? "").isEmpty }
-            .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
-
-        let alert = NSAlert()
-        alert.messageText = L("Pick a running app")
-        alert.alertStyle = .informational
-
-        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
-        for app in apps {
-            popup.addItem(withTitle: "\(app.localizedName ?? "") (\(app.bundleIdentifier ?? ""))")
-        }
-        alert.accessoryView = popup
-        alert.addButton(withTitle: L("OK"))
-        alert.addButton(withTitle: L("Cancel"))
-
-        if alert.runModal() == .alertFirstButtonReturn, popup.indexOfSelectedItem >= 0,
-           popup.indexOfSelectedItem < apps.count {
-            let bundleID = apps[popup.indexOfSelectedItem].bundleIdentifier ?? ""
+        let existing = Set((toBlackList ? blackListText : whiteListText)
+            .split(separator: "\n").map(String.init))
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: existing),
+              !picked.isEmpty else { return }
+        for bundleID in picked {
             if toBlackList {
                 blackListText = appendLine(bundleID, to: blackListText)
             } else {
                 whiteListText = appendLine(bundleID, to: whiteListText)
             }
-            persistLists()
         }
+        persistLists()
     }
 
     private func appendLine(_ line: String, to text: String) -> String {
@@ -1649,33 +1747,13 @@ struct RightClickTabView: View {
         }
     }
 
-    /// Pick a running app (original: AppPickerWindowController selectOne mode)
-    /// and replace the selected list entry with its bundle ID.
+    /// Pick one running app (original: AppPickerWindowController selectOne
+    /// mode) and add its bundle ID to the list.
     private func addRunningApp() {
-        let apps = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil && !($0.bundleIdentifier ?? "").isEmpty }
-            .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
-
-        let alert = NSAlert()
-        alert.messageText = L("Pick a running app")
-        alert.alertStyle = .informational
-
-        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
-        for app in apps {
-            popup.addItem(withTitle: "\(app.localizedName ?? "") (\(app.bundleIdentifier ?? ""))")
-        }
-        alert.accessoryView = popup
-        alert.addButton(withTitle: L("OK"))
-        alert.addButton(withTitle: L("Cancel"))
-
-        if alert.runModal() == .alertFirstButtonReturn, popup.indexOfSelectedItem >= 0,
-           popup.indexOfSelectedItem < apps.count {
-            let bundleID = apps[popup.indexOfSelectedItem].bundleIdentifier ?? ""
-            if !bundleID.isEmpty {
-                RightClicksList.shared.add(bundleID)
-                rightClickApps = RightClicksList.shared.allApps()
-            }
-        }
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), singleSelection: true),
+              let bundleID = picked.first, !bundleID.isEmpty else { return }
+        RightClicksList.shared.add(bundleID)
+        rightClickApps = RightClicksList.shared.allApps()
     }
 }
 
@@ -1906,6 +1984,9 @@ struct ClipboardTabView: View {
 
 struct AboutTabView: View {
     @ObservedObject var viewModel: UserPreferences
+    /// Sparkle's own user-default key (original bound the checkbox to
+    /// SUUpdater.automaticallyDownloadsUpdates).
+    @AppStorage("SUAutomaticallyUpdate") private var automaticallyDownloadsUpdates = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -1931,6 +2012,13 @@ struct AboutTabView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Toggle(L("Automatically Check for Updates"), isOn: $viewModel.autoCheckUpdates)
+                    .onChange(of: viewModel.autoCheckUpdates) { _ in
+                        NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+                    }
+                Toggle(L("Automatically Download Updates"), isOn: $automaticallyDownloadsUpdates)
+                    .onChange(of: automaticallyDownloadsUpdates) { _ in
+                        NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+                    }
                 Button(L("Check Now")) {
                     NotificationCenter.default.post(name: .macStrokeCheckForUpdates, object: nil)
                 }
@@ -1964,4 +2052,27 @@ struct SectionHeader: View {
             .font(.system(size: 20, weight: .semibold))
             .foregroundColor(.primary)
     }
+}
+
+// MARK: - Help Tab (original: embedded README.html, AppPrefsWindowController.m:122)
+
+struct HelpTabView: View {
+    var body: some View {
+        READMEWebView()
+            .frame(maxWidth: .infinity)
+            .frame(height: 560)
+    }
+}
+
+/// WKWebView wrapper loading the localized README.html from the bundle.
+private struct READMEWebView: NSViewRepresentable {
+    func makeNSView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        if let url = Bundle.main.url(forResource: "README", withExtension: "html") {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        }
+        return webView
+    }
+
+    func updateNSView(_ nsView: WKWebView, context: Context) {}
 }

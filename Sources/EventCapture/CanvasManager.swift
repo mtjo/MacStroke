@@ -72,6 +72,8 @@ public class CanvasManager: EventCaptureDelegate {
     // MARK: - Gesture state
 
     private var currentPoints: [GesturePoint] = []
+    /// Previous right-drag point, used for the Synergy teleport check.
+    private var lastDragPoint: GesturePoint?
     private var isCapturing = false
     private var hasDragged = false
     /// The location (AppKit global coords) where the current right-mouse-down happened.
@@ -121,15 +123,25 @@ public class CanvasManager: EventCaptureDelegate {
             switch event.button {
             case .right:
                 return handleRightMouseDown(event)
+            case .left:
+                // Original AppDelegate.m:431-438 — while a right-button gesture
+                // is in progress, left clicks are swallowed to avoid mis-fires.
+                return shouldShow && isCapturing
             default:
-                // Left mouse down is only observed (original: kCGEventLeftMouseDown
-                // is in the mask but does not start a gesture).
                 return false
             }
 
         case .moved:
             guard shouldShow, isCapturing else { return false }
+            // Original AppDelegate.m:332-357 — Synergy hands the pointer to
+            // another machine: the point teleports from a screen edge to the
+            // screen center. Treat that as gesture cancellation.
+            if isSynergyJump(from: lastDragPoint, to: event.point) {
+                resetGestureState()
+                return true
+            }
             hasDragged = true
+            lastDragPoint = event.point
             currentPoints.append(event.point)
             addPointToCanvas(event.point)
             return true
@@ -165,6 +177,7 @@ public class CanvasManager: EventCaptureDelegate {
         }
 
         currentPoints = [event.point]
+        lastDragPoint = event.point
         downLocation = event.point
         hasDragged = false
         isCapturing = true
@@ -227,6 +240,7 @@ public class CanvasManager: EventCaptureDelegate {
     /// user still sees the drawn path (matches original reinitWindow timing).
     private func resetGestureState() {
         currentPoints = []
+        lastDragPoint = nil
         isCapturing = false
         hasDragged = false
         downLocation = nil
@@ -235,6 +249,22 @@ public class CanvasManager: EventCaptureDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.hideAllCanvasWindows()
         }
+    }
+
+    /// Original AppDelegate.m:332-357 — previous drag point near a primary
+    /// screen edge and the new point near the screen center means Synergy
+    /// teleported the pointer to another machine.
+    private func isSynergyJump(from previous: GesturePoint?, to current: GesturePoint) -> Bool {
+        guard let previous, let screen = NSScreen.main else { return false }
+        let f = screen.frame
+        let threshold: Double = 30
+        let nearEdge = abs(previous.x - f.minX) < threshold
+            || abs(previous.x - f.maxX) < threshold
+            || abs(previous.y - f.minY) < threshold
+            || abs(previous.y - f.maxY) < threshold
+        let nearCenter = abs(current.x - (f.minX + f.width / 2)) < threshold
+            && abs(current.y - (f.minY + f.height / 2)) < threshold
+        return nearEdge && nearCenter
     }
 
     /// Replay the pending down + a synthetic up for an interrupted gesture.

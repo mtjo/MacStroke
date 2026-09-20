@@ -16,36 +16,36 @@ public enum AppleScriptError: Error {
     case invalidScript(String)
 }
 
+extension AppleScriptError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .scriptNotFound(let name): return "AppleScript not found: \(name)"
+        case .executionFailed(let message): return message
+        case .invalidScript: return "Invalid AppleScript"
+        }
+    }
+}
+
 /// Executes AppleScript commands.
 public final class AppleScriptRunner {
     public init() {}
 
-    /// Execute an AppleScript string.
+    /// Execute an AppleScript string synchronously
+    /// (original: `NSAppleScript executeAndReturnError:`).
     /// - Parameter script: The AppleScript to run
     /// - Returns: The script's output string, or nil if no output
     /// - Throws: AppleScriptError if execution fails
     public func execute(_ script: String) throws -> String? {
-        let url = URL(fileURLWithPath: "/usr/bin/osascript")
-        let task = Process()
-        task.executableURL = url
-        task.arguments = ["-e", script]
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = outputPipe
-        task.standardError = errorPipe
-
-        try task.run()
-        task.waitUntilExit()
-
-        if task.terminationStatus != 0 {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-            throw AppleScriptError.executionFailed(errorString)
+        guard let appleScript = NSAppleScript(source: script) else {
+            throw AppleScriptError.invalidScript(script)
         }
-
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        var errorInfo: NSDictionary?
+        let descriptor = appleScript.executeAndReturnError(&errorInfo)
+        if let errorInfo {
+            let message = (errorInfo[NSAppleScript.errorMessage] as? String) ?? errorInfo.description
+            throw AppleScriptError.executionFailed(message)
+        }
+        return descriptor.stringValue
     }
 
     /// Execute a preset gesture action by name.

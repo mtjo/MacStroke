@@ -35,7 +35,7 @@ Sources/
   GestureEngine/      # Stroke / GesturePoint / GestureMatcher (DTW)
   EventCapture/       # CGEventTap 全局捕获
   RuleEngine/         # Rule / RuleAction / ActionExecutor
-  Storage/            # PreferencesStorage / ClipboardHistory
+  Storage/            # PreferencesStorage / HistoryClipboard
   Preferences/        # SwiftUI 偏好页面
   WindowManager/      # ToastManager / WindowManager
   AppleScriptRunner/  # AppleScript 执行器

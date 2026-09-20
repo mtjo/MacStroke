@@ -89,16 +89,15 @@ public final class RightClicksList {
     }
 
     /// Check whether the given bundle ID should show the right-click menu.
-    /// Supports wildcard matching (e.g. "com.jetbrains.*" matches "com.jetbrains.jetbrainsbrains")
+    /// Original semantics (RightClicksList.m): every entry is matched by
+    /// dropping its last character and prefix-testing — entries are expected
+    /// to end with "*" (e.g. "com.jetbrains." matches any "com.jetbrains.X").
     public func needRightClick(byAppname appname: String) -> Bool {
         guard !list.isEmpty else { return false }
         if list.contains(appname) { return true }
-        for pattern in list {
-            if let wildcardRange = pattern.range(of: "*"), wildcardRange.lowerBound == pattern.index(before: pattern.endIndex) {
-                let prefix = pattern.dropLast()
-                if appname.hasPrefix(prefix) {
-                    return true
-                }
+        for pattern in list where !pattern.isEmpty {
+            if appname.hasPrefix(String(pattern.dropLast())) {
+                return true
             }
         }
         return false

@@ -28,6 +28,10 @@ cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APP_DIR}/Contents/Re
 cp -R Sources/MacStrokeApp/Resources/en.lproj "${APP_DIR}/Contents/Resources/"
 cp -R Sources/MacStrokeApp/Resources/zh-Hans.lproj "${APP_DIR}/Contents/Resources/"
 
+# AppleScript definition + Sparkle public key
+cp Sources/MacStrokeApp/Resources/AppleScript.sdef "${APP_DIR}/Contents/Resources/"
+cp Sources/MacStrokeApp/Resources/dsa_pub.pem "${APP_DIR}/Contents/Resources/"
+
 # App Icon (from original project)
 cp /Users/mtjo/work/MacStroke/MacStroke/Images.xcassets/AppIcon.appiconset/Danrabbit-Elementary-Devices-mouse.icns \
    "${APP_DIR}/Contents/Resources/AppIcon.icns"
@@ -43,11 +47,71 @@ if [ -n "${SPARKLE_SRC}" ]; then
     echo "✅ Sparkle framework embedded"
 fi
 
-# 4. FinderSync Extension
-EXTENSION_DIR=$(find "${BUILD_DIR}" -name "MacStroke_FinderSyncExtension.bundle" -type d | head -1)
-if [ -n "${EXTENSION_DIR}" ]; then
-    cp -R "${EXTENSION_DIR}" "${APP_DIR}/Contents/PlugIns/"
-    echo "✅ FinderSync extension embedded"
+# 4. FinderSync Extension -> loadable .appex bundle
+EXT_EXE="${BUILD_DIR}/FinderSyncExtension"
+APPEX_DIR="${APP_DIR}/Contents/PlugIns/FinderSyncExtension.appex"
+APPEX_ENT="$(mktemp /tmp/MacStrokeFinderSync.XXXXXX.entitlements)"
+cat > "${APPEX_ENT}" <<'ENT'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+</dict>
+</plist>
+ENT
+if [ -x "${EXT_EXE}" ]; then
+    rm -rf "${APPEX_DIR}"
+    mkdir -p "${APPEX_DIR}/Contents/MacOS" "${APPEX_DIR}/Contents/Resources"
+    cp "${EXT_EXE}" "${APPEX_DIR}/Contents/MacOS/FinderSyncExtension"
+    cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APPEX_DIR}/Contents/Resources/"
+    cp -R Sources/FinderSyncExtension/Resources/en.lproj "${APPEX_DIR}/Contents/Resources/"
+    cp -R Sources/FinderSyncExtension/Resources/zh-Hans.lproj "${APPEX_DIR}/Contents/Resources/"
+    cat > "${APPEX_DIR}/Contents/Info.plist" <<'APPEX'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleDisplayName</key>
+	<string>FinderSyncExtension</string>
+	<key>CFBundleExecutable</key>
+	<string>FinderSyncExtension</string>
+	<key>CFBundleIdentifier</key>
+	<string>net.mtjo.MacStroke.FinderSyncExtension</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>FinderSyncExtension</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict/>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.FinderSync</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>FinderSync</string>
+	</dict>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+</dict>
+</plist>
+APPEX
+    echo "✅ FinderSync .appex assembled"
+else
+    echo "⚠️ FinderSyncExtension executable not found at ${EXT_EXE}"
 fi
 
 # 5. Fix @rpath in executable to find Sparkle at Contents/Frameworks
@@ -90,14 +154,26 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSAppleScriptEnabled</key>
+    <true/>
+    <key>OSAScriptingDefinition</key>
+    <string>AppleScript.sdef</string>
     <key>SUFeedURL</key>
-    <string>https://example.com/updates/feed.xml</string>
+    <string>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</string>
+    <key>SUPublicDSAKeyFile</key>
+    <string>dsa_pub.pem</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
 </dict>
 </plist>
 PLIST
 
-# 8. Codesign (ad-hoc)
-codesign --force --deep --sign - "${APP_DIR}" 2>/dev/null || true
+# 8. Codesign (ad-hoc). Children are signed first — the parent seal then
+# covers the appex signature that carries the sandbox entitlements.
+codesign --force --sign - "${APP_DIR}/Contents/Frameworks/Sparkle.framework" 2>/dev/null || true
+codesign --force --sign - --entitlements "${APPEX_ENT}" "${APPEX_DIR}" 2>/dev/null || true
+codesign --force --sign - "${APP_DIR}" 2>/dev/null || true
+rm -f "${APPEX_ENT}"
 
 # 9. Verify framework linkage
 echo "🔍 Verifying framework linkage..."

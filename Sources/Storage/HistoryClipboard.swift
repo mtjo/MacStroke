@@ -90,6 +90,10 @@ public final class HistoryClipboardManager {
     public init(databasePath: String, userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
 
+        if databasePath == Self.defaultDatabasePath {
+            Self.migrateLegacyDatabaseIfNeeded(at: databasePath)
+        }
+
         do {
             try FileManager.default.createDirectory(
                 atPath: (databasePath as NSString).deletingLastPathComponent,
@@ -102,6 +106,21 @@ public final class HistoryClipboardManager {
             print("[HistoryClipboard] Failed to create database: \(error)")
             self.db = nil
         }
+    }
+
+    /// The original ObjC MacStroke kept the same `local_history_clipoard`
+    /// table in ~/Library/Caches/MacStroke/database.sqlite; adopt that file
+    /// on first launch so existing clipboard history carries over.
+    private static func migrateLegacyDatabaseIfNeeded(at path: String) {
+        let fm = FileManager.default
+        guard !fm.fileExists(atPath: path) else { return }
+        let legacy = "\(NSHomeDirectory())/Library/Caches/MacStroke/database.sqlite"
+        guard fm.fileExists(atPath: legacy) else { return }
+        try? fm.createDirectory(
+            atPath: (path as NSString).deletingLastPathComponent,
+            withIntermediateDirectories: true
+        )
+        try? fm.copyItem(atPath: legacy, toPath: path)
     }
 
     /// Create the history table if it doesn't exist

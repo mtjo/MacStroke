@@ -44,44 +44,4 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(parsed?.1, 393216) // control (0x40000) + shift (0x20000)
     }
 
-    func testClipboardHistoryAddAndRetrieve() {
-        let manager = ClipboardHistoryManager(maxEntries: 10, databasePath: getTestDatabasePath())
-
-        manager.add("First entry")
-        manager.add("Second entry")
-        manager.add("Third entry")
-
-        let entries = manager.recentEntries(limit: 10)
-
-        XCTAssertEqual(entries.count, 3)
-        XCTAssertEqual(entries[0].text, "Third entry")
-        XCTAssertEqual(entries[1].text, "Second entry")
-        XCTAssertEqual(entries[2].text, "First entry")
-    }
-
-    func testClipboardHistoryPruning() {
-        let manager = ClipboardHistoryManager(maxEntries: 3, databasePath: getTestDatabasePath())
-
-        for i in 0..<5 {
-            manager.add("Entry \(i)")
-        }
-
-        let entries = manager.recentEntries(limit: 10)
-
-        XCTAssertEqual(entries.count, 3)
-        XCTAssertEqual(entries[0].text, "Entry 4")
-        XCTAssertEqual(entries[1].text, "Entry 3")
-        XCTAssertEqual(entries[2].text, "Entry 2")
-    }
-
-    func testClipboardHistoryClear() {
-        let manager = ClipboardHistoryManager(maxEntries: 10, databasePath: getTestDatabasePath())
-
-        manager.add("First entry")
-        manager.add("Second entry")
-        manager.clear()
-
-        XCTAssertEqual(manager.entryCount, 0)
-    }
-
 }

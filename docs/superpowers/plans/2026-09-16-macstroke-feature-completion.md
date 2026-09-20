@@ -29,7 +29,7 @@
 
 **Interfaces:**
 - `HistoryClipboardManager` 类：`enableHistoryClipboard()`, `isEnable()`, `getHistoryClipboardList(firstPage:)`, `getTopList()`, `clearHistoryList()`, `insertLocalHistoryClipboard(content:isTop:)`, `topCount`, `addTop()`, `removeTop()`, `nextPage()`, `clearTop()`, `clearAll()`, `deleteExpired()`
-- `ClipboardEntry` 结构体：`id`, `content`, `isTop`, `createTime`, `modifyTime`
+- `HistoryClipboardEntry` 结构体：`id`, `content`, `isTop`, `createTime`, `modifyTime`
 - 分页大小 30，支持置顶条目和普通条目分离存储
 
 **Dependencies:** Task #14（PresetGesture 已完成）

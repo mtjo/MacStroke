@@ -259,3 +259,20 @@
 
 "Click to Record" = "Click to Record";
 "Recording… press a key (Esc to cancel)" = "Recording… press a key (Esc to cancel)";
+
+/* General tab */
+"Show Icon In Status Bar" = "Show Icon In Status Bar";
+"Open Preferences Window at Startup" = "Open Preferences Window at Startup";
+"Auto Start at Login" = "Auto Start at Login";
+"Language:" = "Language:";
+"Show Gesture In Whatever App" = "Show Gesture In Whatever App";
+"FontSize" = "FontSize";
+
+/* Rules tab (original layout) */
+"Image" = "Image";
+"Filter" = "Filter";
+"tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule." = "tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule.";
+"Gesture draw complete!" = "Gesture draw complete!";
+"Plase Select" = "Plase Select";
+"Text Color:" = "Text Color:";
+"Help" = "Help";

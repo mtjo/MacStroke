@@ -9,73 +9,15 @@
 //
 
 import Foundation
+import AppKit
 import FinderSync
-
-// MARK: - Right-click menu provider for Finder
-
-/// Provides the context menu items shown in Finder's right-click menu.
-public final class FinderMenuProvider: NSObject {
-
-    public func contextMenu() -> NSMenu {
-        let menu = NSMenu(title: Bundle.main.localizedString(forKey: "MacStroke", value: nil, table: nil))
-
-        let recognizerItem = NSMenuItem(
-            title: Bundle.main.localizedString(forKey: "Recognize Gesture", value: nil, table: nil),
-            action: #selector(handleRecognizeGesture),
-            keyEquivalent: ""
-        )
-        recognizerItem.image = NSImage(systemSymbolName: "cursor.arrow.down.angled", accessibilityDescription: nil)
-        recognizerItem.target = self
-        menu.addItem(recognizerItem)
-
-        let presetsItem = NSMenuItem(
-            title: Bundle.main.localizedString(forKey: "Preset Gestures", value: nil, table: nil),
-            action: #selector(handlePresets),
-            keyEquivalent: ""
-        )
-        presetsItem.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: nil)
-        presetsItem.target = self
-        menu.addItem(presetsItem)
-
-        menu.addItem(.separator())
-
-        let settingsItem = NSMenuItem(
-            title: Bundle.main.localizedString(forKey: "Open Preferences", value: nil, table: nil),
-            action: #selector(handleOpenPreferences),
-            keyEquivalent: ","
-        )
-        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
-        settingsItem.target = self
-        menu.addItem(settingsItem)
-
-        return menu
-    }
-
-    @objc private func handleRecognizeGesture() {
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("com.macstroke.RecognizeGesture"),
-            object: nil
-        )
-    }
-
-    @objc private func handlePresets() {
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("com.macstroke.Presets"),
-            object: nil
-        )
-    }
-
-    @objc private func handleOpenPreferences() {
-        DistributedNotificationCenter.default().postNotificationName(
-            NSNotification.Name("com.macstroke.OpenPreferences"),
-            object: nil
-        )
-    }
-}
 
 // MARK: - FinderSync extension
 
 /// The FIFinderSync subclass that provides custom menu items in Finder.
+/// Registered as the ObjC class "FinderSync" — the NSExtensionPrincipalClass
+/// in the appex Info.plist looks it up by that name.
+@objc(FinderSync)
 public final class FinderSyncExtensionController: FIFinderSync {
 
     private var enableRightClickMenu = false

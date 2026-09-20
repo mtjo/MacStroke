@@ -16,7 +16,7 @@ public enum StorageKey: String, CaseIterable {
     case launchAtLogin = "launchAtLogin"
     case showUIInWhateverApp = "showUIInWhateverApp"
     case blockFilter = "blockFilter"
-    case whiteListMode = "whiteListMode"
+    case whiteListMode = "filterIsInWhiteMode"
     case whiteList = "whiteList"
     case language = "language"
     case openPrefOnStartup = "openPrefOnStartup"
@@ -26,13 +26,13 @@ public enum StorageKey: String, CaseIterable {
 
     // Gesture recognition
     case minimumPoints = "minimumPoints"
-    case minSimilarityScore = "minSimilarityScore"
+    case minSimilarityScore = "minScore"
     case enableGestureMinScore = "enableGestureMinScore"
     case showGestureNote = "showGestureNote"
 
     // Note/Toast
-    case noteRetentionTime = "noteRetentionTime"
-    case notePosition = "notePosition"
+    case noteRetentionTime = "noteRetetionTime"
+    case notePosition = "notePostion"
     case noteBackgroundAlpha = "noteBackgroundAlpha"
     case noteFontName = "noteFontName"
     case noteFontSize = "noteFontSize"
@@ -158,7 +158,7 @@ public enum StorageDefaults {
     public static let openPrefOnStartup: Bool = true
     public static let mergeConsecutiveIdenticalGestures: Bool = false
     public static let defaultLineColor: String = "#0000ff"
-    public static let defaultNoteColor: String = "#000000"
+    public static let defaultNoteColor: String = "#FFFFFF"
 
     // Gesture recognition
     public static let minimumPoints: Int = 10
@@ -270,10 +270,35 @@ public func registerUserDefaultsDefaults() {
         "newFile": StorageDefaults.enableNewFile,
         "openInTerminal": StorageDefaults.enableOpenInTerminal,
         "copyFilePath": StorageDefaults.enableCopyFilePath,
-        // Black/white list mode default (blacklist = not whitelist mode).
-        "filterIsInWhiteMode": false,
-        // Gesture score gate (read with the raw key by RuleEngine.match).
-        "minScore": StorageDefaults.minSimilarityScore,
     ]
     UserDefaults.standard.register(defaults: defaults)
+
+    migrateLegacyPreferenceKeys()
+}
+
+/// One-time migration of early Swift-port key names to the original MacStroke
+/// keys (the StorageKey rawValues now match the original, so re-registering
+/// under the new name is enough; old values are moved only if actually written).
+private func migrateLegacyPreferenceKeys() {
+    let defaults = UserDefaults.standard
+    if defaults.object(forKey: "minSimilarityScore") != nil {
+        if defaults.object(forKey: "minScore") == nil {
+            defaults.set(defaults.double(forKey: "minSimilarityScore"), forKey: "minScore")
+        }
+        defaults.removeObject(forKey: "minSimilarityScore")
+    }
+    if defaults.object(forKey: "whiteListMode") != nil {
+        if defaults.object(forKey: "filterIsInWhiteMode") == nil {
+            defaults.set(defaults.bool(forKey: "whiteListMode"), forKey: "filterIsInWhiteMode")
+        }
+        defaults.removeObject(forKey: "whiteListMode")
+    }
+    for (legacy, key) in [("noteRetentionTime", "noteRetetionTime"), ("notePosition", "notePostion")] {
+        if defaults.object(forKey: legacy) != nil {
+            if defaults.object(forKey: key) == nil {
+                defaults.set(defaults.integer(forKey: legacy), forKey: key)
+            }
+            defaults.removeObject(forKey: legacy)
+        }
+    }
 }

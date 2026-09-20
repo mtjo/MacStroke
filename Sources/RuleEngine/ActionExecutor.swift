@@ -24,13 +24,15 @@ public final class ActionExecutor {
     ///   - rule: The rule that triggered the action (for logging)
     public func execute(_ action: RuleAction, for rule: Rule? = nil) {
         switch action {
-        case .applescript(let script):
-            Task { @MainActor in
-                do {
-                    _ = try appleScriptRunner.execute(script)
-                } catch {
-                    print("[ActionExecutor] AppleScript failed: \(error)")
-                }
+        case .applescript(let reference):
+            // Original: rules reference a stored script by id (apple_script_id);
+            // fall back to treating the value as inline source. Execution is
+            // synchronous and errors surface as a system notification.
+            let source = Self.resolveAppleScriptSource(reference)
+            do {
+                _ = try appleScriptRunner.execute(source)
+            } catch {
+                postAppleScriptErrorNotification(message: error.localizedDescription)
             }
         case .keyPress(let key):
             pressKey(key)
@@ -47,6 +49,24 @@ public final class ActionExecutor {
         case .none:
             break
         }
+    }
+
+    /// Resolve a rule's AppleScript reference: a stored script id
+    /// (original `apple_script_id`) wins; anything else is inline source.
+    public static func resolveAppleScriptSource(_ reference: String) -> String {
+        if let uuid = UUID(uuidString: reference),
+           let item = AppleScriptsList.sharedAppleScriptsList.getScriptById(id: uuid) {
+            return item.source
+        }
+        return reference
+    }
+
+    /// Original: NSUserNotification "MacStroke AppleScript Error" on failure.
+    private func postAppleScriptErrorNotification(message: String) {
+        let notification = NSUserNotification()
+        notification.title = "MacStroke AppleScript Error"
+        notification.informativeText = message
+        NSUserNotificationCenter.default.deliver(notification)
     }
 
     private func pressKey(_ key: String) {

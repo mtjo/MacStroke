@@ -187,6 +187,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self, selector: #selector(checkForUpdatesFromNotification),
             name: .macStrokeCheckForUpdates, object: nil)
 
+        // About tab update-setting checkboxes.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(updateSettingsDidChange(_:)),
+            name: .macStrokeUpdateSettingsDidChange, object: nil)
+
         // Gesture-recording requests from the preferences UI.
         NotificationCenter.default.addObserver(
             self, selector: #selector(recordGesture(_:)),
@@ -194,6 +199,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(cancelRecordGesture),
             name: .macStrokeCancelRecordGesture, object: nil)
+
+        registerAppleScriptHandler()
+    }
+
+    /// AppleScript support (original: AppleScript.sdef + AppleScriptCommand):
+    /// `tell application "MacStroke" to openPreferences` arrives as an
+    /// 'stds'/'pref' Apple Event (sdef code stdspref).
+    private func registerAppleScriptHandler() {
+        let stds = Self.fourCharCode("stds")
+        let pref = Self.fourCharCode("pref")
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleOpenPreferencesEvent(_:reply:)),
+            forEventClass: AEEventClass(stds),
+            andEventID: AEEventID(pref)
+        )
+    }
+
+    private static func fourCharCode(_ s: String) -> OSType {
+        var out: OSType = 0
+        for byte in s.utf8 { out = (out << 8) | OSType(byte) }
+        return out
+    }
+
+    @objc private func handleOpenPreferencesEvent(
+        _ event: NSAppleEventDescriptor,
+        reply: NSAppleEventDescriptor
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            self?.togglePreferences()
+        }
     }
 
     /// Reopen (Dock icon click) shows the preferences window (original:
@@ -409,15 +445,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func initSparkleUpdater() {
-        // Use SPUStandardUpdaterController for automatic update checking and UI
+        // Use SPUStandardUpdaterController for automatic update checking and UI.
+        // Feed URL & DSA key come from Info.plist (SUFeedURL / SUPublicDSAKeyFile),
+        // same appcast as the original MacStroke release.
         let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-        // Placeholder feed URL - replace with your actual appcast URL
-        if let feedURL = URL(string: "https://example.com/updates/feed.xml") {
-            controller.updater.setFeedURL(feedURL)
-        }
         controller.updater.automaticallyChecksForUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
+        controller.updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
         self.updaterController = controller
         print("[AppDelegate] Sparkle updater initialized")
+    }
+
+    /// About tab checkboxes → apply to the live Sparkle updater.
+    @objc func updateSettingsDidChange(_ notification: Notification) {
+        guard let updater = updaterController?.updater else { return }
+        updater.automaticallyChecksForUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
+        updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
     }
 
     /// Trigger a Sparkle update check (About tab "Check for Updates" button).

@@ -97,7 +97,6 @@ swift test --list-tests
 - **Sources/Storage/** —
   - `PreferencesStorage` — 对 `UserDefaults` 的薄封装，提供类型化 getter/setter 以及 `StorageDefaults` 常量
   - `HistoryClipboardManager` — 基于 SQLite 的剪贴板历史，支持置顶/收藏条目、分页、过期清理
-  - `ClipboardHistoryManager` — 更简单的 SQLite 剪贴板存储（遗留实现？）
 
 - **Sources/WindowManager/** — `WindowManager`（状态栏）、`Toast` / `ToastManager`（屏幕上的提示）
 

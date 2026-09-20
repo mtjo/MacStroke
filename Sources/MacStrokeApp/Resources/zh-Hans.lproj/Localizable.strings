@@ -45,7 +45,7 @@
 "Click \"Add Rule\" to create your first gesture rule" = "点击“添加规则”创建您的第一条手势规则";
 "Enabled" = "已启用";
 "Name" = "名称";
-"Description" = "描述";
+"Description" = "说明";
 "Gesture" = "手势";
 "Action" = "动作";
 "App Filter" = "应用过滤";
@@ -184,8 +184,8 @@
 "Trigger on Every Match" = "持续触发";
 "Trigger on every match" = "持续触发";
 "Type" = "类型";
-"Hot Key" = "快捷键";
-"Apple Script" = "Apple 脚本";
+"Hot Key" = "热键";
+"Apple Script" = "AppleScript脚本";
 "Text" = "文本";
 "tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\"." = "提示：点击手势缩略图选中规则，然后使用预设手势或\"绘制手势\"。";
 "Draw Gesture!" = "绘制手势！";
@@ -196,7 +196,7 @@
 "Black List" = "黑名单";
 "White List" = "白名单";
 "add.." = "添加..";
-"Pick a running app" = "选择运行中的应用";
+"Pick a running app" = "从运行中的App中选取";
 "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'" = "提示：模拟右键菜单，支持 '*' 通配符匹配，例如 'com.jetbrains.*'";
 "enable right click menu" = "启用右键菜单";
 "new text file" = "新建文本文件";
@@ -259,3 +259,24 @@
 
 "Click to Record" = "点击录制";
 "Recording… press a key (Esc to cancel)" = "录制中…请按下快捷键（Esc 取消）";
+
+/* General tab */
+"Show Icon In Status Bar" = "在状态栏中显示图标";
+"Open Preferences Window at Startup" = "在启动时打开偏好面板";
+"Auto Start at Login" = "自动启动";
+"Language:" = "语言：";
+"Show Gesture In Whatever App" = "在所有App中显示";
+"FontSize" = "字号";
+
+/* Rules tab (original layout) */
+"Image" = "手势图片";
+"Filter" = "过滤";
+"tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule." = "提示：双击手势图片可绘制或修改手势，双击名称编辑规则。";
+"Gesture draw complete!" = "手势绘制完成!";
+"Plase Select" = "请选择";
+"Text Color:" = "文字颜色：";
+"Help" = "帮助";
+"Bundle ID" = "Bundle ID";
+"OK" = "好";
+"Delete Rule" = "删除规则";
+"Automatically Download Updates" = "自动下载更新";

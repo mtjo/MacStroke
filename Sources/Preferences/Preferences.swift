@@ -100,6 +100,13 @@ public final class UserPreferences: ObservableObject {
         set { lineColorHex = newValue.hexString }
     }
 
+    /// Computed Color wrapper for defaultNoteColor (original noteColor —
+    /// the gesture note text color), used by ColorPicker.
+    public var noteColor: Color {
+        get { Color(hex: defaultNoteColor) }
+        set { defaultNoteColor = newValue.hexString }
+    }
+
     // MARK: - Right-click menu
     @Published public var enableRightClickMenu: Bool {
         didSet { storage.setBool(enableRightClickMenu, forKey: .enableRightClickMenu) }

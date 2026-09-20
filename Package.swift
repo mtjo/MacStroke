@@ -33,7 +33,11 @@ let package = Package(
         // Executable product
         .executable(
             name: "MacStrokeApp",
-            targets: ["MacStrokeApp"])
+            targets: ["MacStrokeApp"]),
+        // Finder Sync appex executable
+        .executable(
+            name: "FinderSyncExtension",
+            targets: ["FinderSyncExtension"])
     ],
     dependencies: [
         // SQLite.swift for clipboard history and rule storage
@@ -91,12 +95,16 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]),
-        // ============ Finder Sync Extension ============
-        .target(
+        // ============ Finder Sync Extension (real .appex executable) ============
+        .executableTarget(
             name: "FinderSyncExtension",
-            dependencies: ["RuleEngine"],
+            dependencies: [],
             resources: [
                 .process("Resources")
+            ],
+            linkerSettings: [
+                // Entry point provided by Foundation's extension launcher.
+                .unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])
             ]),
         // ============ Right-click menu management ============
         .target(
