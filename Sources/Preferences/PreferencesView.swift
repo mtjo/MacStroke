@@ -209,8 +209,8 @@ public struct PreferencesView: View {
                         }
                     }
                     .padding(24)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: geometry.size.height - 48)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: geometry.size.height - 48, alignment: .top)
                 }
                 .frame(width: geometry.size.width - 181)
                 .frame(minHeight: 550)
@@ -1764,7 +1764,7 @@ struct RightClickMenuTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(L("Finder Right-Click Menu"))
 
             Toggle(L("enable right click menu"), isOn: Binding(
@@ -1775,63 +1775,66 @@ struct RightClickMenuTabView: View {
                 }
             ))
 
-            if viewModel.enableRightClickMenu {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle(isOn: Binding(
-                        get: { viewModel.enableNewFile },
-                        set: { newValue in
-                            viewModel.enableNewFile = newValue
-                            syncToExtension()
-                        }
-                    )) {
-                        Label(L("new text file"), systemImage: "doc.badge.plus")
+            // Original: sub-items stay visible and are only disabled
+            // when the master toggle is off (enabled binding in the xib).
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(L("new text file"), isOn: Binding(
+                    get: { viewModel.enableNewFile },
+                    set: { newValue in
+                        viewModel.enableNewFile = newValue
+                        syncToExtension()
                     }
-                    Toggle(isOn: Binding(
+                ))
+
+                HStack(spacing: 8) {
+                    Toggle(L("open in terminal"), isOn: Binding(
                         get: { viewModel.enableOpenInTerminal },
                         set: { newValue in
                             viewModel.enableOpenInTerminal = newValue
                             syncToExtension()
                         }
-                    )) {
-                        Label(L("open in terminal"), systemImage: "terminal.fill")
-                    }
-                    Toggle(isOn: Binding(
-                        get: { viewModel.enableCopyFilePath },
+                    ))
+
+                    Picker("", selection: Binding(
+                        get: { viewModel.userTerminal },
                         set: { newValue in
-                            viewModel.enableCopyFilePath = newValue
+                            viewModel.userTerminal = newValue
                             syncToExtension()
                         }
                     )) {
-                        Label(L("copy file path"), systemImage: "doc.on.doc")
+                        Text("Terminal").tag("Terminal")
+                        Text("Iterm").tag("iTerm")
                     }
-
-                    Divider()
-
-                    HStack {
-                        Text(L("Terminal"))
-                        Picker("", selection: $viewModel.userTerminal) {
-                            Text("Terminal").tag("Terminal")
-                            Text("Iterm").tag("iTerm")
-                        }
-                        .pickerStyle(.radioGroup)
-                        .frame(width: 160)
-                    }
-
-                    HStack {
-                        Button(L("Re-enable Extension")) {
-                            RightClickMenuManager.shared.reEnableFinderExtension()
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button(L("Delayed Re-enable")) {
-                            RightClickMenuManager.shared.delayedEnableFinderExtension()
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                .padding(.leading, 16)
+
+                Toggle(L("copy file path"), isOn: Binding(
+                    get: { viewModel.enableCopyFilePath },
+                    set: { newValue in
+                        viewModel.enableCopyFilePath = newValue
+                        syncToExtension()
+                    }
+                ))
             }
+            .padding(.leading, 22)
+            .disabled(!viewModel.enableRightClickMenu)
+
+            Divider()
+
+            HStack(spacing: 12) {
+                Button(L("Re-enable Extension")) {
+                    RightClickMenuManager.shared.reEnableFinderExtension()
+                }
+                Button(L("Delayed Re-enable")) {
+                    RightClickMenuManager.shared.delayedEnableFinderExtension()
+                }
+                Spacer()
+            }
+
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Push the enable flags + localized menu titles to the FinderSync
