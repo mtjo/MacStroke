@@ -1534,59 +1534,131 @@ struct AppleScriptExamples {
 // MARK: - Filters Tab
 // Original: black/white list mode radio + two text views + apply + add.
 
+struct FilterEntry: Identifiable {
+    let index: Int
+    let value: String
+    var id: Int { index }
+}
+
 struct FiltersTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var blackListText = ""
     @State private var whiteListText = ""
+    @State private var showWhiteList = false
+    @State private var selection: Set<Int> = []
+    @State private var newPattern = ""
+    @State private var showingPatternSheet = false
+
+    private var currentLines: [String] {
+        (showWhiteList ? whiteListText : blackListText).components(separatedBy: "\n")
+    }
+
+    private var entries: [FilterEntry] {
+        currentLines.enumerated().compactMap { i, line in
+            line.trimmingCharacters(in: .whitespaces).isEmpty ? nil : FilterEntry(index: i, value: line)
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionHeader(L("Application Filters"))
 
-            VStack(alignment: .leading, spacing: 12) {
+            // System-settings style list switcher (like Sound output/input).
+            Picker("", selection: $showWhiteList) {
+                Text(L("Black List")).tag(false)
+                Text(L("White List")).tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 300)
+
+            Table(entries, selection: $selection) {
+                TableColumn(L("Name")) { entry in
+                    Text(entry.value)
+                        .font(.system(size: 12, design: .monospaced))
+                }
+                TableColumn(L("Type")) { entry in
+                    Text(Self.kind(for: entry.value))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(minHeight: 280)
+
+            HStack(spacing: 12) {
+                Button(action: addRunningApp) {
+                    Image(systemName: "plus")
+                }
+                .help(L("Pick a running app"))
+                Button(action: removeSelected) {
+                    Image(systemName: "minus")
+                }
+                .disabled(selection.isEmpty)
+                Button(L("Add Pattern")) {
+                    newPattern = ""
+                    showingPatternSheet = true
+                }
+
+                Spacer()
+
                 Picker(L("Filter Mode"), selection: $viewModel.whiteListMode) {
                     Text(L("Black list mode")).tag(false)
                     Text(L("White list mode")).tag(true)
                 }
                 .pickerStyle(.radioGroup)
-                .labelsHidden()
+                .fixedSize()
                 .onChange(of: viewModel.whiteListMode) { _ in
                     persistLists()
                 }
-            }
 
-            Text(L("Enter bundle identifiers one per line. Supports wildcards (e.g. com.jetbrains.*)"))
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            SectionHeader(L("Black List"))
-            TextEditor(text: $blackListText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 130)
-                .border(Color.secondary.opacity(0.2))
-
-            SectionHeader(L("White List"))
-            TextEditor(text: $whiteListText)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 130)
-                .border(Color.secondary.opacity(0.2))
-
-            HStack {
-                Button(L("add..")) { addRunningApp(toBlackList: !viewModel.whiteListMode) }
-                    .buttonStyle(.bordered)
                 Button(L("Apply")) { persistLists() }
                     .buttonStyle(.borderedProminent)
-                Spacer()
             }
 
-            Text(L("Current mode: \(viewModel.whiteListMode ? "Whitelist" : "Blacklist")"))
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             blackListText = BlackWhiteFilter.shared.blackListText
             whiteListText = BlackWhiteFilter.shared.whiteListText
         }
+        .sheet(isPresented: $showingPatternSheet) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L("Add Pattern")).font(.headline)
+                TextField("com.jetbrains.*", text: $newPattern)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 280)
+                HStack {
+                    Spacer()
+                    Button(L("Cancel")) { showingPatternSheet = false }
+                    Button(L("OK")) {
+                        addPattern(newPattern.trimmingCharacters(in: .whitespaces))
+                        showingPatternSheet = false
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(newPattern.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .padding(20)
+            .frame(width: 340)
+        }
+    }
+
+    /// Type column: wildcard pattern / resolved app name / unknown.
+    private static func kind(for entry: String) -> String {
+        if entry.contains("*") { return L("Wildcard") }
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry),
+           let bundle = Bundle(url: url),
+           let name = bundle.infoDictionary?["CFBundleDisplayName"] as? String
+            ?? bundle.infoDictionary?["CFBundleName"] as? String {
+            return name
+        }
+        return L("Unknown App")
+    }
+
+    private func setText(_ lines: [String]) {
+        let joined = lines.joined(separator: "\n")
+        if showWhiteList { whiteListText = joined } else { blackListText = joined }
+        persistLists()
     }
 
     private func persistLists() {
@@ -1595,29 +1667,36 @@ struct FiltersTabView: View {
         viewModel.save()
     }
 
-    /// Add running apps' bundle IDs to the black or white list
-    /// (original: AppPickerWindowController with addedToTextView, multi-select).
-    private func addRunningApp(toBlackList: Bool) {
-        let existing = Set((toBlackList ? blackListText : whiteListText)
-            .split(separator: "\n").map(String.init))
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: existing),
-              !picked.isEmpty else { return }
-        for bundleID in picked {
-            if toBlackList {
-                blackListText = appendLine(bundleID, to: blackListText)
-            } else {
-                whiteListText = appendLine(bundleID, to: whiteListText)
-            }
-        }
-        persistLists()
+    private func removeSelected() {
+        let lines = currentLines.enumerated()
+            .filter { !selection.contains($0.offset) }
+            .map(\.element)
+        selection = []
+        setText(lines)
     }
 
-    private func appendLine(_ line: String, to text: String) -> String {
-        var lines = text.split(separator: "\n").map(String.init)
-        if !lines.contains(line) {
-            lines.append(line)
+    private func addPattern(_ pattern: String) {
+        guard !pattern.isEmpty else { return }
+        var lines = currentLines
+        if !lines.contains(pattern) {
+            lines.removeAll { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+            lines.append(pattern)
+            setText(lines)
         }
-        return lines.joined(separator: "\n")
+    }
+
+    /// Add running apps' bundle IDs to the visible list
+    /// (original: AppPickerWindowController with addedToTextView, multi-select).
+    private func addRunningApp() {
+        let existing = Set(entries.map(\.value))
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: existing),
+              !picked.isEmpty else { return }
+        var lines = currentLines
+        for bundleID in picked where !lines.contains(bundleID) {
+            lines.removeAll { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+            lines.append(bundleID)
+        }
+        setText(lines)
     }
 }
 

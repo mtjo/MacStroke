@@ -280,3 +280,7 @@
 "OK" = "好";
 "Delete Rule" = "删除规则";
 "Automatically Download Updates" = "自动下载更新";
+
+"Add Pattern" = "添加匹配模式";
+"Wildcard" = "通配模式";
+"Unknown App" = "未知应用";
