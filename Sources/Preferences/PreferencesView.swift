@@ -2069,7 +2069,15 @@ private struct READMEWebView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
         if let url = Bundle.main.url(forResource: "README", withExtension: "html") {
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            // README.html is an HTML fragment without a charset declaration;
+            // wrap it as UTF-8 so WKWebView doesn't garble the Chinese text.
+            let body = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            let html = """
+            <!DOCTYPE html>
+            <html><head><meta charset="utf-8"></head>
+            <body style="font-family: -apple-system; margin: 16px;">\(body)</body></html>
+            """
+            webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
         }
         return webView
     }
