@@ -136,7 +136,7 @@ struct ShortcutRecorder: NSViewRepresentable {
 public struct PreferencesView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var selectedTab: PreferencesTab = .general
-    @StateObject private var ruleStore = RuleStore()
+    @StateObject private var ruleStore = RuleStore.shared
     @State private var showingRuleEditor = false
     @State private var editingRule: Rule?
     @State private var scripts: [AppleScriptItem] = []
@@ -438,6 +438,11 @@ struct GeneralTabView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            // System Settings can change the login item while we run, so
+            // re-read the state instead of keeping the launch-time snapshot.
+            launchController.refreshState()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MacStrokeNoteFontDidChange"))) { _ in
             let defaults = UserDefaults.standard
             if let name = defaults.string(forKey: "noteFontName") {

@@ -13,6 +13,11 @@ import RuleEngine
 /// A rule store that manages gesture rules with persistence.
 @available(macOS 13.0, *)
 public final class RuleStore: ObservableObject {
+    /// Process-wide store (original: `[RulesList sharedRulesList]`) so rule
+    /// edits made in the preferences window are picked up by gesture matching
+    /// immediately instead of only at the next launch.
+    public static let shared = RuleStore()
+
     /// All loaded rules.
     @Published public var rules: [Rule] = []
 

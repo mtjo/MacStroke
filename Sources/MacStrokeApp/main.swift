@@ -131,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         // Initialize rule store / engine
-        ruleStore = RuleStore()
+        ruleStore = RuleStore.shared
         ruleEngine = RuleEngine()
 
         // Initialize Sparkle updater
@@ -249,7 +249,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if !defaults.bool(forKey: "firstLaunch") {
             defaults.set(true, forKey: "firstLaunch")
             RightClicksList.shared.reInit()
-            _ = RuleStore() // creates rules.json with the 15 default rules
+            _ = RuleStore.shared // creates rules.json with the 15 default rules
             defaults.synchronize()
         }
     }
@@ -264,9 +264,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Clipboard history
 
     private func initHistoryClipboard() {
-        let manager = HistoryClipboardManager()
-        _ = manager.enableHistoryClipboard()
-        clipboardHistoryManager = manager
+        restartHistoryClipboard()
 
         // Persist the default ^⇧V shortcut on first run so the preference
         // exists for every reader (original DefaultPreferences.plist value).
@@ -288,6 +286,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: UserDefaults.didChangeNotification, object: nil)
     }
 
+    /// Rebuild the clipboard manager and its pasteboard watcher (original:
+    /// `onToggleClipboard` / `onChangeStroageLocalction` call
+    /// `initHistoryClipboard` again), so enabling the feature or switching the
+    /// storage backend takes effect without restarting the app.
+    private func restartHistoryClipboard() {
+        clipboardHistoryManager?.stopHistoryClipboard()
+        let manager = HistoryClipboardManager()
+        _ = manager.enableHistoryClipboard()
+        clipboardHistoryManager = manager
+        // The list window keeps its own manager (and thus its own database
+        // handle); drop it so the next opening uses the current backend.
+        if let window = historyClipboardWindow?.window, window.isVisible {
+            window.close()
+        }
+        historyClipboardWindow = nil
+        clipboardConfigSnapshot = historyClipboardConfigKey()
+    }
+
+    private func historyClipboardConfigKey() -> String {
+        let enabled = storage.getBoolOptional(forKey: .enableHistoryClipboard)
+            ?? StorageDefaults.enableHistoryClipboard
+        let local = storage.getBoolOptional(forKey: .clipoardStroageLocal)
+            ?? StorageDefaults.clipoardStroageLocal
+        let ram = storage.getBoolOptional(forKey: .clipoardStroageRam)
+            ?? StorageDefaults.clipoardStroageRam
+        return "\(enabled),\(local),\(ram)"
+    }
+
+    private var clipboardConfigSnapshot = ""
+
     private func startMonitoringHistoryShortcut(_ shortcutString: String) {
         guard let parsed = ShortcutMonitor.parseShortcut(shortcutString) else {
             shortcutMonitor?.stop()
@@ -306,6 +334,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func userDefaultsDidChange(_ notification: Notification) {
+        // Clipboard storage switches need a fresh manager (original does the
+        // same by calling initHistoryClipboard from the toggle handlers).
+        if historyClipboardConfigKey() != clipboardConfigSnapshot {
+            DispatchQueue.main.async { [weak self] in
+                self?.restartHistoryClipboard()
+            }
+        }
+
         let shortcutString = storage.getStringOptional(forKey: .historyCilpboardListShortcut)
             ?? StorageDefaults.historyCilpboardListShortcut
         // Only react to shortcut changes (cheap string compare).
@@ -332,7 +368,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func showHistoryClipboard(_ sender: Any?) {
         guard (storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true) else { return }
         if historyClipboardWindow == nil {
-            historyClipboardWindow = HistoryClipboardListWindowController()
+            historyClipboardWindow = HistoryClipboardListWindowController(
+                manager: clipboardHistoryManager)
         }
         historyClipboardWindow?.showWindow(nil)
     }
