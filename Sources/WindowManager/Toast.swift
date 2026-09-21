@@ -168,6 +168,10 @@ public final class ToastManager {
         window.hasShadow = false
         window.ignoresMouseEvents = false
         window.isOpaque = false
+        // close() must NOT add an extra release on top of ARC's ownership,
+        // otherwise the window is over-released and the next pool pop crashes
+        // with -[NSWindow release] on a deallocated instance.
+        window.isReleasedWhenClosed = false
         window.setFrameOrigin(visibleFrame.origin)
 
         let contentView = NSView(frame: NSRect(origin: .zero, size: windowSize))
