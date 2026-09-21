@@ -44,7 +44,7 @@ public final class ShortcutMonitor {
         }
 
         let callback: CGEventTapCallBack = { _, type, event, refcon in
-            guard let refcon = refcon else { return Unmanaged.passRetained(event) }
+            guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
             let selfPtr = Unmanaged<ShortcutMonitor>.fromOpaque(refcon).takeUnretainedValue()
             return selfPtr.handleEvent(type: type, event: event)
         }
@@ -126,27 +126,37 @@ public final class ShortcutMonitor {
     private static let modifierMask: UInt = 0x1E_0000
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        guard type == .keyDown else { return Unmanaged.passRetained(event) }
+        // The system disables a tap after timeouts / user action; without
+        // re-arming it the shortcut silently stops working.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            print("[ShortcutMonitor] Tap disabled by system, re-armed")
+            return Unmanaged.passUnretained(event)
+        }
+        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
 
         let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let eventFlags = UInt(event.flags.rawValue)
 
         // Check if key code matches (if keyCode is set)
         if keyCode != 0 && eventKeyCode != keyCode {
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         // Check if modifier flags match, ignoring device-dependent bits
         if (eventFlags & Self.modifierMask) != (flags & Self.modifierMask) {
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         // Shortcut matched!
+        print("[ShortcutMonitor] Matched keyCode=\(eventKeyCode) flags=\(eventFlags)")
         DispatchQueue.main.async { [weak self] in
             self?.onShortcutDetected?()
         }
 
         // Allow the event to propagate normally (don't consume it)
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
 }
