@@ -5,6 +5,15 @@ APP_NAME="MacStroke"
 BUILD_DIR=".build/x86_64-apple-macosx/release"
 APP_DIR="./${APP_NAME}.app"
 
+# 稳定的自签名代码签名身份（见 README-签名.md /钥匙串里 "MacStroke Self Signed"）。
+# 用它签名可让 cdhash 在重装后保持不变，辅助功能(TCC)授权不被重置。
+# 若身份不存在则自动回退为 ad-hoc 签名。
+SIGN_IDENTITY="MacStroke Self Signed"
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "${SIGN_IDENTITY}"; then
+    echo "⚠️  未找到签名身份 '${SIGN_IDENTITY}'，回退为 ad-hoc 签名"
+    SIGN_IDENTITY="-"
+fi
+
 echo "🔨 Building release..."
 swift build --configuration release
 
@@ -168,11 +177,11 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# 8. Codesign (ad-hoc). Children are signed first — the parent seal then
+# 8. Codesign. Children are signed first — the parent seal then
 # covers the appex signature that carries the sandbox entitlements.
-codesign --force --sign - "${APP_DIR}/Contents/Frameworks/Sparkle.framework" 2>/dev/null || true
-codesign --force --sign - --entitlements "${APPEX_ENT}" "${APPEX_DIR}" 2>/dev/null || true
-codesign --force --sign - "${APP_DIR}" 2>/dev/null || true
+codesign --force --sign "${SIGN_IDENTITY}" "${APP_DIR}/Contents/Frameworks/Sparkle.framework" 2>/dev/null || true
+codesign --force --sign "${SIGN_IDENTITY}" --entitlements "${APPEX_ENT}" "${APPEX_DIR}" 2>/dev/null || true
+codesign --force --sign "${SIGN_IDENTITY}" "${APP_DIR}" 2>/dev/null || true
 rm -f "${APPEX_ENT}"
 
 # 9. Verify framework linkage
