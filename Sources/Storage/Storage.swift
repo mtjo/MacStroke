@@ -176,7 +176,7 @@ public enum StorageDefaults {
 
     // Drawing
     public static let disableMousePath: Bool = false
-    public static let lineColorHex: String = "#0000FFFF" // 蓝色
+    public static let lineColorHex: String = "#0000FF" // 蓝色（RRGGBB；旧默认值 "#0000FFFF" 是 ARGB 写法，会导致按 RRGGBBAA 解析成全透明）
     public static let lineWidth: Double = 4.0
 
     // Right-click menu

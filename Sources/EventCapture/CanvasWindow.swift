@@ -41,8 +41,14 @@ final class CanvasView: NSView {
 
     /// Reads line color from UserDefaults.
     private func updateColorFromDefaults() {
-        let hex = UserDefaults.standard.string(forKey: "lineColorHex") ?? "#0000FFFF"
-        lineColor = NSColor(hex: hex) ?? NSColor.blue
+        let hex = UserDefaults.standard.string(forKey: "lineColorHex") ?? "#0000FF"
+        lineColor = NSColor(hex: Self.normalizeLegacyHex(hex)) ?? NSColor.blue
+    }
+
+    /// 兼容历史默认值 "#0000FFFF"（ARGB 写法的蓝色）：按 RRGGBBAA 解析会得到
+    /// alpha=0 的完全透明色，轨迹线因此不可见。仅对这一已知存量值做映射。
+    static func normalizeLegacyHex(_ hex: String) -> String {
+        return hex.caseInsensitiveCompare("#0000FFFF") == .orderedSame ? "#0000FF" : hex
     }
 
     /// Adds a point to the gesture path and requests a redraw.

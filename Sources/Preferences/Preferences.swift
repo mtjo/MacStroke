@@ -195,7 +195,9 @@ public final class UserPreferences: ObservableObject {
         self.noteFontSize = storage.getDoubleOptional(forKey: .noteFontSize) ?? StorageDefaults.noteFontSize
         self.showNoteIcon = storage.getBoolOptional(forKey: .showNoteIcon) ?? StorageDefaults.showNoteIcon
         self.disableMousePath = storage.getBoolOptional(forKey: .disableMousePath) ?? StorageDefaults.disableMousePath
-        self.lineColorHex = storage.getStringOptional(forKey: .lineColorHex) ?? StorageDefaults.lineColorHex
+        // 存量 "#0000FFFF"（ARGB 写法蓝色）按 RRGGBBAA 解析是透明色，归一化为 "#0000FF"。
+        let storedLineColor = storage.getStringOptional(forKey: .lineColorHex) ?? StorageDefaults.lineColorHex
+        self.lineColorHex = storedLineColor.caseInsensitiveCompare("#0000FFFF") == .orderedSame ? "#0000FF" : storedLineColor
         self.enableRightClickMenu = storage.getBoolOptional(forKey: .enableRightClickMenu) ?? StorageDefaults.enableRightClickMenu
         self.enableNewFile = storage.getBoolOptional(forKey: .enableNewFile) ?? StorageDefaults.enableNewFile
         self.enableOpenInTerminal = storage.getBoolOptional(forKey: .enableOpenInTerminal) ?? StorageDefaults.enableOpenInTerminal
