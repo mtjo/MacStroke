@@ -2,8 +2,9 @@
 //  ShortcutRecorderView.swift
 //  MacStroke
 //
-//  A view for recording keyboard shortcuts, similar to SRRecorderControl.
-//  Click to start recording; press any key to record it, or Esc to cancel.
+//  A view for recording keyboard shortcuts, mirroring the original
+//  SRRecorderControl: clicking makes the view first responder and it
+//  captures the next key press through keyDown: — no CGEvent tap needed.
 //
 
 import Foundation
@@ -26,12 +27,16 @@ public final class ShortcutRecorderView: NSView {
 
     /// Whether the recorder is currently listening for input.
     @Published public var isRecording = false {
-        didSet { needsDisplay = true }
+        didSet {
+            needsDisplay = true
+            layer?.borderColor = isRecording
+                ? NSColor.controlAccentColor.cgColor
+                : NSColor.separatorColor.cgColor
+        }
     }
 
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var monitoring = false
+    /// Live modifier flags echoed while recording (SRModifierOptionView).
+    private var pressedFlags: UInt = 0
 
     /// Callback when shortcut recording completes.
     var onShortcutChanged: ((UInt16, UInt) -> Void)?
@@ -55,19 +60,19 @@ public final class ShortcutRecorderView: NSView {
 
     // MARK: - Display
 
-    /// Standard keyboard modifier bits (shift/control/option/command).
-    private static let modifierMask: UInt64 = 0x1E_0000
-
     /// Human-readable shortcut like "⌃⇧V" (mirrors ShortcutRecorder's display).
     public var displayString: String {
         if keyCode == 0 && flags == 0 { return "" }
+        return Self.modifierSymbols(flags) + Self.keyName(for: keyCode)
+    }
+
+    static func modifierSymbols(_ flags: UInt) -> String {
         var symbols = ""
-        let f = flags
-        if f & 0x100000 != 0 { symbols += "⌘" }   // command
-        if f & 0x80000 != 0 { symbols += "⌥" }    // option
-        if f & 0x40000 != 0 { symbols += "⌃" }    // control
-        if f & 0x20000 != 0 { symbols += "⇧" }    // shift
-        return symbols + Self.keyName(for: keyCode)
+        if flags & 0x100000 != 0 { symbols += "⌘" }   // command
+        if flags & 0x80000 != 0 { symbols += "⌥" }    // option
+        if flags & 0x40000 != 0 { symbols += "⌃" }    // control
+        if flags & 0x20000 != 0 { symbols += "⇧" }    // shift
+        return symbols
     }
 
     public override func draw(_ dirtyRect: NSRect) {
@@ -75,7 +80,9 @@ public final class ShortcutRecorderView: NSView {
 
         let text: String
         if isRecording {
-            text = L("Recording… press a key (Esc to cancel)")
+            text = pressedFlags != 0
+                ? Self.modifierSymbols(pressedFlags) + "…"
+                : L("Recording… press a key (Esc to cancel)")
         } else if keyCode == 0 && flags == 0 {
             text = L("Click to Record")
         } else {
@@ -107,116 +114,82 @@ public final class ShortcutRecorderView: NSView {
         attributed.draw(in: textRect)
     }
 
-    // MARK: - Mouse Handling
+    // MARK: - First responder (original SRRecorderControl style)
 
-    public override func mouseDown(with event: NSEvent) {
-        startRecording()
-        // Keep the tap running until a key is pressed or Esc cancels —
-        // stopping on mouseUp would end recording before any key is pressed.
-    }
+    public override var acceptsFirstResponder: Bool { true }
 
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    public override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        if isRecording {
+            cancelRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    public override func resignFirstResponder() -> Bool {
+        if isRecording { cancelRecording() }
+        return super.resignFirstResponder()
+    }
+
+    /// ⌘-combos normally go to menu key equivalents; capture them here so
+    /// recording works for shortcuts that include Command.
+    public override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isRecording, event.type == .keyDown {
+            keyDown(with: event)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    public override func keyDown(with event: NSEvent) {
+        guard isRecording else {
+            super.keyDown(with: event)
+            return
+        }
+        if event.keyCode == UInt16(kVK_Escape) {
+            cancelRecording()
+            return
+        }
+        keyCode = event.keyCode
+        flags = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        stopRecording()
+    }
+
+    public override func flagsChanged(with event: NSEvent) {
+        guard isRecording else {
+            super.flagsChanged(with: event)
+            return
+        }
+        pressedFlags = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        needsDisplay = true
+    }
 
     // MARK: - Public API
 
     /// Starts listening for keyboard input.
     public func startRecording() {
-        guard !monitoring else { return }
+        guard !isRecording else { return }
+        pressedFlags = UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
         isRecording = true
-
-        let callback: CGEventTapCallBack = { _, type, event, refcon in
-            guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
-            let selfPtr = Unmanaged<ShortcutRecorderView>.fromOpaque(refcon).takeUnretainedValue()
-            return selfPtr.handleKeyEvent(type: type, event: event)
-        }
-
-        // Create event tap for key down events only
-        eventTap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(1 << CGEventType.keyDown.rawValue),
-            callback: callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        )
-
-        guard let eventTap = eventTap else {
-            print("[ShortcutRecorder] Failed to create event tap")
-            isRecording = false
-            return
-        }
-
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-        if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
-        }
-
-        CGEvent.tapEnable(tap: eventTap, enable: true)
-        monitoring = true
     }
 
     /// Stops listening and reports the recorded shortcut.
     public func stopRecording() {
-        guard monitoring else { return }
-        teardownTap()
+        guard isRecording else { return }
+        isRecording = false
+        pressedFlags = 0
         onShortcutChanged?(keyCode, flags)
     }
 
     /// Stop listening without reporting a change (cancel).
     public func cancelRecording() {
-        guard monitoring else { return }
-        teardownTap()
-    }
-
-    /// Disables the event tap and removes its run-loop source. Without this
-    /// an orphaned tap keeps swallowing every key press.
-    private func teardownTap() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-        }
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
-        }
-        eventTap = nil
-        runLoopSource = nil
-        monitoring = false
+        guard isRecording else { return }
         isRecording = false
-    }
-
-    private func handleKeyEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        // The system disables a tap after timeouts or user action; re-arm it
-        // so recording keeps working.
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap = eventTap {
-                CGEvent.tapEnable(tap: tap, enable: true)
-            }
-            return Unmanaged.passUnretained(event)
-        }
-        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
-
-        let keyCodeValue = event.getIntegerValueField(.keyboardEventKeycode)
-
-        // Esc cancels recording and swallows the key.
-        if keyCodeValue == UInt64(kVK_Escape) {
-            DispatchQueue.main.async { [weak self] in
-                self?.cancelRecording()
-                self?.needsDisplay = true
-            }
-            return nil
-        }
-
-        // Extract key code and flags
-        self.keyCode = UInt16(keyCodeValue)
-        self.flags = UInt(event.flags.rawValue)
-
-        // Update the view and finish recording
-        DispatchQueue.main.async { [weak self] in
-            self?.needsDisplay = true
-            self?.stopRecording()
-        }
-
-        // Swallow the recorded key so it doesn't trigger other shortcuts.
-        return nil
+        pressedFlags = 0
+        needsDisplay = true
     }
 
     // MARK: - Key naming
