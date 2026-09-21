@@ -127,13 +127,16 @@ public final class ShortcutMonitor {
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // The system disables a tap after timeouts / user action; without
-        // re-arming it the shortcut silently stops working.
+        // re-arming it the shortcut silently stops working. On these
+        // notifications the `event` argument is a synthetic pseudo-event that
+        // must not be returned — releasing it at the end of the runloop callout
+        // over-releases and crashes. Return NULL, like the original.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
             print("[ShortcutMonitor] Tap disabled by system, re-armed")
-            return Unmanaged.passRetained(event)
+            return nil
         }
         guard type == .keyDown else { return Unmanaged.passRetained(event) }
 

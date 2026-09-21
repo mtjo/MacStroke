@@ -150,13 +150,20 @@ public class EventCapture: NSObject {
     public var running: Bool { isRunning }
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        // Re-enable the tap if the system disabled it due to a timeout,
-        // mirroring the original's kCGEventTapDisabledByTimeout handling.
-        if type == .tapDisabledByTimeout {
+        // Re-enable the tap if the system disabled it due to a timeout or
+        // user input, mirroring the original's kCGEventTapDisabledByTimeout
+        // handling (which just re-enables and returns NULL).
+        //
+        // Important: on these disable notifications the `event` argument is a
+        // synthetic pseudo-event we do NOT own. Returning it (retained) makes
+        // CoreFoundation release it at the end of the runloop callout, causing
+        // an objc_release over-release crash on real, fast gestures (the tap
+        // times out under load). Return NULL instead, exactly like the original.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
-            return Unmanaged.passRetained(event)
+            return nil
         }
 
         guard isEnabled else {
