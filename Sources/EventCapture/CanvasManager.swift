@@ -294,7 +294,10 @@ public class CanvasManager: EventCaptureDelegate {
             mouseCursorPosition: cgPoint,
             mouseButton: .right
         ) else { return }
-        event.post(tap: .cghidEventTap)
+        // Original: CGEventPost(kCGSessionEventTap, …) — session level is
+        // downstream of our HID tap, so the replay is not re-captured
+        // (posting at HID would loop: capture → replay → capture …).
+        event.post(tap: .cgSessionEventTap)
     }
 
     /// Synthesize Ctrl+left-click at the given point on a background thread,
@@ -305,8 +308,9 @@ public class CanvasManager: EventCaptureDelegate {
         let cgPoint = CGPoint(x: point.x, y: primaryHeight - point.y)
 
         Thread.detachNewThread {
+            // Original taps: control keys at session, left clicks at HID.
             let controlDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: true)
-            controlDown?.post(tap: .cghidEventTap)
+            controlDown?.post(tap: .cgSessionEventTap)
             usleep(25_000) // improve reliability (matches original)
 
             let leftDown = CGEvent(
@@ -327,7 +331,7 @@ public class CanvasManager: EventCaptureDelegate {
             leftUp?.post(tap: .cghidEventTap)
 
             let controlUp = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: false)
-            controlUp?.post(tap: .cghidEventTap)
+            controlUp?.post(tap: .cgSessionEventTap)
         }
     }
 
