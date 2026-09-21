@@ -47,7 +47,6 @@ public final class ToastManager {
     public static let shared = ToastManager()
 
     private var activeToasts: [NSWindow] = []
-    private let preferences: UserPreferences
 
     // CoolToast defaults (ToastWindowController initWithWindowNibName:)
     private let edgeOffset: CGFloat = 50      // left/top/right/bottom offset
@@ -60,9 +59,7 @@ public final class ToastManager {
     private let iconWidth: CGFloat = 58       // xib icon width constraint
     private let fadeDuration = 0.3            // showNoteTost: animaterTimeSecond
 
-    private init() {
-        self.preferences = UserPreferences()
-    }
+    private init() {}
 
     /// Parse "#RRGGBB" / "#RRGGBBAA" into an NSColor.
     static func color(fromHex hex: String) -> NSColor? {
@@ -87,7 +84,10 @@ public final class ToastManager {
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
-        // Original note preferences (showNoteTost:)
+        // Original note preferences (showNoteTost:): read live on every show,
+        // like the original's per-call NSUserDefaults reads, so preference
+        // edits take effect without restarting the app.
+        let preferences = UserPreferences()
         let fontSize = CGFloat(preferences.noteFontSize)
         let bgAlpha = CGFloat(preferences.noteBackgroundAlpha)
         let fontName = preferences.noteFontName

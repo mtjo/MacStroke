@@ -377,6 +377,7 @@ public class CanvasManager: EventCaptureDelegate {
             canvasWindows[screenKey] = window
         }
 
+        window.canvasView.updateColorFromDefaults()
         window.show()
     }
 

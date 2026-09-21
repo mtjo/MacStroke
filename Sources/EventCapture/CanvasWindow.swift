@@ -39,8 +39,10 @@ final class CanvasView: NSView {
         updateColorFromDefaults()
     }
 
-    /// Reads line color from UserDefaults.
-    private func updateColorFromDefaults() {
+    /// Reads line color from UserDefaults. Called on every canvas show so
+    /// preference edits take effect immediately (the original builds a fresh
+    /// CanvasView per gesture).
+    func updateColorFromDefaults() {
         let hex = UserDefaults.standard.string(forKey: "lineColorHex") ?? "#0000FF"
         lineColor = NSColor(hex: Self.normalizeLegacyHex(hex)) ?? NSColor.blue
     }
