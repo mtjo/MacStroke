@@ -81,6 +81,44 @@ public final class ToastManager {
         return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
     }
 
+    /// Container origin measured from the top-left corner of the screen's
+    /// visible area (CoolToast `getContainerPointWithWidth:height:`). The toast
+    /// window covers exactly that area, so every position stays on screen.
+    /// (The original sizes the window to the full screen height while placing
+    /// it at the visible-frame origin, which pushes the box up by the menu bar
+    /// plus Dock height and clips the top positions.)
+    static func containerOrigin(for position: ToastPosition,
+                                visibleFrame: NSRect,
+                                mouseLocation: CGPoint,
+                                containerSize: NSSize,
+                                edgeOffset: CGFloat) -> NSPoint {
+        let screenW = visibleFrame.width
+        let screenH = visibleFrame.height
+        switch position {
+        case .center:
+            return NSPoint(x: (screenW - containerSize.width) / 2,
+                           y: (screenH - containerSize.height) / 2)
+        case .leftTop:
+            return NSPoint(x: edgeOffset, y: edgeOffset)
+        case .rightTop:
+            return NSPoint(x: screenW - edgeOffset - containerSize.width, y: edgeOffset)
+        case .leftBottom:
+            return NSPoint(x: edgeOffset, y: screenH - edgeOffset - containerSize.height)
+        case .rightBottom:
+            return NSPoint(x: screenW - edgeOffset - containerSize.width,
+                           y: screenH - edgeOffset - containerSize.height)
+        case .mouse:
+            // The box sits just above the pointer, flipping to its left when it
+            // would leave the right edge, and clamped inside the visible area
+            // (the pointer can be over the Dock or the menu bar).
+            var x = mouseLocation.x - visibleFrame.minX
+            if x + containerSize.width > screenW { x -= containerSize.width }
+            let y = visibleFrame.maxY - mouseLocation.y - containerSize.height
+            return NSPoint(x: max(0, min(x, screenW - containerSize.width)),
+                           y: max(0, min(y, screenH - containerSize.height)))
+        }
+    }
+
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
@@ -103,9 +141,6 @@ public final class ToastManager {
         let screen = NSScreen.screens.first { $0.frame.contains(mouseLocation) }
             ?? NSScreen.main ?? NSScreen.screens[0]
         let visibleFrame = screen.visibleFrame
-        // CTScreen frameForScreen: top-left-origin coords, visibleFrame size
-        let screenW = visibleFrame.width
-        let screenH = visibleFrame.height
 
         // showCoolToast: measure the text to size the container
         let attributes: [NSAttributedString.Key: Any] = [.font: font]
@@ -127,36 +162,16 @@ public final class ToastManager {
 
         // getContainerPointWithWidth:height: (top-left origin within the window)
         let position = ToastPosition(rawValue: positionIndex) ?? toast.position
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        switch position {
-        case .center:
-            x = (screenW - containerWidth) / 2
-            y = (screenH - containerHeight) / 2
-        case .leftTop:
-            x = edgeOffset
-            y = edgeOffset
-        case .rightTop:
-            x = screenW - edgeOffset - containerWidth
-            y = edgeOffset
-        case .leftBottom:
-            x = edgeOffset
-            y = screenH - edgeOffset - containerHeight
-        case .rightBottom:
-            x = screenW - edgeOffset - containerWidth
-            y = screenH - edgeOffset - containerHeight
-        case .mouse:
-            x = mouseLocation.x - visibleFrame.minX
-            y = screenH - (mouseLocation.y - visibleFrame.minY)
-            if x + containerWidth > screenW { x -= containerWidth }
-            if y + containerHeight > screenH { y -= containerHeight }
-            x = max(x, 0)
-            y = max(y, 0)
-        }
+        let origin = Self.containerOrigin(for: position,
+                                          visibleFrame: visibleFrame,
+                                          mouseLocation: mouseLocation,
+                                          containerSize: NSSize(width: containerWidth,
+                                                                height: containerHeight),
+                                          edgeOffset: edgeOffset)
 
         // Window covers the screen (CoolToastWindow): clear bg, no shadow,
         // NSPopUpMenuWindowLevel
-        let windowSize = NSSize(width: visibleFrame.width, height: screen.frame.height)
+        let windowSize = visibleFrame.size
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: windowSize),
             styleMask: [.borderless],
@@ -179,7 +194,7 @@ public final class ToastManager {
 
         // Container (CTView): dark rounded box, corner radius conerRadius
         let container = NSView(
-            frame: NSRect(x: x, y: windowSize.height - y - containerHeight,
+            frame: NSRect(x: origin.x, y: windowSize.height - origin.y - containerHeight,
                           width: containerWidth, height: containerHeight))
         container.wantsLayer = true
         container.layer?.cornerRadius = cornerRadius
