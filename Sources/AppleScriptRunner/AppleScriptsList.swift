@@ -6,15 +6,16 @@
 //
 
 import Foundation
+import Combine
 
 /// Represents a user-defined AppleScript with metadata.
-public struct AppleScriptItem: Codable, Equatable, Sendable {
-    /// Unique identifier for the script
+public struct AppleScriptItem: Codable, Equatable, Sendable, Identifiable {
+    /// Unique identifier for the script (original: `id`, a globally unique string)
     public let id: UUID
     /// Human-readable name/title of the script
-    public let name: String
+    public var name: String
     /// The AppleScript source code
-    public let source: String
+    public var source: String
     /// Timestamp when the script was created
     public let createTime: Date
 
@@ -37,15 +38,19 @@ public struct AppleScriptItem: Codable, Equatable, Sendable {
     }
 }
 
-/// Thread-safe singleton class for managing a collection of AppleScripts with persistence.
-public final class AppleScriptsList: @unchecked Sendable {
+/// Shared script list (original: `[AppleScriptsList sharedAppleScriptsList]`).
+/// Observable so the preferences window redraws when scripts are added,
+/// renamed or removed; every mutation persists immediately (`save`).
+public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
     /// Shared singleton instance
     public static let sharedAppleScriptsList = AppleScriptsList()
+
+    public let objectWillChange = ObservableObjectPublisher()
 
     /// The file URL for persistent storage
     private let storageURL: URL
 
-    /// Internal storage for scripts
+    /// Internal storage for scripts, kept in insertion order
     private var scripts: [AppleScriptItem] = []
 
     /// Lock for thread-safe access
@@ -102,6 +107,60 @@ public final class AppleScriptsList: @unchecked Sendable {
         return scripts.count
     }
 
+    /// Title of the script at `index` (original: `titleAtIndex:`)
+    public func title(at index: Int) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return scripts[index].name
+    }
+
+    /// Source of the script at `index` (original: `scriptAtIndex:`)
+    public func script(at index: Int) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return scripts[index].source
+    }
+
+    /// Identifier of the script at `index` (original: `idAtIndex:`)
+    public func id(at index: Int) -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
+        return scripts[index].id
+    }
+
+    /// Position of a script by id, or nil (original: `getIndexById:` returning -1)
+    public func index(of id: UUID) -> Int? {
+        lock.lock()
+        defer { lock.unlock() }
+        return scripts.firstIndex { $0.id == id }
+    }
+
+    /// Rename a script (original: `setTitleAtIndex:title:` + `save`).
+    /// No republish: the inline field already shows the new title.
+    public func setTitle(at index: Int, _ title: String) {
+        mutate(at: index, notify: false) { $0.name = title }
+    }
+
+    /// Replace a script's source (original: `setScriptAtIndex:script:` + `save`).
+    /// Does not republish by default: the caller is usually the very text view
+    /// showing that source, and re-rendering it mid-edit would drop the caret.
+    public func setScript(at index: Int, _ script: String, notify: Bool = false) {
+        mutate(at: index, notify: notify) { $0.source = script }
+    }
+
+    /// Remove the script at `index` (original: `removeAtIndex:` + `save`)
+    public func remove(at index: Int) {
+        lock.lock()
+        guard scripts.indices.contains(index) else {
+            lock.unlock()
+            return
+        }
+        scripts.remove(at: index)
+        lock.unlock()
+        objectWillChange.send()
+        save()
+    }
+
     /// Add a new script to the list
     /// - Parameters:
     ///   - name: The name/title of the script
@@ -112,8 +171,9 @@ public final class AppleScriptsList: @unchecked Sendable {
         let item = AppleScriptItem(name: name, source: source)
         lock.lock()
         scripts.append(item)
-        save()
         lock.unlock()
+        objectWillChange.send()
+        save()
         return item
     }
 
@@ -126,10 +186,11 @@ public final class AppleScriptsList: @unchecked Sendable {
         let initialCount = scripts.count
         scripts.removeAll { $0.id == id }
         let removed = scripts.count < initialCount
+        lock.unlock()
         if removed {
+            objectWillChange.send()
             save()
         }
-        lock.unlock()
         return removed
     }
 
@@ -142,18 +203,34 @@ public final class AppleScriptsList: @unchecked Sendable {
         return scripts.first { $0.id == id }
     }
 
-    /// Get all scripts as an array
-    /// - Returns: Array of all AppleScriptItems, sorted by creation time (newest first)
+    /// Get all scripts as an array, in insertion order
+    /// (original: the table simply indexes `_appleScriptsList`).
+    /// - Returns: Array of all AppleScriptItems
     public func getAllScripts() -> [AppleScriptItem] {
         lock.lock()
         defer { lock.unlock() }
-        return scripts.sorted { $0.createTime > $1.createTime }
+        return scripts
+    }
+
+    private func mutate(at index: Int, notify: Bool = true, _ change: (inout AppleScriptItem) -> Void) {
+        lock.lock()
+        guard scripts.indices.contains(index) else {
+            lock.unlock()
+            return
+        }
+        change(&scripts[index])
+        lock.unlock()
+        if notify {
+            objectWillChange.send()
+        }
+        save()
     }
 
     /// Persist the current scripts to disk
-    /// Must be called with lock held
     private func save() {
+        lock.lock()
         let scriptsToSave = scripts
+        lock.unlock()
 
         do {
             let encoder = JSONEncoder()

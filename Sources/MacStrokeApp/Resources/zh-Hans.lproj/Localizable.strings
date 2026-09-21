@@ -68,7 +68,6 @@
 "Action Type" = "动作类型";
 "Key Combination" = "按键组合";
 "e.g. ⌘⇧N" = "例如 ⌘⇧N";
-"AppleScript Source" = "AppleScript 源码";
 "Text to Copy" = "要复制的文本";
 "Password (will be masked)" = "密码（将被隐藏）";
 "Password" = "密码";
@@ -82,17 +81,8 @@
 "Cancel" = "取消";
 "Add" = "添加";
 "Save" = "保存";
-"AppleScripts" = "AppleScripts";
-"Add Script" = "添加脚本";
 "Add Example" = "添加示例";
-"No AppleScripts defined" = "尚未定义 AppleScript";
-"Click \"Add Script\" or \"Add Example\" to get started" = "点击“添加脚本”或“添加示例”开始使用";
-"Source Preview" = "源码预览";
 "Created" = "创建时间";
-"Script Info" = "脚本信息";
-"Source Code" = "源码";
-"Add AppleScript" = "添加 AppleScript";
-"Edit AppleScript" = "编辑 AppleScript";
 "Application Filters" = "应用过滤";
 "Filter Mode" = "过滤模式";
 "Blacklist Mode (block listed apps)" = "黑名单模式（阻止列出的应用）";
@@ -154,8 +144,6 @@
 "Line width" = "线条宽度";
 "Import Rules…" = "导入规则…";
 "Export Rules…" = "导出规则…";
-"Open in External Editor" = "在外部编辑器中打开";
-"Open in External Editor…" = "在外部编辑器中打开…";
 "Font Panel" = "字体面板";
 "Default Note Color" = "默认提示颜色";
 "Note Color" = "提示颜色";
@@ -245,10 +233,6 @@
 "Check Now" = "立即检查更新";
 "issues" = "意见反馈";
 "Text to input" = "要输入的文本";
-"Export Scripts…" = "导出脚本…";
-"Import Scripts…" = "导入脚本…";
-"Load Example" = "加载示例";
-"Click \"Add Script\" or \"Load Example\" to get started" = "点击\"添加脚本\"或\"加载示例\"开始使用";
 "Show History Clipboard" = "显示剪贴板历史";
 
 "Click to Record" = "点击录制";
@@ -277,5 +261,10 @@
 "Add Pattern" = "添加匹配模式";
 "Wildcard" = "通配模式";
 "Unknown App" = "未知应用";
-"Delete Script" = "删除脚本";
-"Edit" = "编辑";
+
+/* AppleScript tab (original Preferences.xib pane) */
+"Load Example" = "载入样例脚本";
+"Enter AppleScript here" = "Enter AppleScript here";
+"Edit in External Editor" = "在外部编辑器编辑";
+"Stop" = "停止";
+"Select a AppleScript first!" = "请先选择一个AppleScript！";

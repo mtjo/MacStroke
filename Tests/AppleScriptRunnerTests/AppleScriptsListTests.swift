@@ -102,7 +102,7 @@ final class AppleScriptsListTests: XCTestCase {
         XCTAssertNil(found)
     }
 
-    func testGetAllScriptsReturnsSortedArray() {
+    func testGetAllScriptsKeepsInsertionOrder() {
         let script1 = testList.addScript(name: "First", source: "return 1")
         Thread.sleep(forTimeInterval: 0.01)
         let script2 = testList.addScript(name: "Second", source: "return 2")
@@ -112,10 +112,46 @@ final class AppleScriptsListTests: XCTestCase {
         let allScripts = testList.getAllScripts()
 
         XCTAssertEqual(allScripts.count, 3)
-        // Should be sorted by createTime descending (newest first)
-        XCTAssertEqual(allScripts[0].id, script3.id)
+        // Original indexes `_appleScriptsList` directly: insertion order.
+        XCTAssertEqual(allScripts[0].id, script1.id)
         XCTAssertEqual(allScripts[1].id, script2.id)
-        XCTAssertEqual(allScripts[2].id, script1.id)
+        XCTAssertEqual(allScripts[2].id, script3.id)
+    }
+
+    // MARK: - Index-based API (original titleAtIndex: / scriptAtIndex: / …)
+
+    func testIndexBasedAccessors() {
+        let first = testList.addScript(name: "First", source: "return 1")
+        testList.addScript(name: "Second", source: "return 2")
+
+        XCTAssertEqual(testList.title(at: 0), "First")
+        XCTAssertEqual(testList.script(at: 1), "return 2")
+        XCTAssertEqual(testList.id(at: 0), first.id)
+        XCTAssertEqual(testList.index(of: first.id), 0)
+        XCTAssertNil(testList.index(of: UUID()))
+    }
+
+    func testSetTitleAndScriptPersist() {
+        let added = testList.addScript(name: "Old", source: "old source")
+        testList.setTitle(at: 0, "Renamed")
+        testList.setScript(at: 0, "new source")
+
+        let reloaded = AppleScriptsList(storageURL: testStorageURL)
+        XCTAssertEqual(reloaded.title(at: 0), "Renamed")
+        XCTAssertEqual(reloaded.script(at: 0), "new source")
+        XCTAssertEqual(reloaded.index(of: added.id), 0)
+    }
+
+    func testRemoveAtIndex() {
+        testList.addScript(name: "Keep", source: "keep")
+        testList.addScript(name: "Drop", source: "drop")
+        testList.addScript(name: "Keep 2", source: "keep2")
+
+        testList.remove(at: 1)
+
+        XCTAssertEqual(testList.count, 2)
+        XCTAssertEqual(testList.title(at: 0), "Keep")
+        XCTAssertEqual(testList.title(at: 1), "Keep 2")
     }
 
     // MARK: - Remove Tests

@@ -68,7 +68,6 @@
 "Action Type" = "Action Type";
 "Key Combination" = "Key Combination";
 "e.g. ⌘⇧N" = "e.g. ⌘⇧N";
-"AppleScript Source" = "AppleScript Source";
 "Text to Copy" = "Text to Copy";
 "Password (will be masked)" = "Password (will be masked)";
 "Password" = "Password";
@@ -82,17 +81,8 @@
 "Cancel" = "Cancel";
 "Add" = "Add";
 "Save" = "Save";
-"AppleScripts" = "AppleScripts";
-"Add Script" = "Add Script";
 "Add Example" = "Add Example";
-"No AppleScripts defined" = "No AppleScripts defined";
-"Click \"Add Script\" or \"Add Example\" to get started" = "Click \"Add Script\" or \"Add Example\" to get started";
-"Source Preview" = "Source Preview";
 "Created" = "Created";
-"Script Info" = "Script Info";
-"Source Code" = "Source Code";
-"Add AppleScript" = "Add AppleScript";
-"Edit AppleScript" = "Edit AppleScript";
 "Application Filters" = "Application Filters";
 "Filter Mode" = "Filter Mode";
 "Blacklist Mode (block listed apps)" = "Blacklist Mode (block listed apps)";
@@ -154,8 +144,6 @@
 "Line width" = "Line width";
 "Import Rules…" = "Import Rules…";
 "Export Rules…" = "Export Rules…";
-"Open in External Editor" = "Open in External Editor";
-"Open in External Editor…" = "Open in External Editor…";
 "Font Panel" = "Font Panel";
 "Default Note Color" = "Default Note Color";
 "Note Color" = "Note Color";
@@ -244,10 +232,6 @@
 "Check Now" = "Check Now";
 "issues" = "issues";
 "Text to input" = "Text to input";
-"Export Scripts…" = "Export Scripts…";
-"Import Scripts…" = "Import Scripts…";
-"Load Example" = "Load Example";
-"Click \"Add Script\" or \"Load Example\" to get started" = "Click \"Add Script\" or \"Load Example\" to get started";
 "Show History Clipboard" = "Show History Clipboard";
 
 "Click to Record" = "Click to Record";
@@ -275,5 +259,10 @@
 "Add Pattern" = "Add Pattern";
 "Wildcard" = "Wildcard";
 "Unknown App" = "Unknown App";
-"Delete Script" = "Delete Script";
-"Edit" = "Edit";
+
+/* AppleScript tab (original Preferences.xib pane) */
+"Load Example" = "Load Example";
+"Enter AppleScript here" = "Enter AppleScript here";
+"Edit in External Editor" = "Edit in External Editor";
+"Stop" = "Stop";
+"Select a AppleScript first!" = "Select a AppleScript first!";

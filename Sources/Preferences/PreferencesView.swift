@@ -24,8 +24,6 @@ extension Rule: Identifiable {
     public var id: String { name }
 }
 
-extension AppleScriptItem: Identifiable { }
-
 // MARK: - Preferences Tab Enumeration
 
 /// Original MacStroke preferences tab enumeration (8 tabs, matching
@@ -136,9 +134,7 @@ public struct PreferencesView: View {
     @StateObject private var ruleStore = RuleStore.shared
     @State private var showingRuleEditor = false
     @State private var editingRule: Rule?
-    @State private var scripts: [AppleScriptItem] = []
-    @State private var showingScriptEditor = false
-    @State private var editingScript: AppleScriptItem?
+    @ObservedObject private var scriptList = AppleScriptsList.sharedAppleScriptsList
     @State private var rightClickApps: [String] = []
     @State private var newRightClickApp = ""
     /// Bumped whenever the UI language changes so the whole view tree
@@ -182,12 +178,8 @@ public struct PreferencesView: View {
                         )
                         .pageLayout()
                     } else if selectedTab == .appleScript {
-                        AppleScriptTabView(
-                            scripts: $scripts,
-                            showingScriptEditor: $showingScriptEditor,
-                            editingScript: $editingScript
-                        )
-                        .pageLayout()
+                        AppleScriptTabView(scriptList: scriptList)
+                            .pageLayout()
                     } else if selectedTab == .filters {
                         FiltersTabView(viewModel: viewModel)
                             .pageLayout()
@@ -248,20 +240,8 @@ public struct PreferencesView: View {
                 onDismiss: { showingRuleEditor = false; editingRule = nil }
             )
         }
-        .sheet(isPresented: $showingScriptEditor) {
-            ScriptEditorView(
-                scripts: $scripts,
-                editingScript: editingScript,
-                onDismiss: {
-                    showingScriptEditor = false
-                    editingScript = nil
-                    scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                }
-            )
-        }
         .onAppear {
             rightClickApps = RightClicksList.shared.allApps()
-            scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
         }
         .onReceive(NotificationCenter.default.publisher(for: .macStrokeRuleStoreDidChange)) { _ in
             // A screen-drawn gesture was recorded into a rule — refresh.
@@ -967,55 +947,6 @@ extension NSAlert {
     }
 }
 
-extension AppleScriptTabView {
-    private func exportScripts() {
-        let panel = NSSavePanel()
-        panel.title = L("Export Scripts")
-        panel.allowedContentTypes = [.json]
-        panel.allowedFileTypes = ["json"]
-
-        guard let keyWindow = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: keyWindow) { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                let encoder = JSONEncoder()
-                encoder.dateEncodingStrategy = .iso8601
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                let data = try encoder.encode(AppleScriptsList.sharedAppleScriptsList.getAllScripts())
-                try data.write(to: url, options: .atomic)
-            } catch {
-                NSAlert.showError(NSError(domain: "MacStroke", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
-            }
-        }
-    }
-
-    private func importScripts() {
-        let panel = NSOpenPanel()
-        panel.title = L("Import Scripts")
-        panel.allowedContentTypes = [.json]
-        panel.allowedFileTypes = ["json"]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-
-        guard let keyWindow = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: keyWindow) { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                let data = try Data(contentsOf: url)
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                let importedScripts = try decoder.decode([AppleScriptItem].self, from: data)
-                for script in importedScripts {
-                    _ = AppleScriptsList.sharedAppleScriptsList.addScript(name: script.name, source: script.source)
-                }
-                scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-            } catch {
-                NSAlert.showError(NSError(domain: "MacStroke", code: 2, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
-            }
-        }
-    }
-}
-
 struct RuleEditorView: View {
     @ObservedObject var ruleStore: RuleStore
     let editingRule: Rule?
@@ -1027,7 +958,11 @@ struct RuleEditorView: View {
     @State private var minSimilarityScore = 30.0
     @State private var actionType: RuleActionType = .shortcut
     @State private var shortcutKey = ""
+    @State private var appleScriptId = ""
+    /// Legacy rules stored the raw source instead of a script id; keep it so
+    /// editing such a rule does not silently drop the action.
     @State private var appleScriptSource = ""
+    @ObservedObject private var scriptList = AppleScriptsList.sharedAppleScriptsList
     @State private var copyText = ""
     @State private var mouseClickX = 0
     @State private var mouseClickY = 0
@@ -1154,12 +1089,18 @@ struct RuleEditorView: View {
                                         .frame(width: 150, height: 24)
                                 }
                             case .applescript:
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(L("AppleScript Source"))
-                                    TextEditor(text: $appleScriptSource)
-                                        .font(.system(.body, design: .monospaced))
-                                        .frame(minHeight: 120)
-                                        .border(Color.secondary.opacity(0.2))
+                                // Original: an NSComboBox of the saved scripts;
+                                // the rule stores the picked script's id.
+                                HStack {
+                                    Text(L("Apple Script"))
+                                    Picker("", selection: $appleScriptId) {
+                                        Text("").tag("")
+                                        ForEach(scriptList.getAllScripts()) { script in
+                                            Text(script.name).tag(script.id.uuidString)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .frame(width: 220)
                                 }
                             case .text:
                                 VStack(alignment: .leading, spacing: 8) {
@@ -1249,7 +1190,12 @@ struct RuleEditorView: View {
             shortcutKey = "keyCode=\(keyCode), flags=\(flags)"
         case .applescript(let reference):
             actionType = .applescript
-            appleScriptSource = ActionExecutor.resolveAppleScriptSource(reference)
+            if let uuid = UUID(uuidString: reference), scriptList.index(of: uuid) != nil {
+                appleScriptId = reference
+            } else {
+                appleScriptId = ""
+                appleScriptSource = reference
+            }
         case .copyToClipboard(let text):
             actionType = .text
             copyText = text
@@ -1285,11 +1231,9 @@ struct RuleEditorView: View {
                 action = .keyPress(shortcutKey)
             }
         case .applescript:
-            // Original stores `apple_script_id`: prefer referencing a stored
-            // script whose source matches verbatim; otherwise inline source.
-            if let match = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                .first(where: { $0.source == appleScriptSource }) {
-                action = .applescript(match.id.uuidString)
+            // Original stores `apple_script_id`; "" leaves a legacy inline source intact.
+            if !appleScriptId.isEmpty {
+                action = .applescript(appleScriptId)
             } else {
                 action = .applescript(appleScriptSource)
             }
@@ -1339,229 +1283,228 @@ struct RuleEditorView: View {
 }
 
 // MARK: - AppleScript Tab
+//
+// Original pane (Preferences.xib "AppleScript"): an editable single-column title
+// table 225pt wide on the left, the selected script's source in a bordered field
+// on the right, and "+" "-" / "Load Example" / "Edit in External Editor" below.
+// AppPrefsWindowController.m:460-567 is the behaviour reference.
 
 struct AppleScriptTabView: View {
-    @Binding var scripts: [AppleScriptItem]
-    @Binding var showingScriptEditor: Bool
-    @Binding var editingScript: AppleScriptItem?
-    @State private var selection: AppleScriptItem.ID?
+    @ObservedObject var scriptList: AppleScriptsList
+    /// Single selection (original table has multipleSelection=NO)
+    @State private var selectedId: UUID?
+    /// Live external-editor session (original's isEditing + currentScriptId/Path)
+    @State private var externalSession: ExternalScriptSession?
 
-    private var selectedScript: AppleScriptItem? {
-        scripts.first { $0.id == selection }
+    init(scriptList: AppleScriptsList, selectedId: UUID? = nil) {
+        self.scriptList = scriptList
+        _selectedId = State(initialValue: selectedId)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(L("AppleScripts"))
-
-            if scripts.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "curlybraces")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text(L("No AppleScripts defined"))
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text(L("Click \"Add Script\" or \"Load Example\" to get started"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Table(scripts, selection: $selection) {
-                    TableColumn(L("Name")) { script in
-                        Text(script.name)
-                            .font(.system(size: 13))
-                    }
-                    .width(min: 160, ideal: 220)
-
-                    TableColumn(L("Source Preview")) { script in
-                        Text(script.source.prefix(80).replacingOccurrences(of: "\n", with: " ") + (script.source.count > 80 ? "…" : ""))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        HStack(alignment: .top, spacing: 8) {
+            titleTable
+                .frame(width: 225)
+            VStack(spacing: 6) {
+                sourceEditor
+                buttonBar
             }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            Divider()
+    private var scripts: [AppleScriptItem] { scriptList.getAllScripts() }
 
-            // Bottom bar (original: + - Open in External Editor Load Example)
-            HStack(spacing: 8) {
-                Button {
-                    editingScript = nil
-                    showingScriptEditor = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .help(L("Add Script"))
+    private var selectedIndex: Int? {
+        selectedId.flatMap { scriptList.index(of: $0) }
+    }
 
-                Button {
-                    if let script = selectedScript {
-                        AppleScriptsList.sharedAppleScriptsList.removeScript(id: script.id)
-                        scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                        selection = nil
-                    }
-                } label: {
-                    Image(systemName: "minus")
-                }
-                .help(L("Delete Script"))
-                .disabled(selectedScript == nil)
+    private var isEditingExternally: Bool { externalSession != nil }
 
-                Button(L("Edit")) {
-                    if let script = selectedScript {
-                        editingScript = script
-                        showingScriptEditor = true
-                    }
-                }
-                .disabled(selectedScript == nil)
-
-                Button(L("Open in External Editor")) {
-                    if let script = selectedScript {
-                        openInExternalEditor(script: script)
-                    }
-                }
-                .disabled(selectedScript == nil)
-
-                Menu(L("Load Example")) {
-                    ForEach(AppleScriptExamples.examples, id: \.name) { example in
-                        Button(example.name) {
-                            _ = AppleScriptsList.sharedAppleScriptsList.addScript(name: example.name, source: example.source)
-                            scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+    private var titleTable: some View {
+        Table(scripts, selection: $selectedId) {
+            // Original: one editable "Title" column, header left blank.
+            TableColumn("") { script in
+                TextField("", text: Binding(
+                    get: { scriptList.index(of: script.id).map { scriptList.title(at: $0) } ?? script.name },
+                    set: { newValue in
+                        if let index = scriptList.index(of: script.id) {
+                            scriptList.setTitle(at: index, newValue)
                         }
-                    }
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
+                    }))
+                    .textFieldStyle(.plain)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .width(min: 40, ideal: 140, max: 1000)
+        }
+        .tableStyle(.inset)
+        .disabled(isEditingExternally)
+    }
 
-                Spacer()
-
-                Button(L("Export Scripts…")) {
-                    exportScripts()
+    private var sourceEditor: some View {
+        TextEditor(text: Binding(
+            get: { selectedIndex.map { scriptList.script(at: $0) } ?? "" },
+            set: { newValue in
+                if let index = selectedIndex { scriptList.setScript(at: index, newValue) }
+            }))
+            .font(.system(size: 13))
+            .padding(4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(NSColor.textBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            .overlay(alignment: .topLeading) {
+                if selectedIndex == nil {
+                    Text(L("Enter AppleScript here"))
+                        .foregroundColor(.secondary)
+                        .padding(8)
+                        .allowsHitTesting(false)
                 }
-                .buttonStyle(.bordered)
+            }
+            .disabled(selectedIndex == nil || isEditingExternally)
+    }
 
-                Button(L("Import Scripts…")) {
-                    importScripts()
+    private var buttonBar: some View {
+        HStack(spacing: 6) {
+            Button("+") { createScript() }
+                .disabled(isEditingExternally)
+            Button("-") { removeSelected() }
+                .disabled(selectedIndex == nil || isEditingExternally)
+            Spacer()
+            Menu(L("Load Example")) {
+                ForEach(AppleScriptExample.all) { example in
+                    Button(example.title) { load(example) }
                 }
-                .buttonStyle(.bordered)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .disabled(isEditingExternally)
+            Button(isEditingExternally ? L("Stop") : L("Edit in External Editor")) {
+                toggleExternalEditor()
             }
         }
     }
-}
 
-private func openInExternalEditor(script: AppleScriptItem) {
-    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("MacStrokeExternalEditor", isDirectory: true)
-    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
-    let fileURL = tempDir.appendingPathComponent("\(script.id).applescript")
-    // Write source as plain text for the editor
-    do {
-        try script.source.write(to: fileURL, atomically: true, encoding: .utf8)
-    } catch {
-        NSAlert.showError(NSError(domain: "MacStroke", code: 3, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
-        return
+    /// Original createAppleScript: — append a blank script and select it.
+    private func createScript() {
+        selectedId = scriptList.addScript(name: "New AppleScript", source: "").id
     }
-    NSWorkspace.shared.open(fileURL)
-}
 
-struct ScriptEditorView: View {
-    @Binding var scripts: [AppleScriptItem]
-    let editingScript: AppleScriptItem?
-    let onDismiss: () -> Void
+    /// Original exampleAppleScriptSelected: — copy the bundled example's source
+    /// into a new script and select it.
+    private func load(_ example: AppleScriptExample) {
+        selectedId = scriptList.addScript(name: example.title, source: example.source).id
+    }
 
-    @State private var name = ""
-    @State private var source = ""
+    /// Original removeAppleScript: — re-select min(index, count-1), and reload
+    /// the rules table so its script pickers drop the dead reference.
+    private func removeSelected() {
+        guard let index = selectedIndex else { return }
+        scriptList.remove(at: index)
+        let remaining = scripts
+        selectedId = remaining.isEmpty ? nil : remaining[min(index, remaining.count - 1)].id
+        NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
+    }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(editingScript == nil ? L("Add AppleScript") : L("Edit AppleScript"))
-                .font(.title2)
-                .fontWeight(.semibold)
+    private struct ExternalScriptSession {
+        let id: UUID
+        let path: String
+    }
 
-            VStack(alignment: .leading, spacing: 20) {
-                GroupBox(L("Script Info")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        LabeledContent(L("Name")) {
-                            TextField(L("Name"), text: $name)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 400)
-                        }
-                    }
-                }
-
-                GroupBox(L("Source Code")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextEditor(text: $source)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(minHeight: 300)
-                            .border(Color.secondary.opacity(0.2))
-                    }
-                }
-            }
-
-            HStack {
-                Spacer()
-                Button(L("Cancel"), action: onDismiss)
-                Button(editingScript == nil ? L("Add") : L("Save")) {
-                    if let editingScript = editingScript {
-                        // Replace in place: remove the old entry, keep its id.
-                        let id = editingScript.id
-                        AppleScriptsList.sharedAppleScriptsList.removeScript(id: id)
-                        let added = AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
-                        _ = added
-                    } else {
-                        AppleScriptsList.sharedAppleScriptsList.addScript(name: name, source: source)
-                    }
-                    scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                    onDismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(name.isEmpty || source.isEmpty)
-            }
+    /// Original editAppleScriptInExternalEditor: — the first click dumps the
+    /// source into $TMPDIR/<id>/MacStroke.applescript and opens it in whatever
+    /// app owns .applescript files; "Stop" reads the file back.
+    private func toggleExternalEditor() {
+        if let session = externalSession {
+            externalSession = nil
+            guard let content = try? String(contentsOfFile: session.path, encoding: .utf8),
+                  let index = scriptList.index(of: session.id) else { return }
+            scriptList.setScript(at: index, content, notify: true)
+            return
         }
-        .padding(24)
-        .frame(width: 600, height: 500)
-        .onAppear {
-            if let script = editingScript {
-                name = script.name
-                source = script.source
-            }
+
+        guard let index = selectedIndex else {
+            // Original still fires the notification because its button never disables.
+            let notification = NSUserNotification()
+            notification.title = "MacStroke"
+            notification.informativeText = L("Select a AppleScript first!")
+            NSUserNotificationCenter.default.deliver(notification)
+            return
         }
+
+        let id = scriptList.id(at: index)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(id.uuidString, isDirectory: true)
+        let url = directory.appendingPathComponent("MacStroke.applescript")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: url)
+        try? scriptList.script(at: index).write(to: url, atomically: true, encoding: .utf8)
+        NSWorkspace.shared.open(url)
+        externalSession = ExternalScriptSession(id: id, path: url.path)
     }
 }
 
-/// Example scripts corresponding to the original's bundled .scpt examples
-/// (ChromeCloseTabsToTheRight, OpenMacStrokePreferences, SearchInWeb).
-struct AppleScriptExamples {
-    static let examples = [
-        (name: "Close Tabs To The Right In Chrome",
-         source: """
-         tell application "Google Chrome"
-             set windowIndex to 1
-             repeat with w in windows
-                 set activeTabIndex to active tab index of w
-                 set tabCount to count of tabs of w
-                 repeat with i from tabCount to (activeTabIndex + 1) by -1
-                     delete tab i of w
-                 end repeat
-             end repeat
-         end tell
-         """),
-        (name: "Open MacStroke Preferences",
-         source: """
-         tell application "MacStroke" to activate
-         """),
-        (name: "Search in Web",
-         source: """
-         set searchURL to "https://www.google.com/search?q="
-         set theClipboard to the clipboard as text
-         set encodedQuery to do shell script "python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' " & quoted form of theClipboard
-         open location (searchURL & encodedQuery)
-         """),
+/// The three examples the original bundles and lists under "Load Example"
+/// (AppPrefsWindowController.m:49-57; sources are the shipped .applescript files).
+/// Titles stay untranslated, exactly like the original's hardcoded strings.
+struct AppleScriptExample: Identifiable {
+    let id: String
+    let title: String
+    let source: String
+
+    static let all: [AppleScriptExample] = [
+        AppleScriptExample(
+            id: "ChromeCloseTabsToTheRight",
+            title: "Close Tabs To The Right In Chrome",
+            source: """
+            tell application "Google Chrome"
+                set i to 1
+                set tabsToDelete to {}
+
+                repeat with t in (tabs of (first window))
+                    if i is greater than (active tab index of (first window)) then
+                        set beginning of tabsToDelete to t
+                    end if
+                    set i to i + 1
+                end repeat
+
+                repeat with t in tabsToDelete
+                    close t
+                end repeat
+            end tell
+            """),
+        AppleScriptExample(
+            id: "OpenMacStrokePreferences",
+            title: "Open MacStroke Preferences",
+            source: """
+            tell application "MacStroke"
+                openPreferences
+            end tell
+            """),
+        AppleScriptExample(
+            id: "SearchInWeb",
+            title: "Search in Web",
+            source: """
+            tell application "System Events" to keystroke "c" using {command down}
+            delay 0.3 -- prolong or shorten it if needed
+            try
+                    set theData to (the clipboard as text)
+                    -- for Baidu, use http://www.baidu.com/s?word=
+                    -- for Google, use http://www.googe.com/search?q=
+                    -- for Bing, use http://www.bing.com/search?q=
+                    set theData to "http://www.baidu.com/s?word=" & quoted form of theData
+                    do shell script "open " & theData
+            on error
+                    display notification "Format not yet supported"
+            end try
+            """),
     ]
 }
+
 
 // MARK: - Filters Tab
 // Original: black/white list mode radio + two text views + apply + add.
