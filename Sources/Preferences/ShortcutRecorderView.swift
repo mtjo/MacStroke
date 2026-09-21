@@ -111,15 +111,11 @@ public final class ShortcutRecorderView: NSView {
 
     public override func mouseDown(with event: NSEvent) {
         startRecording()
-        // Keep the tap running until a key is pressed or the mouse leaves —
+        // Keep the tap running until a key is pressed or Esc cancels —
         // stopping on mouseUp would end recording before any key is pressed.
     }
 
-    public override func mouseExited(with event: NSEvent) {
-        if isRecording && keyCode == 0 {
-            cancelRecording()
-        }
-    }
+    public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     // MARK: - Public API
 
@@ -129,7 +125,7 @@ public final class ShortcutRecorderView: NSView {
         isRecording = true
 
         let callback: CGEventTapCallBack = { _, type, event, refcon in
-            guard let refcon = refcon else { return Unmanaged.passRetained(event) }
+            guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
             let selfPtr = Unmanaged<ShortcutRecorderView>.fromOpaque(refcon).takeUnretainedValue()
             return selfPtr.handleKeyEvent(type: type, event: event)
         }
@@ -157,50 +153,46 @@ public final class ShortcutRecorderView: NSView {
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
         monitoring = true
-
-        // Track when the pointer leaves the view so a stray click doesn't
-        // leave the recorder armed forever.
-        let trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeInKeyWindow],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(trackingArea)
     }
 
     /// Stops listening and reports the recorded shortcut.
     public func stopRecording() {
         guard monitoring else { return }
-
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-        }
-
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
-        }
-
-        eventTap = nil
-        runLoopSource = nil
-        monitoring = false
-        isRecording = false
-        trackingAreas.forEach(removeTrackingArea)
+        teardownTap()
         onShortcutChanged?(keyCode, flags)
     }
 
     /// Stop listening without reporting a change (cancel).
     public func cancelRecording() {
         guard monitoring else { return }
+        teardownTap()
+    }
+
+    /// Disables the event tap and removes its run-loop source. Without this
+    /// an orphaned tap keeps swallowing every key press.
+    private func teardownTap() {
+        if let tap = eventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        if let source = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+        }
         eventTap = nil
         runLoopSource = nil
         monitoring = false
         isRecording = false
-        trackingAreas.forEach(removeTrackingArea)
     }
 
     private func handleKeyEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        guard type == .keyDown else { return Unmanaged.passRetained(event) }
+        // The system disables a tap after timeouts or user action; re-arm it
+        // so recording keeps working.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
 
         let keyCodeValue = event.getIntegerValueField(.keyboardEventKeycode)
 

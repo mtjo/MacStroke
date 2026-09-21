@@ -171,46 +171,58 @@ public struct PreferencesView: View {
 
                 Divider()
 
-                // Content area
-                ScrollView {
-                    VStack(spacing: 0) {
-                        switch selectedTab {
-                        case .general:
-                            GeneralTabView(viewModel: viewModel)
-                        case .rules:
-                            RulesTabView(
-                                viewModel: viewModel,
-                                ruleStore: ruleStore,
-                                showingRuleEditor: $showingRuleEditor,
-                                editingRule: $editingRule
-                            )
-                        case .filters:
-                            FiltersTabView(viewModel: viewModel)
-                        case .appleScript:
-                            AppleScriptTabView(
-                                scripts: $scripts,
-                                showingScriptEditor: $showingScriptEditor,
-                                editingScript: $editingScript
-                            )
-                        case .rightClick:
-                            RightClickTabView(
-                                viewModel: viewModel,
-                                rightClickApps: $rightClickApps,
-                                newRightClickApp: $newRightClickApp
-                            )
-                        case .rightClickMenu:
-                            RightClickMenuTabView(viewModel: viewModel)
-                        case .clipboard:
-                            ClipboardTabView(viewModel: viewModel)
-                        case .about:
-                            AboutTabView(viewModel: viewModel)
-                        case .help:
-                            HelpTabView()
+                // Content area. The rules / AppleScript tabs host a Table that
+                // must fill the page (original xib layout) — a ScrollView would
+                // collapse it to its minimum height, so those two skip it.
+                Group {
+                    if selectedTab == .rules {
+                        RulesTabView(
+                            viewModel: viewModel,
+                            ruleStore: ruleStore,
+                            showingRuleEditor: $showingRuleEditor,
+                            editingRule: $editingRule
+                        )
+                        .padding(24)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    } else if selectedTab == .appleScript {
+                        AppleScriptTabView(
+                            scripts: $scripts,
+                            showingScriptEditor: $showingScriptEditor,
+                            editingScript: $editingScript
+                        )
+                        .padding(24)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                switch selectedTab {
+                                case .general:
+                                    GeneralTabView(viewModel: viewModel)
+                                case .filters:
+                                    FiltersTabView(viewModel: viewModel)
+                                case .rightClick:
+                                    RightClickTabView(
+                                        viewModel: viewModel,
+                                        rightClickApps: $rightClickApps,
+                                        newRightClickApp: $newRightClickApp
+                                    )
+                                case .rightClickMenu:
+                                    RightClickMenuTabView(viewModel: viewModel)
+                                case .clipboard:
+                                    ClipboardTabView(viewModel: viewModel)
+                                case .about:
+                                    AboutTabView(viewModel: viewModel)
+                                case .help:
+                                    HelpTabView()
+                                case .rules, .appleScript:
+                                    EmptyView()
+                                }
+                            }
+                            .padding(24)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(minHeight: geometry.size.height - 48, alignment: .top)
                         }
                     }
-                    .padding(24)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(minHeight: geometry.size.height - 48, alignment: .top)
                 }
                 .frame(width: geometry.size.width - 181)
                 .frame(minHeight: 550)
@@ -1314,40 +1326,15 @@ struct AppleScriptTabView: View {
     @Binding var scripts: [AppleScriptItem]
     @Binding var showingScriptEditor: Bool
     @Binding var editingScript: AppleScriptItem?
+    @State private var selection: AppleScriptItem.ID?
+
+    private var selectedScript: AppleScriptItem? {
+        scripts.first { $0.id == selection }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                SectionHeader(L("AppleScripts"))
-                Spacer()
-                Button(L("Add Script")) {
-                    editingScript = nil
-                    showingScriptEditor = true
-                }
-                .buttonStyle(.borderedProminent)
-
-                Menu {
-                    ForEach(AppleScriptExamples.examples, id: \.name) { example in
-                        Button(example.name) {
-                            _ = AppleScriptsList.sharedAppleScriptsList.addScript(name: example.name, source: example.source)
-                            scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                        }
-                    }
-                } label: {
-                    Label(L("Load Example"), systemImage: "plus.square.on.square")
-                }
-                .menuStyle(.borderlessButton)
-
-                Button(L("Export Scripts…")) {
-                    exportScripts()
-                }
-                .buttonStyle(.bordered)
-
-                Button(L("Import Scripts…")) {
-                    importScripts()
-                }
-                .buttonStyle(.bordered)
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(L("AppleScripts"))
 
             if scripts.isEmpty {
                 VStack(spacing: 12) {
@@ -1361,14 +1348,14 @@ struct AppleScriptTabView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                .frame(maxWidth: .infinity, minHeight: 300)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Table(scripts) {
+                Table(scripts, selection: $selection) {
                     TableColumn(L("Name")) { script in
                         Text(script.name)
                             .font(.system(size: 13))
                     }
-                    .width(min: 200, max: 300)
+                    .width(min: 160, ideal: 220)
 
                     TableColumn(L("Source Preview")) { script in
                         Text(script.source.prefix(80).replacingOccurrences(of: "\n", with: " ") + (script.source.count > 80 ? "…" : ""))
@@ -1376,45 +1363,72 @@ struct AppleScriptTabView: View {
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
-                    .width(min: 250, max: 400)
-
-                    TableColumn(L("Created")) { script in
-                        Text(script.createTime, style: .date)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                    .width(120)
-
-                    TableColumn("") { script in
-                        HStack(spacing: 8) {
-                            Button {
-                                editingScript = script
-                                showingScriptEditor = true
-                            } label: {
-                                Image(systemName: "pencil")
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button {
-                                openInExternalEditor(script: script)
-                            } label: {
-                                Image(systemName: "square.and.pencil")
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(role: .destructive) {
-                                AppleScriptsList.sharedAppleScriptsList.removeScript(id: script.id)
-                                scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    }
-                    .width(120)
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(minHeight: 400)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            Divider()
+
+            // Bottom bar (original: + - Open in External Editor Load Example)
+            HStack(spacing: 8) {
+                Button {
+                    editingScript = nil
+                    showingScriptEditor = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help(L("Add Script"))
+
+                Button {
+                    if let script = selectedScript {
+                        AppleScriptsList.sharedAppleScriptsList.removeScript(id: script.id)
+                        scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+                        selection = nil
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .help(L("Delete Script"))
+                .disabled(selectedScript == nil)
+
+                Button(L("Edit")) {
+                    if let script = selectedScript {
+                        editingScript = script
+                        showingScriptEditor = true
+                    }
+                }
+                .disabled(selectedScript == nil)
+
+                Button(L("Open in External Editor")) {
+                    if let script = selectedScript {
+                        openInExternalEditor(script: script)
+                    }
+                }
+                .disabled(selectedScript == nil)
+
+                Menu(L("Load Example")) {
+                    ForEach(AppleScriptExamples.examples, id: \.name) { example in
+                        Button(example.name) {
+                            _ = AppleScriptsList.sharedAppleScriptsList.addScript(name: example.name, source: example.source)
+                            scripts = AppleScriptsList.sharedAppleScriptsList.getAllScripts()
+                        }
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                Spacer()
+
+                Button(L("Export Scripts…")) {
+                    exportScripts()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L("Import Scripts…")) {
+                    importScripts()
+                }
+                .buttonStyle(.bordered)
             }
         }
     }
