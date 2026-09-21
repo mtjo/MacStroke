@@ -39,7 +39,6 @@ enum PreferencesTab: CaseIterable {
     case rightClickMenu
     case clipboard
     case about
-    case help
 
     var title: String {
         switch self {
@@ -51,7 +50,6 @@ enum PreferencesTab: CaseIterable {
         case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
         case .about: return L("About")
-        case .help: return L("Help")
         }
     }
 
@@ -65,7 +63,6 @@ enum PreferencesTab: CaseIterable {
         case .rightClickMenu: return "list.bullet.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .about: return "info.circle"
-        case .help: return "questionmark.circle"
         }
     }
 }
@@ -201,6 +198,9 @@ public struct PreferencesView: View {
                             newRightClickApp: $newRightClickApp
                         )
                         .pageLayout()
+                    } else if selectedTab == .about {
+                        AboutTabView(viewModel: viewModel)
+                            .pageLayout()
                     } else {
                         ScrollView {
                             VStack(spacing: 0) {
@@ -219,11 +219,7 @@ public struct PreferencesView: View {
                                     RightClickMenuTabView(viewModel: viewModel)
                                 case .clipboard:
                                     ClipboardTabView(viewModel: viewModel)
-                                case .about:
-                                    AboutTabView(viewModel: viewModel)
-                                case .help:
-                                    HelpTabView()
-                                case .rules, .appleScript, .filters, .rightClick:
+                                case .rules, .appleScript, .filters, .rightClick, .about:
                                     EmptyView()
                                 }
                             }
@@ -2071,59 +2067,56 @@ struct ClipboardTabView: View {
 // MARK: - About Tab
 // Original: version, author, issues link, Sparkle update controls.
 
+/// Original About pane (Preferences.xib "About", 800x519): the two update
+/// checkboxes, the version / author rows and the README.html web view that
+/// fills the rest of the page.
 struct AboutTabView: View {
     @ObservedObject var viewModel: UserPreferences
     /// Sparkle's own user-default key (original bound the checkbox to
     /// SUUpdater.automaticallyDownloadsUpdates).
     @AppStorage("SUAutomaticallyUpdate") private var automaticallyDownloadsUpdates = false
 
+    private var versionString: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .center, spacing: 16) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .frame(width: 128, height: 128)
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(L("Automatically Check for Updates"), isOn: $viewModel.autoCheckUpdates)
+                .onChange(of: viewModel.autoCheckUpdates) { _ in
+                    NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+                }
+            Toggle(L("Automatically Download Updates"), isOn: $automaticallyDownloadsUpdates)
+                .onChange(of: automaticallyDownloadsUpdates) { _ in
+                    NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+                }
 
-                Text(L("MacStroke"))
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-
-                Text(L("Version") + ": \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
-                    .font(.title3)
-                    .foregroundColor(.secondary)
-
-                Text(L("Author: mtjo.net@gmail.com"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle(L("Automatically Check for Updates"), isOn: $viewModel.autoCheckUpdates)
-                    .onChange(of: viewModel.autoCheckUpdates) { _ in
-                        NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
-                    }
-                Toggle(L("Automatically Download Updates"), isOn: $automaticallyDownloadsUpdates)
-                    .onChange(of: automaticallyDownloadsUpdates) { _ in
-                        NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
-                    }
+            HStack(spacing: 6) {
+                Text(L("Version:"))
+                Text(versionString)
                 Button(L("Check Now")) {
                     NotificationCenter.default.post(name: .macStrokeCheckForUpdates, object: nil)
                 }
-                .buttonStyle(.bordered)
+                .padding(.leading, 12)
+                Button(L("issues")) {
+                    if let url = URL(string: "https://github.com/mtjo/MacStroke/issues") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                Spacer()
             }
+            // Original x positions: the version/author rows start 19pt further
+            // right than the checkboxes.
+            .padding(.leading, 19)
 
-            Divider()
+            Text(L("Author: mtjo.net@gmail.com"))
+                .padding(.leading, 19)
 
-            SectionHeader(L("Links"))
-            HStack(spacing: 20) {
-                Link(L("GitHub Repository"), destination: URL(string: "https://github.com/mtjo/MacStroke")!)
-                Link(L("issues"), destination: URL(string: "https://github.com/mtjo/MacStroke/issues")!)
-            }
-
-            Spacer()
+            READMEWebView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 7)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
@@ -2143,15 +2136,7 @@ struct SectionHeader: View {
     }
 }
 
-// MARK: - Help Tab (original: embedded README.html, AppPrefsWindowController.m:122)
-
-struct HelpTabView: View {
-    var body: some View {
-        READMEWebView()
-            .frame(maxWidth: .infinity)
-            .frame(height: 560)
-    }
-}
+// MARK: - README 网页（原版 About 页内嵌 README.html，AppPrefsWindowController.m:122）
 
 /// WKWebView wrapper loading the localized README.html from the bundle.
 private struct READMEWebView: NSViewRepresentable {

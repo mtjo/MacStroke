@@ -130,14 +130,6 @@
 "Pinned items: %d" = "Pinned items: %d";
 "Total items: %d" = "Total items: %d";
 "About" = "About";
-"Version %@" = "Version %@";
-"Build %@" = "Build %@";
-"MacStroke is a gesture recognition utility for macOS that lets you trigger actions by drawing mouse gestures." = "MacStroke is a gesture recognition utility for macOS that lets you trigger actions by drawing mouse gestures.";
-"Links" = "Links";
-"GitHub Repository" = "GitHub Repository";
-"Report an Issue" = "Report an Issue";
-"License" = "License";
-"MIT License - Copyright © 2024" = "MIT License - Copyright © 2024";
 "No gesture template set" = "No gesture template set";
 "Draw Gesture" = "Draw Gesture";
 "MacStroke Preferences" = "MacStroke Preferences";
@@ -246,6 +238,7 @@
 "Reset Defaults" = "Reset Defaults";
 "Export succeeded" = "Export succeeded";
 "Author: mtjo.net@gmail.com" = "Author: mtjo.net@gmail.com";
+"Version:" = "Version:";
 "Automatically Check for Updates" = "Automatically Check for Updates";
 "Automatically Download Updates" = "Automatically Download Updates";
 "Check Now" = "Check Now";
