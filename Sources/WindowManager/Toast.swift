@@ -37,12 +37,28 @@ public enum ToastPosition: Int {
 }
 
 /// Manages toast notifications displayed on screen.
+///
+/// Mirrors the original CoolToast `ToastWindowController` (used by
+/// `showNoteTost:`): a screen-covering transparent borderless window with a
+/// dynamically sized dark container (min 320×80, corner radius 6), centered
+/// message text, optional app icon, fade animation, per-toast auto dismiss,
+/// and multiple toasts allowed on screen at the same time.
 public final class ToastManager {
     public static let shared = ToastManager()
 
-    private var currentToastWindow: NSWindow?
-    private var toastTimer: Timer?
+    private var activeToasts: [NSWindow] = []
     private let preferences: UserPreferences
+
+    // CoolToast defaults (ToastWindowController initWithWindowNibName:)
+    private let edgeOffset: CGFloat = 50      // left/top/right/bottom offset
+    private let maxWidth: CGFloat = 826
+    private let minWidth: CGFloat = 320
+    private let minHeight: CGFloat = 80
+    private let cornerRadius: CGFloat = 6
+    private let imageMarginLeft: CGFloat = 15
+    private let labelMargin: CGFloat = 30
+    private let iconWidth: CGFloat = 58       // xib icon width constraint
+    private let fadeDuration = 0.3            // showNoteTost: animaterTimeSecond
 
     private init() {
         self.preferences = UserPreferences()
@@ -71,128 +87,168 @@ public final class ToastManager {
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
-        // Cancel any existing toast
-        toastTimer?.invalidate()
-        if let old = currentToastWindow {
-            old.close()
-            currentToastWindow = nil
-        }
-
-        // Read preferences for display (original: showNoteTost)
+        // Original note preferences (showNoteTost:)
         let fontSize = CGFloat(preferences.noteFontSize)
-        let bgAlpha = preferences.noteBackgroundAlpha
+        let bgAlpha = CGFloat(preferences.noteBackgroundAlpha)
         let fontName = preferences.noteFontName
         let retention = preferences.noteRetentionTime
         let positionIndex = preferences.notePosition
+        let hiddenIcon = !preferences.showNoteIcon
+        let textColor = Self.color(fromHex: preferences.defaultNoteColor) ?? .white
 
-        let toastSize = CGSize(width: 280, height: 60)
+        let font = NSFont(name: fontName, size: fontSize) ?? .systemFont(ofSize: 15)
 
-        // Create window for toast
+        // CTScreen getCurrentScreen: the screen containing the mouse
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(mouseLocation) }
+            ?? NSScreen.main ?? NSScreen.screens[0]
+        let visibleFrame = screen.visibleFrame
+        // CTScreen frameForScreen: top-left-origin coords, visibleFrame size
+        let screenW = visibleFrame.width
+        let screenH = visibleFrame.height
+
+        // showCoolToast: measure the text to size the container
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let labelMaxWidth = maxWidth - labelMargin * 2 - (hiddenIcon ? 0 : iconWidth + imageMarginLeft)
+        let message = toast.message as NSString
+        var labelWidth = message.size(withAttributes: attributes).width
+        let bounding = message.boundingRect(
+            with: CGSize(width: labelMaxWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin], attributes: attributes)
+        let lineCount = Int(ceil(bounding.height / NSLayoutManager().defaultLineHeight(for: font)))
+        var containerHeight = minHeight
+        if lineCount > 2 {
+            containerHeight = minHeight + CGFloat(lineCount - 2) * font.boundingRectForFont.height
+            labelWidth = labelMaxWidth
+        }
+        // Original quirk: icon width is counted even when the icon is hidden
+        var containerWidth = labelWidth + iconWidth + labelMargin * 2 + imageMarginLeft
+        if containerWidth < minWidth { containerWidth = minWidth }
+
+        // getContainerPointWithWidth:height: (top-left origin within the window)
+        let position = ToastPosition(rawValue: positionIndex) ?? toast.position
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        switch position {
+        case .center:
+            x = (screenW - containerWidth) / 2
+            y = (screenH - containerHeight) / 2
+        case .leftTop:
+            x = edgeOffset
+            y = edgeOffset
+        case .rightTop:
+            x = screenW - edgeOffset - containerWidth
+            y = edgeOffset
+        case .leftBottom:
+            x = edgeOffset
+            y = screenH - edgeOffset - containerHeight
+        case .rightBottom:
+            x = screenW - edgeOffset - containerWidth
+            y = screenH - edgeOffset - containerHeight
+        case .mouse:
+            x = mouseLocation.x - visibleFrame.minX
+            y = screenH - (mouseLocation.y - visibleFrame.minY)
+            if x + containerWidth > screenW { x -= containerWidth }
+            if y + containerHeight > screenH { y -= containerHeight }
+            x = max(x, 0)
+            y = max(y, 0)
+        }
+
+        // Window covers the screen (CoolToastWindow): clear bg, no shadow,
+        // NSPopUpMenuWindowLevel
+        let windowSize = NSSize(width: visibleFrame.width, height: screen.frame.height)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: toastSize.width, height: toastSize.height),
+            contentRect: NSRect(origin: .zero, size: windowSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
-        window.level = .statusBar
-        window.backgroundColor = .black.withAlphaComponent(bgAlpha)
-        window.hasShadow = true
+        window.level = .popUpMenu
+        window.backgroundColor = .clear
+        window.hasShadow = false
+        window.ignoresMouseEvents = false
         window.isOpaque = false
+        window.setFrameOrigin(visibleFrame.origin)
 
-        // Create content view
-        let contentView = NSView(frame: window.frame)
-        contentView.wantsLayer = true
-        contentView.layer?.backgroundColor = NSColor.black.withAlphaComponent(bgAlpha).cgColor
-        contentView.layer?.cornerRadius = 8
-
-        // Add label — original noteColor (text color, default white).
-        // Icon (original CoolToast: app icon on the left, hidden by showNoteIcon).
-        let showIcon = preferences.showNoteIcon
-        let iconView = NSImageView(frame: NSRect(x: 12, y: (toastSize.height - 40) / 2, width: 40, height: 40))
-        iconView.image = NSApp.applicationIconImage
-        iconView.imageScaling = .scaleProportionallyUpOrDown
-        iconView.isHidden = !showIcon
-        contentView.addSubview(iconView)
-
-        let label = NSTextField(labelWithString: toast.message)
-        label.textColor = Self.color(fromHex: preferences.defaultNoteColor) ?? .white
-        label.font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        let labelX: CGFloat = showIcon ? 60 : 16
-        label.frame = NSRect(x: labelX, y: 16, width: toastSize.width - labelX - 16, height: 28)
-        contentView.addSubview(label)
-
+        let contentView = NSView(frame: NSRect(origin: .zero, size: windowSize))
         window.contentView = contentView
 
-        // Position window — original notePostion mapping.
-        let screen = NSScreen.main ?? NSScreen.screens[0]
-        let frame = screen.frame
-        let toastPosition = ToastPosition(rawValue: positionIndex) ?? toast.position
+        // Container (CTView): dark rounded box, corner radius conerRadius
+        let container = NSView(
+            frame: NSRect(x: x, y: windowSize.height - y - containerHeight,
+                          width: containerWidth, height: containerHeight))
+        container.wantsLayer = true
+        container.layer?.cornerRadius = cornerRadius
+        container.layer?.backgroundColor = NSColor(red: 0, green: 0, blue: 0, alpha: bgAlpha).cgColor
 
-        let origin: NSPoint
-        switch toastPosition {
-        case .mouse:
-            // Follow the current mouse location (original: CTPositionMouse).
-            let mouse = NSEvent.mouseLocation
-            origin = NSPoint(
-                x: mouse.x - toastSize.width / 2,
-                y: mouse.y - toastSize.height / 2
-            )
-        case .center:
-            origin = NSPoint(
-                x: frame.midX - toastSize.width / 2,
-                y: frame.midY - toastSize.height / 2
-            )
-        case .rightTop:
-            origin = NSPoint(
-                x: frame.maxX - toastSize.width - 16,
-                y: frame.maxY - toastSize.height - 16
-            )
-        case .rightBottom:
-            origin = NSPoint(
-                x: frame.maxX - toastSize.width - 16,
-                y: frame.minY + 16
-            )
-        case .leftTop:
-            origin = NSPoint(
-                x: frame.minX + 16,
-                y: frame.maxY - toastSize.height - 16
-            )
-        case .leftBottom:
-            origin = NSPoint(
-                x: frame.minX + 16,
-                y: frame.minY + 16
-            )
-        }
+        // Icon: app icon, leading imageMarginLeft, 58 wide, vertical margins 10
+        let iconView = NSImageView(
+            frame: NSRect(x: imageMarginLeft, y: 10,
+                          width: iconWidth, height: containerHeight - 20))
+        iconView.image = NSApp.applicationIconImage
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.isHidden = hiddenIcon
+        container.addSubview(iconView)
 
-        window.setFrameOrigin(origin)
+        // Message label: centered text, leading labelMargin, trailing 5
+        let label = NSTextField(labelWithString: toast.message)
+        label.alignment = .center
+        label.font = font
+        label.textColor = textColor
+        label.frame = NSRect(x: labelMargin, y: (containerHeight - 40) / 2,
+                             width: containerWidth - labelMargin - 5, height: 40)
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        container.addSubview(label)
 
-        // Fade in (original: CTAnimaterFade, 0.3s).
-        window.alphaValue = 0
-        window.orderFrontRegardless()
+        // Double-click on the container dismisses the toast
+        let click = NSClickGestureRecognizer(target: self, action: #selector(toastClicked(_:)))
+        click.numberOfClicksRequired = 2
+        container.addGestureRecognizer(click)
+
+        contentView.addSubview(container)
+        window.makeKeyAndOrderFront(nil)
+
+        // Fade in (CTAnimaterFade)
+        container.alphaValue = 0
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.3
-            window.animator().alphaValue = 1
+            context.duration = fadeDuration
+            container.animator().alphaValue = 1
         }
 
-        currentToastWindow = window
+        activeToasts.append(window)
 
-        // Auto-dismiss after duration (use retention time in seconds)
-        toastTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(retention), repeats: false) { [weak self] _ in
-            self?.hide()
+        // autoDismiss: dismiss after noteRetetionTime seconds (independent,
+        // toasts may overlap like the original)
+        DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval(retention)) { [weak self, weak window] in
+            guard let self, let window else { return }
+            self.dismiss(window)
         }
     }
 
-    /// Fade out and hide the current toast (original: dismissWithAnimator).
-    public func hide() {
-        toastTimer?.invalidate()
-        toastTimer = nil
-        guard let window = currentToastWindow else { return }
-        currentToastWindow = nil
+    @objc private func toastClicked(_ gesture: NSClickGestureRecognizer) {
+        guard let window = gesture.view?.window else { return }
+        dismiss(window)
+    }
+
+    /// Fade out and close a toast window (dismissWithAnimator, CTAnimaterFade).
+    private func dismiss(_ window: NSWindow) {
+        guard activeToasts.contains(where: { $0 === window }) else { return }
+        activeToasts.removeAll { $0 === window }
+        guard let container = window.contentView?.subviews.first else { return }
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.3
-            window.animator().alphaValue = 0
+            context.duration = fadeDuration
+            container.animator().alphaValue = 0
         }, completionHandler: {
+            window.orderOut(nil)
             window.close()
         })
+    }
+
+    /// Fade out and hide all current toasts.
+    public func hide() {
+        for window in activeToasts {
+            dismiss(window)
+        }
     }
 }
