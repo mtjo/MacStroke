@@ -156,87 +156,59 @@ public struct PreferencesView: View {
     }
 
     public var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // Sidebar / Tab bar
-                VStack(spacing: 0) {
-                    ForEach(PreferencesTab.allCases, id: \.self) { tab in
-                        TabButton(
-                            tab: tab,
-                            isSelected: selectedTab == tab,
-                            action: { selectedTab = tab }
-                        )
-                    }
-                    Spacer()
+        HStack(spacing: 0) {
+            // Sidebar (macOS System Settings style)
+            VStack(spacing: 1) {
+                ForEach(PreferencesTab.allCases, id: \.self) { tab in
+                    TabButton(
+                        tab: tab,
+                        isSelected: selectedTab == tab,
+                        action: { selectedTab = tab }
+                    )
                 }
-                .frame(width: 180)
-                .background(Color(NSColor.controlBackgroundColor))
-
-                Divider()
-
-                // Content area. The rules / AppleScript / filters / right-click
-                // tabs host a Table that must fill the page (original xib
-                // layout) — a ScrollView would collapse it to its minimum
-                // height and leave blank space below, so those skip it.
-                Group {
-                    if selectedTab == .rules {
-                        RulesTabView(
-                            viewModel: viewModel,
-                            ruleStore: ruleStore,
-                            showingRuleEditor: $showingRuleEditor,
-                            editingRule: $editingRule
-                        )
-                        .pageLayout()
-                    } else if selectedTab == .appleScript {
-                        AppleScriptTabView(scriptList: scriptList)
-                            .pageLayout()
-                    } else if selectedTab == .filters {
-                        FiltersTabView(viewModel: viewModel)
-                            .pageLayout()
-                    } else if selectedTab == .rightClick {
-                        RightClickTabView(
-                            viewModel: viewModel,
-                            rightClickApps: $rightClickApps,
-                            newRightClickApp: $newRightClickApp
-                        )
-                        .pageLayout()
-                    } else if selectedTab == .about {
-                        AboutTabView(viewModel: viewModel)
-                            .pageLayout()
-                    } else {
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                switch selectedTab {
-                                case .general:
-                                    GeneralTabView(viewModel: viewModel)
-                                case .filters:
-                                    FiltersTabView(viewModel: viewModel)
-                                case .rightClick:
-                                    RightClickTabView(
-                                        viewModel: viewModel,
-                                        rightClickApps: $rightClickApps,
-                                        newRightClickApp: $newRightClickApp
-                                    )
-                                case .rightClickMenu:
-                                    RightClickMenuTabView(viewModel: viewModel)
-                                case .clipboard:
-                                    ClipboardTabView(viewModel: viewModel)
-                                case .rules, .appleScript, .filters, .rightClick, .about:
-                                    EmptyView()
-                                }
-                            }
-                            .padding(24)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(minHeight: geometry.size.height - 48, alignment: .top)
-                        }
-                    }
-                }
-                .frame(width: geometry.size.width - 181)
-                .frame(minHeight: 550)
+                Spacer()
             }
-            .frame(minWidth: 820, minHeight: 620)
-            .frame(maxWidth: .infinity, alignment: .top)
+            .padding(.horizontal, 8)
+            .padding(.top, 10)
+            .frame(width: SettingsChrome.sidebarWidth, alignment: .leading)
+            .background(SettingsChrome.sidebarBackground)
+
+            Divider()
+
+            // Each page supplies its own chrome (scrolling form vs. table that
+            // must fill the viewport).
+            Group {
+                switch selectedTab {
+                case .general:
+                    GeneralTabView(viewModel: viewModel)
+                case .rules:
+                    RulesTabView(
+                        viewModel: viewModel,
+                        ruleStore: ruleStore,
+                        showingRuleEditor: $showingRuleEditor,
+                        editingRule: $editingRule
+                    )
+                case .filters:
+                    FiltersTabView(viewModel: viewModel)
+                case .appleScript:
+                    AppleScriptTabView(scriptList: scriptList)
+                case .rightClick:
+                    RightClickTabView(
+                        viewModel: viewModel,
+                        rightClickApps: $rightClickApps,
+                        newRightClickApp: $newRightClickApp
+                    )
+                case .rightClickMenu:
+                    RightClickMenuTabView(viewModel: viewModel)
+                case .clipboard:
+                    ClipboardTabView(viewModel: viewModel)
+                case .about:
+                    AboutTabView(viewModel: viewModel)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(minWidth: 820, minHeight: 620)
         .id(languageRevision)
         .onReceive(NotificationCenter.default.publisher(for: .languageDidChange)) { _ in
             languageRevision += 2
@@ -260,15 +232,8 @@ public struct PreferencesView: View {
     }
 }
 
-/// Page chrome for tabs that host a list filling the whole window height.
-private extension View {
-    func pageLayout() -> some View {
-        padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-/// Tab button in the sidebar.
+/// Sidebar entry, styled like a System Settings row: rounded accent
+/// highlight with white content when selected.
 struct TabButton: View {
     let tab: PreferencesTab
     let isSelected: Bool
@@ -276,23 +241,26 @@ struct TabButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 icon
-                    .font(.system(size: 16, weight: .medium))
-                    .frame(width: 24)
+                    .font(.system(size: 14, weight: .regular))
+                    .frame(width: 20, height: 20)
                 Text(tab.title)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                Spacer()
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                isSelected ? Color.accentColor.opacity(0.15) : Color.clear
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isSelected ? Color.accentColor : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundColor(isSelected ? .accentColor : .primary)
+        .foregroundColor(isSelected ? .white : .primary)
     }
 
     @ViewBuilder
@@ -330,38 +298,48 @@ struct GeneralTabView: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // MARK: General Group (original xib order: enable / open prefs /
+        SettingsPage {
+            // MARK: General (original xib order: enable / open prefs /
             // auto start / status bar icon / language)
-            GroupBox(L("General Settings")) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Toggle(L("Enable MacStroke"), isOn: Binding(
-                        get: { viewModel.isEnabled },
-                        set: { newValue in
-                            viewModel.isEnabled = newValue
-                            NotificationCenter.default.post(
-                                name: .macStrokeEnabledDidChange, object: newValue)
-                        }
-                    ))
-                    Toggle(L("Open Preferences Window at Startup"), isOn: $viewModel.openPrefOnStartup)
-                    Toggle(L("Auto Start at Login"), isOn: Binding(
-                        get: { launchController.isEnabled },
-                        set: { enabled in
-                            launchController.setEnabled(enabled)
-                            viewModel.launchAtLogin = enabled
-                        }
-                    ))
-                    Toggle(L("Show Icon In Status Bar"), isOn: Binding(
-                        get: { viewModel.showIconInStatusBar },
-                        set: { newValue in
-                            viewModel.showIconInStatusBar = newValue
-                            NotificationCenter.default.post(
-                                name: .showIconInStatusBarDidChange, object: newValue)
-                        }
-                    ))
-
-                    HStack(spacing: 8) {
-                        Text(L("Language:"))
+            SettingsSection(title: L("General Settings")) {
+                SettingsCard {
+                    SettingsRow(L("Enable MacStroke")) {
+                        TrailingSwitch(isOn: Binding(
+                            get: { viewModel.isEnabled },
+                            set: { newValue in
+                                viewModel.isEnabled = newValue
+                                NotificationCenter.default.post(
+                                    name: .macStrokeEnabledDidChange, object: newValue)
+                            }
+                        ))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Open Preferences Window at Startup")) {
+                        TrailingSwitch(isOn: $viewModel.openPrefOnStartup)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Auto Start at Login")) {
+                        TrailingSwitch(isOn: Binding(
+                            get: { launchController.isEnabled },
+                            set: { enabled in
+                                launchController.setEnabled(enabled)
+                                viewModel.launchAtLogin = enabled
+                            }
+                        ))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Show Icon In Status Bar")) {
+                        TrailingSwitch(isOn: Binding(
+                            get: { viewModel.showIconInStatusBar },
+                            set: { newValue in
+                                viewModel.showIconInStatusBar = newValue
+                                NotificationCenter.default.post(
+                                    name: .showIconInStatusBarDidChange, object: newValue)
+                            }
+                        ))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Language:")) {
                         Picker(L("Language"), selection: $viewModel.language) {
                             Text(L("English")).tag("en")
                             Text(L("简体中文")).tag("zh-Hans")
@@ -371,52 +349,66 @@ struct GeneralTabView: View {
                         .fixedSize()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 2)
             }
 
-            // MARK: Gesture Group
-            GroupBox(L("Gesture")) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Toggle(L("Gesture Min Score"), isOn: $viewModel.enableGestureMinScore)
-                            .fixedSize()
-                        Text(L("Min Score:"))
-                        Text("\(Int(viewModel.minSimilarityScore))")
-                            .frame(width: 26, alignment: .trailing)
-                        Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
-                            .frame(width: 210)
+            // MARK: Gesture
+            SettingsSection(title: L("Gesture")) {
+                SettingsCard {
+                    SettingsRow(L("Gesture Min Score")) {
+                        TrailingSwitch(isOn: $viewModel.enableGestureMinScore)
                     }
-                    Toggle(L("Disable Mouse Path"), isOn: $viewModel.disableMousePath)
-                    Toggle(L("Show Gesture In Whatever App"), isOn: $viewModel.showUIInWhateverApp)
-                    HStack(spacing: 8) {
-                        Text(L("Line color:"))
+                    RowDivider()
+                    SettingsRow(L("Min Score:")) {
+                        HStack(spacing: 8) {
+                            Text("\(Int(viewModel.minSimilarityScore))")
+                                .foregroundColor(.secondary)
+                                .frame(width: 26, alignment: .trailing)
+                            Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
+                                .frame(width: 200)
+                        }
+                    }
+                    RowDivider()
+                    SettingsRow(L("Disable Mouse Path")) {
+                        TrailingSwitch(isOn: $viewModel.disableMousePath)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Show Gesture In Whatever App")) {
+                        TrailingSwitch(isOn: $viewModel.showUIInWhateverApp)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Line color:")) {
                         ColorPicker("", selection: $viewModel.lineColor)
                             .labelsHidden()
-                            .frame(width: 100, alignment: .leading)
+                            .fixedSize()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 2)
             }
 
-            // MARK: Note Group
-            GroupBox(L("Note")) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Toggle(L("Show Gesture Note"), isOn: $viewModel.showGestureNote)
-                            .fixedSize()
-                        Text(L("Font:"))
-                        Text(viewModel.noteFontName)
-                        TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 50)
-                        Button(L("Choose")) { openFontPanel() }
+            // MARK: Note
+            SettingsSection(title: L("Note")) {
+                SettingsCard {
+                    SettingsRow(L("Show Gesture Note")) {
+                        TrailingSwitch(isOn: $viewModel.showGestureNote)
                     }
-                    HStack(spacing: 8) {
-                        Toggle(L("Show Icon"), isOn: $viewModel.showNoteIcon)
-                            .fixedSize()
-                        Text(L("Postion:"))
+                    RowDivider()
+                    SettingsRow(L("Font:")) {
+                        HStack(spacing: 8) {
+                            Text(viewModel.noteFontName)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
+                                .textFieldStyle(.roundedBorder)
+                                .labelsHidden()
+                                .frame(width: 48)
+                            Button(L("Choose")) { openFontPanel() }
+                        }
+                    }
+                    RowDivider()
+                    SettingsRow(L("Show Icon")) {
+                        TrailingSwitch(isOn: $viewModel.showNoteIcon)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Postion:")) {
                         Picker("", selection: $viewModel.notePosition) {
                             Text(L("Follow The Mouse")).tag(0)
                             Text(L("Center In Screen")).tag(1)
@@ -426,25 +418,30 @@ struct GeneralTabView: View {
                             Text(L("Left Bottom")).tag(5)
                         }
                         .labelsHidden()
-                        .fixedSize()
+                        .frame(width: 170)
                     }
-                    HStack(spacing: 8) {
-                        Text(L("Background Apha:"))
+                    RowDivider()
+                    SettingsRow(L("Background Apha:")) {
                         Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
-                            .frame(width: 100)
-                        Text(L("Retention Time:"))
-                        Slider(value: Binding(
-                            get: { Double(viewModel.noteRetentionTime) },
-                            set: { viewModel.noteRetentionTime = Int($0) }
-                        ), in: 1...4, step: 1)
-                            .frame(width: 100)
+                            .frame(width: 200)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Retention Time:")) {
+                        HStack(spacing: 8) {
+                            Text(String(format: "%.0f", viewModel.noteRetentionTime))
+                                .foregroundColor(.secondary)
+                                .frame(width: 26, alignment: .trailing)
+                            Slider(value: Binding(
+                                get: { Double(viewModel.noteRetentionTime) },
+                                set: { viewModel.noteRetentionTime = Int($0) }
+                            ), in: 1...4, step: 1)
+                            .frame(width: 200)
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 2)
             }
 
-            // MARK: Bottom Buttons (original: right-aligned Import/Export/Reset)
+            // MARK: Import / Export / Reset (original: buttons under the Note box)
             HStack(spacing: 12) {
                 Spacer()
                 Button(L("Import")) { importPreferences() }
@@ -452,7 +449,6 @@ struct GeneralTabView: View {
                 Button(L("Reset Defaults")) { resetDefaults() }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             // System Settings can change the login item while we run, so
             // re-read the state instead of keeping the launch-time snapshot.
@@ -603,21 +599,23 @@ struct RulesTabView: View {
     @State private var selectedRuleID: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        SettingsFillingPage {
             // Rules list (original: table fills the tab, button bar at bottom)
             if ruleStore.rules.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text(L("No rules defined"))
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text(L("Click \"Add Rule\" to create your first gesture rule"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text(L("No rules defined"))
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text(L("Click \"Add Rule\" to create your first gesture rule"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 300)
                 }
-                .frame(maxWidth: .infinity, minHeight: 300)
             } else {
                 Table(ruleStore.rules, selection: $selectedRuleID) {
                     TableColumn(L("Image")) { rule in
@@ -676,6 +674,7 @@ struct RulesTabView: View {
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
                 .frame(minHeight: 300, maxHeight: .infinity)
+                .settingsListCard()
             }
 
             Text(L("tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule."))
@@ -731,7 +730,6 @@ struct RulesTabView: View {
                 .foregroundColor(.red)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// Plain action-type label for the table's Type column (original combo:
@@ -1324,16 +1322,19 @@ struct AppleScriptTabView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            titleTable
-                .frame(width: 225)
-            VStack(spacing: 6) {
-                sourceEditor
-                buttonBar
+        SettingsFillingPage {
+            HStack(alignment: .top, spacing: 12) {
+                titleTable
+                    .frame(width: 225)
+                    .settingsListCard()
+                VStack(spacing: 8) {
+                    sourceEditor
+                    buttonBar
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var scripts: [AppleScriptItem] { scriptList.getAllScripts() }
@@ -1374,11 +1375,7 @@ struct AppleScriptTabView: View {
             .font(.system(size: 13))
             .padding(4)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(NSColor.textBackgroundColor))
-            .overlay(
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-            )
+            .settingsListCard()
             .overlay(alignment: .topLeading) {
                 if selectedIndex == nil {
                     Text(L("Enter AppleScript here"))
@@ -1557,17 +1554,19 @@ struct FiltersTabView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        SettingsFillingPage {
             SectionHeader(L("Application Filters"))
 
             // System-settings style list switcher (like Sound output/input).
-            Picker("", selection: $showWhiteList) {
-                Text(L("Black List")).tag(false)
-                Text(L("White List")).tag(true)
+            SettingsCard {
+                Picker("", selection: $showWhiteList) {
+                    Text(L("Black List")).tag(false)
+                    Text(L("White List")).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .padding(10)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 300)
 
             Table(entries, selection: $selection) {
                 TableColumn(L("Name")) { entry in
@@ -1580,6 +1579,7 @@ struct FiltersTabView: View {
                 }
             }
             .frame(minHeight: 280, maxHeight: .infinity)
+            .settingsListCard()
 
             HStack(spacing: 12) {
                 Button(action: addRunningApp) {
@@ -1714,44 +1714,53 @@ struct RightClickTabView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Right Click Menu - App List"))
+        SettingsFillingPage {
+            VStack(alignment: .leading, spacing: 4) {
+                SectionHeader(L("Right Click Menu - App List"))
+                Text(L("tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
 
-            Text(L("tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"))
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            HStack {
-                TextField(L("Bundle ID (e.g. com.apple.finder)"), text: $newRightClickApp)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 300)
-                Button {
-                    addRunningApp()
-                } label: {
-                    Label(L("add.."), systemImage: "plus.circle")
-                }
-                .buttonStyle(.bordered)
-                Button(L("Add")) {
-                    if !newRightClickApp.isEmpty {
-                        RightClicksList.shared.add(newRightClickApp)
-                        rightClickApps = RightClicksList.shared.allApps()
-                        newRightClickApp = ""
+            SettingsCard {
+                HStack(spacing: 8) {
+                    TextField(L("Bundle ID (e.g. com.apple.finder)"), text: $newRightClickApp)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 300)
+                    Button {
+                        addRunningApp()
+                    } label: {
+                        Label(L("add.."), systemImage: "plus.circle")
                     }
+                    .buttonStyle(.bordered)
+                    Button(L("Add")) {
+                        if !newRightClickApp.isEmpty {
+                            RightClicksList.shared.add(newRightClickApp)
+                            rightClickApps = RightClicksList.shared.allApps()
+                            newRightClickApp = ""
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(newRightClickApp.isEmpty)
+                    Spacer()
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(newRightClickApp.isEmpty)
+                .padding(10)
             }
 
             if rightClickApps.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "mouse")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text(L("No applications configured"))
-                        .font(.headline)
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "mouse")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text(L("No applications configured"))
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 200)
+                    .padding(.vertical, 20)
                 }
-                .frame(maxWidth: .infinity, minHeight: 200, maxHeight: .infinity)
+                .frame(maxHeight: .infinity)
             } else {
                 Table(items) {
                     TableColumn(L("Bundle ID / Pattern")) { item in
@@ -1773,6 +1782,7 @@ struct RightClickTabView: View {
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
                 .frame(maxHeight: .infinity)
+                .settingsListCard()
             }
 
             HStack {
@@ -1811,63 +1821,69 @@ struct RightClickMenuTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(L("Finder Right-Click Menu"))
-
-            Toggle(L("enable right click menu"), isOn: Binding(
-                get: { viewModel.enableRightClickMenu },
-                set: { newValue in
-                    viewModel.enableRightClickMenu = newValue
-                    syncToExtension()
+        SettingsPage {
+            SettingsSection(title: L("Finder Right-Click Menu")) {
+                SettingsCard {
+                    SettingsRow(L("enable right click menu")) {
+                        TrailingSwitch(isOn: Binding(
+                            get: { viewModel.enableRightClickMenu },
+                            set: { newValue in
+                                viewModel.enableRightClickMenu = newValue
+                                syncToExtension()
+                            }
+                        ))
+                    }
                 }
-            ))
+            }
 
             // Original: sub-items stay visible and are only disabled
             // when the master toggle is off (enabled binding in the xib).
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle(L("new text file"), isOn: Binding(
-                    get: { viewModel.enableNewFile },
-                    set: { newValue in
-                        viewModel.enableNewFile = newValue
-                        syncToExtension()
-                    }
-                ))
-
-                HStack(spacing: 8) {
-                    Toggle(L("open in terminal"), isOn: Binding(
+            SettingsCard {
+                SettingsRow(L("new text file")) {
+                    TrailingSwitch(isOn: Binding(
+                        get: { viewModel.enableNewFile },
+                        set: { newValue in
+                            viewModel.enableNewFile = newValue
+                            syncToExtension()
+                        }
+                    ))
+                }
+                RowDivider()
+                SettingsRow(L("open in terminal")) {
+                    TrailingSwitch(isOn: Binding(
                         get: { viewModel.enableOpenInTerminal },
                         set: { newValue in
                             viewModel.enableOpenInTerminal = newValue
                             syncToExtension()
                         }
-                    ))
-
-                    Picker("", selection: Binding(
-                        get: { viewModel.userTerminal },
+                    )) {
+                        Picker("", selection: Binding(
+                            get: { viewModel.userTerminal },
+                            set: { newValue in
+                                viewModel.userTerminal = newValue
+                                syncToExtension()
+                            }
+                        )) {
+                            Text("Terminal").tag("Terminal")
+                            Text("Iterm").tag("iTerm")
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                }
+                RowDivider()
+                SettingsRow(L("copy file path")) {
+                    TrailingSwitch(isOn: Binding(
+                        get: { viewModel.enableCopyFilePath },
                         set: { newValue in
-                            viewModel.userTerminal = newValue
+                            viewModel.enableCopyFilePath = newValue
                             syncToExtension()
                         }
-                    )) {
-                        Text("Terminal").tag("Terminal")
-                        Text("Iterm").tag("iTerm")
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    ))
                 }
-
-                Toggle(L("copy file path"), isOn: Binding(
-                    get: { viewModel.enableCopyFilePath },
-                    set: { newValue in
-                        viewModel.enableCopyFilePath = newValue
-                        syncToExtension()
-                    }
-                ))
             }
             .padding(.leading, 22)
             .disabled(!viewModel.enableRightClickMenu)
-
-            Divider()
 
             HStack(spacing: 12) {
                 Button(L("Re-enable Extension")) {
@@ -1878,10 +1894,7 @@ struct RightClickMenuTabView: View {
                 }
                 Spacer()
             }
-
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Push the enable flags + localized menu titles to the FinderSync
@@ -1898,81 +1911,85 @@ struct ClipboardTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            SectionHeader(L("Clipboard History"))
-
-            Toggle(L("enable history clipboard"), isOn: $viewModel.enableHistoryClipboard)
+        SettingsPage {
+            SettingsSection(title: L("Clipboard History")) {
+                SettingsCard {
+                    SettingsRow(L("enable history clipboard")) {
+                        TrailingSwitch(isOn: $viewModel.enableHistoryClipboard)
+                    }
+                }
+            }
 
             if viewModel.enableHistoryClipboard {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Storage mode: local file vs RAM
-                    HStack {
-                        Text(L("storage:"))
+                SettingsCard {
+                    SettingsRow(L("storage:")) {
                         Picker("", selection: $viewModel.clipoardStroageLocal) {
                             Text(L("local")).tag(true)
                             Text(L("ram")).tag(false)
                         }
                         .pickerStyle(.segmented)
+                        .labelsHidden()
                         .frame(width: 200)
                     }
-                    .frame(height: 30)
+                }
 
-                    Text(L("Storage limit"))
-                        .font(.headline)
-
-                    HStack {
-                        Toggle(L("Limit top records:"), isOn: $viewModel.enableLimitTop)
-                        Stepper(value: $viewModel.limitTop, in: 1...9999) {
-                            Text("\(viewModel.limitTop)")
-                                .frame(width: 50, alignment: .trailing)
+                SettingsSection(title: L("Storage limit")) {
+                    SettingsCard {
+                        SettingsRow(L("Limit top records:")) {
+                            TrailingSwitch(isOn: $viewModel.enableLimitTop) {
+                                Stepper(value: $viewModel.limitTop, in: 1...9999) {
+                                    Text("\(viewModel.limitTop)")
+                                        .frame(width: 50, alignment: .trailing)
+                                }
+                                .disabled(!viewModel.enableLimitTop)
+                            }
                         }
-                        .disabled(!viewModel.enableLimitTop)
-                    }
-
-                    HStack {
-                        Toggle(L("Limit total records:"), isOn: $viewModel.enableLimitTotal)
-                        Stepper(value: $viewModel.limitTotal, in: 1...999999) {
-                            Text("\(viewModel.limitTotal)")
-                                .frame(width: 60, alignment: .trailing)
+                        RowDivider()
+                        SettingsRow(L("Limit total records:")) {
+                            TrailingSwitch(isOn: $viewModel.enableLimitTotal) {
+                                Stepper(value: $viewModel.limitTotal, in: 1...999999) {
+                                    Text("\(viewModel.limitTotal)")
+                                        .frame(width: 60, alignment: .trailing)
+                                }
+                                .disabled(!viewModel.enableLimitTotal)
+                            }
                         }
-                        .disabled(!viewModel.enableLimitTotal)
-                    }
-
-                    HStack {
-                        Toggle(L("Limit save days:"), isOn: $viewModel.enableLimitSaveDays)
-                        Stepper(value: $viewModel.limitSaveDays, in: 1...9999) {
-                            Text("\(viewModel.limitSaveDays)")
-                                .frame(width: 50, alignment: .trailing)
+                        RowDivider()
+                        SettingsRow(L("Limit save days:")) {
+                            TrailingSwitch(isOn: $viewModel.enableLimitSaveDays) {
+                                Stepper(value: $viewModel.limitSaveDays, in: 1...9999) {
+                                    Text("\(viewModel.limitSaveDays)")
+                                        .frame(width: 50, alignment: .trailing)
+                                }
+                                .disabled(!viewModel.enableLimitSaveDays)
+                            }
                         }
-                        .disabled(!viewModel.enableLimitSaveDays)
+                        RowDivider()
+                        SettingsRow(L("keyboard shortcut:")) {
+                            ShortcutRecorder(
+                                text: $viewModel.historyCilpboardListShortcut,
+                                onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
+                            )
+                            .frame(width: 200, height: 28)
+                        }
                     }
+                }
 
-                    Divider()
-
-                    // Global shortcut to show clipboard history list
-                    HStack {
-                        Text(L("keyboard shortcut:"))
-                        ShortcutRecorder(
-                            text: $viewModel.historyCilpboardListShortcut,
-                            onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
-                        )
-                        .frame(width: 200, height: 28)
+                SettingsCard {
+                    SettingsActionRow {
+                        Button(L("show history clipboard")) {
+                            showHistoryList()
+                        }
                     }
+                }
 
-                    Button(L("show history clipboard")) {
-                        showHistoryList()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Divider()
-
-                    HStack {
+                SettingsCard {
+                    SettingsActionRow {
                         Button(L("Clear History")) {
                             confirmThen(L("Are you sure to clear all history clipboard records?")) {
                                 HistoryClipboardManager().clearHistoryList()
                             }
                         }
-                        .buttonStyle(.bordered)
                         .foregroundColor(.red)
 
                         Button(L("Clear Pinned")) {
@@ -1980,7 +1997,6 @@ struct ClipboardTabView: View {
                                 HistoryClipboardManager().clearTop()
                             }
                         }
-                        .buttonStyle(.bordered)
                         .foregroundColor(.red)
 
                         Button(L("Clear All")) {
@@ -1988,24 +2004,23 @@ struct ClipboardTabView: View {
                                 HistoryClipboardManager().clearAll()
                             }
                         }
-                        .buttonStyle(.bordered)
                         .foregroundColor(.red)
-
-                        Spacer()
                     }
                 }
-                .padding(.leading, 16)
             }
 
-            SectionHeader(L("Current Status"))
             let manager = HistoryClipboardManager()
-            HStack {
-                Text(L("Pinned items") + ": \(manager.topCount)")
-                Spacer()
-                Text(L("Total items") + ": \(manager.getCount(isTop: false))")
+            SettingsSection(title: L("Current Status")) {
+                SettingsCard {
+                    SettingsRow(L("Pinned items")) {
+                        Text("\(manager.topCount)").foregroundColor(.secondary)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Total items")) {
+                        Text("\(manager.getCount(isTop: false))").foregroundColor(.secondary)
+                    }
+                }
             }
-            .font(.caption)
-            .foregroundColor(.secondary)
         }
     }
 
@@ -2046,46 +2061,232 @@ struct AboutTabView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Toggle(L("Automatically Check for Updates"), isOn: $viewModel.autoCheckUpdates)
+        SettingsFillingPage {
+            SettingsCard {
+                SettingsRow(L("Automatically Check for Updates")) {
+                    TrailingSwitch(isOn: $viewModel.autoCheckUpdates)
+                }
                 .onChange(of: viewModel.autoCheckUpdates) { _ in
                     NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
                 }
-            Toggle(L("Automatically Download Updates"), isOn: $automaticallyDownloadsUpdates)
+                RowDivider()
+                SettingsRow(L("Automatically Download Updates")) {
+                    TrailingSwitch(isOn: $automaticallyDownloadsUpdates)
+                }
                 .onChange(of: automaticallyDownloadsUpdates) { _ in
                     NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
                 }
+            }
 
-            HStack(spacing: 6) {
-                Text(L("Version:"))
-                Text(versionString)
-                Button(L("Check Now")) {
-                    NotificationCenter.default.post(name: .macStrokeCheckForUpdates, object: nil)
-                }
-                .padding(.leading, 12)
-                Button(L("issues")) {
-                    if let url = URL(string: "https://github.com/mtjo/MacStroke/issues") {
-                        NSWorkspace.shared.open(url)
+            SettingsCard {
+                SettingsRow(L("Version:")) {
+                    HStack(spacing: 8) {
+                        Text(versionString)
+                            .foregroundColor(.secondary)
+                        Button(L("Check Now")) {
+                            NotificationCenter.default.post(name: .macStrokeCheckForUpdates, object: nil)
+                        }
+                        Button(L("issues")) {
+                            if let url = URL(string: "https://github.com/mtjo/MacStroke/issues") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
                     }
                 }
-                Spacer()
+                RowDivider()
+                SettingsRow(L("Author: mtjo.net@gmail.com"))
             }
-            // Original x positions: the version/author rows start 19pt further
-            // right than the checkboxes.
-            .padding(.leading, 19)
-
-            Text(L("Author: mtjo.net@gmail.com"))
-                .padding(.leading, 19)
 
             READMEWebView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 7)
+                .settingsListCard()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
 // MARK: - Shared Components
+//
+// Visual language follows macOS System Settings: a sidebar with rounded
+// selection highlight, a gray page, and white rounded cards that hold
+// label-left / control-right rows separated by full-width dividers.
+
+enum SettingsChrome {
+    /// Width of the sidebar column.
+    static let sidebarWidth: CGFloat = 216
+    /// Max width of the centered content column.
+    static let contentWidth: CGFloat = 680
+    static let cornerRadius: CGFloat = 8
+
+    static func dynamic(light: CGFloat, dark: CGFloat) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return NSColor(calibratedWhite: isDark ? dark : light, alpha: 1)
+        })
+    }
+
+    static let sidebarBackground = dynamic(light: 0.93, dark: 0.11)
+    static let pageBackground = dynamic(light: 0.96, dark: 0.14)
+    static let cardBackground = dynamic(light: 1.0, dark: 0.21)
+    static let cardBorder = Color.primary.opacity(0.08)
+}
+
+/// Page container for form tabs: scrolls, centers the content column and
+/// paints the System Settings background.
+struct SettingsPage<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                content()
+            }
+            .frame(maxWidth: SettingsChrome.contentWidth, alignment: .leading)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
+        }
+        .background(SettingsChrome.pageBackground)
+    }
+}
+
+/// Page container for tabs whose table must fill the viewport (no scrolling).
+struct SettingsFillingPage<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(SettingsChrome.pageBackground)
+    }
+}
+
+/// A bold group title above a card.
+struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .padding(.leading, 2)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Rounded container holding rows.
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content()
+        }
+        .frame(maxWidth: .infinity)
+        .background(SettingsChrome.cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous)
+                .strokeBorder(SettingsChrome.cardBorder, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous))
+    }
+}
+
+/// One row inside a card: title on the leading edge, control on the trailing edge.
+struct SettingsRow<Trailing: View>: View {
+    let title: String
+    var subtitle: String?
+    var titleWidth: CGFloat? = nil
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(_ title: String, subtitle: String? = nil, titleWidth: CGFloat? = nil,
+         @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.title = title
+        self.subtitle = subtitle
+        self.titleWidth = titleWidth
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title)
+                .frame(width: titleWidth, alignment: .leading)
+            Spacer(minLength: 12)
+            trailing()
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 40)
+    }
+}
+
+extension SettingsRow where Trailing == EmptyView {
+    init(_ title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.trailing = { EmptyView() }
+    }
+}
+
+/// Divider between rows of a card.
+struct RowDivider: View {
+    var body: some View {
+        Divider().padding(.leading, 14)
+    }
+}
+
+/// Card row that only hosts actions (buttons), leading-aligned.
+struct SettingsActionRow<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        HStack(spacing: 8) {
+            content()
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 40)
+    }
+}
+
+extension View {
+    /// Wraps a table/list so it reads as a System Settings card.
+    func settingsListCard() -> some View {
+        background(SettingsChrome.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous)
+                    .strokeBorder(SettingsChrome.cardBorder, lineWidth: 1)
+            )
+    }
+}
+
+/// Trailing switch for a row (System Settings puts the label on the left).
+struct TrailingSwitch<Extra: View>: View {
+    var isOn: Binding<Bool>
+    @ViewBuilder var extra: () -> Extra
+
+    var body: some View {
+        HStack(spacing: 10) {
+            extra()
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+    }
+}
+
+extension TrailingSwitch where Extra == EmptyView {
+    init(isOn: Binding<Bool>) {
+        self.isOn = isOn
+        self.extra = { EmptyView() }
+    }
+}
 
 struct SectionHeader: View {
     let title: String
@@ -2096,7 +2297,7 @@ struct SectionHeader: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 20, weight: .semibold))
+            .font(.system(size: 13, weight: .bold))
             .foregroundColor(.primary)
     }
 }
