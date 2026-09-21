@@ -186,6 +186,99 @@ public struct Rule: Codable {
         self.filter = filter
         self.filterType = filterType
     }
+
+    // MARK: - Persistence (original RulesList.m dictionary schema)
+
+    /// Persisted keys mirror the original rule dictionary exactly:
+    /// direction / data / filter / filterType / actionType / text / password /
+    /// shortcut_code / shortcut_flag / apple_script_id / note /
+    /// trigger_on_every_match. In-memory-only fields (description,
+    /// minSimilarityScore, isEnabled) are not stored.
+    private enum RuleKeys: String, CodingKey {
+        case direction, data, filter, filterType, actionType, text, password
+        case shortcutCode = "shortcut_code"
+        case shortcutFlag = "shortcut_flag"
+        case appleScriptId = "apple_script_id"
+        case note
+        case triggerOnEveryMatch = "trigger_on_every_match"
+    }
+
+    private struct StoredPoint: Codable {
+        let x: Double
+        let y: Double
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: RuleKeys.self)
+        name = try c.decode(String.self, forKey: .direction)
+        let points = try c.decode([StoredPoint].self, forKey: .data)
+        template = GestureTemplate(
+            points: points.map { GesturePoint(x: $0.x, y: $0.y) },
+            name: name
+        )
+        filter = try c.decode(String.self, forKey: .filter)
+        filterType = try c.decode(Int.self, forKey: .filterType) == 1 ? "regex" : "wildcard"
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        description = note
+        minSimilarityScore = 30.0
+        isEnabled = true
+        triggerOnEveryMatch = try c.decodeIfPresent(Bool.self, forKey: .triggerOnEveryMatch) ?? false
+
+        let text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+        let password = try c.decodeIfPresent(String.self, forKey: .password) ?? ""
+        switch try c.decode(Int.self, forKey: .actionType) {
+        case 1:
+            action = .applescript(try c.decodeIfPresent(String.self, forKey: .appleScriptId) ?? "")
+        case 2:
+            action = .text(text)
+        case 3:
+            action = .password(password)
+        default:
+            action = .shortcut(
+                keyCode: UInt16(try c.decodeIfPresent(Int.self, forKey: .shortcutCode) ?? 0),
+                flags: UInt(try c.decodeIfPresent(Int.self, forKey: .shortcutFlag) ?? 0)
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: RuleKeys.self)
+        try c.encode(name, forKey: .direction)
+        try c.encode(template.points.map { StoredPoint(x: $0.x, y: $0.y) }, forKey: .data)
+        try c.encode(filter, forKey: .filter)
+        try c.encode(filterType == "regex" ? 1 : 0, forKey: .filterType)
+        // Original always stores text/password, empty when unused.
+        var text = ""
+        var password = ""
+        switch action {
+        case .text(let t): text = t
+        case .password(let p): password = p
+        default: break
+        }
+        try c.encode(text, forKey: .text)
+        try c.encode(password, forKey: .password)
+        switch action {
+        case .applescript(let reference):
+            try c.encode(1, forKey: .actionType)
+            try c.encode(reference, forKey: .appleScriptId)
+        case .text:
+            try c.encode(2, forKey: .actionType)
+        case .password:
+            try c.encode(3, forKey: .actionType)
+        case .shortcut(let keyCode, let flags):
+            try c.encode(0, forKey: .actionType)
+            try c.encode(Int(keyCode), forKey: .shortcutCode)
+            try c.encode(Int(flags), forKey: .shortcutFlag)
+        case .keyPress, .mouseClick, .copyToClipboard, .none:
+            try c.encode(0, forKey: .actionType)
+            try c.encode(0, forKey: .shortcutCode)
+            try c.encode(0, forKey: .shortcutFlag)
+        }
+        try c.encode(note, forKey: .note)
+        if triggerOnEveryMatch {
+            try c.encode(true, forKey: .triggerOnEveryMatch)
+        }
+    }
 }
 
 /// A rule engine that matches incoming strokes against defined rules.

@@ -59,7 +59,7 @@ public final class RuleStore: ObservableObject {
     /// Add a rule.
     /// - Parameter rule: The rule to add.
     public func add(_ rule: Rule) {
-        rules.append(rule)
+        rules.insert(rule, at: 0)   // original: insertObject:atIndex:0
         save()
     }
 
@@ -187,7 +187,9 @@ public final class RuleStore: ObservableObject {
             )
         }
 
-        return [
+        // Original reInit inserts each rule at index 0, so the stored list is
+        // the reverse of the declaration order (NextTab first … password last).
+        let list: [Rule] = [
             rule(
                 name: "Password",
                 description: "Input password",
@@ -295,6 +297,7 @@ public final class RuleStore: ObservableObject {
                 note: "Next Tab"
             ),
         ]
+        return list.reversed()
     }
 
     /// Check if a rule name already exists.
