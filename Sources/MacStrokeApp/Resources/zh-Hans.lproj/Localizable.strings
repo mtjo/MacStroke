@@ -268,3 +268,14 @@
 "Edit in External Editor" = "在外部编辑器编辑";
 "Stop" = "停止";
 "Select a AppleScript first!" = "请先选择一个AppleScript！";
+"Gesture Path" = "手势轨迹";
+"Not selected" = "未选择";
+"Drawn Gesture" = "已绘制的手势";
+"No gesture drawn yet" = "尚未绘制手势，可绘制或选择预设";
+"Draw On Screen" = "在屏幕上绘制";
+"Cancel Recording" = "取消录制";
+"Name cannot be empty" = "名称不能为空";
+"Rule name already exists" = "该名称已存在";
+"Filter hint" = "多个 Bundle ID 用 | 分隔；* 匹配所有应用，留空则不匹配任何应用";
+"Show" = "显示";
+"Hide" = "隐藏";

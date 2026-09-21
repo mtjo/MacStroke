@@ -90,9 +90,9 @@ swift test --list-tests
 - **Sources/Preferences/** —
   - `UserPreferences`（`ObservableObject`）将每个设置绑定到 `PreferencesStorage`（`StorageKey` enum 中的 UserDefaults key）
   - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、About（8 个，对齐原版 `AppPrefsWindowController.setupToolbar`；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
-  - `DrawGestureView` — 用于在规则表格中渲染手势缩略图的 `NSViewRepresentable` 包装器，内部是 AppKit `DrawGesture`（`NSView`）
-  - `GestureTemplatePreview` / `PresetGesturePickerView` — 预设手势选择（A–Z、方向箭头、方框符号）以及 "Apply to Selected" 流程
-  - 规则表格列：Enabled、Gesture（DrawGestureView 56×56）、Name、Description、Action、App Filter
+  - 视觉风格参照 macOS 系统设置：`SettingsChrome` 常量 + `SettingsPage` / `SettingsFillingPage`（含表格的页不滚动）+ `SettingsSection` / `SettingsCard` / `SettingsRow` / `TrailingSwitch`；侧栏圆角高亮、灰底页面、白色圆角卡片、左标题右控件
+  - 规则表格列：Image（`GestureThumb` 84pt 行高，双击走"屏幕绘制"）、Gesture（名称，双击打开编辑器）、Type、Action、Filter、Description
+  - `RuleEditorView` — 添加/编辑规则的弹层（原版是表格就地编辑，Swift Table 只读所以改为 sheet）；字段仅名称/说明/手势轨迹/过滤/动作类型+内容，原版没有的每规则开关（启用、最小分数、持续触发、正则）不再暴露，保存时原样保留旧值
 
 - **Sources/Storage/** —
   - `PreferencesStorage` — 对 `UserDefaults` 的薄封装，提供类型化 getter/setter 以及 `StorageDefaults` 常量
@@ -123,8 +123,7 @@ swift test --list-tests
 
 - **Rule 是不可变的** — 不要修改 `rule.template` 或其他 `let` 属性；始终构造新的 `Rule` 并调用 `RuleStore.update(newRule)`
 - **DrawGesture 缩放** — `computeScaledPoints` 使用 `bounds.width/height`（不是硬编码常量）；`layout()` 覆写会在 bounds 变化时重新计算；`clipsToBounds = true`，背景透明
-- **PreferencesView 规则表格** — Gesture 列使用 `DrawGestureView`（frame 56×56）；表格高度填充可用空间（滚动视图上使用 `maxHeight: .infinity`）
-- **手势录入** — 点击手势缩略图选中规则 → "Draw Gesture" 弹窗确认 → 发送 `.macStrokeRecordGesture`（userInfo 携带规则名）→ AppDelegate 进入录制模式 → 用户在屏幕上画手势 → `onGestureRecorded` 写入规则并广播 `.macStrokeRuleStoreDidChange`
+- **手势录入** — 规则表 Image 列双击（或编辑器里的"在屏幕上绘制"按钮）→ 发送 `.macStrokeRecordGesture`（userInfo 带规则名；编辑器发起时额外带 `deferStoreUpdate: true`）→ AppDelegate 进入录制模式 → 画完 `onGestureRecorded` 写回规则并广播 `.macStrokeGestureDidRecord`（编辑器据此回填轨迹）。编辑器发起的录制只回填表单、不写库，点保存才落盘
 - **Toast 位置** — `ToastPosition` 原始值对齐原版 `notePostion`：0=跟随鼠标、1=屏幕中央、2=右上、3=右下、4=左上、5=左下
 - **FinderSync 通信** — 主 app → 扩展：`SyncSharedDefaultsNotification`（object=主 app bundleID，userInfo 带开关与菜单标题，扩展收到后写入自己的 UserDefaults）；扩展启动时发 `RequestObservingPathNotification`，主 app 回 `ObservingPathSetNotification`（根路径 "/"）；扩展 → 主 app：`CustomMessageReceivedNotification`（object=JSON 字符串，解析 operation/path/items）。主 app 端解析在 `RightClickMenuManager.customMessageReceivedFromFinder`
 - **无障碍权限** — 启动时通过 `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` 检查；会显示带 "Open System Settings" 按钮的模态提示

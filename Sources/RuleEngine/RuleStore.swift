@@ -81,6 +81,19 @@ public final class RuleStore: ObservableObject {
         return nil
     }
 
+    /// Replace the rule currently stored under `oldName` with `rule`, which may
+    /// carry a different name. The rules list is positional (original: rows are
+    /// addressed by index), so renaming has to be explicit here or the edit
+    /// would silently drop the new values.
+    /// - Returns: true when the rule was found and replaced.
+    @discardableResult
+    public func replace(named oldName: String, with rule: Rule) -> Bool {
+        guard let index = rules.firstIndex(where: { $0.name == oldName }) else { return false }
+        rules[index] = rule
+        save()
+        return true
+    }
+
     /// Remove a rule by name.
     /// - Parameter name: The rule name to remove.
     /// - Returns: The removed rule, or nil if not found.
@@ -306,9 +319,12 @@ public final class RuleStore: ObservableObject {
     }
 
     /// Check if a rule name already exists.
-    /// - Parameter name: The rule name to check.
-    /// - Returns: true if a rule with this name exists.
-    public func exists(named name: String) -> Bool {
-        rules.contains { $0.name == name }
+    /// - Parameters:
+    ///   - name: The rule name to check.
+    ///   - oldName: A name to ignore, so editing a rule without renaming it
+    ///     does not collide with itself (rule names are the UI's row identity).
+    /// - Returns: true if another rule already uses this name.
+    public func exists(named name: String, excluding oldName: String = "") -> Bool {
+        rules.contains { $0.name == name && $0.name != oldName }
     }
 }

@@ -266,3 +266,14 @@
 "Edit in External Editor" = "Edit in External Editor";
 "Stop" = "Stop";
 "Select a AppleScript first!" = "Select a AppleScript first!";
+"Gesture Path" = "Gesture Path";
+"Not selected" = "Not selected";
+"Drawn Gesture" = "Drawn Gesture";
+"No gesture drawn yet" = "No gesture drawn yet; draw one or pick a preset";
+"Draw On Screen" = "Draw On Screen";
+"Cancel Recording" = "Cancel Recording";
+"Name cannot be empty" = "Name cannot be empty";
+"Rule name already exists" = "Rule name already exists";
+"Filter hint" = "Separate bundle IDs with |; * matches every app, empty matches none";
+"Show" = "Show";
+"Hide" = "Hide";

@@ -33,6 +33,9 @@ public extension Notification.Name {
     static let macStrokeRecordGesture = Notification.Name("MacStrokeRecordGesture")
     /// Leave gesture-recording mode without storing anything.
     static let macStrokeCancelRecordGesture = Notification.Name("MacStrokeCancelRecordGesture")
+    /// A screen-drawn stroke finished; userInfo carries ["ruleName": String,
+    /// "points": [GesturePoint]] so an open rule editor can capture it too.
+    static let macStrokeGestureDidRecord = Notification.Name("MacStrokeGestureDidRecord")
 }
 
 struct MacStrokeApp {
@@ -378,6 +381,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func recordGesture(_ notification: Notification) {
         guard let ruleName = notification.userInfo?["ruleName"] as? String else { return }
+        // The rule editor keeps the drawn path in its own form state and only
+        // writes it on Save, so a cancelled edit must not touch the store.
+        let deferStoreUpdate = (notification.userInfo?["deferStoreUpdate"] as? Bool) ?? false
         pendingRecordRuleName = ruleName
         canvasManager?.isRecordingGesture = true
         canvasManager?.onGestureRecorded = { [weak self] points in
@@ -385,7 +391,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             var stroke = Stroke(capacity: points.count)
             for p in points { stroke.addPoint(p) }
             let template = GestureTemplate(from: stroke, name: "Recorded")
-            if let store = self.ruleStore, let old = store.rule(named: name) {
+            NotificationCenter.default.post(
+                name: .macStrokeGestureDidRecord,
+                object: nil,
+                userInfo: ["ruleName": name, "points": stroke.points])
+            if !deferStoreUpdate, let store = self.ruleStore, let old = store.rule(named: name) {
                 let newRule = Rule(
                     name: old.name,
                     description: old.description,
