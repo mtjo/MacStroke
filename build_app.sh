@@ -32,6 +32,8 @@ chmod +x "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 cp Sources/MacStrokeApp/Resources/menu_icon_16x16.png "${APP_DIR}/Contents/Resources/"
 cp Sources/MacStrokeApp/Resources/menu_icon_disabled_16x16.png "${APP_DIR}/Contents/Resources/"
 cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APP_DIR}/Contents/Resources/"
+# 偏好窗口侧边栏图标（沿用原版素材）
+cp Sources/MacStrokeApp/Resources/RightClick.png "${APP_DIR}/Contents/Resources/"
 
 # Copy main app localization (DO NOT copy FinderSync's - it has its own bundle)
 cp -R Sources/MacStrokeApp/Resources/en.lproj "${APP_DIR}/Contents/Resources/"

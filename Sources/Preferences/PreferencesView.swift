@@ -63,6 +63,16 @@ enum PreferencesTab: CaseIterable {
         case .about: return "info.circle"
         }
     }
+
+    /// Bundle image shipped by the original preferences toolbar
+    /// (AppPrefsWindowController.setupToolbar), used when no SF Symbol of the
+    /// same meaning renders on this system.
+    var iconResourceName: String? {
+        switch self {
+        case .rightClick: return "RightClick"
+        default: return nil
+        }
+    }
 }
 
 // MARK: - Check-for-updates notification (handled by the AppDelegate)
@@ -267,7 +277,7 @@ struct TabButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: tab.systemImage)
+                icon
                     .font(.system(size: 16, weight: .medium))
                     .frame(width: 24)
                 Text(tab.title)
@@ -283,6 +293,18 @@ struct TabButton: View {
         }
         .buttonStyle(.plain)
         .foregroundColor(isSelected ? .accentColor : .primary)
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if let name = tab.iconResourceName, let nsImage = NSImage(named: name) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 18, height: 18)
+        } else {
+            Image(systemName: tab.systemImage)
+        }
     }
 }
 

@@ -155,7 +155,7 @@
 "Top Left" = "左上";
 "Bottom Left" = "左下";
 
-"RightClick" = "右键";
+"RightClick" = "模拟右键";
 "warning!" = "警告！";
 "Ok" = "确定";
 "Are you sure you want to clear all the rules?" = "确定要清除所有规则吗？";
