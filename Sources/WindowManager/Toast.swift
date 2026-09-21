@@ -194,13 +194,17 @@ public final class ToastManager {
         iconView.isHidden = hiddenIcon
         container.addSubview(iconView)
 
-        // Message label: centered text, leading labelMargin, trailing 5
+        // Message label: centered text, leading labelMargin, trailing 5.
+        // The xib gives the label no height constraint (only centerY), so it
+        // keeps its intrinsic font line height — a fixed 40pt frame would clip
+        // large note fonts (e.g. Monaco 40 needs ~48pt).
         let label = NSTextField(labelWithString: toast.message)
         label.alignment = .center
         label.font = font
         label.textColor = textColor
-        label.frame = NSRect(x: labelMargin, y: (containerHeight - 40) / 2,
-                             width: containerWidth - labelMargin - 5, height: 40)
+        let labelHeight = CGFloat(max(1, lineCount)) * NSLayoutManager().defaultLineHeight(for: font)
+        label.frame = NSRect(x: labelMargin, y: (containerHeight - labelHeight) / 2,
+                             width: containerWidth - labelMargin - 5, height: labelHeight)
         label.lineBreakMode = .byWordWrapping
         label.maximumNumberOfLines = 0
         container.addSubview(label)

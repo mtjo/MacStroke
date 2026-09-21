@@ -41,13 +41,9 @@ cp -R Sources/MacStrokeApp/Resources/zh-Hans.lproj "${APP_DIR}/Contents/Resource
 cp Sources/MacStrokeApp/Resources/AppleScript.sdef "${APP_DIR}/Contents/Resources/"
 cp Sources/MacStrokeApp/Resources/dsa_pub.pem "${APP_DIR}/Contents/Resources/"
 
-# App Icon (from original project)
-cp /Users/mtjo/work/MacStroke/MacStroke/Images.xcassets/AppIcon.appiconset/Danrabbit-Elementary-Devices-mouse.icns \
-   "${APP_DIR}/Contents/Resources/AppIcon.icns"
-
-# 3. Sparkle framework
-cp /Users/mtjo/work/MacStroke/MacStroke/Images.xcassets/AppIcon.appiconset/Danrabbit-Elementary-Devices-mouse.icns \
-   "${APP_DIR}/Contents/Resources/AppIcon.icns"
+# App Icon：由原版 AppIcon.appiconset/logo.png（鼠标+三角结 logo）生成，
+# 已入库，避免依赖外部工程路径。
+cp Sources/MacStrokeApp/Resources/AppIcon.icns "${APP_DIR}/Contents/Resources/AppIcon.icns"
 
 # 3. Sparkle framework - copy ENTIRE framework with correct structure
 SPARKLE_SRC=$(find "${BUILD_DIR}" -name "Sparkle.framework" -type d | head -1)
