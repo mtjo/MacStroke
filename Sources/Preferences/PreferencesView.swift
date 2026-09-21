@@ -2302,25 +2302,19 @@ struct SectionHeader: View {
     }
 }
 
-// MARK: - README 网页（原版 About 页内嵌 README.html，AppPrefsWindowController.m:122）
+// MARK: - README 网页（原版 About 页内嵌 README.html，AppPrefsWindowController.m:126）
 
-/// WKWebView wrapper loading the localized README.html from the bundle.
+/// 原版用的是同进程 WebView（xib 里的 webView outlet），这里保持一致：
+/// WKWebView 每次都要拉起 WebContent 子进程，首次打开 About 会卡近 1 秒。
 private struct READMEWebView: NSViewRepresentable {
-    func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        if let url = Bundle.main.url(forResource: "README", withExtension: "html") {
-            // README.html is an HTML fragment without a charset declaration;
-            // wrap it as UTF-8 so WKWebView doesn't garble the Chinese text.
-            let body = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            let html = """
-            <!DOCTYPE html>
-            <html><head><meta charset="utf-8"></head>
-            <body style="font-family: -apple-system; margin: 16px;">\(body)</body></html>
-            """
-            webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+    func makeNSView(context: Context) -> WebView {
+        let webView = WebView()
+        if let url = Bundle.main.url(forResource: "README", withExtension: "html"),
+           let body = try? String(contentsOf: url, encoding: .utf8) {
+            webView.mainFrame.loadHTMLString(body, baseURL: url)
         }
         return webView
     }
 
-    func updateNSView(_ nsView: WKWebView, context: Context) {}
+    func updateNSView(_ nsView: WebView, context: Context) {}
 }
