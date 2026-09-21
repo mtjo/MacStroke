@@ -44,7 +44,7 @@ public final class ShortcutMonitor {
         }
 
         let callback: CGEventTapCallBack = { _, type, event, refcon in
-            guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
+            guard let refcon = refcon else { return Unmanaged.passRetained(event) }
             let selfPtr = Unmanaged<ShortcutMonitor>.fromOpaque(refcon).takeUnretainedValue()
             return selfPtr.handleEvent(type: type, event: event)
         }
@@ -133,21 +133,21 @@ public final class ShortcutMonitor {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
             print("[ShortcutMonitor] Tap disabled by system, re-armed")
-            return Unmanaged.passUnretained(event)
+            return Unmanaged.passRetained(event)
         }
-        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
+        guard type == .keyDown else { return Unmanaged.passRetained(event) }
 
         let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let eventFlags = UInt(event.flags.rawValue)
 
         // Check if key code matches (if keyCode is set)
         if keyCode != 0 && eventKeyCode != keyCode {
-            return Unmanaged.passUnretained(event)
+            return Unmanaged.passRetained(event)
         }
 
         // Check if modifier flags match, ignoring device-dependent bits
         if (eventFlags & Self.modifierMask) != (flags & Self.modifierMask) {
-            return Unmanaged.passUnretained(event)
+            return Unmanaged.passRetained(event)
         }
 
         // Shortcut matched!
@@ -157,6 +157,6 @@ public final class ShortcutMonitor {
         }
 
         // Allow the event to propagate normally (don't consume it)
-        return Unmanaged.passUnretained(event)
+        return Unmanaged.passRetained(event)
     }
 }
