@@ -269,14 +269,15 @@ public final class RuleStore: ObservableObject {
                 name: "PageUp",
                 description: "Page up",
                 gesture: "I Shape Revered",
-                action: .shortcut(keyCode: keyPageUp, flags: 0),
+                // Original quirk: RulesList.m passes kVK_PageUp as the flag.
+                action: .shortcut(keyCode: keyPageUp, flags: UInt(keyPageUp)),
                 note: "PageUp"
             ),
             rule(
                 name: "PageDown",
                 description: "Page down",
                 gesture: "I Shape",
-                action: .shortcut(keyCode: keyPageDown, flags: 0),
+                action: .shortcut(keyCode: keyPageDown, flags: UInt(keyPageDown)),
                 note: "PageDown"
             ),
             rule(
