@@ -171,9 +171,10 @@ public struct PreferencesView: View {
 
                 Divider()
 
-                // Content area. The rules / AppleScript tabs host a Table that
-                // must fill the page (original xib layout) — a ScrollView would
-                // collapse it to its minimum height, so those two skip it.
+                // Content area. The rules / AppleScript / filters / right-click
+                // tabs host a Table that must fill the page (original xib
+                // layout) — a ScrollView would collapse it to its minimum
+                // height and leave blank space below, so those skip it.
                 Group {
                     if selectedTab == .rules {
                         RulesTabView(
@@ -182,16 +183,24 @@ public struct PreferencesView: View {
                             showingRuleEditor: $showingRuleEditor,
                             editingRule: $editingRule
                         )
-                        .padding(24)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .pageLayout()
                     } else if selectedTab == .appleScript {
                         AppleScriptTabView(
                             scripts: $scripts,
                             showingScriptEditor: $showingScriptEditor,
                             editingScript: $editingScript
                         )
-                        .padding(24)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .pageLayout()
+                    } else if selectedTab == .filters {
+                        FiltersTabView(viewModel: viewModel)
+                            .pageLayout()
+                    } else if selectedTab == .rightClick {
+                        RightClickTabView(
+                            viewModel: viewModel,
+                            rightClickApps: $rightClickApps,
+                            newRightClickApp: $newRightClickApp
+                        )
+                        .pageLayout()
                     } else {
                         ScrollView {
                             VStack(spacing: 0) {
@@ -214,7 +223,7 @@ public struct PreferencesView: View {
                                     AboutTabView(viewModel: viewModel)
                                 case .help:
                                     HelpTabView()
-                                case .rules, .appleScript:
+                                case .rules, .appleScript, .filters, .rightClick:
                                     EmptyView()
                                 }
                             }
@@ -262,6 +271,14 @@ public struct PreferencesView: View {
             // A screen-drawn gesture was recorded into a rule — refresh.
             ruleStore.load()
         }
+    }
+}
+
+/// Page chrome for tabs that host a list filling the whole window height.
+private extension View {
+    func pageLayout() -> some View {
+        padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -1601,7 +1618,7 @@ struct FiltersTabView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(minHeight: 280)
+            .frame(minHeight: 280, maxHeight: .infinity)
 
             HStack(spacing: 12) {
                 Button(action: addRunningApp) {
@@ -1632,8 +1649,6 @@ struct FiltersTabView: View {
                 Button(L("Apply")) { persistLists() }
                     .buttonStyle(.borderedProminent)
             }
-
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
@@ -1775,7 +1790,7 @@ struct RightClickTabView: View {
                         .font(.headline)
                         .foregroundColor(.secondary)
                 }
-                .frame(maxWidth: .infinity, minHeight: 200)
+                .frame(maxWidth: .infinity, minHeight: 200, maxHeight: .infinity)
             } else {
                 Table(items) {
                     TableColumn(L("Bundle ID / Pattern")) { item in
@@ -1796,7 +1811,7 @@ struct RightClickTabView: View {
                     .width(50)
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(minHeight: 300)
+                .frame(maxHeight: .infinity)
             }
 
             HStack {
