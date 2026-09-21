@@ -100,15 +100,23 @@ public final class FinderSyncExtensionController: FIFinderSync {
     /// UserDefaults.didChangeNotification refreshes the flags).
     @objc private func syncSharedDefaults(_ notification: Notification) {
         guard let data = notification.userInfo else { return }
-        sharedDefaults.set(Int(data["enableRightClickMenu"] as? String ?? "0") != 0, forKey: "enableRightClickMenu")
-        sharedDefaults.set(Int(data["enableNewFile"] as? String ?? "0") != 0, forKey: "enableNewFile")
-        sharedDefaults.set(Int(data["enableOpenInTerminal"] as? String ?? "0") != 0, forKey: "enableOpenInTerminal")
-        sharedDefaults.set(Int(data["enableCopyFilePath"] as? String ?? "0") != 0, forKey: "enableCopyFilePath")
+        sharedDefaults.set(intFlag(data["enableRightClickMenu"]) != 0, forKey: "enableRightClickMenu")
+        sharedDefaults.set(intFlag(data["enableNewFile"]) != 0, forKey: "enableNewFile")
+        sharedDefaults.set(intFlag(data["enableOpenInTerminal"]) != 0, forKey: "enableOpenInTerminal")
+        sharedDefaults.set(intFlag(data["enableCopyFilePath"]) != 0, forKey: "enableCopyFilePath")
         if let items = data["items"] as? String {
             sharedDefaults.set(items, forKey: "items")
         }
         sharedDefaults.synchronize()
         defaultsChanged()
+    }
+
+    /// Original uses `intValue` on the payload, which accepts both the "1"/"0"
+    /// strings the main app sends and plain numbers.
+    private func intFlag(_ value: Any?) -> Int {
+        if let number = value as? NSNumber { return number.intValue }
+        if let string = value as? String { return Int((string as NSString).intValue) }
+        return 0
     }
 
     /// Receive the observing root from the main app (original: setRoot).

@@ -38,17 +38,21 @@ public final class RightClickMenuManager {
     /// and sync shared defaults.
     public func initFinderSyncExtension() {
         let center = DistributedNotificationCenter.default()
+        // `suspensionBehavior: .deliverImmediately`: as a background agent the app
+        // gets throttled, and the default (coalescing) behaviour drops requests.
         center.addObserver(
             self,
             selector: #selector(rootPathRequested(_:)),
             name: Notification.Name("RequestObservingPathNotification"),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
         center.addObserver(
             self,
             selector: #selector(customMessageReceivedFromFinder(_:)),
             name: Notification.Name("CustomMessageReceivedNotification"),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
         syncSharedDefaultsToFinderSyncExtension()
     }
@@ -70,13 +74,19 @@ public final class RightClickMenuManager {
         send(
             "SyncSharedDefaultsNotification",
             data: [
-                "enableRightClickMenu": "\(enableRightClickMenu)",
-                "enableNewFile": "\(enableNewFile)",
-                "enableOpenInTerminal": "\(enableOpenInTerminal)",
-                "enableCopyFilePath": "\(enableCopyFilePath)",
+                "enableRightClickMenu": RightClickMenuManager.flagString(enableRightClickMenu),
+                "enableNewFile": RightClickMenuManager.flagString(enableNewFile),
+                "enableOpenInTerminal": RightClickMenuManager.flagString(enableOpenInTerminal),
+                "enableCopyFilePath": RightClickMenuManager.flagString(enableCopyFilePath),
                 "items": items
             ]
         )
+    }
+
+    /// The original sends these as `%hhd` (so "1"/"0"), and the extension parses
+    /// them with `intValue` — "true"/"false" would both read back as 0.
+    private static func flagString(_ value: Bool) -> String {
+        value ? "1" : "0"
     }
 
     /// Enable the FinderSync extension
