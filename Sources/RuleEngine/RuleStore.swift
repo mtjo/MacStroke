@@ -107,12 +107,12 @@ public final class RuleStore: ObservableObject {
         return nil
     }
 
-    /// Match a stroke against rules, with optional bundle ID filtering.
+    /// Match a stroke against rules, filtered by the frontmost bundle ID.
     /// - Parameters:
     ///   - stroke: The stroke to test
-    ///   - bundleID: The current application's bundle ID
+    ///   - bundleID: The frontmost application's bundle ID ("" when it has none)
     /// - Returns: The matching rule and its similarity score, or nil if no match.
-    public func match(stroke: Stroke, bundleID: String? = nil) -> (rule: Rule, score: Double)? {
+    public func match(stroke: Stroke, bundleID: String) -> (rule: Rule, score: Double)? {
         // Use RuleEngine's match method
         // Create a temporary rule engine with our rules
         let engine = RuleEngine()
@@ -183,7 +183,6 @@ public final class RuleStore: ObservableObject {
 
         func rule(
             name: String,
-            description: String,
             gesture: String,
             action: RuleAction,
             note: String,
@@ -193,7 +192,9 @@ public final class RuleStore: ObservableObject {
             let stroke = templateByName[gesture] ?? templateByName["A Shape"]!
             return Rule(
                 name: name,
-                description: description,
+                // Original rules have no separate description: the note doubles
+                // as it.
+                description: note,
                 template: GestureTemplate(from: stroke, name: gesture),
                 minSimilarityScore: 30.0,
                 action: action,
@@ -209,85 +210,74 @@ public final class RuleStore: ObservableObject {
         // the reverse of the declaration order (NextTab first … password last).
         let list: [Rule] = [
             rule(
-                name: "Password",
-                description: "Input password",
+                // Original stores the direction lower-case: "password".
+                name: "password",
                 gesture: "P Shape Revered",
                 action: .password("12345678"),
                 note: "input password"
             ),
             rule(
                 name: "Email",
-                description: "Input e-mail",
                 gesture: "M Shape",
                 action: .text("mtjo.net@gmail.com"),
                 note: "input e-mail"
             ),
             rule(
                 name: "Back",
-                description: "Navigate back",
                 gesture: "\u{2190}",
                 action: .shortcut(keyCode: keyLeftArrow, flags: cmd),
                 note: "Back"
             ),
             rule(
                 name: "Next",
-                description: "Navigate next",
                 gesture: "\u{2192}",
                 action: .shortcut(keyCode: keyRightArrow, flags: cmd),
                 note: "Next"
             ),
             rule(
                 name: "MinSizeAll",
-                description: "Minimize all windows",
                 gesture: "\u{2198}",
                 action: .shortcut(keyCode: keyM, flags: cmd | option),
                 note: "Min Size All Windows"
             ),
             rule(
                 name: "MinSize",
-                description: "Minimize window",
                 gesture: "\u{2199}",
                 action: .shortcut(keyCode: keyM, flags: cmd),
                 note: "Min Size Windows"
             ),
             rule(
                 name: "FullScreen",
-                description: "Toggle full screen",
                 gesture: "\u{2197}",
                 action: .shortcut(keyCode: keyF, flags: cmd | control),
                 note: "Full screen"
             ),
             rule(
                 name: "Exit",
-                description: "Exit app",
                 gesture: "L Shape Revered",
                 action: .shortcut(keyCode: keyQ, flags: cmd),
                 note: "Exit App"
             ),
             rule(
                 name: "CloseTab",
-                description: "Close tab",
                 gesture: "L Shape",
                 action: .shortcut(keyCode: keyW, flags: cmd),
                 note: "Close Tab"
             ),
             rule(
                 name: "Paste",
-                description: "Paste",
                 gesture: "V Shape",
                 action: .shortcut(keyCode: keyV, flags: cmd),
                 note: "Paste"
             ),
             rule(
                 name: "SelectAll",
-                description: "Select all",
                 gesture: "A Shape",
                 action: .shortcut(keyCode: keyA, flags: cmd),
                 note: "SelectALL"
             ),
             rule(
                 name: "PageUp",
-                description: "Page up",
                 gesture: "I Shape Revered",
                 // Original quirk: RulesList.m passes kVK_PageUp as the flag.
                 action: .shortcut(keyCode: keyPageUp, flags: UInt(keyPageUp)),
@@ -295,21 +285,18 @@ public final class RuleStore: ObservableObject {
             ),
             rule(
                 name: "PageDown",
-                description: "Page down",
                 gesture: "I Shape",
                 action: .shortcut(keyCode: keyPageDown, flags: UInt(keyPageDown)),
                 note: "PageDown"
             ),
             rule(
                 name: "PrevTab",
-                description: "Previous tab",
                 gesture: "T Shape Revered",
                 action: .shortcut(keyCode: keyLeftBracket, flags: shift | cmd),
                 note: "Prev Tab"
             ),
             rule(
                 name: "NextTab",
-                description: "Next tab",
                 gesture: "F Shape Revered",
                 action: .shortcut(keyCode: keyRightBracket, flags: shift | cmd),
                 note: "Next Tab"

@@ -402,7 +402,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     isEnabled: old.isEnabled,
                     triggerOnEveryMatch: old.triggerOnEveryMatch,
                     filter: old.filter,
-                    filterType: old.filterType
+                    filterType: old.filterType,
+                    spareActions: old.spareActions
                 )
                 store.update(newRule)
                 // Notify the UI to refresh.

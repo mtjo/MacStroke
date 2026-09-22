@@ -73,10 +73,11 @@ swift test --list-tests
   - `Stroke.normalize()` 平移 + 缩放到 `[0,1]²`，计算 `t/dt/alpha`
 
 - **Sources/RuleEngine/** —
-  - `Rule`（不可变 `struct`，所有 `let` 属性）包含 `GestureTemplate`、`RuleAction`、过滤器（通配符/正则 bundle ID）、`minSimilarityScore`
+  - `Rule`（`struct`）包含 `GestureTemplate`、`RuleAction`、过滤器（通配符/正则 bundle ID）、`minSimilarityScore`，以及 `spareActions`（`RuleSpareActions`）：原版每条规则同时保存 `text` / `password` / `apple_script_id` / `shortcut_code`+`shortcut_flag` 四类动作值，切换 `actionType` 只改类型不清空其他字段，`spareActions` 就是为此存在（非当前动作类型的值从同名持久化键解出）；编码时只有当前动作类型对应的键会被写出，与原版 `addRuleWithDirection:` 一致
   - `RuleAction`: `.shortcut(keyCode:flags:)`、`.applescript`、`.text`、`.password`、`.keyPress`、`.mouseClick`、`.copyToClipboard`、`.none`
-  - `RuleEngine.match` 遍历**所有**过滤匹配的规则取**最高分**（对齐原版 `setActionIndex`），并接入全局 `enableGestureMinScore` / `minScore`（默认 85）门槛；`appSuitedRule(bundleID:)` 判断某 app 是否有适用规则
-  - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；`defaultRules()` 提供与原版 `RulesList.reInit` 相同的 15 条默认规则（带修饰键的 shortcut 动作、Reversed 点序反转模板、text/password 动作）
+  - `WildcardMatch.swift`：原版 `utils.m` 的 `wildcardArray` / `wildcardString`，即 `NSPredicate "self LIKE %@"` 语义 —— 整串锚定、`*` 任意串、`?` 单个字符、大小写由两侧 lowercase 实现（不做 trim、不丢弃空片段，因此空 filter 永不匹配）；`BlackWhiteFilter` 与规则 filter 的通配匹配共用此实现（`regex:` 前缀等自创语法已删除）
+  - `RuleEngine.match(stroke:bundleID:)` 的 `bundleID` 必传（无 bundle id 时传 `""`，对齐 `frontBundleName()`），**每条规则的 filter 都会参与判定**；遍历**所有**过滤匹配的规则取**最高分**（对齐原版 `setActionIndex`），并接入全局 `enableGestureMinScore` / `minScore`（默认 85）门槛；`appSuitedRule(bundleID:)` 判断某 app 是否有适用规则
+  - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；`defaultRules()` 提供与原版 `RulesList.reInit` 相同的 15 条默认规则（首条 direction 为小写 `password`，description 即 note，带修饰键的 shortcut 动作、Reversed 点序反转模板、text/password 动作）
   - `ActionExecutor.typeText` 使用 `CGEventKeyboardSetUnicodeString` 模拟键入（对齐原版 `typeSting`）
   - **不可变性**：更新规则时，创建新的 `Rule` 实例并调用 `RuleStore.update()`
 

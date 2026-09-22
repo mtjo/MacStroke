@@ -3,7 +3,7 @@
 //  MacStroke
 //
 //  Black/white list filter for app bundle ID matching.
-//  Supports wildcard patterns (e.g. com.jetbrains.*) and regex.
+//  Patterns use the original's `LIKE` semantics (`*` and `?`, whole-string).
 //
 
 import Foundation
@@ -74,8 +74,8 @@ public final class BlackWhiteFilter: @unchecked Sendable {
 
     /// Match a bundle ID against the configured lists.
     /// Returns true if the bundle ID matches any pattern.
-    /// Supports wildcard patterns (e.g. com.jetbrains.* matches com.jetbrains.Xcode)
-    /// and regex patterns (strings starting with "regex:").
+    /// Original `bundleName:fitWithRules:`: every list item is a `LIKE` pattern
+    /// (`*` / `?`, whole-string, case-folded) — no regex support.
     public func match(bundleName: String) -> Bool {
         let patterns = inWhiteListMode ? whiteList : blackList
         return match(bundleName: bundleName, against: patterns)
@@ -83,48 +83,7 @@ public final class BlackWhiteFilter: @unchecked Sendable {
 
     /// Check if bundleName matches any pattern in the list.
     private func match(bundleName: String, against patterns: [String]) -> Bool {
-        let lowercased = bundleName.lowercased()
-        for pattern in patterns {
-            let trimmed = pattern.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
-            if trimmed.hasPrefix("regex:") {
-                let regexPattern = String(trimmed.dropFirst(6))
-                if matchRegex(regexPattern, against: lowercased) { return true }
-            } else if trimmed.contains("*") {
-                if matchWildcard(trimmed.lowercased(), against: lowercased) { return true }
-            } else {
-                if lowercased == trimmed.lowercased() { return true }
-            }
-        }
-        return false
-    }
-
-    /// Wildcard matching: * matches any sequence of characters.
-    private func matchWildcard(_ pattern: String, against text: String) -> Bool {
-        let patternParts = pattern.components(separatedBy: "*")
-        if patternParts.isEmpty { return true }
-        if !text.hasPrefix(patternParts[0].lowercased()) { return false }
-        var remaining = text.dropFirst(patternParts[0].count)
-        for i in 1..<patternParts.count {
-            if let range = remaining.range(of: patternParts[i].lowercased()) {
-                remaining = remaining.dropFirst(range.lowerBound.utf16Offset(in: remaining))
-                remaining = remaining.dropFirst(patternParts[i].count)
-            } else if i == patternParts.count - 1 {
-                return false
-            }
-        }
-        return true
-    }
-
-    /// Regex matching using NSRegularExpression.
-    private func matchRegex(_ pattern: String, against text: String) -> Bool {
-        do {
-            let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-            let range = NSRange(location: 0, length: text.utf16.count)
-            return regex.firstMatch(in: text, options: [], range: range) != nil
-        } catch {
-            return false
-        }
+        wildcardArray(bundleName, patterns: patterns, ignoreCase: true)
     }
 
     /// Migrate from old "blockFilter" UserDefaults key.

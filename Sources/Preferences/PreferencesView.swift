@@ -872,7 +872,8 @@ struct RulesTabView: View {
             isEnabled: old.isEnabled,
             triggerOnEveryMatch: old.triggerOnEveryMatch,
             filter: old.filter,
-            filterType: old.filterType
+            filterType: old.filterType,
+            spareActions: old.spareActions
         )
         ruleStore.update(newRule)
         NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
@@ -888,20 +889,19 @@ struct RulesTabView: View {
     }
 
     /// Original bottom-bar button: multi-select running apps (AppPicker-
-    /// WindowController) and join their bundle IDs with "|" as the selected
-    /// rule's wildcard filter.
+    /// WindowController) and write the "|"-joined result (each entry followed by
+    /// a pipe) through `setWildFilter:atIndex:`, which also forces the filter
+    /// type back to wildcard. Picking nothing clears the filter.
     private func pickAppForSelectedRule() {
         guard let id = selectedRuleID,
               let idx = ruleStore.rules.firstIndex(where: { $0.name == id }) else { return }
         let oldRule = ruleStore.rules[idx]
 
         let preselected = Set(oldRule.filter
-            .split(whereSeparator: { $0 == "|" || $0 == "\n" || $0 == "\r" })
-            .map(String.init)
+            .components(separatedBy: CharacterSet(charactersIn: "|\n"))
             .filter { !$0.isEmpty })
 
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected),
-              !picked.isEmpty else { return }
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected) else { return }
 
         let newRule = Rule(
             name: oldRule.name,
@@ -912,8 +912,9 @@ struct RulesTabView: View {
             note: oldRule.note,
             isEnabled: oldRule.isEnabled,
             triggerOnEveryMatch: oldRule.triggerOnEveryMatch,
-            filter: picked.joined(separator: "|"),
-            filterType: "wildcard"
+            filter: picked.map { "\($0)|" }.joined(),
+            filterType: "wildcard",
+            spareActions: oldRule.spareActions
         )
         ruleStore.update(newRule)
     }
@@ -1249,6 +1250,12 @@ struct RuleEditorView: View {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// What the rule writes to `apple_script_id`: the picked script's id, or the
+    /// legacy inline source for rules that predate the id reference.
+    private var scriptReference: String {
+        appleScriptId.isEmpty ? appleScriptSource : appleScriptId
+    }
+
     private var nameError: String? {
         if trimmedName.isEmpty { return L("Name cannot be empty") }
         if ruleStore.exists(named: trimmedName, excluding: editingRule?.name ?? "") {
@@ -1269,6 +1276,8 @@ struct RuleEditorView: View {
         name = rule.name
         note = rule.note
         ruleDescription = rule.description
+        // Original writes the filter verbatim (a leading/trailing space simply
+        // stops the pattern from matching).
         filter = rule.filter
         filterType = rule.filterType
         minSimilarityScore = rule.minSimilarityScore
@@ -1278,6 +1287,18 @@ struct RuleEditorView: View {
         strokePoints = rule.template.points
         strokeIsCustom = !availableGestures.contains { $0.name == rule.template.name }
         if strokeIsCustom { templateName = Self.drawnGestureTag }
+
+        // The original keeps every action payload on the rule, so switching the
+        // action type back and forth restores what was typed before.
+        let spare = rule.spareActions
+        textValue = spare.text
+        passwordValue = spare.password
+        if let uuid = UUID(uuidString: spare.appleScriptId), scriptList.index(of: uuid) != nil {
+            appleScriptId = spare.appleScriptId
+        }
+        if spare.shortcutCode != 0 || spare.shortcutFlag != 0 {
+            shortcutKey = "keyCode=\(spare.shortcutCode), flags=\(spare.shortcutFlag)"
+        }
 
         switch rule.action {
         case .keyPress(let key):
@@ -1335,16 +1356,15 @@ struct RuleEditorView: View {
         NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
     }
 
-    /// Original: filter is a "|"-joined list of bundle IDs picked from the
-    /// running apps panel (AppPickerWindowController).
+    /// Original: filter is the picked bundle IDs joined with "|", and every entry
+    /// gets a trailing "|"; picking nothing clears the filter (which then matches
+    /// no app at all — an original quirk).
     private func pickApps() {
         let preselected = Set(filter
-            .split(whereSeparator: { $0 == "|" || $0 == "\n" || $0 == "\r" })
-            .map(String.init)
+            .components(separatedBy: CharacterSet(charactersIn: "|\n"))
             .filter { !$0.isEmpty })
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected),
-              !picked.isEmpty else { return }
-        filter = picked.joined(separator: "|")
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected) else { return }
+        filter = picked.map { "\($0)|" }.joined()
     }
 
     private func saveRule() {
@@ -1367,12 +1387,22 @@ struct RuleEditorView: View {
             }
         case .applescript:
             // Original stores `apple_script_id`; "" keeps a legacy inline source.
-            action = .applescript(appleScriptId.isEmpty ? appleScriptSource : appleScriptId)
+            action = .applescript(scriptReference)
         case .text:
             action = .text(textValue)
         case .password:
             action = .password(passwordValue)
         }
+
+        // Values typed for the other action types stay on the rule, exactly like
+        // the original's per-field setters.
+        let spare = RuleSpareActions(
+            text: textValue,
+            password: passwordValue,
+            appleScriptId: scriptReference,
+            shortcutCode: Self.parseShortcutKey(shortcutKey).map { Int($0.keyCode) } ?? 0,
+            shortcutFlag: Self.parseShortcutKey(shortcutKey).map { Int($0.flags) } ?? 0
+        )
 
         let rule = Rule(
             name: trimmedName,
@@ -1383,8 +1413,9 @@ struct RuleEditorView: View {
             note: note,
             isEnabled: isEnabled,
             triggerOnEveryMatch: triggerOnEveryMatch,
-            filter: filter.trimmingCharacters(in: .whitespacesAndNewlines),
-            filterType: filterType
+            filter: filter,
+            filterType: filterType,
+            spareActions: spare
         )
 
         if let original = editingRule {

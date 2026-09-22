@@ -172,4 +172,122 @@ final class RuleEngineTests: XCTestCase {
             XCTFail("Expected applescript action")
         }
     }
+
+    // MARK: - Original LIKE filter semantics (utils.m wildcardArray)
+
+    func testWildcardLikePatternsAreAnchored() {
+        XCTAssertTrue(wildcardLikeMatch("com.apple.mail", "com.apple.*"))
+        XCTAssertFalse(wildcardLikeMatch("com.apple.mail", "com.apple"))
+        XCTAssertFalse(wildcardLikeMatch("xcom.apple", "com.apple"))
+        XCTAssertTrue(wildcardLikeMatch("com.apple.mail", "com.*.mail"))
+        XCTAssertTrue(wildcardLikeMatch("com.apple.dt.xcode", "com.*.dt.*"))
+        // `?` is exactly one character, unlike the previous substring matcher.
+        XCTAssertTrue(wildcardLikeMatch("com.apple.mail", "com.apple.mai?"))
+        XCTAssertFalse(wildcardLikeMatch("com.apple.mail", "com.apple.mail?"))
+        XCTAssertTrue(wildcardLikeMatch("", ""))
+        XCTAssertFalse(wildcardLikeMatch("com.apple.mail", ""))
+        XCTAssertTrue(wildcardLikeMatch("com.apple.mail", "*"))
+    }
+
+    func testWildcardFilterIgnoresCaseButKeepsWhitespace() {
+        XCTAssertTrue(wildcardArray("Com.Apple.Mail", patterns: ["com.apple.*"], ignoreCase: true))
+        // Original lowercases both sides and never trims the patterns.
+        XCTAssertFalse(wildcardArray("com.apple.mail", patterns: [" com.apple.*"], ignoreCase: true))
+        XCTAssertTrue(wildcardString("com.apple.mail", patterns: "com.other.*|com.apple.*", ignoreCase: true))
+        XCTAssertTrue(wildcardString("com.apple.mail", patterns: "com.other.*\ncom.apple.*", ignoreCase: true))
+    }
+
+    private func ruleWithFilter(_ filter: String, filterType: String = "wildcard") -> Rule {
+        Rule(
+            name: "Filter rule",
+            description: "",
+            template: GestureTemplate(points: [GesturePoint(x: 0, y: 0)], name: "A Shape"),
+            action: .text("x"),
+            filter: filter,
+            filterType: filterType
+        )
+    }
+
+    private func engine(withFilter filter: String, filterType: String = "wildcard") -> RuleEngine {
+        let engine = RuleEngine()
+        engine.add(ruleWithFilter(filter, filterType: filterType))
+        return engine
+    }
+
+    func testEmptyFilterMatchesNothing() {
+        // Original quirk: an empty filter is evaluated as `LIKE ""`, so the rule
+        // never fires (the old Swift code treated it as "all apps").
+        XCTAssertFalse(engine(withFilter: "").appSuitedRule(bundleID: "com.apple.mail"))
+    }
+
+    func testRegexFilterIsCaseSensitiveSubstring() {
+        XCTAssertTrue(engine(withFilter: "apple\\.ma", filterType: "regex").appSuitedRule(bundleID: "com.apple.mail"))
+        XCTAssertFalse(engine(withFilter: "APPLE", filterType: "regex").appSuitedRule(bundleID: "com.apple.mail"))
+        XCTAssertFalse(engine(withFilter: "(", filterType: "regex").appSuitedRule(bundleID: "com.apple.mail"))
+    }
+
+    // MARK: - Action field round trip (original keeps every payload)
+
+    func testActionTypeChangeKeepsOtherFields() throws {
+        let json = [
+            "direction": "Email",
+            "data": [["x": 0.0, "y": 0.0]],
+            "filter": "*",
+            "filterType": 0,
+            "actionType": 2,
+            "text": "hi@example.com",
+            "password": "12345678",
+            "shortcut_code": 13,
+            "shortcut_flag": 1048576,
+            "note": "input e-mail",
+        ] as [String: Any]
+
+        let rule = try JSONDecoder().decode(Rule.self, from: JSONSerialization.data(withJSONObject: json))
+        guard case .text(let value) = rule.action else { return XCTFail("expected text action") }
+        XCTAssertEqual(value, "hi@example.com")
+        XCTAssertEqual(rule.spareActions.password, "12345678")
+        XCTAssertEqual(rule.spareActions.shortcutCode, 13)
+        XCTAssertEqual(rule.spareActions.shortcutFlag, 1048576)
+
+        // Switching the action type only rewrites actionType, like the original.
+        let switched = Rule(
+            name: rule.name,
+            description: rule.description,
+            template: rule.template,
+            action: .password(rule.spareActions.password),
+            filter: rule.filter,
+            filterType: rule.filterType,
+            spareActions: rule.spareActions
+        )
+        let data = try JSONEncoder().encode(switched)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["actionType"] as? Int, 3)
+        XCTAssertEqual(object["text"] as? String, "hi@example.com")
+        XCTAssertEqual(object["password"] as? String, "12345678")
+        // Original only writes the shortcut keys for the shortcut action type.
+        XCTAssertNil(object["shortcut_code"])
+        XCTAssertNil(object["apple_script_id"])
+    }
+
+    func testShortcutActionWritesShortcutKeysOnly() throws {
+        let rule = Rule(
+            name: "Back",
+            description: "",
+            template: GestureTemplate(points: [GesturePoint(x: 0, y: 0)], name: "A Shape"),
+            action: .shortcut(keyCode: 123, flags: 1048576),
+            spareActions: RuleSpareActions(appleScriptId: "SCRIPT-UUID")
+        )
+        let data = try JSONEncoder().encode(rule)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["actionType"] as? Int, 0)
+        XCTAssertEqual(object["shortcut_code"] as? Int, 123)
+        XCTAssertEqual(object["shortcut_flag"] as? Int, 1048576)
+        XCTAssertNil(object["apple_script_id"])
+    }
+
+    func testDefaultRulesUseOriginalLowercasePasswordDirection() {
+        let names = RuleStore.defaultRules().map { $0.name }
+        XCTAssertTrue(names.contains("password"))
+        XCTAssertFalse(names.contains("Password"))
+    }
 }

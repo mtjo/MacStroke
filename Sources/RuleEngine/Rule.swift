@@ -128,6 +128,32 @@ public enum RuleAction: Codable {
     }
 }
 
+/// The four action payloads the original keeps side by side on every rule
+/// (`text`, `password`, `apple_script_id`, `shortcut_code`/`shortcut_flag`).
+/// Changing a rule's action type in the original only rewrites `actionType`,
+/// so the values typed for the other types survive; these carry them.
+public struct RuleSpareActions: Codable, Equatable {
+    public var text: String
+    public var password: String
+    public var appleScriptId: String
+    public var shortcutCode: Int
+    public var shortcutFlag: Int
+
+    public init(text: String = "",
+                password: String = "",
+                appleScriptId: String = "",
+                shortcutCode: Int = 0,
+                shortcutFlag: Int = 0) {
+        self.text = text
+        self.password = password
+        self.appleScriptId = appleScriptId
+        self.shortcutCode = shortcutCode
+        self.shortcutFlag = shortcutFlag
+    }
+
+    public static let empty = RuleSpareActions()
+}
+
 /// A gesture matching rule that can be tested against a stroke.
 public struct Rule: Codable {
     /// Human-readable name for the rule
@@ -150,6 +176,8 @@ public struct Rule: Codable {
     public let filter: String
     /// Filter type: "wildcard" or "regex"
     public let filterType: String
+    /// Values typed for the action types this rule does not currently use.
+    public var spareActions: RuleSpareActions
 
     /// Create a new rule.
     /// - Parameters:
@@ -163,6 +191,7 @@ public struct Rule: Codable {
     ///   - triggerOnEveryMatch: Whether to keep triggering while gesture is held
     ///   - filter: Bundle ID filter (wildcard or regex)
     ///   - filterType: "wildcard" or "regex"
+    ///   - spareActions: values for the action types this rule does not use
     public init(
         name: String,
         description: String,
@@ -173,7 +202,8 @@ public struct Rule: Codable {
         isEnabled: Bool = true,
         triggerOnEveryMatch: Bool = false,
         filter: String = "",
-        filterType: String = "wildcard"
+        filterType: String = "wildcard",
+        spareActions: RuleSpareActions = .empty
     ) {
         self.name = name
         self.description = description
@@ -185,6 +215,7 @@ public struct Rule: Codable {
         self.triggerOnEveryMatch = triggerOnEveryMatch
         self.filter = filter
         self.filterType = filterType
+        self.spareActions = spareActions
     }
 
     // MARK: - Persistence (original RulesList.m dictionary schema)
@@ -226,19 +257,27 @@ public struct Rule: Codable {
 
         let text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
         let password = try c.decodeIfPresent(String.self, forKey: .password) ?? ""
+        let scriptId = try c.decodeIfPresent(String.self, forKey: .appleScriptId) ?? ""
+        let code = try c.decodeIfPresent(Int.self, forKey: .shortcutCode) ?? 0
+        let flag = try c.decodeIfPresent(Int.self, forKey: .shortcutFlag) ?? 0
+        var spares = RuleSpareActions(text: text, password: password, appleScriptId: scriptId)
         switch try c.decode(Int.self, forKey: .actionType) {
         case 1:
-            action = .applescript(try c.decodeIfPresent(String.self, forKey: .appleScriptId) ?? "")
+            action = .applescript(scriptId)
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
         case 2:
             action = .text(text)
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
         case 3:
             action = .password(password)
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
         default:
-            action = .shortcut(
-                keyCode: UInt16(try c.decodeIfPresent(Int.self, forKey: .shortcutCode) ?? 0),
-                flags: UInt(try c.decodeIfPresent(Int.self, forKey: .shortcutFlag) ?? 0)
-            )
+            action = .shortcut(keyCode: UInt16(truncatingIfNeeded: code), flags: UInt(truncatingIfNeeded: flag))
         }
+        spareActions = spares
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -247,32 +286,39 @@ public struct Rule: Codable {
         try c.encode(template.points.map { StoredPoint(x: $0.x, y: $0.y) }, forKey: .data)
         try c.encode(filter, forKey: .filter)
         try c.encode(filterType == "regex" ? 1 : 0, forKey: .filterType)
-        // Original always stores text/password, empty when unused.
-        var text = ""
-        var password = ""
-        switch action {
-        case .text(let t): text = t
-        case .password(let p): password = p
-        default: break
-        }
-        try c.encode(text, forKey: .text)
-        try c.encode(password, forKey: .password)
+        // Original `addRuleWithDirection:` always writes text/password, and only
+        // writes the shortcut / script keys for the action type in use.
+        var text = spareActions.text
+        var password = spareActions.password
+        var scriptId = spareActions.appleScriptId
+        var code = spareActions.shortcutCode
+        var flag = spareActions.shortcutFlag
+        var actionType = 0
         switch action {
         case .applescript(let reference):
-            try c.encode(1, forKey: .actionType)
-            try c.encode(reference, forKey: .appleScriptId)
-        case .text:
-            try c.encode(2, forKey: .actionType)
-        case .password:
-            try c.encode(3, forKey: .actionType)
+            actionType = 1
+            scriptId = reference
+        case .text(let value):
+            actionType = 2
+            text = value
+        case .password(let value):
+            actionType = 3
+            password = value
         case .shortcut(let keyCode, let flags):
-            try c.encode(0, forKey: .actionType)
-            try c.encode(Int(keyCode), forKey: .shortcutCode)
-            try c.encode(Int(flags), forKey: .shortcutFlag)
+            actionType = 0
+            code = Int(keyCode)
+            flag = Int(flags)
         case .keyPress, .mouseClick, .copyToClipboard, .none:
-            try c.encode(0, forKey: .actionType)
-            try c.encode(0, forKey: .shortcutCode)
-            try c.encode(0, forKey: .shortcutFlag)
+            actionType = 0
+        }
+        try c.encode(actionType, forKey: .actionType)
+        try c.encode(text, forKey: .text)
+        try c.encode(password, forKey: .password)
+        if actionType == 1 {
+            try c.encode(scriptId, forKey: .appleScriptId)
+        } else if actionType == 0 {
+            try c.encode(code, forKey: .shortcutCode)
+            try c.encode(flag, forKey: .shortcutFlag)
         }
         try c.encode(note, forKey: .note)
         if triggerOnEveryMatch {
@@ -363,11 +409,12 @@ public final class RuleEngine {
     ///
     /// - Parameters:
     ///   - stroke: The stroke to test
-    ///   - bundleID: The current application's bundle ID (optional)
+    ///   - bundleID: The frontmost application's bundle ID ("" when it has none,
+    ///     matching the original's `frontBundleName()`)
     /// - Returns: The best-matching rule and its similarity score, or nil if no match.
-    public func match(stroke: Stroke, bundleID: String? = nil) -> (rule: Rule, score: Double)? {
+    public func match(stroke: Stroke, bundleID: String) -> (rule: Rule, score: Double)? {
         // Check BlackWhiteFilter first: if the app is blocked, no rules match
-        if let bundleID = bundleID, !BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID) {
+        if !BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID) {
             return nil
         }
 
@@ -386,11 +433,10 @@ public final class RuleEngine {
         var bestScore: Double = 0.0
 
         for rule in rules where rule.isEnabled {
-            // Apply bundle filter if specified
-            if let bundleID = bundleID, !rule.filter.isEmpty {
-                if !matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) {
-                    continue
-                }
+            // Original: every rule's filter is evaluated, so a rule whose filter
+            // matches nothing is skipped even when the filter field is empty.
+            if !matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) {
+                continue
             }
 
             let score = compare(
@@ -419,46 +465,24 @@ public final class RuleEngine {
     /// (original: `appSuitedRule:` — used to decide whether the gesture UI
     /// may be shown in the given app).
     public func appSuitedRule(bundleID: String) -> Bool {
-        rules.contains { rule in
-            rule.isEnabled && matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID)
+        for rule in rules where rule.isEnabled {
+            if matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) { return true }
         }
+        return false
     }
 
     /// Check if a bundle ID matches a filter (wildcard or regex).
-    /// Mirrors the original `matchFilter:atIndex:`: an empty filter never
-    /// matches (use "*" for all apps); wildcard filters are split on "|" and
-    /// newlines and matched case-insensitively against the whole bundle ID;
-    /// regex filters are case-sensitive substring matches.
+    /// Mirrors the original `matchFilter:atIndex:`: wildcard filters are split on
+    /// "|"/newlines and each segment is `LIKE`-matched (anchored, `*`/`?`)
+    /// case-insensitively against the whole bundle ID; regex filters are
+    /// case-sensitive substring matches. An empty filter therefore matches
+    /// nothing — the original does not treat it as "all apps".
     private func matchesFilter(filter: String, type: String, bundleID: String) -> Bool {
         if type == "regex" {
-            guard !filter.isEmpty else { return false }
-            do {
-                let regex = try NSRegularExpression(pattern: filter)
-                let range = NSRange(location: 0, length: bundleID.utf16.count)
-                return regex.firstMatch(in: bundleID, range: range) != nil
-            } catch {
-                return false
-            }
+            guard let regex = try? NSRegularExpression(pattern: filter) else { return false }
+            let range = NSRange(location: 0, length: bundleID.utf16.count)
+            return regex.firstMatch(in: bundleID, options: [], range: range) != nil
         }
-
-        // Wildcard: one pattern per "|"/newline segment, LIKE semantics, ignore case.
-        let patterns = filter
-            .split(whereSeparator: { $0 == "|" || $0 == "\n" || $0 == "\r" })
-            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
-            .filter { !$0.isEmpty }
-        guard !patterns.isEmpty else { return false }
-
-        let lowercasedBundleID = bundleID.lowercased()
-        for pattern in patterns {
-            let regexPattern = "^" + NSRegularExpression.escapedPattern(for: pattern)
-                .replacingOccurrences(of: "\\*", with: ".*")
-                .replacingOccurrences(of: "\\?", with: ".") + "$"
-            guard let regex = try? NSRegularExpression(pattern: regexPattern) else { continue }
-            let range = NSRange(location: 0, length: lowercasedBundleID.utf16.count)
-            if regex.firstMatch(in: lowercasedBundleID, range: range) != nil {
-                return true
-            }
-        }
-        return false
+        return wildcardString(bundleID, patterns: filter, ignoreCase: true)
     }
 }
