@@ -268,7 +268,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func initHistoryClipboard() {
         restartHistoryClipboard()
 
-        // Persist the default ^⇧V shortcut on first run so the preference
+        // Persist the default ⌘⌥V shortcut on first run so the preference
         // exists for every reader (original DefaultPreferences.plist value).
         if storage.getStringOptional(forKey: .historyCilpboardListShortcut) == nil {
             storage.setString(StorageDefaults.historyCilpboardListShortcut,
@@ -276,7 +276,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         // Global shortcut for the clipboard history list
-        // (original: SRShortcutAction + SRGlobalShortcutMonitor, default ^⇧V).
+        // (original: SRShortcutAction + SRGlobalShortcutMonitor, default ⌘⌥V).
         let shortcutString = storage.getStringOptional(forKey: .historyCilpboardListShortcut)
             ?? StorageDefaults.historyCilpboardListShortcut
         monitoredShortcutString = shortcutString
@@ -297,12 +297,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let manager = HistoryClipboardManager()
         _ = manager.enableHistoryClipboard()
         clipboardHistoryManager = manager
-        // The list window keeps its own manager (and thus its own database
-        // handle); drop it so the next opening uses the current backend.
-        if let window = historyClipboardWindow?.window, window.isVisible {
-            window.close()
-        }
-        historyClipboardWindow = nil
         clipboardConfigSnapshot = historyClipboardConfigKey()
     }
 
@@ -311,9 +305,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             ?? StorageDefaults.enableHistoryClipboard
         let local = storage.getBoolOptional(forKey: .clipoardStroageLocal)
             ?? StorageDefaults.clipoardStroageLocal
-        let ram = storage.getBoolOptional(forKey: .clipoardStroageRam)
-            ?? StorageDefaults.clipoardStroageRam
-        return "\(enabled),\(local),\(ram)"
+        return "\(enabled),\(local)"
     }
 
     private var clipboardConfigSnapshot = ""
@@ -367,13 +359,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var monitoredShortcutString = ""
 
     /// Show the clipboard history list window (original: showHistoryCilpboardList:).
+    /// The original closes any previous window and loads a fresh controller on
+    /// every call, so the list always reflects the current storage backend.
     @objc func showHistoryClipboard(_ sender: Any?) {
         guard (storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true) else { return }
-        if historyClipboardWindow == nil {
-            historyClipboardWindow = HistoryClipboardListWindowController(
-                manager: clipboardHistoryManager)
-        }
-        historyClipboardWindow?.showWindow(nil)
+        historyClipboardWindow?.window?.close()
+        let controller = HistoryClipboardListWindowController(manager: clipboardHistoryManager)
+        historyClipboardWindow = controller
+        controller.window?.center()
+        controller.window?.makeKeyAndOrderFront(nil)
+        controller.window?.level = NSWindow.Level(rawValue: 21)
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Gesture recording (Draw Gesture flow)

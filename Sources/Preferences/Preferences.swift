@@ -128,9 +128,6 @@ public final class UserPreferences: ObservableObject {
     @Published public var clipoardStroageLocal: Bool {
         didSet { storage.setBool(clipoardStroageLocal, forKey: .clipoardStroageLocal) }
     }
-    @Published public var clipoardStroageRam: Bool {
-        didSet { storage.setBool(clipoardStroageRam, forKey: .clipoardStroageRam) }
-    }
     @Published public var historyCilpboardListShortcut: String {
         didSet { storage.setString(historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut) }
     }
@@ -204,7 +201,6 @@ public final class UserPreferences: ObservableObject {
         self.enableCopyFilePath = storage.getBoolOptional(forKey: .enableCopyFilePath) ?? StorageDefaults.enableCopyFilePath
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
         self.clipoardStroageLocal = storage.getBoolOptional(forKey: .clipoardStroageLocal) ?? StorageDefaults.clipoardStroageLocal
-        self.clipoardStroageRam = storage.getBoolOptional(forKey: .clipoardStroageRam) ?? StorageDefaults.clipoardStroageRam
         self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? StorageDefaults.historyCilpboardListShortcut
         self.enableLimitTop = storage.getBoolOptional(forKey: .enableLimitTop) ?? StorageDefaults.enableLimitTop
         self.limitTop = storage.getIntOptional(forKey: .limitTop) ?? StorageDefaults.limitTop
@@ -255,7 +251,6 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.enableCopyFilePath, forKey: .enableCopyFilePath)
         storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
-        storage.setBool(StorageDefaults.clipoardStroageRam, forKey: .clipoardStroageRam)
         storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
         storage.setBool(StorageDefaults.enableLimitTop, forKey: .enableLimitTop)
         storage.setInt(StorageDefaults.limitTop, forKey: .limitTop)

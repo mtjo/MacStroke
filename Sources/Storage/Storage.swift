@@ -53,12 +53,8 @@ public enum StorageKey: String, CaseIterable {
     case enableCopyFilePath = "copyFilePath"
 
     // Clipboard
-    case clipboardLimitTop = "clipboardLimitTop"
-    case clipboardLimitTotal = "clipboardLimitTotal"
-    case clipboardSaveDays = "clipboardSaveDays"
     case enableHistoryClipboard = "enableHistoryClipboard"
     case clipoardStroageLocal = "clipoardStroageLocal"
-    case clipoardStroageRam = "clipoardStroageRam"
     case historyCilpboardListShortcut = "historyCilpboardListShortcut"
     case enableLimitTotal = "enableLimitTotal"
     case limitTotal = "limitTotal"
@@ -190,12 +186,9 @@ public enum StorageDefaults {
 
     // Clipboard
     public static let enableHistoryClipboard: Bool = true
-    public static let clipboardLimitTop: Int = 15
-    public static let clipboardLimitTotal: Int = 200
-    public static let clipboardSaveDays: Int = 7
     public static let clipoardStroageLocal: Bool = true
-    public static let clipoardStroageRam: Bool = false
-    public static let historyCilpboardListShortcut: String = "keyCode=9, flags=393216" // ^⇧V
+    /// Original SRShortcut default: keyCode 9 ("v") + modifierFlags 1572864 (⌘⌥).
+    public static let historyCilpboardListShortcut: String = "keyCode=9, flags=1572864"
     public static let enableLimitTotal: Bool = false
     public static let limitTotal: Int = 200
     public static let enableLimitTop: Bool = true
@@ -256,11 +249,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.enableOpenInTerminal.rawValue: StorageDefaults.enableOpenInTerminal,
         StorageKey.enableCopyFilePath.rawValue: StorageDefaults.enableCopyFilePath,
         StorageKey.enableHistoryClipboard.rawValue: StorageDefaults.enableHistoryClipboard,
-        StorageKey.clipboardLimitTop.rawValue: StorageDefaults.clipboardLimitTop,
-        StorageKey.clipboardLimitTotal.rawValue: StorageDefaults.clipboardLimitTotal,
-        StorageKey.clipboardSaveDays.rawValue: StorageDefaults.clipboardSaveDays,
         StorageKey.clipoardStroageLocal.rawValue: StorageDefaults.clipoardStroageLocal,
-        StorageKey.clipoardStroageRam.rawValue: StorageDefaults.clipoardStroageRam,
         StorageKey.historyCilpboardListShortcut.rawValue: StorageDefaults.historyCilpboardListShortcut,
         StorageKey.enableLimitTotal.rawValue: StorageDefaults.enableLimitTotal,
         StorageKey.limitTotal.rawValue: StorageDefaults.limitTotal,
@@ -317,4 +306,8 @@ private func migrateLegacyPreferenceKeys() {
             defaults.removeObject(forKey: legacy)
         }
     }
+    // "clipoardStroageRam" only ever exists as a dead registered default in the
+    // original; early Swift builds read it as a live switch, so drop any value
+    // they wrote. Storage backend is decided by "clipoardStroageLocal" alone.
+    defaults.removeObject(forKey: "clipoardStroageRam")
 }

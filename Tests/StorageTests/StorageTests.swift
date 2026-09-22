@@ -33,15 +33,16 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(defaults.integer(forKey: "limitSaveDays"), 7)
         XCTAssertEqual(defaults.double(forKey: "minScore"), 85.0)
         XCTAssertEqual(defaults.string(forKey: "userTerminal"), "Terminal")
-        XCTAssertEqual(defaults.string(forKey: "historyCilpboardListShortcut"), "keyCode=9, flags=393216")
+        XCTAssertEqual(defaults.string(forKey: "historyCilpboardListShortcut"), "keyCode=9, flags=1572864")
     }
 
-    /// The default clipboard shortcut parses to ^⇧V.
+    /// The default clipboard shortcut parses to ⌘⌥V (original SRShortcut:
+    /// keyCode 9, modifierFlags 1572864).
     func testDefaultClipboardShortcutParses() {
         let parsed = ShortcutMonitor.parseShortcut(StorageDefaults.historyCilpboardListShortcut)
         XCTAssertNotNil(parsed)
         XCTAssertEqual(parsed?.0, 9)      // kVK_ANSI_V
-        XCTAssertEqual(parsed?.1, 393216) // control (0x40000) + shift (0x20000)
+        XCTAssertEqual(parsed?.1, 1572864) // command (0x100000) + option (0x80000)
     }
 
 }

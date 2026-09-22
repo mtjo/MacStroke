@@ -100,7 +100,7 @@ struct ShortcutRecorder: NSViewRepresentable {
 
     func makeNSView(context: Context) -> ShortcutRecorderView {
         let view = ShortcutRecorderView()
-        // Show the persisted shortcut (e.g. the ^⇧V default) right away.
+        // Show the persisted shortcut (e.g. the ⌘⌥V default) right away.
         if let parsed = Self.parse(text) {
             view.keyCode = parsed.keyCode
             view.flags = parsed.flags
@@ -2009,122 +2009,97 @@ struct RightClickMenuTabView: View {
 
 // MARK: - Clipboard Tab
 // Original: enable + storage mode + storage limits + shortcut + show list.
+// Every control stays visible and is only greyed out (the xib binds `enabled`
+// to enableHistoryClipboard / clipoardStroageLocal / the matching limit switch).
 
 struct ClipboardTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
+    /// Original limit fields carry no formatter at all, so 0 is a valid value.
+    private static let limitFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.allowsFloats = false
+        return formatter
+    }()
+
+    private var featureOn: Bool { viewModel.enableHistoryClipboard }
+    private var limitsOn: Bool { featureOn && viewModel.clipoardStroageLocal }
+
     var body: some View {
         SettingsPage {
-            SettingsSection(title: L("Clipboard History")) {
+            SettingsSection(title: L("Clipboard")) {
                 SettingsCard {
                     SettingsRow(L("enable history clipboard")) {
                         TrailingSwitch(isOn: $viewModel.enableHistoryClipboard)
                     }
-                }
-            }
-
-            if viewModel.enableHistoryClipboard {
-                SettingsCard {
+                    RowDivider()
                     SettingsRow(L("storage:")) {
                         Picker("", selection: $viewModel.clipoardStroageLocal) {
-                            Text(L("local")).tag(true)
                             Text(L("ram")).tag(false)
+                            Text(L("local")).tag(true)
                         }
-                        .pickerStyle(.segmented)
                         .labelsHidden()
-                        .frame(width: 200)
-                    }
-                }
-
-                SettingsSection(title: L("Storage limit")) {
-                    SettingsCard {
-                        SettingsRow(L("Limit top records:")) {
-                            TrailingSwitch(isOn: $viewModel.enableLimitTop) {
-                                Stepper(value: $viewModel.limitTop, in: 1...9999) {
-                                    Text("\(viewModel.limitTop)")
-                                        .frame(width: 50, alignment: .trailing)
-                                }
-                                .disabled(!viewModel.enableLimitTop)
-                            }
-                        }
-                        RowDivider()
-                        SettingsRow(L("Limit total records:")) {
-                            TrailingSwitch(isOn: $viewModel.enableLimitTotal) {
-                                Stepper(value: $viewModel.limitTotal, in: 1...999999) {
-                                    Text("\(viewModel.limitTotal)")
-                                        .frame(width: 60, alignment: .trailing)
-                                }
-                                .disabled(!viewModel.enableLimitTotal)
-                            }
-                        }
-                        RowDivider()
-                        SettingsRow(L("Limit save days:")) {
-                            TrailingSwitch(isOn: $viewModel.enableLimitSaveDays) {
-                                Stepper(value: $viewModel.limitSaveDays, in: 1...9999) {
-                                    Text("\(viewModel.limitSaveDays)")
-                                        .frame(width: 50, alignment: .trailing)
-                                }
-                                .disabled(!viewModel.enableLimitSaveDays)
-                            }
-                        }
-                        RowDivider()
-                        SettingsRow(L("keyboard shortcut:")) {
-                            ShortcutRecorder(
-                                text: $viewModel.historyCilpboardListShortcut,
-                                onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
-                            )
-                            .frame(width: 200, height: 28)
-                        }
-                    }
-                }
-
-                SettingsCard {
-                    SettingsActionRow {
-                        Button(L("show history clipboard")) {
-                            showHistoryList()
-                        }
-                    }
-                }
-
-                SettingsCard {
-                    SettingsActionRow {
-                        Button(L("Clear History")) {
-                            confirmThen(L("Are you sure to clear all history clipboard records?")) {
-                                HistoryClipboardManager().clearHistoryList()
-                            }
-                        }
-                        .foregroundColor(.red)
-
-                        Button(L("Clear Pinned")) {
-                            confirmThen(L("Are you sure to clear all top records?")) {
-                                HistoryClipboardManager().clearTop()
-                            }
-                        }
-                        .foregroundColor(.red)
-
-                        Button(L("Clear All")) {
-                            confirmThen(L("Are you sure to clear all top records and history clipboard records?")) {
-                                HistoryClipboardManager().clearAll()
-                            }
-                        }
-                        .foregroundColor(.red)
+                        .frame(width: 110)
+                        .disabled(!featureOn)
                     }
                 }
             }
 
-            let manager = HistoryClipboardManager()
-            SettingsSection(title: L("Current Status")) {
+            SettingsSection(title: L("Storage limit")) {
                 SettingsCard {
-                    SettingsRow(L("Pinned items")) {
-                        Text("\(manager.topCount)").foregroundColor(.secondary)
+                    SettingsRow(L("Limit top records:")) {
+                        TrailingSwitch(isOn: $viewModel.enableLimitTop) {
+                            limitField($viewModel.limitTop, width: 48,
+                                       enabled: limitsOn && viewModel.enableLimitTop)
+                        }
+                        .disabled(!limitsOn)
                     }
                     RowDivider()
-                    SettingsRow(L("Total items")) {
-                        Text("\(manager.getCount(isTop: false))").foregroundColor(.secondary)
+                    SettingsRow(L("Limit total records:")) {
+                        TrailingSwitch(isOn: $viewModel.enableLimitTotal) {
+                            limitField($viewModel.limitTotal, width: 60,
+                                       enabled: limitsOn && viewModel.enableLimitTotal)
+                        }
+                        .disabled(!limitsOn)
                     }
+                    RowDivider()
+                    SettingsRow(L("Limit save days:")) {
+                        TrailingSwitch(isOn: $viewModel.enableLimitSaveDays) {
+                            limitField($viewModel.limitSaveDays, width: 48,
+                                       enabled: limitsOn && viewModel.enableLimitSaveDays)
+                        }
+                        .disabled(!limitsOn)
+                    }
+                    RowDivider()
+                    SettingsRow(L("keyboard shortcut:")) {
+                        ShortcutRecorder(
+                            text: $viewModel.historyCilpboardListShortcut,
+                            onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
+                        )
+                        .frame(width: 200, height: 28)
+                        .disabled(!featureOn)
+                    }
+                }
+            }
+
+            SettingsCard {
+                SettingsActionRow {
+                    Button(L("show history clipboard")) {
+                        showHistoryList()
+                    }
+                    .disabled(!featureOn)
                 }
             }
         }
+    }
+
+    private func limitField(_ value: Binding<Int>, width: CGFloat, enabled: Bool) -> some View {
+        TextField("", value: value, formatter: Self.limitFormatter)
+            .textFieldStyle(.roundedBorder)
+            .labelsHidden()
+            .frame(width: width)
+            .disabled(!enabled)
     }
 
     private func showHistoryList() {
@@ -2132,18 +2107,6 @@ struct ClipboardTabView: View {
         // notification channel used by the global shortcut.
         DistributedNotificationCenter.default().postNotificationName(
             Notification.Name("MacStrokeOpenHistoryClipboard"), object: nil, userInfo: nil, deliverImmediately: true)
-    }
-
-    private func confirmThen(_ message: String, action: @escaping () -> Void) {
-        let alert = NSAlert()
-        alert.messageText = L("warning!")
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: L("Ok"))
-        alert.addButton(withTitle: L("Cancel"))
-        if alert.runModal() == .alertFirstButtonReturn {
-            action()
-        }
     }
 }
 

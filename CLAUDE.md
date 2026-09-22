@@ -61,7 +61,7 @@ swift test --list-tests
   - `openPrefOnStartup` / `applicationShouldHandleReopen` 打开偏好窗口
   - 启动 `EventCapture` → `CanvasManager` → `RuleEngine` 处理链，并注入 `shouldCaptureGesture` / `needsRightClickMenu` 闭包
   - `initRightClickMenu`（RightClickMenuManager 分布式通知 + pluginkit 延迟启用）
-  - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ^⇧V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
+  - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ⌘⌥V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
   - 创建状态栏项目，使用模板图片（`menu_icon_16x16.png` / disabled 版本）
   - 初始化 Sparkle 更新器（沿用原版 appcast；Info.plist 必须带 `SUPublicEDKey`，否则 Sparkle 2 启动即弹致命错误模态框）
 
@@ -96,7 +96,8 @@ swift test --list-tests
 
 - **Sources/Storage/** —
   - `PreferencesStorage` — 对 `UserDefaults` 的薄封装，提供类型化 getter/setter 以及 `StorageDefaults` 常量
-  - `HistoryClipboardManager` — 基于 SQLite 的剪贴板历史，支持置顶/收藏条目、分页、过期清理
+  - `HistoryClipboardManager` — 基于 SQLite 的剪贴板历史，支持置顶/收藏条目、分页、过期清理。监控只由 `enableHistoryClipboard` 决定；`clipoardStroageLocal` 单选决定落库位置与裁剪（false 时用 `file::memory:?cache=shared` 内存库），`deleteExpired` 的总数/按天裁剪只在 local 模式执行（原版 `STROAGE_LOCAL` 分支）；`clipoardStroageRam` 在原版中是永不读取的死键，Swift 侧已移除
+  - `HistoryClipboardListWindowController` — 历史列表窗口（780x453、三列表头 序号/内容/操作、底部 tips + clearTop/clear/clearAll 按钮、行内 ↑/- 置顶按钮、双击回填粘贴板并关窗、滚到底加载下一页 30 条）
 
 - **Sources/WindowManager/** — `WindowManager`（状态栏）、`Toast` / `ToastManager`（屏幕上的提示）
 

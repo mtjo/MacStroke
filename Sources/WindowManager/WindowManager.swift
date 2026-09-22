@@ -83,11 +83,15 @@ public final class WindowManager {
     }
 
     /// Show the clipboard history list window.
+    /// The original closes the previous window and loads a fresh controller on
+    /// every call, so the list always reflects the current storage backend.
     @objc public func showClipboardHistory() {
-        if clipboardListWindowController == nil {
-            clipboardListWindowController = HistoryClipboardListWindowController()
-        }
-        clipboardListWindowController?.showWindow(nil)
+        clipboardListWindowController?.window?.close()
+        let controller = HistoryClipboardListWindowController()
+        clipboardListWindowController = controller
+        controller.window?.center()
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     /// Update the global shortcut monitor based on current preferences.

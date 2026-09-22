@@ -44,7 +44,6 @@ public final class HistoryClipboardManager {
 
     public enum UserDefaultsKey: String {
         case clipoardStroageLocal = "clipoardStroageLocal"
-        case clipoardStroageRam = "clipoardStroageRam"
         case enableLimitTop = "enableLimitTop"
         case limitTop = "limitTop"
         case enableLimitTotal = "enableLimitTotal"
@@ -78,7 +77,8 @@ public final class HistoryClipboardManager {
 
     /// Initialize with default database path
     public convenience init() {
-        let useRAM = UserDefaults.standard.bool(forKey: UserDefaultsKey.clipoardStroageRam.rawValue)
+        // Original has a single switch: `clipoardStroageLocal` false means RAM.
+        let useRAM = !UserDefaults.standard.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
         let databasePath = useRAM ? "file::memory:?cache=shared" : Self.defaultDatabasePath
         self.init(databasePath: databasePath, userDefaults: UserDefaults.standard)
     }
@@ -239,7 +239,9 @@ public final class HistoryClipboardManager {
         let cutoffTime = Date().timeIntervalSince1970 - TimeInterval(days * 24 * 60 * 60)
 
         do {
-            let deleted = try db.run(table.filter(createTimeCol < cutoffTime).delete())
+            // Original SQL: `WHERE is_top=0 AND create_time < cutoff` — pinned
+            // entries are never expired away.
+            let deleted = try db.run(table.filter(isTopCol == 0 && createTimeCol < cutoffTime).delete())
             return deleted > 0
         } catch {
             print("[HistoryClipboard] Failed to delete expired: \(error)")
@@ -285,25 +287,17 @@ public final class HistoryClipboardManager {
         return getCountInternal(isTop: true)
     }
 
-    /// Internal: enforce all limits (assumes lock is held)
+    /// Internal: enforce all limits (assumes lock is held).
+    /// Mirrors the original `deleteExpired`: the pinned-count trim always runs,
+    /// the total-count and age trims only apply to local storage.
     private func enforceLimits() {
+        let storageLocal = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
         let enableLimitTotal = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTotal.rawValue)
         let limitTotal = userDefaults.integer(forKey: UserDefaultsKey.limitTotal.rawValue)
         let enableLimitTop = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTop.rawValue)
         let limitTop = userDefaults.integer(forKey: UserDefaultsKey.limitTop.rawValue)
         let enableLimitSaveDays = userDefaults.bool(forKey: UserDefaultsKey.enableLimitSaveDays.rawValue)
         let limitSaveDays = userDefaults.integer(forKey: UserDefaultsKey.limitSaveDays.rawValue)
-
-        // Enforce total count limit
-        if enableLimitTotal && limitTotal > 0 {
-            let totalCount = getCountInternal(isTop: false)
-            if totalCount > limitTotal {
-                let excess = totalCount - limitTotal
-                for _ in 0..<excess {
-                    guard deleteEarliestItemInternal(isTop: false) else { break }
-                }
-            }
-        }
 
         // Enforce top count limit
         if enableLimitTop && limitTop > 0 {
@@ -316,8 +310,21 @@ public final class HistoryClipboardManager {
             }
         }
 
-        // Enforce expiry by days
-        if enableLimitSaveDays && limitSaveDays > 0 {
+        guard storageLocal else { return }
+
+        // Enforce total count limit
+        if enableLimitTotal && limitTotal > 0 {
+            let totalCount = getCountInternal(isTop: false)
+            if totalCount > limitTotal {
+                let excess = totalCount - limitTotal
+                for _ in 0..<excess {
+                    guard deleteEarliestItemInternal(isTop: false) else { break }
+                }
+            }
+        }
+
+        // Enforce expiry by days (0 days wipes every unpinned entry — original quirk)
+        if enableLimitSaveDays {
             _ = deleteExpiredHistoryInternal(days: limitSaveDays)
         }
     }
@@ -405,10 +412,10 @@ public final class HistoryClipboardManager {
         defer { lock.unlock() }
 
         let enabled = userDefaults.bool(forKey: UserDefaultsKey.enableHistoryClipboard.rawValue)
-        let storageLocal = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
-        let storageRAM = userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageRam.rawValue)
 
-        if enabled && (storageLocal || storageRAM) {
+        // Original only checks `enableHistoryClipboard`: monitoring runs in RAM
+        // mode too, the storage switch just decides where entries live.
+        if enabled {
             // Invalidate existing timer if running
             timer?.invalidate()
 
@@ -446,16 +453,28 @@ public final class HistoryClipboardManager {
 
         guard currentChangeCount > changeCount else { return }
 
-        guard let content = pasteboard.string(forType: .string), !content.isEmpty else {
-            changeCount = currentChangeCount
-            return
-        }
-
-        if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
-            enforceLimits()
+        // Original only asks whether the pasteboard carries a string type — an
+        // empty string is recorded as an entry too.
+        if pasteboard.availableType(from: [.string]) != nil {
+            let content = pasteboard.string(forType: .string) ?? ""
+            if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
+                cropTotalAfterInsert()
+            }
         }
 
         changeCount = currentChangeCount
+    }
+
+    /// On insert the original trims just one earliest history row, and only in
+    /// local storage mode (`handleTimer` → `STROAGE_LOCAL` branch).
+    private func cropTotalAfterInsert() {
+        guard userDefaults.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue) else { return }
+        let enableLimitTotal = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTotal.rawValue)
+        let limitTotal = userDefaults.integer(forKey: UserDefaultsKey.limitTotal.rawValue)
+        guard enableLimitTotal && limitTotal > 0 else { return }
+        if getCountInternal(isTop: false) > limitTotal {
+            _ = deleteEarliestItemInternal(isTop: false)
+        }
     }
 
     /// Get combined history list (top entries + history entries) with pagination

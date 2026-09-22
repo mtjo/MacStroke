@@ -393,6 +393,8 @@ final class HistoryClipboardTests: XCTestCase {
         manager.stopHistoryClipboard()
     }
 
+    /// Monitoring is driven by `enableHistoryClipboard` alone: RAM storage still
+    /// watches the pasteboard (original enableHistoryClipboard has no storage test).
     func testEnableHistoryClipboardStorageLocalDisabled() {
         let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
         testDefaults.set(true, forKey: "enableHistoryClipboard")
@@ -402,7 +404,8 @@ final class HistoryClipboardTests: XCTestCase {
 
         let result = manager.enableHistoryClipboard()
 
-        XCTAssertFalse(result)
+        XCTAssertTrue(result)
+        manager.stopHistoryClipboard()
     }
 
     func testGetTopList() {
@@ -557,6 +560,7 @@ final class HistoryClipboardTests: XCTestCase {
 
     func testDeleteExpiredEnforcesTotalLimit() {
         let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
         testDefaults.set(true, forKey: "enableLimitTotal")
         testDefaults.set(3, forKey: "limitTotal")
 
@@ -575,6 +579,24 @@ final class HistoryClipboardTests: XCTestCase {
         XCTAssertEqual(entries[0].content, "History 5".data(using: .utf8)?.base64EncodedString())
         XCTAssertEqual(entries[1].content, "History 4".data(using: .utf8)?.base64EncodedString())
         XCTAssertEqual(entries[2].content, "History 3".data(using: .utf8)?.base64EncodedString())
+    }
+
+    /// RAM storage skips the total-count trim (original: deleteExpired's
+    /// total/day branches sit inside `if (STROAGE_LOCAL)`).
+    func testDeleteExpiredSkipsTotalLimitInRamStorage() {
+        let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(false, forKey: "clipoardStroageLocal")
+        testDefaults.set(true, forKey: "enableLimitTotal")
+        testDefaults.set(3, forKey: "limitTotal")
+
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: testDefaults)
+        for i in 1...5 {
+            manager.insertLocalHistoryClipboard(content: "History \(i)", isTop: false)
+        }
+
+        manager.deleteExpired()
+
+        XCTAssertEqual(manager.getCount(isTop: false), 5)
     }
 
     func testDeleteExpiredEnforcesTopLimit() {
@@ -600,6 +622,7 @@ final class HistoryClipboardTests: XCTestCase {
 
     func testDeleteExpiredEnforcesDaysLimit() {
         let testDefaults = UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+        testDefaults.set(true, forKey: "clipoardStroageLocal")
         testDefaults.set(true, forKey: "enableLimitSaveDays")
         testDefaults.set(1, forKey: "limitSaveDays")
 
