@@ -90,7 +90,6 @@
 "Preview" = "Preview";
 "Current mode: %@" = "Current mode: %@";
 "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)" = "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)";
-"Finder Right-Click Menu" = "Finder Right-Click Menu";
 "Enable Finder right-click menu extension" = "Enable Finder right-click menu extension";
 "Menu Items" = "Menu Items";
 "New Text File" = "New Text File";

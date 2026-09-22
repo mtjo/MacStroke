@@ -172,14 +172,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             suspensionBehavior: .deliverImmediately
         )
 
-        // Open the clipboard history list (from the preferences Clipboard tab
-        // or the global shortcut).
-        DistributedNotificationCenter.default().addObserver(
+        // Open the clipboard history list (preferences Clipboard tab).
+        // In-process like the other preference commands: a distributed
+        // notification would also reach a second MacStroke on this machine.
+        NotificationCenter.default.addObserver(
             self,
             selector: #selector(openHistoryClipboardFromNotification),
-            name: Notification.Name("MacStrokeOpenHistoryClipboard"),
-            object: nil,
-            suspensionBehavior: .deliverImmediately
+            name: .macStrokeShowHistoryClipboard,
+            object: nil
         )
 
         // Check for updates (About tab button).

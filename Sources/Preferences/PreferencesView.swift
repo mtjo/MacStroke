@@ -90,6 +90,9 @@ public extension Notification.Name {
     static let macStrokeGestureDidRecord = Notification.Name("MacStrokeGestureDidRecord")
     /// Sparkle update settings changed in the About tab.
     static let macStrokeUpdateSettingsDidChange = Notification.Name("MacStrokeUpdateSettingsDidChange")
+    /// Ask the AppDelegate to open the clipboard history window (Clipboard tab
+    /// "show history clipboard", original `showHistoryCilpboardList:`).
+    static let macStrokeShowHistoryClipboard = Notification.Name("MacStrokeShowHistoryClipboard")
 }
 
 /// Original feedback channel for confirmations and guards: a banner-style
@@ -2012,22 +2015,23 @@ struct RightClickMenuTabView: View {
 
     var body: some View {
         SettingsPage {
-            SettingsSection(title: L("Finder Right-Click Menu")) {
-                SettingsCard {
-                    SettingsRow(L("enable right click menu")) {
-                        TrailingSwitch(isOn: Binding(
-                            get: { viewModel.enableRightClickMenu },
-                            set: { newValue in
-                                viewModel.enableRightClickMenu = newValue
-                                syncToExtension()
-                            }
-                        ))
-                    }
+            // Original: one untitled box; the master checkbox has no `enabled`
+            // binding, so it is always live.
+            SettingsCard {
+                SettingsRow(L("enable right click menu")) {
+                    TrailingSwitch(isOn: Binding(
+                        get: { viewModel.enableRightClickMenu },
+                        set: { newValue in
+                            viewModel.enableRightClickMenu = newValue
+                            syncToExtension()
+                        }
+                    ))
                 }
             }
 
-            // Original: sub-items stay visible and are only disabled
-            // when the master toggle is off (enabled binding in the xib).
+            // Original: the three sub-checkboxes each bind `enabled` to the
+            // master toggle; the terminal popup has no such binding and stays
+            // clickable even when the menu is off.
             SettingsCard {
                 SettingsRow(L("new text file")) {
                     TrailingSwitch(isOn: Binding(
@@ -2037,29 +2041,31 @@ struct RightClickMenuTabView: View {
                             syncToExtension()
                         }
                     ))
+                    .disabled(!viewModel.enableRightClickMenu)
                 }
                 RowDivider()
                 SettingsRow(L("open in terminal")) {
+                    Picker("", selection: Binding(
+                        get: { viewModel.userTerminal },
+                        set: { newValue in
+                            viewModel.userTerminal = newValue
+                            syncToExtension()
+                        }
+                    )) {
+                        Text("Terminal").tag("Terminal")
+                        Text("Iterm").tag("Iterm")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+
                     TrailingSwitch(isOn: Binding(
                         get: { viewModel.enableOpenInTerminal },
                         set: { newValue in
                             viewModel.enableOpenInTerminal = newValue
                             syncToExtension()
                         }
-                    )) {
-                        Picker("", selection: Binding(
-                            get: { viewModel.userTerminal },
-                            set: { newValue in
-                                viewModel.userTerminal = newValue
-                                syncToExtension()
-                            }
-                        )) {
-                            Text("Terminal").tag("Terminal")
-                            Text("Iterm").tag("Iterm")
-                        }
-                        .labelsHidden()
-                        .fixedSize()
-                    }
+                    ))
+                    .disabled(!viewModel.enableRightClickMenu)
                 }
                 RowDivider()
                 SettingsRow(L("copy file path")) {
@@ -2070,11 +2076,10 @@ struct RightClickMenuTabView: View {
                             syncToExtension()
                         }
                     ))
+                    .disabled(!viewModel.enableRightClickMenu)
                 }
             }
             .padding(.leading, 22)
-            .disabled(!viewModel.enableRightClickMenu)
-
         }
     }
 
@@ -2094,34 +2099,40 @@ struct RightClickMenuTabView: View {
 struct ClipboardTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
-    /// Original limit fields carry no formatter at all, so 0 is a valid value.
-    private static let limitFormatter: NumberFormatter = {
+    /// Original AppPrefsWindowController.m:139-158 gives each limit field its
+    /// own formatter: top 1…9999, total 1…999999, save days 1…9999. Anything
+    /// outside (or non-numeric) fails to parse, so the preference never changes.
+    private static func limitFormatter(minimum: Int, maximum: Int) -> NumberFormatter {
         let formatter = NumberFormatter()
         formatter.numberStyle = .none
         formatter.allowsFloats = false
+        formatter.minimum = NSNumber(value: minimum)
+        formatter.maximum = NSNumber(value: maximum)
         return formatter
-    }()
+    }
+
+    private static let limitTopFormatter = limitFormatter(minimum: 1, maximum: 9_999)
+    private static let limitTotalFormatter = limitFormatter(minimum: 1, maximum: 999_999)
+    private static let limitSaveDaysFormatter = limitFormatter(minimum: 1, maximum: 9_999)
 
     private var featureOn: Bool { viewModel.enableHistoryClipboard }
     private var limitsOn: Bool { featureOn && viewModel.clipoardStroageLocal }
 
     var body: some View {
         SettingsPage {
-            SettingsSection(title: L("Clipboard")) {
-                SettingsCard {
-                    SettingsRow(L("enable history clipboard")) {
-                        TrailingSwitch(isOn: $viewModel.enableHistoryClipboard)
+            SettingsCard {
+                SettingsRow(L("enable history clipboard")) {
+                    TrailingSwitch(isOn: $viewModel.enableHistoryClipboard)
+                }
+                RowDivider()
+                SettingsRow(L("storage:")) {
+                    Picker("", selection: $viewModel.clipoardStroageLocal) {
+                        Text(L("ram")).tag(false)
+                        Text(L("local")).tag(true)
                     }
-                    RowDivider()
-                    SettingsRow(L("storage:")) {
-                        Picker("", selection: $viewModel.clipoardStroageLocal) {
-                            Text(L("ram")).tag(false)
-                            Text(L("local")).tag(true)
-                        }
-                        .labelsHidden()
-                        .frame(width: 110)
-                        .disabled(!featureOn)
-                    }
+                    .labelsHidden()
+                    .frame(width: 68)
+                    .disabled(!featureOn)
                 }
             }
 
@@ -2129,7 +2140,8 @@ struct ClipboardTabView: View {
                 SettingsCard {
                     SettingsRow(L("Limit top records:")) {
                         TrailingSwitch(isOn: $viewModel.enableLimitTop) {
-                            limitField($viewModel.limitTop, width: 48,
+                            limitField($viewModel.limitTop, width: 40,
+                                       formatter: Self.limitTopFormatter,
                                        enabled: limitsOn && viewModel.enableLimitTop)
                         }
                         .disabled(!limitsOn)
@@ -2138,6 +2150,7 @@ struct ClipboardTabView: View {
                     SettingsRow(L("Limit total records:")) {
                         TrailingSwitch(isOn: $viewModel.enableLimitTotal) {
                             limitField($viewModel.limitTotal, width: 60,
+                                       formatter: Self.limitTotalFormatter,
                                        enabled: limitsOn && viewModel.enableLimitTotal)
                         }
                         .disabled(!limitsOn)
@@ -2145,20 +2158,25 @@ struct ClipboardTabView: View {
                     RowDivider()
                     SettingsRow(L("Limit save days:")) {
                         TrailingSwitch(isOn: $viewModel.enableLimitSaveDays) {
-                            limitField($viewModel.limitSaveDays, width: 48,
+                            limitField($viewModel.limitSaveDays, width: 40,
+                                       formatter: Self.limitSaveDaysFormatter,
                                        enabled: limitsOn && viewModel.enableLimitSaveDays)
                         }
                         .disabled(!limitsOn)
                     }
-                    RowDivider()
-                    SettingsRow(L("keyboard shortcut:")) {
-                        ShortcutRecorder(
-                            text: $viewModel.historyCilpboardListShortcut,
-                            onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
-                        )
-                        .frame(width: 200, height: 28)
-                        .disabled(!featureOn)
-                    }
+                }
+            }
+
+            // Original: "keyboard shortcut:" and "show history clipboard" are
+            // siblings of the Storage limit box, not rows inside it.
+            SettingsCard {
+                SettingsRow(L("keyboard shortcut:")) {
+                    ShortcutRecorder(
+                        text: $viewModel.historyCilpboardListShortcut,
+                        onShortcutChanged: { viewModel.historyCilpboardListShortcut = $0 }
+                    )
+                    .frame(width: 200, height: 28)
+                    .disabled(!featureOn)
                 }
             }
 
@@ -2173,8 +2191,9 @@ struct ClipboardTabView: View {
         }
     }
 
-    private func limitField(_ value: Binding<Int>, width: CGFloat, enabled: Bool) -> some View {
-        TextField("", value: value, formatter: Self.limitFormatter)
+    private func limitField(_ value: Binding<Int>, width: CGFloat,
+                            formatter: NumberFormatter, enabled: Bool) -> some View {
+        TextField("", value: value, formatter: formatter)
             .textFieldStyle(.roundedBorder)
             .labelsHidden()
             .frame(width: width)
@@ -2182,10 +2201,9 @@ struct ClipboardTabView: View {
     }
 
     private func showHistoryList() {
-        // The window lives in the main app; ask it to open via the distributed
-        // notification channel used by the global shortcut.
-        DistributedNotificationCenter.default().postNotificationName(
-            Notification.Name("MacStrokeOpenHistoryClipboard"), object: nil, userInfo: nil, deliverImmediately: true)
+        // The window lives in this same process; the original simply runs
+        // showHistoryCilpboardList: through the responder chain.
+        NotificationCenter.default.post(name: .macStrokeShowHistoryClipboard, object: nil)
     }
 }
 

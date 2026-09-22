@@ -90,7 +90,6 @@
 "Preview" = "预览";
 "Current mode: %@" = "当前模式：%@";
 "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)" = "配置哪些应用显示 MacStroke 右键菜单。支持通配符（例如 com.jetbrains.*）";
-"Finder Right-Click Menu" = "Finder 右键菜单";
 "Enable Finder right-click menu extension" = "启用 Finder 右键菜单扩展";
 "Menu Items" = "菜单项";
 "New Text File" = "新建文本文档";
@@ -167,9 +166,9 @@
 "Pick a running app" = "从运行中的App中选取";
 "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'" = "提示：模拟右键菜单，支持 '*' 通配符匹配，例如 'com.jetbrains.*'";
 "enable right click menu" = "启用右键菜单";
-"new text file" = "新建文本文件";
+"new text file" = "新建文本文档";
 "open in terminal" = "在终端中打开";
-"copy file path" = "复制文件路径";
+"copy file path" = "复制路径";
 "Iterm" = "Iterm";
 "enable history clipboard" = "启用历史粘贴板";
 "storage:" = "存储:";
