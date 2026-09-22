@@ -37,8 +37,8 @@
 "Shortcuts" = "Shortcuts";
 "Gesture Rules" = "Gesture Rules";
 "Add Rule" = "Add Rule";
-"Reset to Defaults" = "Reset to Defaults";
-"Clear All" = "Clear All";
+"Defaults" = "Defaults";
+"Clear" = "Clear";
 "No rules defined" = "No rules defined";
 "Click \"Add Rule\" to create your first gesture rule" = "Click \"Add Rule\" to create your first gesture rule";
 "Enabled" = "Enabled";
@@ -89,11 +89,7 @@
 "Apply" = "Apply";
 "Preview" = "Preview";
 "Current mode: %@" = "Current mode: %@";
-"Right Click Menu - App List" = "Right Click Menu - App List";
 "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)" = "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)";
-"Bundle ID (e.g. com.apple.finder)" = "Bundle ID (e.g. com.apple.finder)";
-"No applications configured" = "No applications configured";
-"Bundle ID / Pattern" = "Bundle ID / Pattern";
 "Finder Right-Click Menu" = "Finder Right-Click Menu";
 "Enable Finder right-click menu extension" = "Enable Finder right-click menu extension";
 "Menu Items" = "Menu Items";

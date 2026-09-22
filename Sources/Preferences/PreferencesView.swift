@@ -160,7 +160,6 @@ public struct PreferencesView: View {
     @State private var editingRule: Rule?
     @ObservedObject private var scriptList = AppleScriptsList.sharedAppleScriptsList
     @State private var rightClickApps: [String] = []
-    @State private var newRightClickApp = ""
     /// Bumped whenever the UI language changes so the whole view tree
     /// re-renders with the new localized strings.
     @State private var languageRevision = 0
@@ -207,11 +206,7 @@ public struct PreferencesView: View {
                 case .appleScript:
                     AppleScriptTabView(scriptList: scriptList)
                 case .rightClick:
-                    RightClickTabView(
-                        viewModel: viewModel,
-                        rightClickApps: $rightClickApps,
-                        newRightClickApp: $newRightClickApp
-                    )
+                    RightClickTabView(rightClickApps: $rightClickApps)
                 case .rightClickMenu:
                     RightClickMenuTabView(viewModel: viewModel)
                 case .clipboard:
@@ -715,12 +710,12 @@ struct RulesTabView: View {
 
                 Spacer()
 
-                Button(L("Reset to Defaults")) {
+                Button(L("Defaults")) {
                     ruleStore.rules = RuleStore.defaultRules()
                     ruleStore.save()
                 }
 
-                Button(L("Clear All")) {
+                Button(L("Clear")) {
                     let alert = NSAlert()
                     alert.messageText = L("warning!")
                     alert.informativeText = L("Are you sure you want to clear all the rules?")
@@ -1813,121 +1808,161 @@ private struct FilterTextView: NSViewRepresentable {
 }
 
 // MARK: - Right Click Tab
-// Original RightClick tab: RightClicksList table (apps that keep their
-// native right-click menu) with pick-a-running-app.
-
-struct RightClickAppItem: Identifiable {
-    let id = UUID()
-    let bundleId: String
-}
+// Original RithtClick pane: tips label on top, a headerless single-column table
+// whose cells are inline-editable, and "+" / "-" / "Pick a running app" below.
 
 struct RightClickTabView: View {
-    @ObservedObject var viewModel: UserPreferences
     @Binding var rightClickApps: [String]
-    @Binding var newRightClickApp: String
-
-    private var items: [RightClickAppItem] {
-        rightClickApps.map { RightClickAppItem(bundleId: $0) }
-    }
+    @State private var selectedRow = -1
 
     var body: some View {
         SettingsFillingPage {
-            VStack(alignment: .leading, spacing: 4) {
-                SectionHeader(L("Right Click Menu - App List"))
-                Text(L("tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(L("tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'"))
+                .font(.caption)
+                .foregroundColor(.secondary)
 
-            SettingsCard {
-                HStack(spacing: 8) {
-                    TextField(L("Bundle ID (e.g. com.apple.finder)"), text: $newRightClickApp)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 300)
-                    Button {
-                        addRunningApp()
-                    } label: {
-                        Label(L("add.."), systemImage: "plus.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    Button(L("Add")) {
-                        if !newRightClickApp.isEmpty {
-                            RightClicksList.shared.add(newRightClickApp)
-                            rightClickApps = RightClicksList.shared.allApps()
-                            newRightClickApp = ""
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(newRightClickApp.isEmpty)
-                    Spacer()
-                }
-                .padding(10)
-            }
-
-            if rightClickApps.isEmpty {
-                SettingsCard {
-                    VStack(spacing: 12) {
-                        Image(systemName: "mouse")
-                            .font(.system(size: 48))
-                            .foregroundColor(.secondary)
-                        Text(L("No applications configured"))
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 200)
-                    .padding(.vertical, 20)
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                Table(items) {
-                    TableColumn(L("Bundle ID / Pattern")) { item in
-                        Text(item.bundleId)
-                            .font(.system(size: 13, design: .monospaced))
-                    }
-                    .width(min: 300, max: 500)
-
-                    TableColumn("") { item in
-                        Button(role: .destructive) {
-                            RightClicksList.shared.remove(at: rightClickApps.firstIndex(of: item.bundleId) ?? 0)
-                            rightClickApps = RightClicksList.shared.allApps()
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                    .width(50)
-                }
-                .tableStyle(.inset(alternatesRowBackgrounds: true))
+            RightClicksTable(apps: $rightClickApps, selectedRow: $selectedRow)
                 .frame(maxHeight: .infinity)
                 .settingsListCard()
-            }
 
-            HStack {
-                Button(L("Reset to Defaults")) {
-                    RightClicksList.shared.reInit()
-                    rightClickApps = RightClicksList.shared.allApps()
+            HStack(spacing: 8) {
+                Button(action: addRow) {
+                    Image(systemName: "plus")
                 }
-                .buttonStyle(.bordered)
-
-                Button(L("Clear All")) {
-                    RightClicksList.shared.clear()
-                    rightClickApps = RightClicksList.shared.allApps()
+                Button(action: removeRow) {
+                    Image(systemName: "minus")
                 }
-                .buttonStyle(.bordered)
-                .foregroundColor(.red)
-
                 Spacer()
+                Button(L("Pick a running app")) { pickApp() }
             }
         }
     }
 
-    /// Pick one running app (original: AppPickerWindowController selectOne
-    /// mode) and add its bundle ID to the list.
-    private func addRunningApp() {
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), singleSelection: true),
-              let bundleID = picked.first, !bundleID.isEmpty else { return }
-        RightClicksList.shared.add(bundleID)
+    /// Original `createRightClick:`: append the literal placeholder "appname",
+    /// save, reload and select the new last row.
+    private func addRow() {
+        RightClicksList.shared.add("appname")
         rightClickApps = RightClicksList.shared.allApps()
+        selectedRow = RightClicksList.shared.count - 1
+    }
+
+    /// Original `removeRightClick:`: silently does nothing when no row is
+    /// selected, otherwise removes and keeps the selection index in range.
+    private func removeRow() {
+        guard selectedRow != -1 else { return }
+        RightClicksList.shared.remove(at: selectedRow)
+        rightClickApps = RightClicksList.shared.allApps()
+        if !rightClickApps.isEmpty {
+            selectedRow = min(selectedRow, rightClickApps.count - 1)
+        }
+    }
+
+    /// Original `rightClickPickBtnDidClick:`: needs a selected row, and the
+    /// picked app *replaces* that row (`rightClickPickCallback:atIndex:`).
+    private func pickApp() {
+        guard selectedRow != -1 else {
+            postMacStrokeNotification(L("Select a filter first!"))
+            return
+        }
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), singleSelection: true),
+              let bundleID = picked.first else { return }
+        RightClicksList.shared.setAppname(at: selectedRow, appname: bundleID)
+        rightClickApps = RightClicksList.shared.allApps()
+    }
+}
+
+/// Headerless single-column list with an editable borderless text field per
+/// row, like `tableViewForRightClicks:`. Commits follow the original and key
+/// off the table's selected row rather than the edited cell.
+private struct RightClicksTable: NSViewRepresentable {
+    @Binding var apps: [String]
+    @Binding var selectedRow: Int
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let tableView = NSTableView()
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Appname"))
+        column.width = 600
+        column.resizingMask = .autoresizingMask
+        tableView.addTableColumn(column)
+        tableView.headerView = nil
+        tableView.rowHeight = 19
+        tableView.usesAlternatingRowBackgroundColors = true
+        tableView.allowsMultipleSelection = false
+        tableView.allowsEmptySelection = true
+        tableView.dataSource = context.coordinator
+        tableView.delegate = context.coordinator
+
+        context.coordinator.tableView = tableView
+        context.coordinator.apps = apps
+        context.coordinator.onSelectionChange = { selectedRow = tableView.selectedRow }
+        context.coordinator.onCommit = { row, text in
+            RightClicksList.shared.setAppname(at: row, appname: text)
+            apps = RightClicksList.shared.allApps()
+        }
+
+        let scroll = NSScrollView()
+        scroll.documentView = tableView
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .bezelBorder
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let tableView = scroll.documentView as? NSTableView else { return }
+        let coordinator = context.coordinator
+        coordinator.onSelectionChange = { selectedRow = tableView.selectedRow }
+        coordinator.onCommit = { row, text in
+            RightClicksList.shared.setAppname(at: row, appname: text)
+            apps = RightClicksList.shared.allApps()
+        }
+        // Reload only on real content changes: reloading while a cell is being
+        // edited would tear down the field editor on every selection change.
+        if coordinator.apps != apps {
+            coordinator.apps = apps
+            tableView.reloadData()
+        }
+        if tableView.selectedRow != selectedRow {
+            if selectedRow >= 0 && selectedRow < apps.count {
+                tableView.selectRowIndexes(IndexSet(integer: selectedRow), byExtendingSelection: false)
+            } else {
+                tableView.deselectAll(nil)
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
+        var apps: [String] = []
+        var onSelectionChange: () -> Void = {}
+        var onCommit: (Int, String) -> Void = { _, _ in }
+        weak var tableView: NSTableView?
+
+        func numberOfRows(in tableView: NSTableView) -> Int { apps.count }
+
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            let textField = NSTextField()
+            textField.isEditable = true
+            textField.isBordered = false
+            textField.drawsBackground = false
+            textField.lineBreakMode = .byTruncatingMiddle
+            textField.cell?.isScrollable = true
+            textField.cell?.wraps = false
+            textField.delegate = self
+            textField.tag = row
+            textField.stringValue = apps[row]
+            return textField
+        }
+
+        func tableViewSelectionDidChange(_ notification: Notification) {
+            onSelectionChange()
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField, let tableView else { return }
+            onCommit(tableView.selectedRow, textField.stringValue)
+        }
     }
 }
 

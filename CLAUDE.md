@@ -102,6 +102,8 @@ swift test --list-tests
   - `isEnabled` 是**运行时状态**（原版 `AppDelegate` 的 `static BOOL isEnabled`，每次启动回到 YES 且从不落库），所以 `UserDefaults` 里没有 `isEnabled` 这个 key，勾选框状态不跨启动
   - 偏好页的确认/提示统一走 `postMacStrokeNotification(_:)`（原版一律用 `NSUserNotification`，标题 "MacStroke"，默认声音；只有规则"清空"才是模态 NSAlert）
   - 过滤页照搬原版 Filters 面板：黑白名单**两个常显纯文本框**（`FilterTextView`，richText=NO、systemFont 14、bezel 边框）并排，各自上方一个 radio + `add..` 按钮，右下角 `apply rules`（原版左下的 "Go bigger" 在该面板是 `hidden="YES"`）。radio 点击（`whiteBlackRadioClicked:`）只写 `filterIsInWhiteMode` 并刷新互补选中态与背景色（激活侧 `#ffffff`，非激活侧 = 窗口背景色），**不碰文本**；只有 `apply rules` 才把两个文本框经 setter（trim + 丢空行）写库，再回读进文本框。`add..` 走 AppPicker 的 `addedToTextView` 语义：条目全部不预勾选，OK 后对每个勾选项执行 `原文本 + "\n" + bundleID`（**不去重**，空文本会留下前导空行，交给 apply 清掉）
+  - 右键列表页（xib 里 userLabel 拼作 `RithtClick`）照搬原版：顶部一行 tips 文案（`tips:Simulate right mouse click ,support '*'...`）+ **无表头单列**表格（`RightClicksTable`，每格是一个无边框、无背景、可内联编辑的 NSTextField，提交走 `setAppnameAtIndex:[tableView selectedRow]` —— 原版按选中行而非被编辑行落库）+ 底部 `+` `-` 与右侧 `Pick a running app`。`+` 追加字面量占位符 `"appname"` 并选中新末行；`-` 未选中时**静默不动作**（原版这里不弹通知）；`Pick a running app` 未选中弹 `Select a filter first!`，选中后以 `selectOne` 模式**替换**该行内容而非追加。原版的 `resetRightClick:`（Defaults）在 xib 里**没有任何按钮连接**，因此该页没有"载入预设/清除"按钮
+  - 规则页右下按钮文案是原版的 `Defaults`（载入预设）与 `Clear`（清除），不是"重置到预设/清除全部"
   - 关于页只有 Sparkle 两个开关 + Version/Check Now/issues + Author + README.html WebView；原版是 `LSUIElement` 常驻 accessory 应用，主菜单（`MainMenu.xib` 里那套 "About MenuBarApp" 模板残留）**永远不会显示**，因此标准关于面板与 Credits.rtf 无需移植
 
 - **Sources/Storage/** —

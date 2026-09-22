@@ -37,8 +37,8 @@
 "Shortcuts" = "快捷键";
 "Gesture Rules" = "手势规则";
 "Add Rule" = "添加规则";
-"Reset to Defaults" = "重置到预设";
-"Clear All" = "清除全部";
+"Defaults" = "载入预设";
+"Clear" = "清除";
 "No rules defined" = "尚未定义规则";
 "Click \"Add Rule\" to create your first gesture rule" = "点击“添加规则”创建您的第一条手势规则";
 "Enabled" = "已启用";
@@ -89,11 +89,7 @@
 "Apply" = "应用";
 "Preview" = "预览";
 "Current mode: %@" = "当前模式：%@";
-"Right Click Menu - App List" = "右键菜单 - 应用列表";
 "Configure which applications show the MacStroke right-click menu. Supports wildcards (e.g. com.jetbrains.*)" = "配置哪些应用显示 MacStroke 右键菜单。支持通配符（例如 com.jetbrains.*）";
-"Bundle ID (e.g. com.apple.finder)" = "Bundle ID（例如 com.apple.finder）";
-"No applications configured" = "尚未配置应用";
-"Bundle ID / Pattern" = "Bundle ID / 模式";
 "Finder Right-Click Menu" = "Finder 右键菜单";
 "Enable Finder right-click menu extension" = "启用 Finder 右键菜单扩展";
 "Menu Items" = "菜单项";
