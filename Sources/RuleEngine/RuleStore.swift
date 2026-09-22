@@ -134,25 +134,41 @@ public final class RuleStore: ObservableObject {
             let data = try JSONEncoder().encode(rules)
             try data.write(to: storageURL, options: .atomic)
         } catch {
-            print("[RuleStore] Failed to save rules: \(error)")
+            NSLog("%@", "[RuleStore] Failed to save rules: \(error)")
         }
     }
 
     /// Load rules from disk.
     public func load() {
+        guard FileManager.default.fileExists(atPath: storageURL.path) else {
+            rules = RuleStore.defaultRules()
+            save()
+            return
+        }
         do {
             let data = try Data(contentsOf: storageURL)
             rules = try JSONDecoder().decode([Rule].self, from: data)
-            if rules.isEmpty {
-                print("[RuleStore] Existing rules file is empty, loading default rules")
-                rules = RuleStore.defaultRules()
-                save()
-            }
         } catch {
-            print("[RuleStore] No existing rules file found, starting with default rules: \(error)")
+            // The original `reInit` + save replaced an unreadable archive without
+            // a second thought; Swift decodes all-or-nothing, so one malformed
+            // entry would wipe every hand-written rule. Keep the file instead.
+            NSLog("%@", "[RuleStore] Rules file could not be decoded, backed it up and loaded default rules: \(error)")
+            backUpUnreadableRules()
+            rules = RuleStore.defaultRules()
+            save()
+            return
+        }
+        if rules.isEmpty {
+            NSLog("%@", "[RuleStore] Existing rules file is empty, loading default rules")
             rules = RuleStore.defaultRules()
             save()
         }
+    }
+
+    private func backUpUnreadableRules() {
+        let backupURL = storageURL.appendingPathExtension("bak")
+        try? FileManager.default.removeItem(at: backupURL)
+        try? FileManager.default.moveItem(at: storageURL, to: backupURL)
     }
 
     /// Default rules matching the original MacStroke preset configuration

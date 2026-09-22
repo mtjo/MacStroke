@@ -71,4 +71,34 @@ final class RuleStoreTests: XCTestCase {
         XCTAssertFalse(store.exists(named: "Paste", excluding: "Paste"))
         XCTAssertTrue(store.exists(named: "Paste", excluding: "Other"))
     }
+
+    /// Swift 的解码器是全有或全无，一条坏数据就能让整份规则失效；原版的
+    /// `reInit` + save 会直接把文件覆盖掉，所以这里必须先留备份再写默认规则。
+    func testUnreadableRulesFileIsBackedUpBeforeDefaults() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacStrokeTests-\(UUID().uuidString).json")
+        let backupURL = url.appendingPathExtension("bak")
+        let garbage = #"{"not":"a rules array"}"#
+        try Data(garbage.utf8).write(to: url)
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            try? FileManager.default.removeItem(at: backupURL)
+        }
+
+        let store = RuleStore(storageURL: url)
+
+        XCTAssertEqual(store.rules.count, RuleStore.defaultRules().count)
+        XCTAssertEqual(try String(contentsOf: backupURL, encoding: .utf8), garbage)
+    }
+
+    func testEmptyRulesFileFallsBackToDefaults() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacStrokeTests-\(UUID().uuidString).json")
+        try Data("[]".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let store = RuleStore(storageURL: url)
+
+        XCTAssertFalse(store.rules.isEmpty)
+    }
 }
