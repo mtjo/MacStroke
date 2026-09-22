@@ -17,24 +17,22 @@ final class WindowManagerTests: XCTestCase {
     }
 
     func testUserPreferencesDefaults() {
-        let prefs = UserPreferences()
-        XCTAssertNotNil(prefs)
-        XCTAssertEqual(prefs.minimumPoints, 10)
-        XCTAssertEqual(prefs.minSimilarityScore, 85.0)
+        let prefs = isolatedPreferences()
+        XCTAssertEqual(prefs.minSimilarityScore, StorageDefaults.minSimilarityScore)
+        XCTAssertEqual(prefs.noteRetentionTime, StorageDefaults.noteRetentionTime)
     }
 
+    /// 同一个 suite 里 save 之后重新构造，读回的应是刚写入的值。
     func testUserPreferencesSaveAndLoad() {
-        let prefs = UserPreferences()
-        prefs.minimumPoints = 15
+        let suite = isolatedSuite()
+        let prefs = UserPreferences(storage: PreferencesStorage(defaults: suite))
+        prefs.minSimilarityScore = 66
+        prefs.noteRetentionTime = 7
         prefs.save()
 
-        let loadedPrefs = UserPreferences()
-        XCTAssertEqual(loadedPrefs.minimumPoints, 15)
-
-        // Reset
-        let resetPrefs = UserPreferences()
-        resetPrefs.minimumPoints = 10
-        resetPrefs.save()
+        let loadedPrefs = UserPreferences(storage: PreferencesStorage(defaults: suite))
+        XCTAssertEqual(loadedPrefs.minSimilarityScore, 66)
+        XCTAssertEqual(loadedPrefs.noteRetentionTime, 7)
     }
 
     /// 原版把总开关放在 AppDelegate 的 `static BOOL isEnabled`，每次启动都回到
@@ -75,11 +73,22 @@ final class WindowManagerTests: XCTestCase {
         XCTAssertTrue(prefs.showGestureNote)
     }
 
+    /// 固定 suite 名并在用例前后各清一次：随机 UUID 会让每次跑测试都在
+    /// ~/Library/Preferences 里留下一个新 plist。
+    private static let suiteName = "MacStrokeTests.WindowManager"
+
     private func isolatedSuite() -> UserDefaults {
-        let name = "MacStrokeTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        return defaults
+        UserDefaults(suiteName: Self.suiteName)!
+    }
+
+    override func setUp() {
+        super.setUp()
+        isolatedSuite().removePersistentDomain(forName: Self.suiteName)
+    }
+
+    override func tearDown() {
+        isolatedSuite().removePersistentDomain(forName: Self.suiteName)
+        super.tearDown()
     }
 
     private func isolatedPreferences() -> UserPreferences {

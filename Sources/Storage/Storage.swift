@@ -24,7 +24,6 @@ public enum StorageKey: String, CaseIterable {
     case defaultNoteColor = "defaultNoteColor"
 
     // Gesture recognition
-    case minimumPoints = "minimumPoints"
     case minSimilarityScore = "minScore"
     case enableGestureMinScore = "enableGestureMinScore"
     case showGestureNote = "showGestureNote"
@@ -158,7 +157,6 @@ public enum StorageDefaults {
     public static let defaultNoteColor: String = "#FFFFFF"
 
     // Gesture recognition
-    public static let minimumPoints: Int = 10
     public static let minSimilarityScore: Double = 85.0
     public static let enableGestureMinScore: Bool = true
     public static let showGestureNote: Bool = true
@@ -228,7 +226,6 @@ public func registerUserDefaultsDefaults() {
         StorageKey.mergeConsecutiveIdenticalGestures.rawValue: StorageDefaults.mergeConsecutiveIdenticalGestures,
         StorageKey.defaultLineColor.rawValue: StorageDefaults.defaultLineColor,
         StorageKey.defaultNoteColor.rawValue: StorageDefaults.defaultNoteColor,
-        StorageKey.minimumPoints.rawValue: StorageDefaults.minimumPoints,
         StorageKey.minSimilarityScore.rawValue: StorageDefaults.minSimilarityScore,
         StorageKey.enableGestureMinScore.rawValue: StorageDefaults.enableGestureMinScore,
         StorageKey.showGestureNote.rawValue: StorageDefaults.showGestureNote,

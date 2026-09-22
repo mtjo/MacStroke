@@ -55,9 +55,6 @@ public final class UserPreferences: ObservableObject {
     }
 
     // MARK: - Gesture recognition
-    @Published public var minimumPoints: Int {
-        didSet { storage.setInt(minimumPoints, forKey: .minimumPoints) }
-    }
     @Published public var minSimilarityScore: Double {
         didSet { storage.setDouble(minSimilarityScore, forKey: .minSimilarityScore) }
     }
@@ -181,7 +178,6 @@ public final class UserPreferences: ObservableObject {
         self.mergeConsecutiveIdenticalGestures = storage.getBoolOptional(forKey: .mergeConsecutiveIdenticalGestures) ?? StorageDefaults.mergeConsecutiveIdenticalGestures
         self.defaultLineColor = storage.getStringOptional(forKey: .defaultLineColor) ?? StorageDefaults.defaultLineColor
         self.defaultNoteColor = storage.getStringOptional(forKey: .defaultNoteColor) ?? StorageDefaults.defaultNoteColor
-        self.minimumPoints = storage.getIntOptional(forKey: .minimumPoints) ?? StorageDefaults.minimumPoints
         self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
         self.enableGestureMinScore = storage.getBoolOptional(forKey: .enableGestureMinScore) ?? StorageDefaults.enableGestureMinScore
         self.showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
