@@ -962,4 +962,95 @@ final class HistoryClipboardTests: XCTestCase {
         XCTAssertEqual(HistoryClipboardManager.pasteboardFileURLs(from: pasteboard), [],
                        "a screenshot copy is not a file copy")
     }
+
+    // MARK: - Repeated copies keep a single entry
+
+    func testRepeatedTextCopyMovesToTopWithoutDuplicating() {
+        let manager = createManager()
+        _ = manager.insertLocalHistoryClipboard(content: "alpha", isTop: false)
+        _ = manager.insertLocalHistoryClipboard(content: "beta", isTop: false)
+
+        let repeated = manager.insertLocalHistoryClipboard(content: "alpha", isTop: false)
+
+        XCTAssertNotNil(repeated)
+        XCTAssertEqual(manager.getCount(isTop: false), 2)
+        let history = manager.getHistoryClipboardList(firstPage: true)
+        XCTAssertEqual(manager.textContent(for: history[0]), "alpha", "the fresh copy leads the list")
+        XCTAssertEqual(manager.textContent(for: history[1]), "beta")
+    }
+
+    func testRepeatedCopyOfDifferentTextKeepsBothRows() {
+        let manager = createManager()
+
+        _ = manager.insertLocalHistoryClipboard(content: "same prefix", isTop: false)
+        _ = manager.insertLocalHistoryClipboard(content: "same prefix!", isTop: false)
+
+        XCTAssertEqual(manager.getCount(isTop: false), 2)
+    }
+
+    func testRepeatedCopyNeverConsumesPinnedRows() {
+        let manager = createManager()
+        _ = manager.insertLocalHistoryClipboard(content: "kept", isTop: false)
+        _ = manager.addTop(content: "kept")
+
+        _ = manager.insertLocalHistoryClipboard(content: "kept", isTop: false)
+        _ = manager.insertLocalHistoryClipboard(content: "kept", isTop: false)
+
+        XCTAssertEqual(manager.getTopList().count, 1, "pinning is the user's own list, dedupe stays out of it")
+        XCTAssertEqual(manager.getCount(isTop: false), 1)
+        XCTAssertEqual(manager.textContent(for: manager.getHistoryClipboardList(firstPage: true)[0]), "kept")
+    }
+
+    func testRepeatedFileCopyReusesTheRowAndLeavesTheFilesAlone() throws {
+        let manager = imageManager()
+        let a = try makeTempFile("a.txt")
+        let b = try makeTempFile("b.txt")
+        _ = manager.insertLocalFiles(paths: [a, b])
+        _ = manager.insertLocalFiles(paths: [b])
+
+        _ = manager.insertLocalFiles(paths: [a, b])
+
+        XCTAssertEqual(manager.getCount(isTop: false), 2)
+        let history = manager.getHistoryClipboardList(firstPage: true)
+        XCTAssertEqual(manager.filePaths(for: history[0]), [a, b])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: a))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: b))
+    }
+
+    func testRepeatedImageCopyKeepsOneRowAndOnePayloadFile() throws {
+        let manager = imageManager()
+        let otherPng = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2,
+                                                      bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                                      isPlanar: false, colorSpaceName: .deviceRGB,
+                                                      bytesPerRow: 0, bitsPerPixel: 0)?
+            .representation(using: .png, properties: [:]))
+
+        let first = try XCTUnwrap(manager.insertLocalImage(data: pngData()))
+        _ = manager.insertLocalImage(data: otherPng)
+        let second = try XCTUnwrap(manager.insertLocalImage(data: pngData()))
+
+        XCTAssertEqual(manager.getCount(isTop: false), 2)
+        XCTAssertEqual(second.content, first.content, "identical bytes reuse the stored payload")
+        let fm = FileManager.default
+        let files = try fm.contentsOfDirectory(atPath: (first.content as NSString).deletingLastPathComponent)
+        XCTAssertEqual(files.count, 2, "one payload per remaining row")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: second.content)),
+                       manager.imageData(for: manager.getHistoryClipboardList(firstPage: true)[0]))
+    }
+
+    func testPinKeepsItsOwnCopyOfAnIdenticalImage() throws {
+        let manager = imageManager()
+        let history = try XCTUnwrap(manager.insertLocalImage(data: pngData()))
+
+        let pinned = try XCTUnwrap(manager.addTopImage(for: history))
+        _ = manager.insertLocalImage(data: pngData())
+
+        XCTAssertNotEqual(pinned.content, history.content, "a pin survives later history cleanup")
+        XCTAssertEqual(manager.getTopList().count, 1)
+        XCTAssertEqual(manager.getCount(isTop: false), 1)
+
+        manager.clearHistoryList()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: pinned.content))
+        XCTAssertNotNil(manager.imageData(for: manager.getTopList()[0]))
+    }
 }

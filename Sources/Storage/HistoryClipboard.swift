@@ -230,10 +230,14 @@ public final class HistoryClipboardManager {
     public func insertLocalImage(data: Data, isTop: Bool = false) -> HistoryClipboardEntry? {
         lock.lock()
         defer { lock.unlock() }
-        guard let png = HistoryClipboardManager.pngData(from: data),
-              let path = writeImageFile(png) else { return nil }
-        let entry = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: isTop)
-        if entry == nil { unlinkImageFiles([path]) }
+        guard let png = HistoryClipboardManager.pngData(from: data) else { return nil }
+        // Identical bytes already sitting in the history reuse that payload file
+        // instead of writing a second one for the row the insert replaces.
+        let reusedPath = isTop ? nil : matchingHistoryImagePath(for: png)
+        let path = reusedPath ?? writeImageFile(png)
+        guard let payloadPath = path else { return nil }
+        let entry = insertLocalHistoryClipboardInternal(content: payloadPath, kind: .image, isTop: isTop)
+        if entry == nil, reusedPath == nil { unlinkImageFiles([payloadPath]) }
         return entry
     }
 
@@ -280,6 +284,37 @@ public final class HistoryClipboardManager {
             .map(String.init)
     }
 
+    /// Payload file of an identical PNG that is already unpinned in the history,
+    /// or nil when the image is new. Reusing the file keeps a repeated screenshot
+    /// copy from leaking a second payload next to the row it also replaces.
+    private func matchingHistoryImagePath(for png: Data) -> String? {
+        guard let db = db else { return nil }
+        let fm = FileManager.default
+        let query = table.filter(isTopCol == 0 && typeCol == Int64(HistoryClipboardKind.image.rawValue))
+
+        do {
+            for row in try db.prepare(query) {
+                let path: String = row[contentCol]
+                let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? Int
+                guard size == png.count, let stored = fm.contents(atPath: path), stored == png else { continue }
+                return path
+            }
+        } catch {
+            NSLog("%@", "[HistoryClipboard] Failed to match image: \(error)")
+        }
+        return nil
+    }
+
+    /// Drop the unpinned rows holding this exact payload before an insert, so
+    /// copying the same content again moves it to the top instead of piling up
+    /// duplicates. The list is ordered by id, hence the delete + re-insert.
+    /// Pinned rows are user-curated and stay untouched, and image payloads are
+    /// never unlinked here because the caller re-inserts the same path.
+    private func dropDuplicateHistoryRows(content: String, type: Int64) throws {
+        guard let db = db else { return }
+        try db.run(table.filter(isTopCol == 0 && typeCol == type && contentCol == content).delete())
+    }
+
     private func insertLocalHistoryClipboardInternal(content: String,
                                                      kind: HistoryClipboardKind = .text,
                                                      isTop: Bool) -> HistoryClipboardEntry? {
@@ -290,6 +325,10 @@ public final class HistoryClipboardManager {
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
         do {
+            if !isTop {
+                try dropDuplicateHistoryRows(content: storedContent, type: Int64(kind.rawValue))
+            }
+
             let rowId = try db.run(table.insert(
                 contentCol <- storedContent,
                 typeCol <- Int64(kind.rawValue),
