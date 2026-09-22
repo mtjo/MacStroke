@@ -159,8 +159,6 @@ public struct PreferencesView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var selectedTab: PreferencesTab = .general
     @StateObject private var ruleStore = RuleStore.shared
-    @State private var showingRuleEditor = false
-    @State private var editingRule: Rule?
     @ObservedObject private var scriptList = AppleScriptsList.sharedAppleScriptsList
     @State private var rightClickApps: [String] = []
     /// Bumped whenever the UI language changes so the whole view tree
@@ -198,12 +196,7 @@ public struct PreferencesView: View {
                 case .general:
                     GeneralTabView(viewModel: viewModel)
                 case .rules:
-                    RulesTabView(
-                        viewModel: viewModel,
-                        ruleStore: ruleStore,
-                        showingRuleEditor: $showingRuleEditor,
-                        editingRule: $editingRule
-                    )
+                    RulesTabView(viewModel: viewModel, ruleStore: ruleStore)
                 case .filters:
                     FiltersTabView(viewModel: viewModel)
                 case .appleScript:
@@ -560,154 +553,32 @@ final class FontPanelObserver: NSObject {
 
 // MARK: - Rules Tab
 
-/// Gesture thumbnail drawn with SwiftUI Canvas (same scaling math as
-/// DrawGesture, but no NSView size-negotiation issues inside Table rows).
-struct GestureThumb: View {
-    let points: [GesturePoint]
-    /// Original DrawGesture.m draws into a 60pt canvas inset 12pt from the
-    /// view's bottom-left corner, which assumes an 84pt cell. Smaller hosts
-    /// (the editor preview) pass their own canvas/inset pair.
-    var canvas: Double = 60
-    var inset: Double = 12
-
-    var body: some View {
-        Canvas { context, size in
-            guard points.count > 1 else { return }
-            let xs = points.map(\.x)
-            let ys = points.map(\.y)
-            let minX = xs.min() ?? 0, maxX = xs.max() ?? 0
-            let minY = ys.min() ?? 0, maxY = ys.max() ?? 0
-            let width = maxX - minX
-            let height = maxY - minY
-            let zoom = max(width / canvas, height / canvas)
-            guard zoom > 0 else { return }
-            let fixX = (width < height ? (canvas - width / zoom) / 2 : 0) + inset
-            let fixY = (width > height ? (canvas - height / zoom) / 2 : 0) + inset
-            let scaled = points.map { p in
-                CGPoint(x: (p.x - minX) / zoom + fixX,
-                        y: size.height - ((p.y - minY) / zoom + fixY))
-            }
-            let segments = scaled.count - 1
-            // Original colors by segment index / points.count (not count-1).
-            let total = Double(points.count)
-            for i in 0..<segments {
-                let t = Double(i) / total
-                var path = Path()
-                path.move(to: scaled[i])
-                path.addLine(to: scaled[i + 1])
-                context.stroke(
-                    path,
-                    with: .color(Color(red: 0.5 * t, green: 0.47 + 0.53 * t, blue: 0.9)),
-                    lineWidth: 2)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
 struct RulesTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @ObservedObject var ruleStore: RuleStore
-    @Binding var showingRuleEditor: Bool
-    @Binding var editingRule: Rule?
-    @State private var selectedRuleID: String? = nil
+    @State private var selectedRow = -1
 
     var body: some View {
         SettingsFillingPage {
-            // Rules list (original: table fills the tab, button bar at bottom)
-                Table(ruleStore.rules, selection: $selectedRuleID) {
-                    TableColumn(L("Image")) { rule in
-                        // Original DrawGesture view: with no recorded points the
-                        // cell renders a "Draw Gesture" button instead.
-                        Group {
-                            if rule.template.points.isEmpty {
-                                Button(L("Draw Gesture")) { drawGesture(rule.name) }
-                                    .controlSize(.small)
-                                    .frame(width: 80, height: 25)
-                            } else {
-                                GestureThumb(points: rule.template.points)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .frame(height: 84)   // original heightOfRow: 84
-                        .contentShape(Rectangle())
-                        .onTapGesture(count: 2) {
-                            drawGesture(rule.name)
-                        }
-                    }
-                    .width(84)
-
-                    TableColumn(L("Gesture")) { rule in
-                        Text(rule.name)
-                            .font(.system(size: 13))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) {
-                                editingRule = rule
-                                showingRuleEditor = true
-                            }
-                    }
-                    .width(min: 98, ideal: 120)
-
-                    TableColumn(L("Type")) { rule in
-                        Text(actionTypeLabel(for: rule.action))
-                            .font(.system(size: 12))
-                    }
-                    .width(96)
-
-                    TableColumn(L("Action")) { rule in
-                        Text(actionContentLabel(for: rule.action))
-                            .font(.system(size: 12))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .width(104)
-
-                    TableColumn(L("Filter")) { rule in
-                        Text(rule.filter)
-                            .font(.system(size: 12))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    .width(min: 120, ideal: 160)
-
-                    TableColumn(L("Description")) { rule in
-                        Text(rule.note.isEmpty ? rule.description : rule.note)
-                            .font(.system(size: 12))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                }
-            .tableStyle(.inset(alternatesRowBackgrounds: true))
-            .frame(minHeight: 300, maxHeight: .infinity)
-            .settingsListCard()
-
-            Text(L("tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule."))
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Original: one view-based table fills the pane and every cell hosts
+            // a live control — there is no rule editor window.
+            RulesTable(store: ruleStore, selectedRow: $selectedRow,
+                       onDrawGesture: drawGesture(row:))
+                .frame(maxHeight: .infinity)
+                .settingsListCard()
 
             // Bottom bar (original: + - Pick a running app ... Defaults Clear)
             HStack(spacing: 8) {
-                Button {
-                    editingRule = nil
-                    showingRuleEditor = true
-                } label: {
+                Button(action: addRule) {
                     Image(systemName: "plus")
                 }
-                .help(L("Add Rule"))
 
-                Button {
-                    guard let id = selectedRuleID else { return needRuleSelection() }
-                    ruleStore.remove(named: id)
-                    selectedRuleID = nil
-                } label: {
+                Button(action: removeRule) {
                     Image(systemName: "minus")
                 }
-                .help(L("Delete Rule"))
 
                 Button(L("Pick a running app")) {
-                    guard selectedRuleID != nil else { return needRuleSelection() }
+                    guard selectedRow != -1 else { return needRuleSelection() }
                     pickAppForSelectedRule()
                 }
 
@@ -728,71 +599,41 @@ struct RulesTabView: View {
                     if alert.runModal() == .alertFirstButtonReturn {
                         ruleStore.rules.removeAll()
                         ruleStore.save()
-                        selectedRuleID = nil
+                        selectedRow = -1
                     }
                 }
                 .foregroundColor(.red)
             }
         }
-        .sheet(isPresented: $showingRuleEditor) {
-            RuleEditorView(
-                ruleStore: ruleStore,
-                editingRule: editingRule,
-                onDismiss: { savedName in
-                    showingRuleEditor = false
-                    editingRule = nil
-                    // Follow the row across a rename so the table keeps showing
-                    // what the user just edited.
-                    if let savedName { selectedRuleID = savedName }
-                }
+    }
+
+    /// Original `addShortcutRule:`: append a rule whose every field is the
+    /// "Double click Modify" placeholder, then reload. Names are not unique, so
+    /// the table addresses rows by index exactly like the original does.
+    private func addRule() {
+        let placeholder = RulesTable.Coordinator.placeholder
+        var spare = RuleSpareActions()
+        spare.text = placeholder
+        spare.password = placeholder
+        ruleStore.rules.append(
+            Rule(
+                name: placeholder,
+                description: placeholder,
+                template: GestureTemplate(points: [], name: placeholder),
+                action: .shortcut(keyCode: 0, flags: 0),
+                note: placeholder,
+                filter: "*",
+                spareActions: spare
             )
-        }
+        )
+        ruleStore.save()
     }
 
-    /// Plain action-type label for the table's Type column (original combo:
-    /// Hot Key / Apple Script / Text / Password).
-    private func actionTypeLabel(for action: RuleAction) -> String {
-        switch action {
-        case .applescript: return L("Apple Script")
-        case .keyPress, .shortcut: return L("Hot Key")
-        case .text, .copyToClipboard: return L("Text")
-        case .password: return L("Password")
-        case .mouseClick: return L("Mouse Click")
-        case .none: return L("None")
-        }
-    }
-
-    /// Action column shows the real action content, like the original inline
-    /// cells: shortcut recorder text, script name, text value, password dots.
-    private func actionContentLabel(for action: RuleAction) -> String {
-        switch action {
-        case .shortcut(let keyCode, let flags):
-            var s = ""
-            if flags & 0x100000 != 0 { s += "⌘" }
-            if flags & 0x80000 != 0 { s += "⌥" }
-            if flags & 0x40000 != 0 { s += "⌃" }
-            if flags & 0x20000 != 0 { s += "⇧" }
-            return s + ShortcutRecorderView.keyName(for: keyCode)
-        case .keyPress(let key):
-            return key
-        case .applescript(let reference):
-            if let uuid = UUID(uuidString: reference),
-               let item = AppleScriptsList.sharedAppleScriptsList.getScriptById(id: uuid) {
-                return item.name
-            }
-            if let item = AppleScriptsList.sharedAppleScriptsList.getAllScripts().first(where: { $0.source == reference }) {
-                return item.name
-            }
-            return reference.split(separator: "\n").first.map(String.init) ?? reference
-        case .text(let value), .copyToClipboard(let value):
-            return value
-        case .password(let value):
-            return String(repeating: "•", count: min(max(value.count, 1), 8))
-        case .mouseClick(let x, let y):
-            return "(\(x), \(y))"
-        case .none:
-            return "—"
-        }
+    /// Original `removeRule:`: with no selected row it only posts the toast.
+    private func removeRule() {
+        guard ruleStore.rules.indices.contains(selectedRow) else { return needRuleSelection() }
+        ruleStore.rules.remove(at: selectedRow)
+        ruleStore.save()
     }
 
     /// Enter screen-recording mode for the given rule and show the original
@@ -802,6 +643,13 @@ struct RulesTabView: View {
     /// not a disabled button.
     private func needRuleSelection() {
         postMacStrokeNotification(L("Select a filter first!"))
+    }
+
+    /// The table hands over a row index (original `preSetRuleGestureAtIndex:`);
+    /// the recording plumbing still addresses rules by name.
+    private func drawGesture(row: Int) {
+        guard ruleStore.rules.indices.contains(row) else { return }
+        drawGesture(ruleStore.rules[row].name)
     }
 
     private func drawGesture(_ ruleName: String) {
@@ -896,14 +744,13 @@ struct RulesTabView: View {
         postMacStrokeNotification(L("Gesture draw complete!"))
     }
 
-    /// Original bottom-bar button: multi-select running apps (AppPicker-
-    /// WindowController) and write the "|"-joined result (each entry followed by
-    /// a pipe) through `setWildFilter:atIndex:`, which also forces the filter
-    /// type back to wildcard. Picking nothing clears the filter.
+    /// Original bottom-bar button: multi-select running apps (AppPickerWindow-
+    /// Controller) and write the "|"-joined result (each entry followed by a
+    /// pipe) through `setWildFilter:atIndex:`, which also forces the filter type
+    /// back to wildcard. Picking nothing clears the filter.
     private func pickAppForSelectedRule() {
-        guard let id = selectedRuleID,
-              let idx = ruleStore.rules.firstIndex(where: { $0.name == id }) else { return }
-        let oldRule = ruleStore.rules[idx]
+        guard ruleStore.rules.indices.contains(selectedRow) else { return }
+        let oldRule = ruleStore.rules[selectedRow]
 
         let preselected = Set(oldRule.filter
             .components(separatedBy: CharacterSet(charactersIn: "|\n"))
@@ -911,7 +758,7 @@ struct RulesTabView: View {
 
         guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected) else { return }
 
-        let newRule = Rule(
+        ruleStore.rules[selectedRow] = Rule(
             name: oldRule.name,
             description: oldRule.description,
             template: oldRule.template,
@@ -924,7 +771,7 @@ struct RulesTabView: View {
             filterType: "wildcard",
             spareActions: oldRule.spareActions
         )
-        ruleStore.update(newRule)
+        ruleStore.save()
     }
 }
 
@@ -985,472 +832,6 @@ extension NSAlert {
     }
 }
 
-/// 规则编辑器（添加 / 编辑）。
-///
-/// 原版没有编辑窗口：所有字段都在规则表里就地编辑
-/// （AppPrefsWindowController.m:960 起）。Swift 的 Table 单元格只读，所以统一走
-/// 这个弹层，但字段集合仍与原版一致——名称(direction)、说明(note)、手势轨迹
-/// (data)、过滤(filter)、类型 + 动作内容；原版没有的每规则开关（启用、最小分数、
-/// 持续触发、正则、鼠标点击）一律不再提供，编辑时原样保留旧值以免丢数据。
-struct RuleEditorView: View {
-    @ObservedObject var ruleStore: RuleStore
-    let editingRule: Rule?
-    /// Called when the sheet closes; carries the saved rule's name so the table
-    /// can keep the row selected across a rename.
-    let onDismiss: (_ savedName: String?) -> Void
-
-    enum RuleActionType: String, CaseIterable {
-        case shortcut = "Hot Key"
-        case applescript = "Apple Script"
-        case text = "Text"
-        case password = "Password"
-
-        var label: String { L(rawValue) }
-    }
-
-    @State private var name = ""
-    @State private var note = ""
-    @State private var ruleDescription = ""
-    @State private var filter = "*"
-    // Kept for round-tripping only: the original has no UI for these.
-    @State private var filterType = "wildcard"
-    @State private var minSimilarityScore = 30.0
-    @State private var isEnabled = true
-    @State private var triggerOnEveryMatch = false
-
-    @State private var templateName = ""
-    @State private var strokePoints: [GesturePoint] = []
-    @State private var strokeIsCustom = false
-    @State private var recording = false
-    @State private var availableGestures: [(name: String, stroke: Stroke)] = []
-
-    @State private var actionType: RuleActionType = .shortcut
-    @State private var shortcutKey = ""
-    @State private var appleScriptId = ""
-    /// Legacy rules stored the raw source instead of a script id; keep it so
-    /// editing such a rule does not silently drop the action.
-    @State private var appleScriptSource = ""
-    @State private var textValue = ""
-    @State private var passwordValue = ""
-    @State private var passwordVisible = false
-    @ObservedObject private var scriptList = AppleScriptsList.sharedAppleScriptsList
-
-    private static let drawnGestureTag = "__drawn__"
-    private static let noneGestureTag = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(editingRule == nil ? L("Add Rule") : L("Edit Rule"))
-                .font(.system(size: 15, weight: .bold))
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    basicSection
-                    gestureSection
-                    filterSection
-                    actionSection
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 4)
-            }
-
-            HStack(spacing: 8) {
-                if let error = nameError {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-                Spacer()
-                Button(L("Cancel")) { onDismiss(nil) }
-                    .keyboardShortcut(.cancelAction)
-                Button(editingRule == nil ? L("Add") : L("Save")) { saveRule() }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(nameError != nil)
-            }
-        }
-        .padding(20)
-        .frame(width: 560, height: 600)
-        .onAppear(perform: loadInitialValues)
-        .onReceive(NotificationCenter.default.publisher(for: .macStrokeGestureDidRecord)) { note in
-            guard recording,
-                  let points = note.userInfo?["points"] as? [GesturePoint] else { return }
-            strokePoints = points
-            strokeIsCustom = true
-            templateName = Self.drawnGestureTag
-            recording = false
-        }
-        .onDisappear {
-            if recording {
-                NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
-            }
-        }
-    }
-
-    // MARK: Sections
-
-    private var basicSection: some View {
-        SettingsSection(title: L("Basic Info")) {
-            SettingsCard {
-                SettingsRow(L("Rule Name")) {
-                    TextField(L("Rule Name"), text: $name)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
-                }
-                RowDivider()
-                SettingsRow(L("Description")) {
-                    TextField(L("Description"), text: $note)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 260)
-                }
-            }
-        }
-    }
-
-    private var gestureSection: some View {
-        SettingsSection(title: L("Gesture Trigger")) {
-            SettingsCard {
-                SettingsRow(L("Gesture")) {
-                    Picker("", selection: $templateName) {
-                        Text(L("Not selected")).tag(Self.noneGestureTag)
-                        if strokeIsCustom {
-                            Text(L("Drawn Gesture")).tag(Self.drawnGestureTag)
-                        }
-                        ForEach(availableGestures, id: \.name) { gesture in
-                            Text(gesture.name).tag(gesture.name)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(width: 200)
-                    .onChange(of: templateName) { applyTemplate(named: $0) }
-                }
-                RowDivider()
-                SettingsRow(L("Gesture Path")) {
-                    HStack(spacing: 10) {
-                        Text(strokePoints.isEmpty
-                             ? L("No gesture drawn yet")
-                             : "\(strokePoints.count)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        GestureThumb(points: strokePoints, canvas: 44, inset: 6)
-                            .frame(width: 56, height: 56)
-                            .background(Color(NSColor.textBackgroundColor))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .strokeBorder(Color(NSColor.separatorColor))
-                            )
-                        if recording {
-                            Button(L("Cancel Recording")) { cancelRecording() }
-                        } else {
-                            Button(L("Draw On Screen")) { startRecording() }
-                        }
-                    }
-                }
-            }
-            .disabled(recording)
-            .overlay(alignment: .top) {
-                if recording {
-                    Text(L("You can draw a gesture anywhere on the screen, or select the preset gesture below."))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(6)
-                }
-            }
-        }
-    }
-
-    private var filterSection: some View {
-        SettingsSection(title: L("App Filter")) {
-            SettingsCard {
-                SettingsRow(L("Filter")) {
-                    HStack(spacing: 8) {
-                        TextField("com.apple.*", text: $filter)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 220)
-                        Button(L("Pick a running app")) { pickApps() }
-                    }
-                }
-                SettingsRow(L("Filter hint"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var actionSection: some View {
-        SettingsSection(title: L("Action")) {
-            SettingsCard {
-                SettingsRow(L("Action Type")) {
-                    Picker("", selection: $actionType) {
-                        ForEach(RuleActionType.allCases, id: \.self) { type in
-                            Text(type.label).tag(type)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                }
-            }
-
-            switch actionType {
-            case .shortcut:
-                SettingsCard {
-                    SettingsRow(L("Key Combination")) {
-                        ShortcutRecorder(text: $shortcutKey)
-                            .frame(width: 200, height: 26)
-                    }
-                }
-            case .applescript:
-                // Original: an NSComboBox of the saved scripts; the rule stores
-                // the picked script's id (apple_script_id).
-                SettingsCard {
-                    SettingsRow(L("Apple Script")) {
-                        Picker("", selection: $appleScriptId) {
-                            Text("").tag("")
-                            ForEach(scriptList.getAllScripts()) { script in
-                                Text(script.name).tag(script.id.uuidString)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 220)
-                    }
-                    SettingsRow(L("Load Example"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            case .text:
-                SettingsCard {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L("Text to input"))
-                        TextEditor(text: $textValue)
-                            .font(.system(size: 12))
-                            .frame(height: 110)
-                    }
-                    .padding(12)
-                }
-            case .password:
-                SettingsCard {
-                    SettingsRow(L("Password")) {
-                        HStack(spacing: 8) {
-                            Group {
-                                if passwordVisible {
-                                    TextField(L("Password"), text: $passwordValue)
-                                } else {
-                                    SecureField(L("Password"), text: $passwordValue)
-                                }
-                            }
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 200)
-                            Button(passwordVisible ? L("Hide") : L("Show")) {
-                                passwordVisible.toggle()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: Validation
-
-    private var trimmedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// What the rule writes to `apple_script_id`: the picked script's id, or the
-    /// legacy inline source for rules that predate the id reference.
-    private var scriptReference: String {
-        appleScriptId.isEmpty ? appleScriptSource : appleScriptId
-    }
-
-    private var nameError: String? {
-        if trimmedName.isEmpty { return L("Name cannot be empty") }
-        if ruleStore.exists(named: trimmedName, excluding: editingRule?.name ?? "") {
-            return L("Rule name already exists")
-        }
-        return nil
-    }
-
-    // MARK: Actions
-
-    private func loadInitialValues() {
-        availableGestures = GestureTemplateProvider.shared.presetPickerEntries
-        guard let rule = editingRule else {
-            templateName = availableGestures.first?.name ?? ""
-            applyTemplate(named: templateName)
-            return
-        }
-        name = rule.name
-        note = rule.note
-        ruleDescription = rule.description
-        // Original writes the filter verbatim (a leading/trailing space simply
-        // stops the pattern from matching).
-        filter = rule.filter
-        filterType = rule.filterType
-        minSimilarityScore = rule.minSimilarityScore
-        isEnabled = rule.isEnabled
-        triggerOnEveryMatch = rule.triggerOnEveryMatch
-        templateName = rule.template.name
-        strokePoints = rule.template.points
-        strokeIsCustom = !GestureTemplateProvider.shared.presetPickerEntries.contains { $0.name == rule.template.name }
-        if strokeIsCustom { templateName = Self.drawnGestureTag }
-
-        // The original keeps every action payload on the rule, so switching the
-        // action type back and forth restores what was typed before.
-        let spare = rule.spareActions
-        textValue = spare.text
-        passwordValue = spare.password
-        if let uuid = UUID(uuidString: spare.appleScriptId), scriptList.index(of: uuid) != nil {
-            appleScriptId = spare.appleScriptId
-        }
-        if spare.shortcutCode != 0 || spare.shortcutFlag != 0 {
-            shortcutKey = "keyCode=\(spare.shortcutCode), flags=\(spare.shortcutFlag)"
-        }
-
-        switch rule.action {
-        case .keyPress(let key):
-            actionType = .shortcut
-            shortcutKey = key
-        case .shortcut(let keyCode, let flags):
-            actionType = .shortcut
-            shortcutKey = "keyCode=\(keyCode), flags=\(flags)"
-        case .applescript(let reference):
-            actionType = .applescript
-            if let uuid = UUID(uuidString: reference), scriptList.index(of: uuid) != nil {
-                appleScriptId = reference
-            } else {
-                appleScriptId = ""
-                appleScriptSource = reference
-            }
-        case .text(let text), .copyToClipboard(let text):
-            actionType = .text
-            textValue = text
-        case .password(let text):
-            actionType = .password
-            passwordValue = text
-        case .mouseClick, .none:
-            actionType = .shortcut
-        }
-    }
-
-    /// Point the preview at the preset template picked from the menu.
-    private func applyTemplate(named tag: String) {
-        if tag == Self.drawnGestureTag { return }
-        if tag == Self.noneGestureTag {
-            strokePoints = []
-            strokeIsCustom = false
-            return
-        }
-        guard let entry = availableGestures.first(where: { $0.name == tag }) else { return }
-        strokePoints = entry.stroke.points
-        strokeIsCustom = false
-    }
-
-    private func startRecording() {
-        recording = true
-        NotificationCenter.default.post(
-            name: .macStrokeRecordGesture,
-            object: nil,
-            userInfo: [
-                "ruleName": trimmedName.isEmpty ? (editingRule?.name ?? "") : trimmedName,
-                "deferStoreUpdate": true,
-            ]
-        )
-    }
-
-    private func cancelRecording() {
-        recording = false
-        NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
-    }
-
-    /// Original: filter is the picked bundle IDs joined with "|", and every entry
-    /// gets a trailing "|"; picking nothing clears the filter (which then matches
-    /// no app at all — an original quirk).
-    private func pickApps() {
-        let preselected = Set(filter
-            .components(separatedBy: CharacterSet(charactersIn: "|\n"))
-            .filter { !$0.isEmpty })
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: preselected) else { return }
-        filter = picked.map { "\($0)|" }.joined()
-    }
-
-    private func saveRule() {
-        let template: GestureTemplate
-        if strokeIsCustom, !strokePoints.isEmpty {
-            template = GestureTemplate(points: strokePoints, name: editingRule?.template.name ?? "Recorded")
-        } else if let entry = availableGestures.first(where: { $0.name == templateName }) {
-            template = GestureTemplate(from: entry.stroke, name: entry.name)
-        } else {
-            template = GestureTemplate(points: strokePoints, name: templateName)
-        }
-
-        let action: RuleAction
-        switch actionType {
-        case .shortcut:
-            if let combined = Self.parseShortcutKey(shortcutKey) {
-                action = .shortcut(keyCode: combined.keyCode, flags: combined.flags)
-            } else {
-                action = .keyPress(shortcutKey)
-            }
-        case .applescript:
-            // Original stores `apple_script_id`; "" keeps a legacy inline source.
-            action = .applescript(scriptReference)
-        case .text:
-            action = .text(textValue)
-        case .password:
-            action = .password(passwordValue)
-        }
-
-        // Values typed for the other action types stay on the rule, exactly like
-        // the original's per-field setters.
-        let spare = RuleSpareActions(
-            text: textValue,
-            password: passwordValue,
-            appleScriptId: scriptReference,
-            shortcutCode: Self.parseShortcutKey(shortcutKey).map { Int($0.keyCode) } ?? 0,
-            shortcutFlag: Self.parseShortcutKey(shortcutKey).map { Int($0.flags) } ?? 0
-        )
-
-        let rule = Rule(
-            name: trimmedName,
-            description: ruleDescription.isEmpty ? note : ruleDescription,
-            template: template,
-            minSimilarityScore: minSimilarityScore,
-            action: action,
-            note: note,
-            isEnabled: isEnabled,
-            triggerOnEveryMatch: triggerOnEveryMatch,
-            filter: filter,
-            filterType: filterType,
-            spareActions: spare
-        )
-
-        if let original = editingRule {
-            // Renaming has to be explicit: rows are matched by their old name.
-            if !ruleStore.replace(named: original.name, with: rule) {
-                ruleStore.add(rule)
-            }
-        } else {
-            ruleStore.add(rule)
-        }
-        onDismiss(rule.name)
-    }
-
-    /// Parse the recorder's "keyCode=X, flags=Y" text.
-    static func parseShortcutKey(_ raw: String) -> (keyCode: UInt16, flags: UInt)? {
-        let cleaned = raw.trimmingCharacters(in: .whitespaces)
-        let pattern = #"keyCode=(\d+),\s*flags=(\d+)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: cleaned, range: NSRange(cleaned.startIndex..., in: cleaned)),
-              let keyCodeRange = Range(match.range(at: 1), in: cleaned),
-              let flagsRange = Range(match.range(at: 2), in: cleaned),
-              let keyCodeInt = Int(String(cleaned[keyCodeRange])),
-              let flagsInt = Int(String(cleaned[flagsRange]))
-        else { return nil }
-        return (UInt16(keyCodeInt), UInt(flagsInt))
-    }
-}
 
 // MARK: - AppleScript Tab
 //
