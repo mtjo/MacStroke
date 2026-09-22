@@ -82,6 +82,7 @@ swift test --list-tests
   - **不可变性**：更新规则时，创建新的 `Rule` 实例并调用 `RuleStore.update()`
 
 - **Sources/GestureEngine/GestureTemplateProvider.swift** — 预设手势（A–Z、方向箭头、方框符号）；`reversedTemplate(for:)` 提供 Reversed（点序反转）变体，`allTemplatesIncludingReversed()` 命名格式为 "X Shape" / "X Shape Revered"
+  - `presetPickerEntries` 是 UI 里唯一的预设候选集，严格对齐原版 `alertModalFirstBtnTitle:` 的 68 项顺序：8 个方向符号（← ↑ → ↓ ↙ ↗ ↘ ↖，**无** Revered 变体）→ ┏ ┓ ┗ ┛ 各带 " Revered" → 裸字母 "A"/"A Revered" … "Z"/"Z Revered"（字母在列表里不带 " Shape" 后缀，模板内部名仍是 "A Shape"）
 
 - **Sources/EventCapture/CanvasManager.swift** — 手势状态机（对齐原版 `mouseEventCallback`）：
   - 右键按下时经 `shouldCaptureGesture` 闭包过滤（main.swift 注入：黑白名单 + showUIInWhateverApp + appSuitedRule）
@@ -92,7 +93,8 @@ swift test --list-tests
   - `UserPreferences`（`ObservableObject`）将每个设置绑定到 `PreferencesStorage`（`StorageKey` enum 中的 UserDefaults key）
   - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、About（8 个，对齐原版 `AppPrefsWindowController.setupToolbar`；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
   - 视觉风格参照 macOS 系统设置：`SettingsChrome` 常量 + `SettingsPage` / `SettingsFillingPage`（含表格的页不滚动）+ `SettingsSection` / `SettingsCard` / `SettingsRow` / `TrailingSwitch`；侧栏圆角高亮、灰底页面、白色圆角卡片、左标题右控件
-  - 规则表格列：Image（`GestureThumb` 84pt 行高，双击走"屏幕绘制"）、Gesture（名称，双击打开编辑器）、Type、Action、Filter、Description
+  - 规则表格列：Image（`GestureThumb` 84pt 行高；轨迹为空的行按原版渲染一个 80x25 的"绘制手势"按钮）、Gesture（名称，双击打开编辑器）、Type、Action、Filter、Description。Image 列双击与"绘制手势"按钮在原版都走 `preSetRuleGestureAtIndex:`，即弹出带 68 项预设下拉的"绘制手势！"模态框（不是单独的绘制面板）；选中预设或屏幕上画完会立刻 `setGestureData:` 落库、发"手势绘制完成"通知并合成 Return 键关掉模态框
+  - `GestureThumb` 复刻原版 `DrawGesture setPoints:` 的数学：60pt 画布、`zoo = max(w/60, h/60)`、只在短轴居中、整体右下偏移 12pt、逐段渐变 `(0.5t, 0.47+0.53t, 0.9)` 且 `t = i / points.count`（不是 count-1）；编辑器里 56pt 预览框用 `canvas: 44, inset: 6` 以免裁切
   - `RuleEditorView` — 添加/编辑规则的弹层（原版是表格就地编辑，Swift Table 只读所以改为 sheet）；字段仅名称/说明/手势轨迹/过滤/动作类型+内容，原版没有的每规则开关（启用、最小分数、持续触发、正则）不再暴露，保存时原样保留旧值
 
 - **Sources/Storage/** —

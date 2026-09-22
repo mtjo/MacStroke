@@ -167,8 +167,8 @@
 "Hot Key" = "Hot Key";
 "Apple Script" = "Apple Script";
 "Text" = "Text";
-"tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\"." = "tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\".";
 "Draw Gesture!" = "Draw Gesture!";
+"Select a filter first!" = "Select a filter first!";
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "You can draw a gesture anywhere on the screen, or select the preset gesture below.";
 "Black list mode" = "Black list mode";
 "White list mode" = "White list mode";

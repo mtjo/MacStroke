@@ -136,6 +136,7 @@
 "MIT License - Copyright © 2024" = "MIT License - Copyright © 2024";
 "No gesture template set" = "尚未设置手势模板";
 "Draw Gesture" = "绘制手势";
+"Select a filter first!" = "请先选择一个规则！";
 "MacStroke Preferences" = "MacStroke 偏好设置";
 "Needs Accessibility Permission" = "需要辅助功能权限";
 "MacStroke needs accessibility permission to capture global mouse events and recognize gestures.\n\nClick \"Open System Settings\" and enable MacStroke under \"Privacy & Security\" → \"Accessibility\".\n\nPlease restart the application after granting permission." = "MacStroke 需要辅助功能权限来捕获全局鼠标事件并识别手势。\n\n请点击“打开系统设置”，在“隐私与安全性”→“辅助功能”中启用 MacStroke。\n\n授权后请重新启动应用。";

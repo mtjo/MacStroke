@@ -136,6 +136,7 @@
 "MIT License - Copyright © 2024" = "MIT License - Copyright © 2024";
 "No gesture template set" = "No gesture template set";
 "Draw Gesture" = "Draw Gesture";
+"Select a filter first!" = "Select a filter first!";
 "MacStroke Preferences" = "MacStroke Preferences";
 "Needs Accessibility Permission" = "Needs Accessibility Permission";
 "MacStroke needs accessibility permission to capture global mouse events and recognize gestures.\n\nClick \"Open System Settings\" and enable MacStroke under \"Privacy & Security\" → \"Accessibility\".\n\nPlease restart the application after granting permission." = "MacStroke needs accessibility permission to capture global mouse events and recognize gestures.\n\nClick \"Open System Settings\" and enable MacStroke under \"Privacy & Security\" → \"Accessibility\".\n\nPlease restart the application after granting permission.";

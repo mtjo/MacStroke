@@ -108,4 +108,25 @@ final class GestureMatcherTests: XCTestCase {
         let score = compare(template: template, candidate: decoded)
         XCTAssertGreaterThan(score, 50)
     }
+
+    /// The preferences preset picker must offer exactly the original 68 entries
+    /// (AppPrefsWindowController.m:628-662): no invented action presets, and no
+    /// reversed twins for the four direction arrows.
+    func testPresetPickerEntriesMatchOriginalList() {
+        let names = GestureTemplateProvider.shared.presetPickerEntries.map { $0.name }
+        XCTAssertEqual(names.count, 68)
+        XCTAssertEqual(names.prefix(8).map { $0 }, ["\u{2190}", "\u{2191}", "\u{2192}", "\u{2193}",
+                                                   "\u{2199}", "\u{2197}", "\u{2198}", "\u{2196}"])
+        XCTAssertFalse(names.contains("\u{2190} Revered"))
+        XCTAssertTrue(names.contains("\u{250F}"))
+        XCTAssertTrue(names.contains("\u{250F} Revered"))
+        XCTAssertTrue(names.contains("A"))
+        XCTAssertTrue(names.contains("Z Revered"))
+        XCTAssertFalse(names.contains("Minimize"))
+        XCTAssertFalse(names.contains("Circle"))
+        XCTAssertFalse(names.contains("A Shape"))
+        XCTAssertTrue(names.allSatisfy { name in
+            GestureTemplateProvider.shared.presetPickerEntries.filter { $0.name == name }.count == 1
+        })
+    }
 }

@@ -670,6 +670,45 @@ public final class GestureTemplateProvider {
 
     private init() {}
 
+    /// The preset gesture picker exactly as the original builds it
+    /// (AppPrefsWindowController.m:628-662): 8 direction arrows, then the four
+    /// box corners and the 26 letters each with a " Revered" (sic) twin.
+    /// The arrows have no reversed entry, and the invented action presets
+    /// ("Minimize", "Circle", …) are not part of the picker either.
+    public var presetPickerEntries: [(name: String, stroke: Stroke)] {
+        var entries: [(name: String, stroke: Stroke)] = [
+            ("←", PresetGesture.arrowLeftSymbol.template),
+            ("↑", PresetGesture.arrowUpSymbol.template),
+            ("→", PresetGesture.arrowRightSymbol.template),
+            ("↓", PresetGesture.arrowDownSymbol.template),
+            ("↙", PresetGesture.arrowDownLeft.template),
+            ("↗", PresetGesture.arrowUpRight.template),
+            ("↘", PresetGesture.arrowDownRight.template),
+            ("↖", PresetGesture.arrowUpLeft.template),
+        ]
+        for gesture in [PresetGesture.boxTopLeft, .boxTopRight, .boxBottomLeft, .boxBottomRight] {
+            entries.append((gesture.rawValue, gesture.template))
+            entries.append((gesture.rawValue + " Revered", reversedTemplate(for: gesture)))
+        }
+        for gesture in letterGestures {
+            // Letters are stored as "A Shape" but the picker lists the bare letter.
+            let letter = String(gesture.rawValue.dropLast(" Shape".count))
+            entries.append((letter, gesture.template))
+            entries.append((letter + " Revered", reversedTemplate(for: gesture)))
+        }
+        return entries
+    }
+
+    /// A-Z, in picker order.
+    private var letterGestures: [PresetGesture] {
+        [
+            .letterA, .letterB, .letterC, .letterD, .letterE, .letterF, .letterG,
+            .letterH, .letterI, .letterJ, .letterK, .letterL, .letterM, .letterN,
+            .letterO, .letterP, .letterQ, .letterR, .letterS, .letterT, .letterU,
+            .letterV, .letterW, .letterX, .letterY, .letterZ,
+        ]
+    }
+
     /// All available preset gestures.
     public var presets: [PresetGesture] {
         PresetGesture.allCases

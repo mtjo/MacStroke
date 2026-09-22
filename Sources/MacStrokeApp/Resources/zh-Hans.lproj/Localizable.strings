@@ -167,8 +167,8 @@
 "Hot Key" = "热键";
 "Apple Script" = "AppleScript脚本";
 "Text" = "文本";
-"tips: Click a gesture thumbnail to select the rule, then use a preset or \"Draw Gesture\"." = "提示：点击手势缩略图选中规则，然后使用预设手势或\"绘制手势\"。";
 "Draw Gesture!" = "绘制手势！";
+"Select a filter first!" = "请先选择一个规则！";
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "您可以在屏幕任意位置绘制手势，或在下方选择预设手势。";
 "Black list mode" = "黑名单模式";
 "White list mode" = "白名单模式";

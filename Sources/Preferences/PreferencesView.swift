@@ -549,6 +549,11 @@ final class FontPanelObserver: NSObject {
 /// DrawGesture, but no NSView size-negotiation issues inside Table rows).
 struct GestureThumb: View {
     let points: [GesturePoint]
+    /// Original DrawGesture.m draws into a 60pt canvas inset 12pt from the
+    /// view's bottom-left corner, which assumes an 84pt cell. Smaller hosts
+    /// (the editor preview) pass their own canvas/inset pair.
+    var canvas: Double = 60
+    var inset: Double = 12
 
     var body: some View {
         Canvas { context, size in
@@ -559,21 +564,19 @@ struct GestureThumb: View {
             let minY = ys.min() ?? 0, maxY = ys.max() ?? 0
             let width = maxX - minX
             let height = maxY - minY
-            let margin: CGFloat = 6
-            let availW = max(size.width - margin * 2, 1)
-            let availH = max(size.height - margin * 2, 1)
-            let zoom = max(width / availW, height / availH)
+            let zoom = max(width / canvas, height / canvas)
             guard zoom > 0 else { return }
-            let fixX = (size.width - width / zoom) / 2
-            let fixY = (size.height - height / zoom) / 2
-            // Template points use bottom-left origin; Canvas is top-left.
+            let fixX = (width < height ? (canvas - width / zoom) / 2 : 0) + inset
+            let fixY = (width > height ? (canvas - height / zoom) / 2 : 0) + inset
             let scaled = points.map { p in
                 CGPoint(x: (p.x - minX) / zoom + fixX,
                         y: size.height - ((p.y - minY) / zoom + fixY))
             }
             let segments = scaled.count - 1
+            // Original colors by segment index / points.count (not count-1).
+            let total = Double(points.count)
             for i in 0..<segments {
-                let t = CGFloat(i) / CGFloat(max(segments, 1))
+                let t = Double(i) / total
                 var path = Path()
                 path.move(to: scaled[i])
                 path.addLine(to: scaled[i + 1])
@@ -583,7 +586,7 @@ struct GestureThumb: View {
                     lineWidth: 2)
             }
         }
-        .frame(width: 56, height: 56)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -597,31 +600,25 @@ struct RulesTabView: View {
     var body: some View {
         SettingsFillingPage {
             // Rules list (original: table fills the tab, button bar at bottom)
-            if ruleStore.rules.isEmpty {
-                SettingsCard {
-                    VStack(spacing: 12) {
-                        Image(systemName: "list.bullet.rectangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(.secondary)
-                        Text(L("No rules defined"))
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        Text(L("Click \"Add Rule\" to create your first gesture rule"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 300)
-                }
-            } else {
                 Table(ruleStore.rules, selection: $selectedRuleID) {
                     TableColumn(L("Image")) { rule in
-                        GestureThumb(points: rule.template.points)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .frame(height: 84)   // original heightOfRow: 84
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) {
-                                drawGesture(rule.name)
+                        // Original DrawGesture view: with no recorded points the
+                        // cell renders a "Draw Gesture" button instead.
+                        Group {
+                            if rule.template.points.isEmpty {
+                                Button(L("Draw Gesture")) { drawGesture(rule.name) }
+                                    .controlSize(.small)
+                                    .frame(width: 80, height: 25)
+                            } else {
+                                GestureThumb(points: rule.template.points)
                             }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .frame(height: 84)   // original heightOfRow: 84
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            drawGesture(rule.name)
+                        }
                     }
                     .width(84)
 
@@ -653,9 +650,8 @@ struct RulesTabView: View {
                     .width(104)
 
                     TableColumn(L("Filter")) { rule in
-                        Text(rule.filter.isEmpty ? L("All Apps") : rule.filter)
+                        Text(rule.filter)
                             .font(.system(size: 12))
-                            .foregroundColor(rule.filter.isEmpty ? .secondary : .primary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
@@ -668,10 +664,9 @@ struct RulesTabView: View {
                             .truncationMode(.tail)
                     }
                 }
-                .tableStyle(.inset(alternatesRowBackgrounds: true))
-                .frame(minHeight: 300, maxHeight: .infinity)
-                .settingsListCard()
-            }
+            .tableStyle(.inset(alternatesRowBackgrounds: true))
+            .frame(minHeight: 300, maxHeight: .infinity)
+            .settingsListCard()
 
             Text(L("tips: Double-click a gesture image to draw or edit its path; double-click the name to edit the rule."))
                 .font(.caption)
@@ -688,20 +683,18 @@ struct RulesTabView: View {
                 .help(L("Add Rule"))
 
                 Button {
-                    if let id = selectedRuleID {
-                        ruleStore.remove(named: id)
-                        selectedRuleID = nil
-                    }
+                    guard let id = selectedRuleID else { return needRuleSelection() }
+                    ruleStore.remove(named: id)
+                    selectedRuleID = nil
                 } label: {
                     Image(systemName: "minus")
                 }
                 .help(L("Delete Rule"))
-                .disabled(selectedRuleID == nil)
 
                 Button(L("Pick a running app")) {
+                    guard selectedRuleID != nil else { return needRuleSelection() }
                     pickAppForSelectedRule()
                 }
-                .disabled(selectedRuleID == nil)
 
                 Spacer()
 
@@ -790,6 +783,16 @@ struct RulesTabView: View {
     /// Enter screen-recording mode for the given rule and show the original
     /// "Draw Gesture!" alert with its preset-gesture combo box
     /// (AppPrefsWindowController.m preSetRuleGestureAtIndex / alertModal…).
+    /// Original removeRule:/pickBtnDidClick: guard: a NSUserNotification toast,
+    /// not a disabled button.
+    private func needRuleSelection() {
+        let notification = NSUserNotification()
+        notification.title = "MacStroke"
+        notification.informativeText = L("Select a filter first!")
+        notification.soundName = NSUserNotificationDefaultSoundName
+        NSUserNotificationCenter.default.deliver(notification)
+    }
+
     private func drawGesture(_ ruleName: String) {
         NotificationCenter.default.post(
             name: .macStrokeRecordGesture,
@@ -807,11 +810,12 @@ struct RulesTabView: View {
         let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 160, height: 25))
         combo.isEditable = false
         combo.completes = false
-        combo.addItems(withObjectValues: Self.presetGestureTitles())
+        combo.addItems(withObjectValues: GestureTemplateProvider.shared.presetPickerEntries.map(\.name))
         combo.placeholderString = L("Plase Select")
         alert.accessoryView = combo
 
         var presetApplied = false
+        var drawnOnScreen = false
         let store = ruleStore
         let obs = NotificationCenter.default.addObserver(
             forName: NSComboBox.selectionDidChangeNotification,
@@ -825,24 +829,24 @@ struct RulesTabView: View {
             Self.postGestureCompleteNotification()
             NSApp.stopModal(withCode: .alertFirstButtonReturn)
         }
-        defer { NotificationCenter.default.removeObserver(obs) }
+        // A gesture drawn on the live overlay saves itself and dismisses the
+        // dialog, like the original's synthetic Return key press.
+        let drawnObs = NotificationCenter.default.addObserver(
+            forName: .macStrokeGestureDidRecord, object: nil, queue: .main
+        ) { _ in
+            drawnOnScreen = true
+            NSApp.stopModal(withCode: .alertFirstButtonReturn)
+        }
+        defer {
+            NotificationCenter.default.removeObserver(obs)
+            NotificationCenter.default.removeObserver(drawnObs)
+        }
 
         let response = alert.runModal()
-        if presetApplied { return }
+        if presetApplied || drawnOnScreen { return }
         if response != .alertFirstButtonReturn {
             NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
         }
-    }
-
-    /// Combo entries, verbatim from the original list order.
-    private static func presetGestureTitles() -> [String] {
-        var titles = ["←", "↑", "→", "↓", "↙", "↗", "↘", "↖"]
-        for base in ["┏", "┓", "┗", "┛"] { titles += [base, base + " Revered"] }
-        for scalar in 65...90 {
-            let letter = String(UnicodeScalar(scalar)!)
-            titles += [letter, letter + " Revered"]
-        }
-        return titles
     }
 
     /// Map a combo title ("M", "M Revered", "┏"…) to a preset template and
@@ -850,18 +854,12 @@ struct RulesTabView: View {
     private static func applyPresetGesture(
         _ title: String, toRuleNamed ruleName: String, store ruleStore: RuleStore
     ) -> Bool {
-        let parts = title.split(separator: " ", maxSplits: 1).map(String.init)
-        let base = parts[0]
-        let reversed = parts.count > 1
-        // Letters are stored as "X Shape"; symbol presets use the symbol itself.
-        let templateName = (base.first?.isLetter ?? false)
-            ? "\(base) Shape" + (reversed ? " Revered" : "")
-            : base + (reversed ? " Revered" : "")
-        guard let entry = GestureTemplateProvider.shared.allTemplatesIncludingReversed()
-            .first(where: { $0.name == templateName }) else { return false }
+        // Only titles the original picker actually offers may be applied.
+        guard let entry = GestureTemplateProvider.shared.presetPickerEntries
+            .first(where: { $0.name == title }) else { return false }
         guard let idx = ruleStore.rules.firstIndex(where: { $0.name == ruleName }) else { return false }
         let old = ruleStore.rules[idx]
-        let template = GestureTemplate(from: entry.stroke, name: templateName)
+        let template = GestureTemplate(from: entry.stroke, name: entry.name)
         let newRule = Rule(
             name: old.name,
             description: old.description,
@@ -1124,7 +1122,7 @@ struct RuleEditorView: View {
                              : "\(strokePoints.count)")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        GestureThumb(points: strokePoints)
+                        GestureThumb(points: strokePoints, canvas: 44, inset: 6)
                             .frame(width: 56, height: 56)
                             .background(Color(NSColor.textBackgroundColor))
                             .overlay(
@@ -1267,7 +1265,7 @@ struct RuleEditorView: View {
     // MARK: Actions
 
     private func loadInitialValues() {
-        availableGestures = GestureTemplateProvider.shared.allTemplatesIncludingReversed()
+        availableGestures = GestureTemplateProvider.shared.presetPickerEntries
         guard let rule = editingRule else {
             templateName = availableGestures.first?.name ?? ""
             applyTemplate(named: templateName)
@@ -1285,7 +1283,7 @@ struct RuleEditorView: View {
         triggerOnEveryMatch = rule.triggerOnEveryMatch
         templateName = rule.template.name
         strokePoints = rule.template.points
-        strokeIsCustom = !availableGestures.contains { $0.name == rule.template.name }
+        strokeIsCustom = !GestureTemplateProvider.shared.presetPickerEntries.contains { $0.name == rule.template.name }
         if strokeIsCustom { templateName = Self.drawnGestureTag }
 
         // The original keeps every action payload on the rule, so switching the
