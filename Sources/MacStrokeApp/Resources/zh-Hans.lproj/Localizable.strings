@@ -188,6 +188,7 @@
 "operate" = "操作";
 "tips: Type to search, Enter copies the selected content to the clipboard so you can paste it anywhere." = "提示：输入关键词即时搜索，方向键选择条目，回车复制到剪贴板后即可粘贴到任何地方。";
 "Search clipboard history" = "搜索剪贴板历史";
+"Image" = "图片";
 "Are you sure to clear all history clipboard records?" = "您确定清除历史剪贴板记录吗?";
 "Are you sure to clear all top records?" = "您确定清除全部置顶记录吗?";
 "Are you sure to clear all top records and history clipboard records?" = "您确定清除所有置顶记录和历史剪贴板记录吗？";

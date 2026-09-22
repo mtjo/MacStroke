@@ -9,17 +9,28 @@ import Foundation
 import SQLite
 import AppKit
 
+/// What a clipboard entry holds. The original MacStroke only ever stored
+/// strings; images were added on top of that schema with a `type` column.
+public enum HistoryClipboardKind: Int {
+    case text = 0
+    case image = 1
+}
+
 /// A single clipboard history entry.
-public struct HistoryClipboardEntry: Codable, Equatable {
+public struct HistoryClipboardEntry: Equatable {
     public let id: Int64
-    public let content: String  // Base64 encoded
+    /// Base64 text payload, or the PNG file path for image entries.
+    public let content: String
+    public let kind: HistoryClipboardKind
     public let isTop: Bool
     public let createTime: TimeInterval
     public let modifyTime: TimeInterval
 
-    public init(id: Int64, content: String, isTop: Bool, createTime: TimeInterval, modifyTime: TimeInterval) {
+    public init(id: Int64, content: String, kind: HistoryClipboardKind = .text,
+                isTop: Bool, createTime: TimeInterval, modifyTime: TimeInterval) {
         self.id = id
         self.content = content
+        self.kind = kind
         self.isTop = isTop
         self.createTime = createTime
         self.modifyTime = modifyTime
@@ -45,6 +56,10 @@ public final class HistoryClipboardManager {
     /// Page size for pagination
     public static let pageSize = 30
 
+    /// Image payloads live next to the database (or under the system temp dir
+    /// in RAM mode) so the SQLite rows stay small.
+    static let ramImagesDirectory = "\(NSTemporaryDirectory())MacStroke/clipboard_images"
+
     // MARK: - UserDefaults Keys
 
     public enum UserDefaultsKey: String {
@@ -63,6 +78,7 @@ public final class HistoryClipboardManager {
     private let db: Connection?
     private let lock = NSLock()
     private let userDefaults: UserDefaults
+    private let imagesDirectory: String
 
     // Timer for pasteboard monitoring
     private var timer: Timer?
@@ -74,6 +90,7 @@ public final class HistoryClipboardManager {
     private let table = Table(tableName)
     private let idCol = Expression<Int64>("id")
     private let contentCol = Expression<String>("content")
+    private let typeCol = Expression<Int64>("type")
     private let isTopCol = Expression<Int64>("is_top")
     private let createTimeCol = Expression<Double>("create_time")
     private let modifyTimeCol = Expression<Double>("modify_time")
@@ -94,6 +111,12 @@ public final class HistoryClipboardManager {
     ///   - userDefaults: UserDefaults instance (for testing)
     public init(databasePath: String, userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
+        // Image payloads sit next to the database, or under the system temp
+        // directory in RAM mode so nothing is persisted.
+        self.imagesDirectory = databasePath == Self.ramDatabasePath
+            ? Self.ramImagesDirectory
+            : ((databasePath as NSString).deletingLastPathComponent as NSString)
+                .appendingPathComponent("clipboard_images")
 
         if databasePath == Self.defaultDatabasePath {
             Self.migrateLegacyDatabaseIfNeeded(at: databasePath)
@@ -138,29 +161,117 @@ public final class HistoryClipboardManager {
             try db.run(table.create(ifNotExists: true) { t in
                 t.column(idCol, primaryKey: .autoincrement)
                 t.column(contentCol)
+                t.column(typeCol, defaultValue: Int64(HistoryClipboardKind.text.rawValue))
                 t.column(isTopCol)
                 t.column(createTimeCol)
                 t.column(modifyTimeCol)
             })
             // Create index for faster queries
             try db.run(table.createIndex(isTopCol, ifNotExists: true))
+            try migrateSchemaIfNeeded(db)
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to create table: \(error)")
         }
     }
 
+    /// Databases written before image support have no `type` column; every
+    /// existing row is a string entry, which is exactly the column default.
+    private func migrateSchemaIfNeeded(_ db: Connection) throws {
+        let columns = try db.prepare("PRAGMA table_info(\(Self.tableName))").compactMap { row in
+            row[1] as? String
+        }
+        guard !columns.isEmpty, !columns.contains("type") else { return }
+        try db.run("ALTER TABLE \(Self.tableName) ADD COLUMN type INTEGER NOT NULL DEFAULT 0")
+    }
+
     // MARK: - Internal Methods (lock-free, assume lock is held by caller)
 
-    private func insertLocalHistoryClipboardInternal(content: String, isTop: Bool) -> HistoryClipboardEntry? {
+    /// Payload file paths of the image rows matched by `whereClause` (the
+    /// `type = 1` filter is added here). Callers unlink them after the rows
+    /// are deleted so removed screenshots do not linger on disk. Every value
+    /// interpolated into the clause is an internal id/timestamp, never input.
+    private func imagePaths(where whereClause: String) -> [String] {
+        guard let db = db,
+              let rows = try? db.prepare("SELECT content FROM \(Self.tableName) WHERE type = 1 AND \(whereClause)")
+        else { return [] }
+        return rows.compactMap { $0[0] as? String }
+    }
+
+    private func unlinkImageFiles(_ paths: [String]) {
+        let fm = FileManager.default
+        for path in paths where fm.fileExists(atPath: path) {
+            try? fm.removeItem(atPath: path)
+        }
+    }
+
+    /// Write an image payload to its own PNG file and return the path, or nil
+    /// when the file could not be stored (then no row is inserted).
+    private func writeImageFile(_ data: Data) -> String? {
+        let fm = FileManager.default
+        do {
+            try fm.createDirectory(atPath: imagesDirectory, withIntermediateDirectories: true)
+        } catch {
+            NSLog("%@", "[HistoryClipboard] Failed to create image directory: \(error)")
+            return nil
+        }
+        let path = (imagesDirectory as NSString).appendingPathComponent("\(UUID().uuidString).png")
+        guard fm.createFile(atPath: path, contents: data) else {
+            NSLog("%@", "[HistoryClipboard] Failed to write image payload")
+            return nil
+        }
+        return path
+    }
+
+    /// Insert an image entry from raw image data (stored as PNG).
+    @discardableResult
+    public func insertLocalImage(data: Data, isTop: Bool = false) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let png = HistoryClipboardManager.pngData(from: data),
+              let path = writeImageFile(png) else { return nil }
+        let entry = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: isTop)
+        if entry == nil { unlinkImageFiles([path]) }
+        return entry
+    }
+
+    /// PNG representation of arbitrary pasteboard image data.
+    static func pngData(from data: Data) -> Data? {
+        if let rep = NSBitmapImageRep(data: data) {
+            return rep.representation(using: .png, properties: [:])
+        }
+        return nil
+    }
+
+    /// Decoded image payload of an entry, or nil for text entries and rows
+    /// whose file was removed out from under us.
+    public func imageData(for entry: HistoryClipboardEntry) -> Data? {
+        guard entry.kind == .image else { return nil }
+        return FileManager.default.contents(atPath: entry.content)
+    }
+
+    /// Decoded string payload of a text entry.
+    public func textContent(for entry: HistoryClipboardEntry) -> String {
+        guard entry.kind == .text,
+              let data = Data(base64Encoded: entry.content),
+              let text = String(data: data, encoding: .utf8) else {
+            return entry.content
+        }
+        return text
+    }
+
+    private func insertLocalHistoryClipboardInternal(content: String,
+                                                     kind: HistoryClipboardKind = .text,
+                                                     isTop: Bool) -> HistoryClipboardEntry? {
         guard let db = db else { return nil }
 
-        let base64Content = content.data(using: .utf8)?.base64EncodedString() ?? ""
+        let storedContent = kind == .image ? content : content.data(using: .utf8)?.base64EncodedString() ?? ""
         let now = Date().timeIntervalSince1970
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
         do {
             let rowId = try db.run(table.insert(
-                contentCol <- base64Content,
+                contentCol <- storedContent,
+                typeCol <- Int64(kind.rawValue),
                 isTopCol <- isTopValue,
                 createTimeCol <- now,
                 modifyTimeCol <- now
@@ -168,7 +279,8 @@ public final class HistoryClipboardManager {
 
             return HistoryClipboardEntry(
                 id: rowId,
-                content: base64Content,
+                content: storedContent,
+                kind: kind,
                 isTop: isTop,
                 createTime: now,
                 modifyTime: now
@@ -195,6 +307,7 @@ public final class HistoryClipboardManager {
                 let entry = HistoryClipboardEntry(
                     id: row[idCol],
                     content: row[contentCol],
+                    kind: HistoryClipboardKind(rawValue: Int(row[typeCol])) ?? .text,
                     isTop: row[isTopCol] == 1,
                     createTime: row[createTimeCol],
                     modifyTime: row[modifyTimeCol]
@@ -231,9 +344,12 @@ public final class HistoryClipboardManager {
                 .filter(isTopCol == isTopValue)
                 .order(idCol.asc)
                 .limit(1)
+            let doomed = imagePaths(where: "is_top = \(isTopValue) AND id = "
+                                    + "(SELECT MIN(id) FROM \(Self.tableName) WHERE is_top = \(isTopValue))")
 
             // Original returns the exec result, so a no-op delete still succeeds.
             try db.run(query.delete())
+            unlinkImageFiles(doomed)
             return true
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to delete earliest: \(error)")
@@ -250,7 +366,9 @@ public final class HistoryClipboardManager {
         do {
             // Original SQL: `WHERE is_top=0 AND create_time < cutoff` — pinned
             // entries are never expired away.
+            let doomed = imagePaths(where: "is_top = 0 AND create_time < \(cutoffTime)")
             try db.run(table.filter(isTopCol == 0 && createTimeCol < cutoffTime).delete())
+            unlinkImageFiles(doomed)
             return true
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to delete expired: \(error)")
@@ -263,7 +381,9 @@ public final class HistoryClipboardManager {
         guard let db = db else { return false }
 
         do {
+            let doomed = imagePaths(where: "is_top = 0")
             try db.run(table.filter(isTopCol == 0).delete())
+            unlinkImageFiles(doomed)
             return true
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to clear history: \(error)")
@@ -275,7 +395,9 @@ public final class HistoryClipboardManager {
         guard let db = db else { return }
 
         do {
+            let doomed = imagePaths(where: "is_top = 1")
             try db.run(table.filter(isTopCol == 1).delete())
+            unlinkImageFiles(doomed)
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to clear top: \(error)")
         }
@@ -285,8 +407,10 @@ public final class HistoryClipboardManager {
         guard let db = db else { return }
 
         do {
+            let doomed = imagePaths(where: "1")
             try db.run(table.delete())
             try db.run("DELETE FROM sqlite_sequence WHERE name = ?", Self.tableName)
+            unlinkImageFiles(doomed)
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to clear all: \(error)")
         }
@@ -468,9 +592,34 @@ public final class HistoryClipboardManager {
             if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
                 cropTotalAfterInsert()
             }
+        } else if let data = Self.pasteboardImageData(from: pasteboard),
+                  let png = Self.pngData(from: data) {
+            // Image-only copies (screenshots, picture drags) have no string
+            // type: store the payload as a PNG file next to the database.
+            if let path = writeImageFile(png) {
+                if insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: false) != nil {
+                    cropTotalAfterInsert()
+                } else {
+                    unlinkImageFiles([path])
+                }
+            }
         }
 
         changeCount = currentChangeCount
+    }
+
+    /// Image payload of a pasteboard copy, preferring the richest available type.
+    static func pasteboardImageData(from pasteboard: NSPasteboard) -> Data? {
+        if let png = pasteboard.data(forType: .png) { return png }
+        if let tiff = pasteboard.data(forType: .tiff) { return tiff }
+        // Copied picture files arrive as file-url references, not plain strings.
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        let paths = (pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL])?
+            .map(\.path) ?? []
+        guard let path = paths.first,
+              ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "heic", "webp"]
+                .contains((path as NSString).pathExtension.lowercased()) else { return nil }
+        return FileManager.default.contents(atPath: path)
     }
 
     /// On insert the original trims just one earliest history row, and only in
@@ -538,21 +687,35 @@ public final class HistoryClipboardManager {
         guard let entry = insertLocalHistoryClipboardInternal(content: content, isTop: true) else {
             return nil
         }
+        enforceTopLimit()
+        return entry
+    }
 
+    /// Pin an existing image entry. The payload file is copied so unpinning
+    /// one of the two rows cannot break the other.
+    @discardableResult
+    public func addTopImage(for entry: HistoryClipboardEntry) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard entry.kind == .image, let data = imageData(for: entry) else { return nil }
+        guard let png = Self.pngData(from: data), let path = writeImageFile(png) else { return nil }
+        let pinned = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: true)
+        if pinned == nil { unlinkImageFiles([path]) }
+        enforceTopLimit()
+        return pinned
+    }
+
+    private func enforceTopLimit() {
         let enableLimitTop = userDefaults.bool(forKey: UserDefaultsKey.enableLimitTop.rawValue)
         let limitTop = userDefaults.integer(forKey: UserDefaultsKey.limitTop.rawValue)
-
-        if enableLimitTop && limitTop > 0 {
-            let topCount = getCountInternal(isTop: true)
-            if topCount > limitTop {
-                let excess = topCount - limitTop
-                for _ in 0..<excess {
-                    guard deleteEarliestItemInternal(isTop: true) else { break }
-                }
+        guard enableLimitTop && limitTop > 0 else { return }
+        let topCount = getCountInternal(isTop: true)
+        if topCount > limitTop {
+            let excess = topCount - limitTop
+            for _ in 0..<excess {
+                guard deleteEarliestItemInternal(isTop: true) else { break }
             }
         }
-
-        return entry
     }
 
     /// Remove a top/pinned entry by its index in the top list
@@ -568,6 +731,9 @@ public final class HistoryClipboardManager {
 
         do {
             try db.run(table.filter(idCol == entryToRemove.id).delete())
+            if entryToRemove.kind == .image {
+                unlinkImageFiles([entryToRemove.content])
+            }
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to remove top entry: \(error)")
         }

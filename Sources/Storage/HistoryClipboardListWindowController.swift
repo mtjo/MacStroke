@@ -53,6 +53,8 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         static let searchTop: CGFloat = 14
         static let searchHeight: CGFloat = 36
         static let side: CGFloat = 14
+        static let rowHeight: CGFloat = 28
+        static let imageRowHeight: CGFloat = 44
     }
 
     /// Case-insensitive substring filter over decoded content; the
@@ -146,15 +148,18 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
             clip.addSubview(button)
         }
 
-        // Bottom-left tips label.
+        // Bottom-left tips label; wide enough for the localized sentence and
+        // allowed to wrap, so it never clips.
         let tips = NSTextField(labelWithString: L(
             "tips: Type to search, Enter copies the selected content to the clipboard so you can paste it anywhere."
         ))
         tips.font = NSFont.systemFont(ofSize: 10)
         tips.textColor = .secondaryLabelColor
-        tips.frame = NSRect(x: 14, y: 14, width: 290, height: 14)
+        tips.frame = NSRect(x: 14, y: 8, width: 380, height: 28)
         tips.autoresizingMask = [.maxXMargin, .maxYMargin]
-        tips.lineBreakMode = .byClipping
+        tips.maximumNumberOfLines = 2
+        tips.lineBreakMode = .byWordWrapping
+        tips.cell?.wraps = true
         clip.addSubview(tips)
 
         // Result list: single column, no header, source-list rounded selection.
@@ -234,7 +239,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
     }
 
     private func rebuildFiltered() {
-        displayedEntries = Self.filterEntries(fullEntries, query: query, decoded: decodedContent)
+        displayedEntries = Self.filterEntries(fullEntries, query: query, decoded: summary(for:))
         tableView?.reloadData()
         if query.isEmpty {
             tableView?.deselectAll(nil)
@@ -318,17 +323,32 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
             updated.remove(at: index)
             fullEntries = updated
         }
-        let text = decodedContent(for: entry)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        if entry.kind == .image, let data = entriesStore.imageData(for: entry),
+           let tiff = NSImage(data: data)?.tiffRepresentation {
+            // Reuse the screenshot: declare both PNG and TIFF so every receiver
+            // (Preview, Office, chat apps) finds a type it accepts.
+            pasteboard.declareTypes([.tiff, .png], owner: nil)
+            pasteboard.setData(tiff, forType: .tiff)
+            if let png = HistoryClipboardManager.pngData(from: data) {
+                pasteboard.setData(png, forType: .png)
+            }
+        } else {
+            pasteboard.setString(entriesStore.textContent(for: entry), forType: .string)
+        }
         window?.close()
     }
 
-    /// Pin the entry at the button's row (original: addTop:).
+    /// Pin the entry at the button's row (original: addTop:). Image rows pin a
+    /// copy of their PNG payload.
     @objc private func addTop(_ sender: NSButton) {
         guard let entry = entry(for: sender) else { return }
-        _ = entriesStore.addTop(content: decodedContent(for: entry))
+        if entry.kind == .image {
+            _ = entriesStore.addTopImage(for: entry)
+        } else {
+            _ = entriesStore.addTop(content: entriesStore.textContent(for: entry))
+        }
         reload()
         tableView?.scrollRowToVisible(0)
     }
@@ -388,13 +408,42 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         window?.close()
     }
 
-    private func decodedContent(for entry: HistoryClipboardEntry) -> String {
-        guard let data = Data(base64Encoded: entry.content),
-              let text = String(data: data, encoding: .utf8) else {
-            return entry.content
+    // MARK: - Entry text and image previews
+
+    /// Row text, used for display and as the search match target. Image rows
+    /// carry a generated summary instead of pixels so they stay searchable.
+    private func summary(for entry: HistoryClipboardEntry) -> String {
+        switch entry.kind {
+        case .text:
+            return entriesStore.textContent(for: entry).replacingOccurrences(of: "\n", with: " ")
+        case .image:
+            let size = thumbnail(for: entry)?.size ?? .zero
+            let dimensions = size.width > 0 ? "\(Int(size.width))×\(Int(size.height))" : ""
+            let stamp = Self.summaryFormatter.string(
+                from: Date(timeIntervalSince1970: entry.createTime))
+            return [L("Image"), dimensions, stamp].filter { !$0.isEmpty }.joined(separator: " ")
         }
-        return text
     }
+
+    private static let summaryFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        return formatter
+    }()
+
+    /// Cached file-backed thumbnail; the store reads the PNG from disk once
+    /// per entry so scrolling does not re-decode screenshots.
+    private func thumbnail(for entry: HistoryClipboardEntry) -> NSImage? {
+        guard entry.kind == .image else { return nil }
+        if let cached = thumbnailCache[entry.content] { return cached }
+        guard let data = entriesStore.imageData(for: entry), let image = NSImage(data: data) else {
+            return nil
+        }
+        thumbnailCache[entry.content] = image
+        return image
+    }
+
+    private var thumbnailCache: [String: NSImage] = [:]
 
     // MARK: - Pagination
 
@@ -439,6 +488,13 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         SpotlightRowView()
     }
 
+    /// Image rows are taller so the thumbnail has room, like Spotlight's
+    /// file results.
+    public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+        guard row < displayedEntries.count else { return Layout.rowHeight }
+        return displayedEntries[row].kind == .image ? Layout.imageRowHeight : Layout.rowHeight
+    }
+
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard row < displayedEntries.count else { return nil }
         let entry = displayedEntries[row]
@@ -450,7 +506,19 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         let topCount = entriesStore.topCount
         let number = isPinned ? "[\(globalIndex + 1)]" : "\(max(1, globalIndex - topCount + 1))"
 
-        let label = NSTextField(labelWithString: "\(number) \(displayText(for: entry))")
+        if let image = thumbnail(for: entry) {
+            let thumb = NSImageView()
+            thumb.image = image
+            thumb.imageScaling = .scaleProportionallyUpOrDown
+            thumb.wantsLayer = true
+            thumb.layer?.cornerRadius = 3
+            thumb.layer?.masksToBounds = true
+            thumb.autoresizingMask = [.maxXMargin, .minYMargin, .maxYMargin]
+            cell.addSubview(thumb)
+            cell.thumbnail = thumb
+        }
+
+        let label = NSTextField(labelWithString: "\(number) \(summary(for: entry))")
         label.lineBreakMode = .byTruncatingTail
         label.font = NSFont.systemFont(ofSize: 13)
         label.textColor = isPinned ? NSColor.secondaryLabelColor : NSColor.labelColor
@@ -485,10 +553,6 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
             rowView.revealButton = button
         }
         return cell
-    }
-
-    private func displayText(for entry: HistoryClipboardEntry) -> String {
-        decodedContent(for: entry).replacingOccurrences(of: "\n", with: " ")
     }
 
     /// Source-list rounded selection capsule plus Spotlight-style hover reveal
@@ -551,11 +615,14 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
 private final class ResultCellView: NSTableCellView {
     weak var label: NSTextField?
     weak var pinButton: NSButton?
+    weak var thumbnail: NSImageView?
 
     override func layout() {
         super.layout()
-        label?.frame = NSRect(x: 8, y: (bounds.height - 17) / 2,
-                              width: max(20, bounds.width - 44), height: 17)
+        thumbnail?.frame = NSRect(x: 8, y: (bounds.height - 32) / 2, width: 32, height: 32)
+        let textX: CGFloat = thumbnail == nil ? 8 : 48
+        label?.frame = NSRect(x: textX, y: (bounds.height - 17) / 2,
+                              width: max(20, bounds.width - textX - 36), height: 17)
         pinButton?.frame = NSRect(x: bounds.width - 30, y: (bounds.height - 20) / 2,
                                   width: 24, height: 20)
     }

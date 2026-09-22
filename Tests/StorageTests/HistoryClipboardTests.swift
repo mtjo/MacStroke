@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import AppKit
 @testable import Storage
 import SQLite
 
@@ -722,5 +723,155 @@ final class HistoryClipboardTests: XCTestCase {
         // Stop should not crash
         manager.stopHistoryClipboard()
         XCTAssertTrue(true)
+    }
+
+    // MARK: - Image entries
+
+    /// A valid 1×1 PNG: the storage layer only ever copies these bytes around.
+    private func pngData() -> Data {
+        Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")!
+    }
+
+    /// 每个用例独立的库目录：图片 payload 落在库旁边的 clipboard_images，
+    /// 断言目录为空时不能被其他用例的文件干扰。
+    private func imageManager() -> HistoryClipboardManager {
+        let defaults = isolatedDefaults()
+        defaults.set(true, forKey: "clipoardStroageLocal")
+        let dir = "\(NSTemporaryDirectory())history_clipboard_test_\(UUID().uuidString)"
+        return HistoryClipboardManager(databasePath: "\(dir)/clip.db", userDefaults: defaults)
+    }
+
+    func testInsertLocalImageStoresPngFileAndKind() {
+        let manager = imageManager()
+
+        let entry = manager.insertLocalImage(data: pngData())
+
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.kind, .image)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: entry?.content ?? ""))
+        XCTAssertEqual((entry?.content ?? "").hasSuffix(".png"), true)
+
+        let loaded = manager.selectLocalHistoryClipoardIsTop(isTop: false, start: 0, end: 10)
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded[0].kind, .image)
+        XCTAssertNotNil(manager.imageData(for: loaded[0]))
+    }
+
+    func testImagePayloadIsNotDecodedAsText() {
+        let manager = imageManager()
+        let entry = manager.insertLocalImage(data: pngData())
+
+        // Image rows store a path, so the text decoder must hand it back as-is.
+        XCTAssertEqual(manager.textContent(for: entry!), entry?.content)
+        XCTAssertNil(manager.imageData(for: manager.insertLocalHistoryClipboard(content: "plain", isTop: false)!))
+    }
+
+    func testAddTopImageCopiesPayloadFile() {
+        let manager = imageManager()
+        let history = manager.insertLocalImage(data: pngData())!
+        let pinned = manager.addTopImage(for: history)
+
+        XCTAssertNotNil(pinned)
+        XCTAssertEqual(pinned?.kind, .image)
+        XCTAssertEqual(pinned?.isTop, true)
+        XCTAssertNotEqual(pinned?.content, history.content, "pin must copy the payload")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: history.content))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: pinned?.content ?? ""))
+    }
+
+    func testRemoveTopUnlinksOnlyThePinnedPayload() {
+        let manager = imageManager()
+        let history = manager.insertLocalImage(data: pngData())!
+        let pinned = manager.addTopImage(for: history)!
+
+        manager.removeTop(at: 0)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: pinned.content))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: history.content))
+        XCTAssertEqual(manager.getCount(isTop: false), 1)
+    }
+
+    func testClearHistoryListAndClearAllUnlinkImagePayloads() {
+        let manager = imageManager()
+        let directory = ((manager.insertLocalImage(data: pngData())?.content ?? "") as NSString)
+            .deletingLastPathComponent
+
+        manager.clearHistoryList()
+        XCTAssertEqual(try? FileManager.default.contentsOfDirectory(atPath: directory), [],
+                       "history clear must unlink image files")
+
+        _ = manager.insertLocalImage(data: pngData())
+        _ = manager.insertLocalHistoryClipboard(content: "text", isTop: true)
+        manager.clearAll()
+        XCTAssertEqual(try? FileManager.default.contentsOfDirectory(atPath: directory), [])
+    }
+
+    func testExpiredImageEntryUnlinksPayload() {
+        let defaults = isolatedDefaults()
+        defaults.set(true, forKey: "clipoardStroageLocal")
+        defaults.set(true, forKey: "enableLimitSaveDays")
+        defaults.set(0, forKey: "limitSaveDays")
+        let manager = HistoryClipboardManager(databasePath: getTestDatabasePath(), userDefaults: defaults)
+        let entry = manager.insertLocalImage(data: pngData())!
+
+        manager.deleteExpired()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: entry.content))
+        XCTAssertEqual(manager.getCount(isTop: false), 0)
+    }
+
+    func testPasteboardImageDataAcceptsPngTiffAndImageFiles() {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("MacStrokeTests.image.\(UUID().uuidString)"))
+
+        pasteboard.clearContents()
+        pasteboard.setData(pngData(), forType: .png)
+        XCTAssertNotNil(HistoryClipboardManager.pasteboardImageData(from: pasteboard))
+
+        pasteboard.clearContents()
+        pasteboard.setData(NSBitmapImageRep(data: pngData())!.representation(using: .tiff, properties: [:])!,
+                           forType: .tiff)
+        XCTAssertNotNil(HistoryClipboardManager.pasteboardImageData(from: pasteboard))
+
+        pasteboard.clearContents()
+        pasteboard.setString("just text", forType: .string)
+        XCTAssertNil(HistoryClipboardManager.pasteboardImageData(from: pasteboard))
+    }
+
+    func testPasteboardImageDataIgnoresNonImageFileURLs() throws {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("MacStrokeTests.file.\(UUID().uuidString)"))
+        let textFile = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("note-\(UUID().uuidString).txt")
+        try "hello".write(to: textFile, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: textFile) }
+
+        pasteboard.clearContents()
+        pasteboard.writeObjects([textFile as NSURL])
+        XCTAssertNil(HistoryClipboardManager.pasteboardImageData(from: pasteboard))
+    }
+
+    func testLegacyDatabaseWithoutTypeColumnMigratesToText() throws {
+        let path = getTestDatabasePath()
+        let db = try Connection(path)
+        // The pre-image schema written by earlier builds.
+        try db.run("""
+            CREATE TABLE local_history_clipoard (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT,
+                is_top INTEGER,
+                create_time REAL,
+                modify_time REAL
+            )
+            """)
+        let now = Date().timeIntervalSince1970
+        try db.run("INSERT INTO local_history_clipoard (content, is_top, create_time, modify_time) VALUES (?, ?, ?, ?)",
+                   "legacy".data(using: .utf8)!.base64EncodedString(), 0, now, now)
+
+        let manager = HistoryClipboardManager(databasePath: path)
+        let entries = manager.selectLocalHistoryClipoardIsTop(isTop: false, start: 0, end: 10)
+
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].kind, .text)
+        XCTAssertEqual(entries[0].content, "legacy".data(using: .utf8)?.base64EncodedString())
+        // New image rows still work after the migration.
+        XCTAssertNotNil(manager.insertLocalImage(data: pngData()))
     }
 }
