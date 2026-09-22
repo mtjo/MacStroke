@@ -1009,6 +1009,10 @@ private struct AppleScriptSourceField: NSViewRepresentable {
         field.cell?.isScrollable = true
         field.cell?.wraps = false
         field.lineBreakMode = .byClipping
+        // The original pins this field to a 358pt tall bezel; an NSTextField's
+        // intrinsic height would otherwise make SwiftUI keep it a single strip.
+        field.setContentHuggingPriority(.init(1), for: .vertical)
+        field.setContentHuggingPriority(.init(1), for: .horizontal)
         field.delegate = context.coordinator
         return field
     }

@@ -185,6 +185,7 @@ extension RulesTable {
 
         func reloadIfNeeded() {
             guard !isEditing, signature != currentSignature() else { return }
+            signature = currentSignature()
             table?.reloadData()
             publishSelection()
         }
@@ -192,6 +193,7 @@ extension RulesTable {
         /// Force a rebuild even while a field editor is open (the original calls
         /// `reloadData` after the action type or the gesture changes).
         func forceReload() {
+            signature = currentSignature()
             table?.reloadData()
             publishSelection()
         }

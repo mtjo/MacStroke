@@ -285,6 +285,38 @@ final class RuleEngineTests: XCTestCase {
         XCTAssertNil(object["apple_script_id"])
     }
 
+    /// 原版把四类动作的值各存一个字段，切换 actionType 只改类型、不换值，所以
+    /// 「当前执行的动作」必然等于它自己那一格。代码内构造的 Rule（默认规则、预设
+    /// 手势）只给了 action，不同步进格子的话，偏好页里把类型切走再切回来就把值丢了。
+    func testProgrammaticActionSeedsItsOwnSlot() {
+        func built(_ action: RuleAction) -> Rule {
+            Rule(name: "x", description: "",
+                 template: GestureTemplate(points: [], name: "x"), action: action)
+        }
+        XCTAssertEqual(built(.text("原文")).spareActions.text, "原文")
+        XCTAssertEqual(built(.password("12345678")).spareActions.password, "12345678")
+        XCTAssertEqual(built(.applescript("SCRIPT-UUID")).spareActions.appleScriptId, "SCRIPT-UUID")
+        let shortcut = built(.shortcut(keyCode: 123, flags: 1048576))
+        XCTAssertEqual(shortcut.spareActions.shortcutCode, 123)
+        XCTAssertEqual(shortcut.spareActions.shortcutFlag, 1048576)
+        // 显式给出的其他格子不能被当前动作覆盖。
+        let explicit = Rule(name: "x", description: "",
+                            template: GestureTemplate(points: [], name: "x"),
+                            action: .text("原文"),
+                            spareActions: RuleSpareActions(password: "留着"))
+        XCTAssertEqual(explicit.spareActions.password, "留着")
+    }
+
+    /// 出厂默认规则是用户最先会在规则页切类型的对象，值必须在格子里。
+    func testDefaultRulesCarryTheirActionValuesInSlots() {
+        let rules = RuleStore.defaultRules()
+        let password = rules.first { $0.name == "password" }
+        XCTAssertEqual(password?.spareActions.password, "12345678")
+        let textRules = rules.filter { if case .text = $0.action { return true }; return false }
+        XCTAssertTrue(textRules.allSatisfy { !$0.spareActions.text.isEmpty },
+                      "文本类默认规则的 text 格子要有值")
+    }
+
     func testDefaultRulesUseOriginalLowercasePasswordDirection() {
         let names = RuleStore.defaultRules().map { $0.name }
         XCTAssertTrue(names.contains("password"))

@@ -152,6 +152,27 @@ public struct RuleSpareActions: Codable, Equatable {
     }
 
     public static let empty = RuleSpareActions()
+
+    /// Mirror an action into the slot the original keeps for its type. The
+    /// original stores one value per action type and only rewrites `actionType`
+    /// when the user switches, so the active type's slot always holds the value
+    /// that actually runs; rules built in code (default rules, presets) have to
+    /// keep that invariant or switching type drops the value.
+    mutating func seeding(with action: RuleAction) {
+        switch action {
+        case .text(let value):
+            text = value
+        case .password(let value):
+            password = value
+        case .applescript(let id):
+            appleScriptId = id
+        case .shortcut(let keyCode, let flags):
+            shortcutCode = Int(keyCode)
+            shortcutFlag = Int(flags)
+        default:
+            break
+        }
+    }
 }
 
 /// A gesture matching rule that can be tested against a stroke.
@@ -215,7 +236,9 @@ public struct Rule: Codable {
         self.triggerOnEveryMatch = triggerOnEveryMatch
         self.filter = filter
         self.filterType = filterType
-        self.spareActions = spareActions
+        var spares = spareActions
+        spares.seeding(with: action)
+        self.spareActions = spares
     }
 
     // MARK: - Persistence (original RulesList.m dictionary schema)
