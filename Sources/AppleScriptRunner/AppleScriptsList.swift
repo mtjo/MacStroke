@@ -83,6 +83,7 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
             attributes: nil
         )
 
+        importLegacyUserDefaultsScripts()
         // Load existing scripts
         load()
     }
@@ -135,17 +136,19 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         return scripts.firstIndex { $0.id == id }
     }
 
-    /// Rename a script (original: `setTitleAtIndex:title:` + `save`).
+    /// Rename a script (original: `setTitleAtIndex:title:` — mutates in place;
+    /// the caller persists when the field editor closes).
     /// No republish: the inline field already shows the new title.
     public func setTitle(at index: Int, _ title: String) {
-        mutate(at: index, notify: false) { $0.name = title }
+        mutate(at: index, notify: false, persist: false) { $0.name = title }
     }
 
-    /// Replace a script's source (original: `setScriptAtIndex:script:` + `save`).
-    /// Does not republish by default: the caller is usually the very text view
-    /// showing that source, and re-rendering it mid-edit would drop the caret.
+    /// Replace a script's source (original: `setScriptAtIndex:script:` — mutate
+    /// only, `save` happens when editing ends). Does not republish: the caller is
+    /// the very field showing that source, and re-rendering it mid-edit drops
+    /// the caret.
     public func setScript(at index: Int, _ script: String, notify: Bool = false) {
-        mutate(at: index, notify: notify) { $0.source = script }
+        mutate(at: index, notify: notify, persist: false) { $0.source = script }
     }
 
     /// Remove the script at `index` (original: `removeAtIndex:` + `save`)
@@ -212,7 +215,10 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         return scripts
     }
 
-    private func mutate(at index: Int, notify: Bool = true, _ change: (inout AppleScriptItem) -> Void) {
+    private func mutate(at index: Int,
+                        notify: Bool = true,
+                        persist: Bool = true,
+                        _ change: (inout AppleScriptItem) -> Void) {
         lock.lock()
         guard scripts.indices.contains(index) else {
             lock.unlock()
@@ -223,11 +229,13 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         if notify {
             objectWillChange.send()
         }
-        save()
+        if persist {
+            save()
+        }
     }
 
     /// Persist the current scripts to disk
-    private func save() {
+    public func save() {
         lock.lock()
         let scriptsToSave = scripts
         lock.unlock()
@@ -244,9 +252,33 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// One-time import of the ObjC build's storage. It archived an array of
+    /// `{title, script, id}` dictionaries into `UserDefaults["appleScripts"]`,
+    /// while this port keeps a JSON file; the legacy ids are dropped because
+    /// rules are not read from UserDefaults, so nothing can reference them.
+    private func importLegacyUserDefaultsScripts() {
+        let key = "appleScripts"
+        guard !FileManager.default.fileExists(atPath: storageURL.path),
+              let data = UserDefaults.standard.object(forKey: key) as? Data,
+              let imported = Self.scripts(fromLegacyArchive: data), !imported.isEmpty else { return }
+        scripts = imported
+        save()
+        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.synchronize()
+    }
+
+    /// Decode the ObjC build's archived script dictionaries (`nil` when the
+    /// blob holds something else).
+    static func scripts(fromLegacyArchive data: Data) -> [AppleScriptItem]? {
+        guard let archived = try? NSKeyedUnarchiver.unarchivedObject(
+            ofClasses: [NSArray.self, NSDictionary.self, NSString.self], from: data)
+        else { return nil }
+        guard let dictionaries = archived as? [[String: String]] else { return nil }
+        return dictionaries.map { AppleScriptItem(name: $0["title"] ?? "", source: $0["script"] ?? "") }
+    }
+
     /// Load scripts from disk
-    private func load() {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else {
+    private func load() {        guard FileManager.default.fileExists(atPath: storageURL.path) else {
             return
         }
 

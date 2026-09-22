@@ -815,11 +815,14 @@ struct RulesTabView: View {
         alert.addButton(withTitle: L("Ok"))
         alert.addButton(withTitle: L("Cancel"))
 
-        let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 160, height: 25))
+        // Original: NSComboBox(0,0,100,25), not editable, and the "Plase Select"
+        // (sic) hint is the field's *value*, not a placeholder — a non-editable
+        // combo never shows a placeholder.
+        let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 100, height: 25))
         combo.isEditable = false
         combo.completes = false
         combo.addItems(withObjectValues: GestureTemplateProvider.shared.presetPickerEntries.map(\.name))
-        combo.placeholderString = L("Plase Select")
+        combo.stringValue = L("Plase Select")
         alert.accessoryView = combo
 
         var presetApplied = false
@@ -1491,7 +1494,9 @@ struct AppleScriptTabView: View {
 
     private var titleTable: some View {
         Table(scripts, selection: $selectedId) {
-            // Original: one editable "Title" column, header left blank.
+            // Original: one editable "Title" column, header left blank. The
+            // model is written as the user types but only persisted when the
+            // field editor closes (`control:textShouldEndEditing:` + save).
             TableColumn("") { script in
                 TextField("", text: Binding(
                     get: { scriptList.index(of: script.id).map { scriptList.title(at: $0) } ?? script.name },
@@ -1499,7 +1504,8 @@ struct AppleScriptTabView: View {
                         if let index = scriptList.index(of: script.id) {
                             scriptList.setTitle(at: index, newValue)
                         }
-                    }))
+                    }),
+                    onCommit: { scriptList.save() })
                     .textFieldStyle(.plain)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -1511,24 +1517,15 @@ struct AppleScriptTabView: View {
     }
 
     private var sourceEditor: some View {
-        TextEditor(text: Binding(
-            get: { selectedIndex.map { scriptList.script(at: $0) } ?? "" },
-            set: { newValue in
-                if let index = selectedIndex { scriptList.setScript(at: index, newValue) }
-            }))
-            .font(.system(size: 13))
-            .padding(4)
+        AppleScriptSourceField(
+            text: Binding(
+                get: { selectedIndex.map { scriptList.script(at: $0) } ?? "" },
+                set: { newValue in
+                    if let index = selectedIndex { scriptList.setScript(at: index, newValue) }
+                }),
+            enabled: selectedIndex != nil && !isEditingExternally,
+            onCommit: { _ in scriptList.save() })
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .settingsListCard()
-            .overlay(alignment: .topLeading) {
-                if selectedIndex == nil {
-                    Text(L("Enter AppleScript here"))
-                        .foregroundColor(.secondary)
-                        .padding(8)
-                        .allowsHitTesting(false)
-                }
-            }
-            .disabled(selectedIndex == nil || isEditingExternally)
     }
 
     private var buttonBar: some View {
@@ -1577,7 +1574,6 @@ struct AppleScriptTabView: View {
         let id: UUID
         let path: String
     }
-
     /// Original editAppleScriptInExternalEditor: — the first click dumps the
     /// source into $TMPDIR/<id>/MacStroke.applescript and opens it in whatever
     /// app owns .applescript files; "Stop" reads the file back.
@@ -1587,6 +1583,7 @@ struct AppleScriptTabView: View {
             guard let content = try? String(contentsOfFile: session.path, encoding: .utf8),
                   let index = scriptList.index(of: session.id) else { return }
             scriptList.setScript(at: index, content, notify: true)
+            scriptList.save()
             return
         }
 
@@ -1605,6 +1602,47 @@ struct AppleScriptTabView: View {
         try? scriptList.script(at: index).write(to: url, atomically: true, encoding: .utf8)
         NSWorkspace.shared.open(url)
         externalSession = ExternalScriptSession(id: id, path: url.path)
+    }
+}
+
+/// The original source box is a **single-line** bezelled `NSTextField`
+/// (identifier "Apple Script", 545x358 in the xib) stretched to fill the pane:
+/// long scripts scroll horizontally rather than wrap, and it is disabled until
+/// a row is selected. Edits commit when the field editor closes.
+private struct AppleScriptSourceField: NSViewRepresentable {
+    @Binding var text: String
+    let enabled: Bool
+    let onCommit: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField()
+        field.isBezeled = true
+        field.bezelStyle = .squareBezel
+        field.isEditable = true
+        field.drawsBackground = true
+        field.cell?.isScrollable = true
+        field.cell?.wraps = false
+        field.lineBreakMode = .byClipping
+        field.delegate = context.coordinator
+        return field
+    }
+
+    func updateNSView(_ field: NSTextField, context: Context) {
+        context.coordinator.onCommit = onCommit
+        field.placeholderString = L("Enter AppleScript here")
+        field.isEnabled = enabled
+        if field.stringValue != text { field.stringValue = text }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var onCommit: (String) -> Void = { _ in }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let field = obj.object as? NSTextField else { return }
+            onCommit(field.stringValue)
+        }
     }
 }
 

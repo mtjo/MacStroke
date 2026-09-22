@@ -131,11 +131,16 @@ final class AppleScriptsListTests: XCTestCase {
         XCTAssertNil(testList.index(of: UUID()))
     }
 
-    func testSetTitleAndScriptPersist() {
+    /// Original mutates the array while typing and only calls `save` when the
+    /// field editor closes, so an uncommitted rename must not reach disk.
+    func testInlineEditsPersistOnlyOnSave() {
         let added = testList.addScript(name: "Old", source: "old source")
         testList.setTitle(at: 0, "Renamed")
         testList.setScript(at: 0, "new source")
 
+        XCTAssertEqual(AppleScriptsList(storageURL: testStorageURL).title(at: 0), "Old")
+
+        testList.save()
         let reloaded = AppleScriptsList(storageURL: testStorageURL)
         XCTAssertEqual(reloaded.title(at: 0), "Renamed")
         XCTAssertEqual(reloaded.script(at: 0), "new source")
@@ -315,5 +320,28 @@ final class AppleScriptsListTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(testList.count, 0)
         let allScripts = testList.getAllScripts()
         XCTAssertEqual(allScripts.count, testList.count)
+    }
+
+    /// The ObjC build archived `[{title, script, id}]` into
+    /// `UserDefaults["appleScripts"]`; the importer keeps title/script and
+    /// mints fresh ids.
+    func testLegacyUserDefaultsArchiveIsImported() throws {
+        let legacy = [
+            ["title": "Close Tabs", "script": "tell application \"Chrome\"", "id": "ABC-hostname-1"],
+            ["title": "Empty", "script": "", "id": "DEF-hostname-2"],
+        ]
+        let data = try NSKeyedArchiver.archivedData(withRootObject: legacy as NSArray,
+                                                    requiringSecureCoding: false)
+
+        let imported = try XCTUnwrap(AppleScriptsList.scripts(fromLegacyArchive: data))
+        XCTAssertEqual(imported.map(\.name), ["Close Tabs", "Empty"])
+        XCTAssertEqual(imported.map(\.source), ["tell application \"Chrome\"", ""])
+        XCTAssertNotEqual(imported[0].id, imported[1].id)
+    }
+
+    func testLegacyArchiveOfOtherContentIsIgnored() throws {
+        let data = try NSKeyedArchiver.archivedData(withRootObject: ["not", "scripts"] as NSArray,
+                                                    requiringSecureCoding: false)
+        XCTAssertNil(AppleScriptsList.scripts(fromLegacyArchive: data))
     }
 }
