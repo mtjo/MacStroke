@@ -34,6 +34,11 @@ public final class HistoryClipboardManager {
     /// Default database path
     private static let defaultDatabasePath = "\(NSHomeDirectory())/Library/Application Support/MacStroke/clipboard.db"
 
+    /// RAM mode still has to be one shared store: the clipboard monitor, the
+    /// menu bar and the history window each build their own manager, so a
+    /// private `:memory:` connection would show an empty list.
+    static let ramDatabasePath = "file:macstroke_clipboard?mode=memory&cache=shared"
+
     /// Table name
     private static let tableName = "local_history_clipoard"
 
@@ -79,13 +84,13 @@ public final class HistoryClipboardManager {
     public convenience init() {
         // Original has a single switch: `clipoardStroageLocal` false means RAM.
         let useRAM = !UserDefaults.standard.bool(forKey: UserDefaultsKey.clipoardStroageLocal.rawValue)
-        let databasePath = useRAM ? "file::memory:?cache=shared" : Self.defaultDatabasePath
+        let databasePath = useRAM ? Self.ramDatabasePath : Self.defaultDatabasePath
         self.init(databasePath: databasePath, userDefaults: UserDefaults.standard)
     }
 
     /// Initialize with custom database path (for testing)
     /// - Parameters:
-    ///   - databasePath: Path to the SQLite database file
+    ///   - databasePath: Path to the SQLite database file, or the RAM URI
     ///   - userDefaults: UserDefaults instance (for testing)
     public init(databasePath: String, userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -95,15 +100,18 @@ public final class HistoryClipboardManager {
         }
 
         do {
-            try FileManager.default.createDirectory(
-                atPath: (databasePath as NSString).deletingLastPathComponent,
-                withIntermediateDirectories: true,
-                attributes: nil
-            )
+            // The RAM "path" is a URI, not a file, so there's no parent directory to make.
+            if databasePath != Self.ramDatabasePath {
+                try FileManager.default.createDirectory(
+                    atPath: (databasePath as NSString).deletingLastPathComponent,
+                    withIntermediateDirectories: true,
+                    attributes: nil
+                )
+            }
             self.db = try Connection(databasePath)
             createTable()
         } catch {
-            print("[HistoryClipboard] Failed to create database: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to create database: \(error)")
             self.db = nil
         }
     }
@@ -137,7 +145,7 @@ public final class HistoryClipboardManager {
             // Create index for faster queries
             try db.run(table.createIndex(isTopCol, ifNotExists: true))
         } catch {
-            print("[HistoryClipboard] Failed to create table: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to create table: \(error)")
         }
     }
 
@@ -166,7 +174,7 @@ public final class HistoryClipboardManager {
                 modifyTime: now
             )
         } catch {
-            print("[HistoryClipboard] Failed to insert: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to insert: \(error)")
             return nil
         }
     }
@@ -194,7 +202,7 @@ public final class HistoryClipboardManager {
                 entries.append(entry)
             }
         } catch {
-            print("[HistoryClipboard] Failed to select: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to select: \(error)")
         }
 
         return entries
@@ -208,7 +216,7 @@ public final class HistoryClipboardManager {
             let count = try db.scalar(table.filter(isTopCol == isTopValue).count)
             return count
         } catch {
-            print("[HistoryClipboard] Failed to get count: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to get count: \(error)")
             return 0
         }
     }
@@ -224,10 +232,11 @@ public final class HistoryClipboardManager {
                 .order(idCol.asc)
                 .limit(1)
 
-            let deleted = try db.run(query.delete())
-            return deleted > 0
+            // Original returns the exec result, so a no-op delete still succeeds.
+            try db.run(query.delete())
+            return true
         } catch {
-            print("[HistoryClipboard] Failed to delete earliest: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to delete earliest: \(error)")
             return false
         }
     }
@@ -241,10 +250,10 @@ public final class HistoryClipboardManager {
         do {
             // Original SQL: `WHERE is_top=0 AND create_time < cutoff` — pinned
             // entries are never expired away.
-            let deleted = try db.run(table.filter(isTopCol == 0 && createTimeCol < cutoffTime).delete())
-            return deleted > 0
+            try db.run(table.filter(isTopCol == 0 && createTimeCol < cutoffTime).delete())
+            return true
         } catch {
-            print("[HistoryClipboard] Failed to delete expired: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to delete expired: \(error)")
             return false
         }
     }
@@ -254,10 +263,10 @@ public final class HistoryClipboardManager {
         guard let db = db else { return false }
 
         do {
-            let deleted = try db.run(table.filter(isTopCol == 0).delete())
-            return deleted > 0
+            try db.run(table.filter(isTopCol == 0).delete())
+            return true
         } catch {
-            print("[HistoryClipboard] Failed to clear history: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to clear history: \(error)")
             return false
         }
     }
@@ -268,7 +277,7 @@ public final class HistoryClipboardManager {
         do {
             try db.run(table.filter(isTopCol == 1).delete())
         } catch {
-            print("[HistoryClipboard] Failed to clear top: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to clear top: \(error)")
         }
     }
 
@@ -279,7 +288,7 @@ public final class HistoryClipboardManager {
             try db.run(table.delete())
             try db.run("DELETE FROM sqlite_sequence WHERE name = ?", Self.tableName)
         } catch {
-            print("[HistoryClipboard] Failed to clear all: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to clear all: \(error)")
         }
     }
 
@@ -453,9 +462,8 @@ public final class HistoryClipboardManager {
 
         guard currentChangeCount > changeCount else { return }
 
-        // Original only asks whether the pasteboard carries a string type — an
-        // empty string is recorded as an entry too.
-        if pasteboard.availableType(from: [.string]) != nil {
+        // Original asks the pasteboard type list for an exact string membership.
+        if pasteboard.types?.contains(.string) ?? false {
             let content = pasteboard.string(forType: .string) ?? ""
             if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
                 cropTotalAfterInsert()
@@ -561,7 +569,7 @@ public final class HistoryClipboardManager {
         do {
             try db.run(table.filter(idCol == entryToRemove.id).delete())
         } catch {
-            print("[HistoryClipboard] Failed to remove top entry: \(error)")
+            NSLog("%@", "[HistoryClipboard] Failed to remove top entry: \(error)")
         }
     }
 
