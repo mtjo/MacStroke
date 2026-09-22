@@ -230,14 +230,19 @@ public final class HistoryClipboardManager {
     public func insertLocalImage(data: Data, isTop: Bool = false) -> HistoryClipboardEntry? {
         lock.lock()
         defer { lock.unlock() }
+        return insertLocalImageInternal(data: data, isTop: isTop)
+    }
+
+    /// Internal: insert an image row (assumes the lock is held).
+    @discardableResult
+    private func insertLocalImageInternal(data: Data, isTop: Bool) -> HistoryClipboardEntry? {
         guard let png = HistoryClipboardManager.pngData(from: data) else { return nil }
         // Identical bytes already sitting in the history reuse that payload file
         // instead of writing a second one for the row the insert replaces.
         let reusedPath = isTop ? nil : matchingHistoryImagePath(for: png)
-        let path = reusedPath ?? writeImageFile(png)
-        guard let payloadPath = path else { return nil }
-        let entry = insertLocalHistoryClipboardInternal(content: payloadPath, kind: .image, isTop: isTop)
-        if entry == nil, reusedPath == nil { unlinkImageFiles([payloadPath]) }
+        guard let path = reusedPath ?? writeImageFile(png) else { return nil }
+        let entry = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: isTop)
+        if entry == nil, reusedPath == nil { unlinkImageFiles([path]) }
         return entry
     }
 
@@ -660,16 +665,11 @@ public final class HistoryClipboardManager {
                                                    kind: .file, isTop: false) != nil {
                 cropTotalAfterInsert()
             }
-        } else if let data = Self.pasteboardImageData(from: pasteboard),
-                  let png = Self.pngData(from: data) {
+        } else if let data = Self.pasteboardImageData(from: pasteboard) {
             // Image-only copies (screenshots, picture drags) have no string
             // type: store the payload as a PNG file next to the database.
-            if let path = writeImageFile(png) {
-                if insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: false) != nil {
-                    cropTotalAfterInsert()
-                } else {
-                    unlinkImageFiles([path])
-                }
+            if insertLocalImageInternal(data: data, isTop: false) != nil {
+                cropTotalAfterInsert()
             }
         }
 
