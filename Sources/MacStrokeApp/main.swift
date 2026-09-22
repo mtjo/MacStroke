@@ -529,9 +529,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func statusMenu() -> NSMenu {
+        // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only;
+        // the clipboard history list is opened by its own shortcut, not the menu.
         let menu = NSMenu(title: "MacStroke")
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
-        menu.addItem(withTitle: L("Show History Clipboard"), action: #selector(showHistoryClipboard), keyEquivalent: "")
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         return menu
     }

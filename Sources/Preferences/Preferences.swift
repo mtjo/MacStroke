@@ -23,9 +23,6 @@ public final class UserPreferences: ObservableObject {
     @Published public var showIconInStatusBar: Bool {
         didSet { storage.setBool(showIconInStatusBar, forKey: .showIconInStatusBar) }
     }
-    @Published public var launchAtLogin: Bool {
-        didSet { storage.setBool(launchAtLogin, forKey: .launchAtLogin) }
-    }
     @Published public var showUIInWhateverApp: Bool {
         didSet { storage.setBool(showUIInWhateverApp, forKey: .showUIInWhateverApp) }
     }
@@ -168,7 +165,6 @@ public final class UserPreferences: ObservableObject {
     public init(storage: PreferencesStorage = PreferencesStorage()) {
         self.storage = storage
         self.showIconInStatusBar = storage.getBoolOptional(forKey: .showIconInStatusBar) ?? StorageDefaults.showIconInStatusBar
-        self.launchAtLogin = storage.getBoolOptional(forKey: .launchAtLogin) ?? StorageDefaults.launchAtLogin
         self.showUIInWhateverApp = storage.getBoolOptional(forKey: .showUIInWhateverApp) ?? StorageDefaults.showUIInWhateverApp
         self.blockFilter = storage.getStringOptional(forKey: .blockFilter) ?? StorageDefaults.blockFilter
         self.whiteListMode = storage.getBoolOptional(forKey: .whiteListMode) ?? StorageDefaults.whiteListMode

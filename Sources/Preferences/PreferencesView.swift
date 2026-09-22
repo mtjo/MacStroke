@@ -311,8 +311,8 @@ struct GeneralTabView: View {
                         TrailingSwitch(isOn: Binding(
                             get: { launchController.isEnabled },
                             set: { enabled in
+                                // 原版只调 addToLoginItems/removeFromLoginItems，不落任何偏好键
                                 launchController.setEnabled(enabled)
-                                viewModel.launchAtLogin = enabled
                             }
                         ))
                     }

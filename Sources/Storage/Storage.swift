@@ -12,7 +12,6 @@ import Foundation
 public enum StorageKey: String, CaseIterable {
     // General
     case showIconInStatusBar = "showIconInStatusBar"
-    case launchAtLogin = "launchAtLogin"
     case showUIInWhateverApp = "showUIInWhateverApp"
     case blockFilter = "blockFilter"
     case whiteListMode = "filterIsInWhiteMode"
@@ -145,7 +144,6 @@ public struct PreferencesStorage {
 public enum StorageDefaults {
     // General
     public static let showIconInStatusBar: Bool = true
-    public static let launchAtLogin: Bool = false
     public static let showUIInWhateverApp: Bool = false
     public static let blockFilter: String = ""
     public static let whiteListMode: Bool = false
@@ -216,7 +214,6 @@ public enum StorageDefaults {
 public func registerUserDefaultsDefaults() {
     let defaults: [String: Any] = [
         StorageKey.showIconInStatusBar.rawValue: StorageDefaults.showIconInStatusBar,
-        StorageKey.launchAtLogin.rawValue: StorageDefaults.launchAtLogin,
         StorageKey.showUIInWhateverApp.rawValue: StorageDefaults.showUIInWhateverApp,
         StorageKey.blockFilter.rawValue: StorageDefaults.blockFilter,
         StorageKey.whiteListMode.rawValue: StorageDefaults.whiteListMode,
