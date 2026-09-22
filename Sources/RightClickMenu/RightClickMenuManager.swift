@@ -149,7 +149,7 @@ public final class RightClickMenuManager {
         }
 
         if fileManager.createFile(atPath: filepath, contents: nil, attributes: nil) {
-            print("[RightClickMenu] File created: \(filepath)")
+            NSLog("%@", "[RightClickMenu] File created: \(filepath)")
             return
         }
 

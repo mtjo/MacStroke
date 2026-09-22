@@ -248,7 +248,7 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
             try data.write(to: storageURL, options: .atomic)
         } catch {
             // Log error but don't crash - persistence failure shouldn't break the app
-            print("[AppleScriptsList] Failed to save scripts: \(error)")
+            NSLog("%@", "[AppleScriptsList] Failed to save scripts: \(error)")
         }
     }
 
@@ -291,7 +291,7 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
             scripts = loadedScripts
             lock.unlock()
         } catch {
-            print("[AppleScriptsList] Failed to load scripts: \(error)")
+            NSLog("%@", "[AppleScriptsList] Failed to load scripts: \(error)")
             // Don't overwrite existing scripts on load failure
         }
     }

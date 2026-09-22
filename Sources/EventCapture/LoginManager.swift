@@ -32,7 +32,7 @@ public final class LoginManager {
                 try SMAppService.mainApp.register()
                 return true
             } catch {
-                print("[LoginManager] Failed to register login item: \(error)")
+                NSLog("%@", "[LoginManager] Failed to register login item: \(error)")
                 return false
             }
         } else {
@@ -49,7 +49,7 @@ public final class LoginManager {
                 try SMAppService.mainApp.unregister()
                 return true
             } catch {
-                print("[LoginManager] Failed to unregister login item: \(error)")
+                NSLog("%@", "[LoginManager] Failed to unregister login item: \(error)")
                 return false
             }
         } else {

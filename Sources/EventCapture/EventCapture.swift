@@ -113,7 +113,7 @@ public class EventCapture: NSObject {
         )
 
         guard let eventTap = eventTap else {
-            print("[EventCapture] Failed to create event tap")
+            NSLog("%@", "[EventCapture] Failed to create event tap")
             return false
         }
 
@@ -124,7 +124,7 @@ public class EventCapture: NSObject {
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
         isRunning = true
-        print("[EventCapture] Started")
+        NSLog("%@", "[EventCapture] Started")
         return true
     }
 
@@ -143,7 +143,7 @@ public class EventCapture: NSObject {
         eventTap = nil
         runLoopSource = nil
         isRunning = false
-        print("[EventCapture] Stopped")
+        NSLog("%@", "[EventCapture] Stopped")
     }
 
     /// Whether the event capture is currently running.

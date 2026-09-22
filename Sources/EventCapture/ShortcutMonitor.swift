@@ -39,7 +39,7 @@ public final class ShortcutMonitor {
     public func start() -> Bool {
         guard !monitoring else { return true }
         guard keyCode != 0 || flags != 0 else {
-            print("[ShortcutMonitor] No shortcut configured")
+            NSLog("%@", "[ShortcutMonitor] No shortcut configured")
             return false
         }
 
@@ -60,7 +60,7 @@ public final class ShortcutMonitor {
         )
 
         guard let eventTap = eventTap else {
-            print("[ShortcutMonitor] Failed to create event tap")
+            NSLog("%@", "[ShortcutMonitor] Failed to create event tap")
             return false
         }
 
@@ -71,7 +71,7 @@ public final class ShortcutMonitor {
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
         monitoring = true
-        print("[ShortcutMonitor] Started monitoring keyCode=\(keyCode) flags=\(flags)")
+        NSLog("%@", "[ShortcutMonitor] Started monitoring keyCode=\(keyCode) flags=\(flags)")
         return true
     }
 
@@ -90,7 +90,7 @@ public final class ShortcutMonitor {
         eventTap = nil
         runLoopSource = nil
         monitoring = false
-        print("[ShortcutMonitor] Stopped")
+        NSLog("%@", "[ShortcutMonitor] Stopped")
     }
 
     /// Update the shortcut to monitor.
@@ -135,7 +135,7 @@ public final class ShortcutMonitor {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
-            print("[ShortcutMonitor] Tap disabled by system, re-armed")
+            NSLog("%@", "[ShortcutMonitor] Tap disabled by system, re-armed")
             return nil
         }
         guard type == .keyDown else { return Unmanaged.passRetained(event) }
@@ -154,7 +154,7 @@ public final class ShortcutMonitor {
         }
 
         // Shortcut matched!
-        print("[ShortcutMonitor] Matched keyCode=\(eventKeyCode) flags=\(eventFlags)")
+        NSLog("%@", "[ShortcutMonitor] Matched keyCode=\(eventKeyCode) flags=\(eventFlags)")
         DispatchQueue.main.async { [weak self] in
             self?.onShortcutDetected?()
         }

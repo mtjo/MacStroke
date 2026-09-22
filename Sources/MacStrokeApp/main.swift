@@ -125,9 +125,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if capture.start() {
             eventCapture = capture
             canvasManager = canvas
-            print("[AppDelegate] Event capture started")
+            NSLog("%@", "[AppDelegate] Event capture started")
         } else {
-            print("[AppDelegate] Failed to start event capture - check accessibility permissions")
+            NSLog("%@", "[AppDelegate] Failed to start event capture - check accessibility permissions")
         }
 
         // Initialize rule store / engine
@@ -493,7 +493,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         controller.updater.automaticallyChecksForUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
         controller.updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
         self.updaterController = controller
-        print("[AppDelegate] Sparkle updater initialized")
+        NSLog("%@", "[AppDelegate] Sparkle updater initialized")
     }
 
     /// About tab checkboxes → apply to the live Sparkle updater.
@@ -586,7 +586,7 @@ extension AppDelegate: CanvasManagerDelegate {
         guard let (rule, score) = ruleStore.match(stroke: stroke, bundleID: bundleID) else {
             return false
         }
-        print("[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
+        NSLog("%@", "[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
 
         // Execute the action
         let executor = ActionExecutor()

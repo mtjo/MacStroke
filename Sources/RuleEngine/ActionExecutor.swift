@@ -73,7 +73,7 @@ public final class ActionExecutor {
         // Map common key names to key codes.
         let keyCode: UInt16? = keyCodeForName(key)
         guard let keyCode else {
-            print("[ActionExecutor] Unknown key: \(key)")
+            NSLog("%@", "[ActionExecutor] Unknown key: \(key)")
             return
         }
         pressKey(keyCode: keyCode, flags: 0)
