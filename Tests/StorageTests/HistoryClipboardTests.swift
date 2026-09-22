@@ -874,4 +874,92 @@ final class HistoryClipboardTests: XCTestCase {
         // New image rows still work after the migration.
         XCTAssertNotNil(manager.insertLocalImage(data: pngData()))
     }
+
+    // MARK: - File entries
+
+    private func makeTempFile(_ name: String) throws -> String {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("clip_file_\(UUID().uuidString)")
+            .appendingPathComponent(name)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: url)
+        return url.path
+    }
+
+    func testInsertLocalFilesStoresPathListAndKind() throws {
+        let manager = imageManager()
+        let a = try makeTempFile("report.pdf")
+        let b = try makeTempFile("数据.csv")
+
+        let entry = manager.insertLocalFiles(paths: [a, b])
+
+        XCTAssertEqual(entry?.kind, .file)
+        XCTAssertEqual(entry?.content, "\(a)\n\(b)", "paths are stored verbatim, not base64")
+        let loaded = manager.selectLocalHistoryClipoardIsTop(isTop: false, start: 0, end: 10)
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(manager.filePaths(for: loaded[0]), [a, b], "pasteboard order is kept")
+        XCTAssertEqual(manager.textContent(for: loaded[0]), loaded[0].content)
+    }
+
+    func testFileEntryWritesNoPayloadFiles() throws {
+        let manager = imageManager()
+        let path = try makeTempFile("note.txt")
+        let entry = try XCTUnwrap(manager.insertLocalFiles(paths: [path]))
+
+        // File rows reference the user's files; nothing is copied next to the database.
+        XCTAssertNil(manager.imageData(for: entry))
+        XCTAssertEqual(manager.filePaths(for: entry), [path])
+    }
+
+    func testAddTopFilePinsTheSamePathList() throws {
+        let manager = imageManager()
+        let a = try makeTempFile("budget.xlsx")
+        let history = manager.insertLocalFiles(paths: [a])!
+
+        let pinned = manager.addTopFile(for: history)
+
+        XCTAssertEqual(pinned?.kind, .file)
+        XCTAssertEqual(pinned?.isTop, true)
+        XCTAssertEqual(manager.filePaths(for: pinned!), [a])
+        XCTAssertEqual(manager.getTopList().count, 1)
+        XCTAssertNil(manager.addTopFile(for: manager.insertLocalHistoryClipboard(content: "text", isTop: false)!),
+                     "only file rows may be pinned as file rows")
+    }
+
+    func testClearingHistoryNeverDeletesReferencedFiles() throws {
+        let manager = imageManager()
+        let a = try makeTempFile("keepme.txt")
+        _ = manager.insertLocalFiles(paths: [a])
+        _ = manager.addTopFile(for: manager.getHistoryClipboardList(firstPage: true)[0])
+
+        manager.clearHistoryList()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: a))
+
+        manager.clearTop()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: a),
+                      "file rows only reference the user's files")
+
+        _ = manager.insertLocalFiles(paths: [a])
+        manager.clearAll()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: a))
+    }
+
+    func testPasteboardFileURLsKeepsExistingFilesOnly() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let existing = dir.appendingPathComponent("present.pdf")
+        try Data("x".utf8).write(to: existing)
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("MacStrokeTests.urls.\(UUID().uuidString)"))
+
+        pasteboard.clearContents()
+        pasteboard.writeObjects([existing as NSURL,
+                                 dir.appendingPathComponent("gone.txt") as NSURL] as [NSURL])
+        XCTAssertEqual(HistoryClipboardManager.pasteboardFileURLs(from: pasteboard), [existing.path])
+
+        pasteboard.clearContents()
+        pasteboard.setData(pngData(), forType: .png)
+        XCTAssertEqual(HistoryClipboardManager.pasteboardFileURLs(from: pasteboard), [],
+                       "a screenshot copy is not a file copy")
+    }
 }

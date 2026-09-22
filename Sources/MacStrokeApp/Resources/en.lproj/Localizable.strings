@@ -188,7 +188,8 @@
 "operate" = "operate";
 "tips: Type to search, Enter copies the selected content to the clipboard so you can paste it anywhere." = "tips: Type to search, Enter copies the selected content to the clipboard so you can paste it anywhere.";
 "Search clipboard history" = "Search clipboard history";
-"Image" = "Image";
+"image" = "Image";
+"%d files:" = "%d files:";
 "Are you sure to clear all history clipboard records?" = "Are you sure to clear all history clipboard records?";
 "Are you sure to clear all top records?" = "Are you sure to clear all top records?";
 "Are you sure to clear all top records and history clipboard records?" = "Are you sure to clear all top records and history clipboard records?";

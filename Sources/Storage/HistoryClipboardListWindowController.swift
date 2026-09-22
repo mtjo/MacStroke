@@ -10,6 +10,8 @@
 //  - single source-list style result column: "[n] content" for pinned rows
 //    (gray) and "n content" for history rows; the pin button (↑ / −) is
 //    revealed on row hover or selection, Spotlight-style
+//  - text rows show their content; image rows show the PNG as a thumbnail and
+//    file rows the real Finder icon, with a searchable name/dimension summary
 //  - original features kept: double-click copy + close, pin / unpin,
 //    clear / clearTop / clearAll with sheet confirmations, bottom tips label,
 //    scroll-to-bottom pagination (30 per page), Esc close, floating level 21
@@ -54,7 +56,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         static let searchHeight: CGFloat = 36
         static let side: CGFloat = 14
         static let rowHeight: CGFloat = 28
-        static let imageRowHeight: CGFloat = 44
+        static let iconRowHeight: CGFloat = 44
     }
 
     /// Case-insensitive substring filter over decoded content; the
@@ -325,8 +327,12 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        if entry.kind == .image, let data = entriesStore.imageData(for: entry),
-           let tiff = NSImage(data: data)?.tiffRepresentation {
+        switch entry.kind {
+        case .text:
+            pasteboard.setString(entriesStore.textContent(for: entry), forType: .string)
+        case .image:
+            guard let data = entriesStore.imageData(for: entry),
+                  let tiff = NSImage(data: data)?.tiffRepresentation else { break }
             // Reuse the screenshot: declare both PNG and TIFF so every receiver
             // (Preview, Office, chat apps) finds a type it accepts.
             pasteboard.declareTypes([.tiff, .png], owner: nil)
@@ -334,20 +340,25 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
             if let png = HistoryClipboardManager.pngData(from: data) {
                 pasteboard.setData(png, forType: .png)
             }
-        } else {
-            pasteboard.setString(entriesStore.textContent(for: entry), forType: .string)
+        case .file:
+            // Reuse the copy: writeObjects([NSURL]) is what Finder's own paste
+            // board writer produces, so Cmd+V in Finder copies the files again.
+            let urls = entriesStore.filePaths(for: entry).map { URL(fileURLWithPath: $0) as NSURL }
+            if !urls.isEmpty {
+                pasteboard.writeObjects(urls)
+            }
         }
         window?.close()
     }
 
     /// Pin the entry at the button's row (original: addTop:). Image rows pin a
-    /// copy of their PNG payload.
+    /// copy of their PNG payload; file rows pin the same path list.
     @objc private func addTop(_ sender: NSButton) {
         guard let entry = entry(for: sender) else { return }
-        if entry.kind == .image {
-            _ = entriesStore.addTopImage(for: entry)
-        } else {
-            _ = entriesStore.addTop(content: entriesStore.textContent(for: entry))
+        switch entry.kind {
+        case .text: _ = entriesStore.addTop(content: entriesStore.textContent(for: entry))
+        case .image: _ = entriesStore.addTopImage(for: entry)
+        case .file: _ = entriesStore.addTopFile(for: entry)
         }
         reload()
         tableView?.scrollRowToVisible(0)
@@ -410,8 +421,9 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
 
     // MARK: - Entry text and image previews
 
-    /// Row text, used for display and as the search match target. Image rows
-    /// carry a generated summary instead of pixels so they stay searchable.
+    /// Row text, used for display and as the search match target. Image and
+    /// file rows carry a generated summary instead of pixels or raw paths so
+    /// they stay searchable by name.
     private func summary(for entry: HistoryClipboardEntry) -> String {
         switch entry.kind {
         case .text:
@@ -419,10 +431,19 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         case .image:
             let size = thumbnail(for: entry)?.size ?? .zero
             let dimensions = size.width > 0 ? "\(Int(size.width))×\(Int(size.height))" : ""
-            let stamp = Self.summaryFormatter.string(
-                from: Date(timeIntervalSince1970: entry.createTime))
-            return [L("Image"), dimensions, stamp].filter { !$0.isEmpty }.joined(separator: " ")
+            return [L("image"), dimensions, stamp(for: entry)].filter { !$0.isEmpty }.joined(separator: " ")
+        case .file:
+            // The row icon already says "file", so the text is the names.
+            let names = entriesStore.filePaths(for: entry).map { ($0 as NSString).lastPathComponent }
+            let head = names.count > 1 ? LFormat("%d files:", names.count) : ""
+            let shown = names.prefix(2).joined(separator: ", ")
+            let tail = names.count > 2 ? "…" : ""
+            return [head, shown + tail, stamp(for: entry)].filter { !$0.isEmpty }.joined(separator: " ")
         }
+    }
+
+    private func stamp(for entry: HistoryClipboardEntry) -> String {
+        Self.summaryFormatter.string(from: Date(timeIntervalSince1970: entry.createTime))
     }
 
     private static let summaryFormatter: DateFormatter = {
@@ -431,15 +452,28 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         return formatter
     }()
 
-    /// Cached file-backed thumbnail; the store reads the PNG from disk once
-    /// per entry so scrolling does not re-decode screenshots.
+    /// Cached row icon: the stored PNG for image rows, the real Finder icon for
+    /// file rows. Read once per entry so scrolling does not re-decode them.
     private func thumbnail(for entry: HistoryClipboardEntry) -> NSImage? {
-        guard entry.kind == .image else { return nil }
+        guard entry.kind == .image || entry.kind == .file else { return nil }
         if let cached = thumbnailCache[entry.content] { return cached }
-        guard let data = entriesStore.imageData(for: entry), let image = NSImage(data: data) else {
-            return nil
+        let image: NSImage?
+        switch entry.kind {
+        case .image:
+            image = entriesStore.imageData(for: entry).flatMap { NSImage(data: $0) }
+        case .file:
+            let paths = entriesStore.filePaths(for: entry)
+            if paths.count > 1 {
+                image = NSWorkspace.shared.icon(forFiles: paths)
+            } else {
+                image = paths.first.map { NSWorkspace.shared.icon(forFile: $0) }
+            }
+        case .text:
+            image = nil
         }
-        thumbnailCache[entry.content] = image
+        if let image {
+            thumbnailCache[entry.content] = image
+        }
         return image
     }
 
@@ -488,11 +522,11 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         SpotlightRowView()
     }
 
-    /// Image rows are taller so the thumbnail has room, like Spotlight's
-    /// file results.
+    /// Icon rows (images, files) are taller so the thumbnail has room, like
+    /// Spotlight's file results.
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
         guard row < displayedEntries.count else { return Layout.rowHeight }
-        return displayedEntries[row].kind == .image ? Layout.imageRowHeight : Layout.rowHeight
+        return displayedEntries[row].kind == .text ? Layout.rowHeight : Layout.iconRowHeight
     }
 
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {

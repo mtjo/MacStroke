@@ -10,16 +10,19 @@ import SQLite
 import AppKit
 
 /// What a clipboard entry holds. The original MacStroke only ever stored
-/// strings; images were added on top of that schema with a `type` column.
+/// strings; images and files were added on top of that schema with a `type`
+/// column.
 public enum HistoryClipboardKind: Int {
     case text = 0
     case image = 1
+    case file = 2
 }
 
 /// A single clipboard history entry.
 public struct HistoryClipboardEntry: Equatable {
     public let id: Int64
-    /// Base64 text payload, or the PNG file path for image entries.
+    /// Base64 text payload, the PNG file path for image entries, or the
+    /// newline-joined absolute paths for file entries.
     public let content: String
     public let kind: HistoryClipboardKind
     public let isTop: Bool
@@ -234,6 +237,16 @@ public final class HistoryClipboardManager {
         return entry
     }
 
+    /// Insert a file entry from absolute paths (Finder-style copy). The files
+    /// themselves are never copied — the row only records where they were.
+    @discardableResult
+    public func insertLocalFiles(paths: [String], isTop: Bool = false) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        return insertLocalHistoryClipboardInternal(content: paths.joined(separator: "\n"),
+                                                   kind: .file, isTop: isTop)
+    }
+
     /// PNG representation of arbitrary pasteboard image data.
     static func pngData(from data: Data) -> Data? {
         if let rep = NSBitmapImageRep(data: data) {
@@ -259,12 +272,20 @@ public final class HistoryClipboardManager {
         return text
     }
 
+    /// Absolute paths of a file entry, in pasteboard order.
+    public func filePaths(for entry: HistoryClipboardEntry) -> [String] {
+        guard entry.kind == .file else { return [] }
+        return entry.content
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map(String.init)
+    }
+
     private func insertLocalHistoryClipboardInternal(content: String,
                                                      kind: HistoryClipboardKind = .text,
                                                      isTop: Bool) -> HistoryClipboardEntry? {
         guard let db = db else { return nil }
 
-        let storedContent = kind == .image ? content : content.data(using: .utf8)?.base64EncodedString() ?? ""
+        let storedContent = kind == .text ? (content.data(using: .utf8)?.base64EncodedString() ?? "") : content
         let now = Date().timeIntervalSince1970
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
@@ -587,9 +608,17 @@ public final class HistoryClipboardManager {
         guard currentChangeCount > changeCount else { return }
 
         // Original asks the pasteboard type list for an exact string membership.
+        let copiedFiles = Self.pasteboardFileURLs(from: pasteboard)
         if pasteboard.types?.contains(.string) ?? false {
             let content = pasteboard.string(forType: .string) ?? ""
             if insertLocalHistoryClipboardInternal(content: content, isTop: false) != nil {
+                cropTotalAfterInsert()
+            }
+        } else if !copiedFiles.isEmpty {
+            // Finder-style copy: record the paths, not the file contents, so
+            // pasting again hands the very same files back.
+            if insertLocalHistoryClipboardInternal(content: copiedFiles.joined(separator: "\n"),
+                                                   kind: .file, isTop: false) != nil {
                 cropTotalAfterInsert()
             }
         } else if let data = Self.pasteboardImageData(from: pasteboard),
@@ -608,18 +637,19 @@ public final class HistoryClipboardManager {
         changeCount = currentChangeCount
     }
 
+    /// Absolute paths of a file copy on the pasteboard. Copied files also carry
+    /// bitmap previews, so this is checked before the image branch.
+    static func pasteboardFileURLs(from pasteboard: NSPasteboard) -> [String] {
+        guard pasteboard.types?.contains(.fileURL) ?? false else { return [] }
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        let urls = (pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL]) ?? []
+        return urls.map(\.path).filter { FileManager.default.fileExists(atPath: $0) }
+    }
+
     /// Image payload of a pasteboard copy, preferring the richest available type.
     static func pasteboardImageData(from pasteboard: NSPasteboard) -> Data? {
         if let png = pasteboard.data(forType: .png) { return png }
-        if let tiff = pasteboard.data(forType: .tiff) { return tiff }
-        // Copied picture files arrive as file-url references, not plain strings.
-        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
-        let paths = (pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL])?
-            .map(\.path) ?? []
-        guard let path = paths.first,
-              ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "tif", "heic", "webp"]
-                .contains((path as NSString).pathExtension.lowercased()) else { return nil }
-        return FileManager.default.contents(atPath: path)
+        return pasteboard.data(forType: .tiff)
     }
 
     /// On insert the original trims just one earliest history row, and only in
@@ -701,6 +731,17 @@ public final class HistoryClipboardManager {
         guard let png = Self.pngData(from: data), let path = writeImageFile(png) else { return nil }
         let pinned = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: true)
         if pinned == nil { unlinkImageFiles([path]) }
+        enforceTopLimit()
+        return pinned
+    }
+
+    /// Pin an existing file entry: the same path list, no payload to copy.
+    @discardableResult
+    public func addTopFile(for entry: HistoryClipboardEntry) -> HistoryClipboardEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard entry.kind == .file else { return nil }
+        let pinned = insertLocalHistoryClipboardInternal(content: entry.content, kind: .file, isTop: true)
         enforceTopLimit()
         return pinned
     }
