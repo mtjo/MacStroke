@@ -42,7 +42,6 @@
 "No rules defined" = "No rules defined";
 "Click \"Add Rule\" to create your first gesture rule" = "Click \"Add Rule\" to create your first gesture rule";
 "Enabled" = "Enabled";
-"Name" = "Name";
 "Description" = "Description";
 "Gesture" = "Gesture";
 "Action" = "Action";
@@ -61,7 +60,6 @@
 "Min Similarity Score" = "Min Similarity Score";
 "App Filter (optional)" = "App Filter (optional)";
 "Bundle ID filter (e.g. com.apple.*)" = "Bundle ID filter (e.g. com.apple.*)";
-"Wildcard" = "Wildcard";
 "Regex" = "Regex";
 "Action Type" = "Action Type";
 "Key Combination" = "Key Combination";
@@ -81,8 +79,6 @@
 "Save" = "Save";
 "Add Example" = "Add Example";
 "Created" = "Created";
-"Application Filters" = "Application Filters";
-"Filter Mode" = "Filter Mode";
 "Blacklist Mode (block listed apps)" = "Blacklist Mode (block listed apps)";
 "Whitelist Mode (only allow listed apps)" = "Whitelist Mode (only allow listed apps)";
 "Blocklist" = "Blocklist";
@@ -170,10 +166,8 @@
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "You can draw a gesture anywhere on the screen, or select the preset gesture below.";
 "Black list mode" = "Black list mode";
 "White list mode" = "White list mode";
-"Enter bundle identifiers one per line. Supports wildcards (e.g. com.jetbrains.*)" = "Enter bundle identifiers one per line. Supports wildcards (e.g. com.jetbrains.*)";
-"Black List" = "Black List";
-"White List" = "White List";
 "add.." = "add..";
+"apply rules" = "apply rules";
 "Pick a running app" = "Pick a running app";
 "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'" = "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'";
 "enable right click menu" = "enable right click menu";
@@ -258,9 +252,6 @@
 
 "General Settings" = "General";
 
-"Add Pattern" = "Add Pattern";
-"Wildcard" = "Wildcard";
-"Unknown App" = "Unknown App";
 
 /* AppleScript tab (original Preferences.xib pane) */
 "Load Example" = "Load Example";

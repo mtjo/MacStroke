@@ -42,7 +42,6 @@
 "No rules defined" = "尚未定义规则";
 "Click \"Add Rule\" to create your first gesture rule" = "点击“添加规则”创建您的第一条手势规则";
 "Enabled" = "已启用";
-"Name" = "名称";
 "Description" = "说明";
 "Gesture" = "手势";
 "Action" = "动作";
@@ -61,7 +60,6 @@
 "Min Similarity Score" = "最小相似度";
 "App Filter (optional)" = "应用过滤（可选）";
 "Bundle ID filter (e.g. com.apple.*)" = "Bundle ID 过滤（例如 com.apple.*）";
-"Wildcard" = "通配符";
 "Regex" = "正则表达式";
 "Action Type" = "动作类型";
 "Key Combination" = "按键组合";
@@ -81,8 +79,6 @@
 "Save" = "保存";
 "Add Example" = "添加示例";
 "Created" = "创建时间";
-"Application Filters" = "应用过滤";
-"Filter Mode" = "过滤模式";
 "Blacklist Mode (block listed apps)" = "黑名单模式（阻止列出的应用）";
 "Whitelist Mode (only allow listed apps)" = "白名单模式（仅允许列出的应用）";
 "Blocklist" = "阻止列表";
@@ -170,10 +166,8 @@
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "您可以在屏幕任意位置绘制手势，或在下方选择预设手势。";
 "Black list mode" = "黑名单模式";
 "White list mode" = "白名单模式";
-"Enter bundle identifiers one per line. Supports wildcards (e.g. com.jetbrains.*)" = "每行输入一个 Bundle ID，支持通配符（如 com.jetbrains.*）";
-"Black List" = "黑名单";
-"White List" = "白名单";
 "add.." = "添加..";
+"apply rules" = "应用规则";
 "Pick a running app" = "从运行中的App中选取";
 "tips:Simulate right mouse click ,support '*' character matching. eg:'com.jetbrains.*'" = "提示：模拟右键菜单，支持 '*' 通配符匹配，例如 'com.jetbrains.*'";
 "enable right click menu" = "启用右键菜单";
@@ -260,9 +254,6 @@
 "Delete Rule" = "删除规则";
 "Automatically Download Updates" = "自动下载更新";
 
-"Add Pattern" = "添加匹配模式";
-"Wildcard" = "通配模式";
-"Unknown App" = "未知应用";
 
 /* AppleScript tab (original Preferences.xib pane) */
 "Load Example" = "载入样例脚本";

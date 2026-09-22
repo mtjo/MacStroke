@@ -101,6 +101,7 @@ swift test --list-tests
   - `resetToDefaults()` 严格照搬原版 `resetDefaults:`：只回写 `DefaultPreferences.plist` 携带的键（+ `resetColors` 从 `defaultLineColor`/`defaultNoteColor` 重新派生 `lineColorHex`），**不动**语言、黑白名单与模式、登录项、`minimumPoints`、`disableMousePath`、更新设置；原版没有确认框也没有重启提示，SwiftUI 侧靠 `reloadResetValues()` 把新值推回 `@Published` 属性来模拟原版的绑定自动刷新
   - `isEnabled` 是**运行时状态**（原版 `AppDelegate` 的 `static BOOL isEnabled`，每次启动回到 YES 且从不落库），所以 `UserDefaults` 里没有 `isEnabled` 这个 key，勾选框状态不跨启动
   - 偏好页的确认/提示统一走 `postMacStrokeNotification(_:)`（原版一律用 `NSUserNotification`，标题 "MacStroke"，默认声音；只有规则"清空"才是模态 NSAlert）
+  - 过滤页照搬原版 Filters 面板：黑白名单**两个常显纯文本框**（`FilterTextView`，richText=NO、systemFont 14、bezel 边框）并排，各自上方一个 radio + `add..` 按钮，右下角 `apply rules`（原版左下的 "Go bigger" 在该面板是 `hidden="YES"`）。radio 点击（`whiteBlackRadioClicked:`）只写 `filterIsInWhiteMode` 并刷新互补选中态与背景色（激活侧 `#ffffff`，非激活侧 = 窗口背景色），**不碰文本**；只有 `apply rules` 才把两个文本框经 setter（trim + 丢空行）写库，再回读进文本框。`add..` 走 AppPicker 的 `addedToTextView` 语义：条目全部不预勾选，OK 后对每个勾选项执行 `原文本 + "\n" + bundleID`（**不去重**，空文本会留下前导空行，交给 apply 清掉）
   - 关于页只有 Sparkle 两个开关 + Version/Check Now/issues + Author + README.html WebView；原版是 `LSUIElement` 常驻 accessory 应用，主菜单（`MainMenu.xib` 里那套 "About MenuBarApp" 模板残留）**永远不会显示**，因此标准关于面板与 Credits.rtf 无需移植
 
 - **Sources/Storage/** —

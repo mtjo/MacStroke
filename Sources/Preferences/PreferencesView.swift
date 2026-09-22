@@ -1672,172 +1672,143 @@ struct AppleScriptExample: Identifiable {
 
 
 // MARK: - Filters Tab
-// Original: black/white list mode radio + two text views + apply + add.
-
-struct FilterEntry: Identifiable {
-    let index: Int
-    let value: String
-    var id: Int { index }
-}
+// Original: two always-visible plain text views side by side (black / white
+// list), one radio plus an "add.." button above each, and "apply rules" at the
+// bottom right. Only "apply rules" writes to UserDefaults; the radio writes the
+// mode immediately.
 
 struct FiltersTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @State private var blackListText = ""
     @State private var whiteListText = ""
-    @State private var showWhiteList = false
-    @State private var selection: Set<Int> = []
-    @State private var newPattern = ""
-    @State private var showingPatternSheet = false
-
-    private var currentLines: [String] {
-        (showWhiteList ? whiteListText : blackListText).components(separatedBy: "\n")
-    }
-
-    private var entries: [FilterEntry] {
-        currentLines.enumerated().compactMap { i, line in
-            line.trimmingCharacters(in: .whitespaces).isEmpty ? nil : FilterEntry(index: i, value: line)
-        }
-    }
 
     var body: some View {
         SettingsFillingPage {
-            SectionHeader(L("Application Filters"))
-
-            // System-settings style list switcher (like Sound output/input).
-            SettingsCard {
-                Picker("", selection: $showWhiteList) {
-                    Text(L("Black List")).tag(false)
-                    Text(L("White List")).tag(true)
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        ModeRadio(title: L("Black list mode"), on: !viewModel.whiteListMode) {
+                            viewModel.whiteListMode = false
+                        }
+                        .fixedSize()
+                        Button(L("add..")) { addRunningApps(whiteList: false) }
+                        Spacer()
+                    }
+                    FilterTextView(text: $blackListText, active: !viewModel.whiteListMode)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .padding(10)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        ModeRadio(title: L("White list mode"), on: viewModel.whiteListMode) {
+                            viewModel.whiteListMode = true
+                        }
+                        .fixedSize()
+                        Button(L("add..")) { addRunningApps(whiteList: true) }
+                        Spacer()
+                    }
+                    FilterTextView(text: $whiteListText, active: viewModel.whiteListMode)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            Table(entries, selection: $selection) {
-                TableColumn(L("Name")) { entry in
-                    Text(entry.value)
-                        .font(.system(size: 12, design: .monospaced))
-                }
-                TableColumn(L("Type")) { entry in
-                    Text(Self.kind(for: entry.value))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(minHeight: 280, maxHeight: .infinity)
-            .settingsListCard()
-
-            HStack(spacing: 12) {
-                Button(action: addRunningApp) {
-                    Image(systemName: "plus")
-                }
-                .help(L("Pick a running app"))
-                Button(action: removeSelected) {
-                    Image(systemName: "minus")
-                }
-                .disabled(selection.isEmpty)
-                Button(L("Add Pattern")) {
-                    newPattern = ""
-                    showingPatternSheet = true
-                }
-
+            HStack {
                 Spacer()
-
-                Picker(L("Filter Mode"), selection: $viewModel.whiteListMode) {
-                    Text(L("Black list mode")).tag(false)
-                    Text(L("White list mode")).tag(true)
-                }
-                .pickerStyle(.radioGroup)
-                .fixedSize()
-                .onChange(of: viewModel.whiteListMode) { _ in
-                    persistLists()
-                }
-
-                Button(L("Apply")) { persistLists() }
-                    .buttonStyle(.borderedProminent)
+                Button(L("apply rules")) { applyRules() }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             blackListText = BlackWhiteFilter.shared.blackListText
             whiteListText = BlackWhiteFilter.shared.whiteListText
         }
-        .sheet(isPresented: $showingPatternSheet) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L("Add Pattern")).font(.headline)
-                TextField("com.jetbrains.*", text: $newPattern)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 280)
-                HStack {
-                    Spacer()
-                    Button(L("Cancel")) { showingPatternSheet = false }
-                    Button(L("OK")) {
-                        addPattern(newPattern.trimmingCharacters(in: .whitespaces))
-                        showingPatternSheet = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(newPattern.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
-            .padding(20)
-            .frame(width: 340)
-        }
     }
 
-    /// Type column: wildcard pattern / resolved app name / unknown.
-    private static func kind(for entry: String) -> String {
-        if entry.contains("*") { return L("Wildcard") }
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry),
-           let bundle = Bundle(url: url),
-           let name = bundle.infoDictionary?["CFBundleDisplayName"] as? String
-            ?? bundle.infoDictionary?["CFBundleName"] as? String {
-            return name
-        }
-        return L("Unknown App")
-    }
-
-    private func setText(_ lines: [String]) {
-        let joined = lines.joined(separator: "\n")
-        if showWhiteList { whiteListText = joined } else { blackListText = joined }
-        persistLists()
-    }
-
-    private func persistLists() {
+    /// Original `filterViewApplyClicked:`: both text views go through the
+    /// trim/drop-empty-lines setter, then the stored lists are read back so the
+    /// editor shows exactly what was persisted.
+    private func applyRules() {
         BlackWhiteFilter.shared.blackListText = blackListText
         BlackWhiteFilter.shared.whiteListText = whiteListText
-        viewModel.save()
+        blackListText = BlackWhiteFilter.shared.blackListText
+        whiteListText = BlackWhiteFilter.shared.whiteListText
     }
 
-    private func removeSelected() {
-        let lines = currentLines.enumerated()
-            .filter { !selection.contains($0.offset) }
-            .map(\.element)
-        selection = []
-        setText(lines)
-    }
-
-    private func addPattern(_ pattern: String) {
-        guard !pattern.isEmpty else { return }
-        var lines = currentLines
-        if !lines.contains(pattern) {
-            lines.removeAll { $0.trimmingCharacters(in: .whitespaces).isEmpty }
-            lines.append(pattern)
-            setText(lines)
-        }
-    }
-
-    /// Add running apps' bundle IDs to the visible list
-    /// (original: AppPickerWindowController with addedToTextView, multi-select).
-    private func addRunningApp() {
-        let existing = Set(entries.map(\.value))
-        guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), preselected: existing),
+    /// Original `addedToTextView` picker mode: nothing is pre-checked, and OK
+    /// appends `previous\n<bundle id>` per checked row — no dedup, no apply.
+    private func addRunningApps(whiteList: Bool) {
+        guard let picked = AppPickerPanel.pick(title: L("Pick a running app")),
               !picked.isEmpty else { return }
-        var lines = currentLines
-        for bundleID in picked where !lines.contains(bundleID) {
-            lines.removeAll { $0.trimmingCharacters(in: .whitespaces).isEmpty }
-            lines.append(bundleID)
+        for bundleID in picked {
+            if whiteList { whiteListText += "\n" + bundleID } else { blackListText += "\n" + bundleID }
         }
-        setText(lines)
+    }
+}
+
+/// One radio of the original pair. AppKit can't group radios across separate
+/// representables, so the checked state is driven from the model, mirroring
+/// `refreshFilterRadioAndTextViewState`.
+private struct ModeRadio: NSViewRepresentable {
+    let title: String
+    let on: Bool
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(radioButtonWithTitle: title,
+                              target: context.coordinator,
+                              action: #selector(Coordinator.clicked))
+        button.setContentHuggingPriority(.required, for: .vertical)
+        button.setContentCompressionResistancePriority(.required, for: .vertical)
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.action = action
+        button.state = on ? .on : .off
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+        init(action: @escaping () -> Void) { self.action = action }
+        @objc func clicked() { action() }
+    }
+}
+
+/// Plain (non-rich) multi-line editor, 14pt system font like the original text
+/// views. The active list gets a white background, the inactive one the window
+/// background color.
+private struct FilterTextView: NSViewRepresentable {
+    @Binding var text: String
+    let active: Bool
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = NSTextView()
+        textView.isRichText = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.allowsUndo = true
+        textView.font = .systemFont(ofSize: 14)
+        textView.autoresizingMask = [.width]
+        textView.isVerticallyResizable = true
+        textView.textContainer?.widthTracksTextView = true
+
+        let scroll = NSScrollView()
+        scroll.documentView = textView
+        scroll.hasVerticalScroller = true
+        scroll.hasHorizontalScroller = false
+        scroll.borderType = .bezelBorder
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let textView = scroll.documentView as? NSTextView else { return }
+        if textView.string != text { textView.string = text }
+        let background = active ? NSColor.white : NSColor.windowBackgroundColor
+        textView.drawsBackground = true
+        textView.backgroundColor = background
+        scroll.drawsBackground = true
+        scroll.backgroundColor = background
     }
 }
 
