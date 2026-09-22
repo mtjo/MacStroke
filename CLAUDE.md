@@ -98,7 +98,7 @@ swift test --list-tests
   - 规则页**没有编辑弹层**（原版就没有 `RuleEditorView`，已删除）：所有字段在表格内就地编辑，落库严格按原版 `control:textShouldEndEditing:` 的 identifier 分派（Gesture/Filter/Note/Apple Script/Text/Password），末尾无条件同时 `RulesList.save` 与 `AppleScriptsList.save`；Filter 提交时强制 wildcard 类型。Type 列是 `NSComboBox(0,25,90,27)` 不可编辑，切换只改 actionType（其它动作字段原样保留）+ save + reloadData；Action 列按类型就地放控件（84pt 行内 y=27 处）：快捷键 → `ShortcutRecorderView(0,27,100,25)`（录制即把 actionType 钉成 SHORTCUT）、AppleScript → `NSComboBox(0,27,100,25)`（数据源是脚本标题、按 `apple_script_id` 预选、选中只写 id）、文本/密码 → 方形 bezel 无边框 `NSTextField(0,30,100,20)`（密码用 `NSSecureTextField`）。`+` 追加的原版 `addShortcutRule:` 是一条全字段 `"Double click Modify"` 占位、filter `*`、actionType SHORTCUT、gestureData nil 的规则；`-` 未选中时只弹"请选择规则"通知。表格自身只在非编辑态、且内容签名变化时 `reloadData`，避免打断内联输入
   - 常规页对齐原版 `Preferences.xib` 的 General 面板：语言下拉是**原始 locale 码**（`en` / `zh-Hans`，宽 81，原版就是代码里塞进 combo 的裸值），切换后只弹非模态通知"重启MacStroke后生效"；字号是只读文本（原版两个字段都是 display-only 绑定，只能由字体面板改）；滑块宽 210、颜色井宽 100
   - 字体面板：`chooseFont:` 先 `fontPanel:YES` 显示、**再** `setSelectedAttributes(["NSColor": noteColor])`（原版注释：显示前设置会一直是黑色），因此面板里的颜色井可直接改提示文字色，回调走 `setColor(_:forAttribute:)` 写 `defaultNoteColor`
-  - `resetToDefaults()` 严格照搬原版 `resetDefaults:`：只回写 `DefaultPreferences.plist` 携带的键（+ `resetColors` 从 `defaultLineColor`/`defaultNoteColor` 重新派生 `lineColorHex`），**不动**语言、黑白名单与模式、登录项、`minimumPoints`、`disableMousePath`、更新设置；原版没有确认框也没有重启提示，SwiftUI 侧靠 `reloadResetValues()` 把新值推回 `@Published` 属性来模拟原版的绑定自动刷新
+  - `resetToDefaults()` 严格照搬原版 `resetDefaults:`：只回写 `DefaultPreferences.plist` 携带的键（+ `resetColors` 从 `defaultLineColor`/`defaultNoteColor` 重新派生 `lineColorHex`），**不动**语言、黑白名单与模式、登录项、`disableMousePath`、更新设置；原版没有确认框也没有重启提示，SwiftUI 侧靠 `reloadResetValues()` 把新值推回 `@Published` 属性来模拟原版的绑定自动刷新
   - `isEnabled` 是**运行时状态**（原版 `AppDelegate` 的 `static BOOL isEnabled`，每次启动回到 YES 且从不落库），所以 `UserDefaults` 里没有 `isEnabled` 这个 key，勾选框状态不跨启动
   - 偏好页的确认/提示统一走 `postMacStrokeNotification(_:)`（原版一律用 `NSUserNotification`，标题 "MacStroke"，默认声音；只有规则"清空"才是模态 NSAlert）
   - 过滤页照搬原版 Filters 面板：黑白名单**两个常显纯文本框**（`FilterTextView`，richText=NO、systemFont 14、bezel 边框）并排，各自上方一个 radio + `add..` 按钮，右下角 `apply rules`（原版左下的 "Go bigger" 在该面板是 `hidden="YES"`）。radio 点击（`whiteBlackRadioClicked:`）只写 `filterIsInWhiteMode` 并刷新互补选中态与背景色（激活侧 `#ffffff`，非激活侧 = 窗口背景色），**不碰文本**；只有 `apply rules` 才把两个文本框经 setter（trim + 丢空行）写库，再回读进文本框。`add..` 走 AppPicker 的 `addedToTextView` 语义：条目全部不预勾选，OK 后对每个勾选项执行 `原文本 + "\n" + bundleID`（**不去重**，空文本会留下前导空行，交给 apply 清掉）
@@ -113,7 +113,7 @@ swift test --list-tests
 
 - **Sources/Storage/** —
   - `PreferencesStorage` — 对 `UserDefaults` 的薄封装，提供类型化 getter/setter 以及 `StorageDefaults` 常量
-  - `HistoryClipboardManager` — 基于 SQLite 的剪贴板历史，支持置顶/收藏条目、分页、过期清理。监控只由 `enableHistoryClipboard` 决定；`clipoardStroageLocal` 单选决定落库位置与裁剪（false 时用 `file::memory:?cache=shared` 内存库），`deleteExpired` 的总数/按天裁剪只在 local 模式执行（原版 `STROAGE_LOCAL` 分支）；`clipoardStroageRam` 在原版中是永不读取的死键，Swift 侧已移除
+  - `HistoryClipboardManager` — 基于 SQLite 的剪贴板历史，支持置顶/收藏条目、分页、过期清理。监控只由 `enableHistoryClipboard` 决定；`clipoardStroageLocal` 单选决定落库位置与裁剪（false 时用共享内存库 `file:macstroke_clipboard?mode=memory&cache=shared`——剪贴板监听器、菜单栏和历史列表窗口各 new 一个 manager，私有 `:memory:` 会让对方读到空表；该 URI 不是文件路径，构造时不能 `createDirectory`），`deleteExpired` 的总数/按天裁剪只在 local 模式执行（原版 `STROAGE_LOCAL` 分支）；`clipoardStroageRam` 在原版中是永不读取的死键，Swift 侧已移除
   - `HistoryClipboardListWindowController` — 历史列表窗口（780x453、三列表头 序号/内容/操作、底部 tips + clearTop/clear/clearAll 按钮、行内 ↑/- 置顶按钮、双击回填粘贴板并关窗、滚到底加载下一页 30 条）
 
 - **Sources/WindowManager/** — `WindowManager`（状态栏）、`Toast` / `ToastManager`（屏幕上的提示）
@@ -140,10 +140,13 @@ swift test --list-tests
 ### 重要实现注意事项
 
 - **Rule 是不可变的** — 不要修改 `rule.template` 或其他 `let` 属性；始终构造新的 `Rule` 并调用 `RuleStore.update(newRule)`
+- **规则文件坏数据** — `RuleStore.load()` 只在文件不存在时直接写默认规则；文件存在但解码失败会先把它改名成 `rules.json.bak` 再落默认规则（Swift 解码器全有或全无，一条坏数据就会让整份规则失效，原版 `reInit`+save 是无声覆盖）
 - **DrawGesture 缩放** — `computeScaledPoints` 使用 `bounds.width/height`（不是硬编码常量）；`layout()` 覆写会在 bounds 变化时重新计算；`clipsToBounds = true`，背景透明
 - **手势录入** — 规则表 Image 列双击（或编辑器里的"在屏幕上绘制"按钮）→ 发送 `.macStrokeRecordGesture`（userInfo 带规则名；编辑器发起时额外带 `deferStoreUpdate: true`）→ AppDelegate 进入录制模式 → 画完 `onGestureRecorded` 写回规则并广播 `.macStrokeGestureDidRecord`（编辑器据此回填轨迹）。编辑器发起的录制只回填表单、不写库，点保存才落盘
 - **Toast 位置** — `ToastPosition` 原始值对齐原版 `notePostion`：0=跟随鼠标、1=屏幕中央、2=右上、3=右下、4=左上、5=左下
 - **FinderSync 通信** — 主 app → 扩展：`SyncSharedDefaultsNotification`（object=主 app bundleID，userInfo 带开关与菜单标题，扩展收到后写入自己的 UserDefaults；开关值按原版编码为 `"1"/"0"` 字符串，扩展用 `intValue` 解析，发 `"true"/"false"` 会一律读成 0 导致菜单为空）；扩展启动时发 `RequestObservingPathNotification`，主 app 回 `ObservingPathSetNotification`（根路径 "/"）；扩展 → 主 app：`CustomMessageReceivedNotification`（object=JSON 字符串，解析 operation/path/items）。主 app 端解析在 `RightClickMenuManager.customMessageReceivedFromFinder`，两个 DNC 观察者必须带 `suspensionBehavior: .deliverImmediately`（后台 agent 会被节流丢包）
+- **日志统一走 `NSLog("%@", …)`** — 不要改回 `print`：交付形态是 `.app`（`open` 启动、无 tty），stdout 既不落地也看不到，`log show --predicate 'process == "MacStroke"'` 才能取到运行日志
+
 - **无障碍权限** — 启动时通过 `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` 检查；会显示带 "Open System Settings" 按钮的模态提示
 - **Sparkle** — `SPUStandardUpdaterController` 在 `AppDelegate.initSparkleUpdater()` 中初始化；feed URL 与原版一致（`mtjo/MacStroke` release 分支的 AppCast），但 Sparkle 2 要求 `SUPublicEDKey`（缺了会在 `startUpdater:` 直接弹模态致命错误、冻结主线程，Finder 菜单随之失效），私钥在本地 `.sparkle/ed25519-private.pem`（未入库）。移植期启动自动检查关闭（`SUEnableAutomaticChecks=false`、`StorageDefaults.autoCheckUpdates=false`），因为该 feed 只发布 ObjC 版且仅有 DSA 签名——自动检查会提示把 Swift 版覆盖成另一条代码线的构建；关于页"Check Now"（`.macStrokeCheckForUpdates`）仍可手动触发。
 

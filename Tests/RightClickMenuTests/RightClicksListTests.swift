@@ -2,14 +2,29 @@ import XCTest
 @testable import RightClickMenu
 
 final class RightClicksListTests: XCTestCase {
-    private let suiteName = "com.macstroke.tests.RightClicksList.\(UUID().uuidString)"
+    /// 固定 suite 名：随机 UUID 会让每次跑测试都在 ~/Library/Preferences 里留下一个新 plist
+    private let suiteName = "com.macstroke.tests.RightClicksList"
 
     private func makeDefaults() -> UserDefaults {
         UserDefaults(suiteName: suiteName)!
     }
 
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        purge()
+    }
+
     override func tearDownWithError() throws {
+        purge()
+        try super.tearDownWithError()
+    }
+
+    private func purge() {
         UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(
+            at: URL(fileURLWithPath: NSHomeDirectory())
+                .appendingPathComponent("Library/Preferences/\(suiteName).plist")
+        )
     }
 
     func testStartsEmptyUntilFirstLaunchReInit() {
