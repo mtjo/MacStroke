@@ -11,7 +11,6 @@ import Foundation
 /// Storage keys used by the preferences module.
 public enum StorageKey: String, CaseIterable {
     // General
-    case isEnabled = "isEnabled"
     case showIconInStatusBar = "showIconInStatusBar"
     case launchAtLogin = "launchAtLogin"
     case showUIInWhateverApp = "showUIInWhateverApp"
@@ -146,7 +145,6 @@ public struct PreferencesStorage {
 /// Default storage configuration values.
 public enum StorageDefaults {
     // General
-    public static let isEnabled: Bool = true
     public static let showIconInStatusBar: Bool = true
     public static let launchAtLogin: Bool = false
     public static let showUIInWhateverApp: Bool = false
@@ -219,7 +217,6 @@ public enum StorageDefaults {
 /// and the gesture score gate on a fresh install.
 public func registerUserDefaultsDefaults() {
     let defaults: [String: Any] = [
-        StorageKey.isEnabled.rawValue: StorageDefaults.isEnabled,
         StorageKey.showIconInStatusBar.rawValue: StorageDefaults.showIconInStatusBar,
         StorageKey.launchAtLogin.rawValue: StorageDefaults.launchAtLogin,
         StorageKey.showUIInWhateverApp.rawValue: StorageDefaults.showUIInWhateverApp,

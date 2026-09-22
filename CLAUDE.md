@@ -96,6 +96,12 @@ swift test --list-tests
   - 规则表格列：Image（`GestureThumb` 84pt 行高；轨迹为空的行按原版渲染一个 80x25 的"绘制手势"按钮）、Gesture（名称，双击打开编辑器）、Type、Action、Filter、Description。Image 列双击与"绘制手势"按钮在原版都走 `preSetRuleGestureAtIndex:`，即弹出带 68 项预设下拉的"绘制手势！"模态框（不是单独的绘制面板）；选中预设或屏幕上画完会立刻 `setGestureData:` 落库、发"手势绘制完成"通知并合成 Return 键关掉模态框
   - `GestureThumb` 复刻原版 `DrawGesture setPoints:` 的数学：60pt 画布、`zoo = max(w/60, h/60)`、只在短轴居中、整体右下偏移 12pt、逐段渐变 `(0.5t, 0.47+0.53t, 0.9)` 且 `t = i / points.count`（不是 count-1）；编辑器里 56pt 预览框用 `canvas: 44, inset: 6` 以免裁切
   - `RuleEditorView` — 添加/编辑规则的弹层（原版是表格就地编辑，Swift Table 只读所以改为 sheet）；字段仅名称/说明/手势轨迹/过滤/动作类型+内容，原版没有的每规则开关（启用、最小分数、持续触发、正则）不再暴露，保存时原样保留旧值
+  - 常规页对齐原版 `Preferences.xib` 的 General 面板：语言下拉是**原始 locale 码**（`en` / `zh-Hans`，宽 81，原版就是代码里塞进 combo 的裸值），切换后只弹非模态通知"重启MacStroke后生效"；字号是只读文本（原版两个字段都是 display-only 绑定，只能由字体面板改）；滑块宽 210、颜色井宽 100
+  - 字体面板：`chooseFont:` 先 `fontPanel:YES` 显示、**再** `setSelectedAttributes(["NSColor": noteColor])`（原版注释：显示前设置会一直是黑色），因此面板里的颜色井可直接改提示文字色，回调走 `setColor(_:forAttribute:)` 写 `defaultNoteColor`
+  - `resetToDefaults()` 严格照搬原版 `resetDefaults:`：只回写 `DefaultPreferences.plist` 携带的键（+ `resetColors` 从 `defaultLineColor`/`defaultNoteColor` 重新派生 `lineColorHex`），**不动**语言、黑白名单与模式、登录项、`minimumPoints`、`disableMousePath`、更新设置；原版没有确认框也没有重启提示，SwiftUI 侧靠 `reloadResetValues()` 把新值推回 `@Published` 属性来模拟原版的绑定自动刷新
+  - `isEnabled` 是**运行时状态**（原版 `AppDelegate` 的 `static BOOL isEnabled`，每次启动回到 YES 且从不落库），所以 `UserDefaults` 里没有 `isEnabled` 这个 key，勾选框状态不跨启动
+  - 偏好页的确认/提示统一走 `postMacStrokeNotification(_:)`（原版一律用 `NSUserNotification`，标题 "MacStroke"，默认声音；只有规则"清空"才是模态 NSAlert）
+  - 关于页只有 Sparkle 两个开关 + Version/Check Now/issues + Author + README.html WebView；原版是 `LSUIElement` 常驻 accessory 应用，主菜单（`MainMenu.xib` 里那套 "About MenuBarApp" 模板残留）**永远不会显示**，因此标准关于面板与 Credits.rtf 无需移植
 
 - **Sources/Storage/** —
   - `PreferencesStorage` — 对 `UserDefaults` 的薄封装，提供类型化 getter/setter 以及 `StorageDefaults` 常量
@@ -119,7 +125,7 @@ swift test --list-tests
 
 ### 本地化
 
-- `L(key)` 函数位于 `Sources/Storage/Localization.swift`，从 `Resources/en.lproj/Localizable.strings` 和 `zh-Hans.lproj/Localizable.strings` 加载
+- `L(key)` 函数位于 `Sources/Storage/Localization.swift`，实际生效的文件是 `Sources/MacStrokeApp/Resources/{en,zh-Hans}.lproj/Localizable.strings`（`build_app.sh` 整目录拷进 app bundle；仓库根下曾有一份 145 行的旧副本，已删除，勿再新建）
 - 语言持久化在 `UserDefaults` 的 `language` key 中；运行时切换会发送 `.languageDidChange` 通知
 - `applyUserLanguage(_)` 会更新 `Bundle.main.preferredLocalizations`
 

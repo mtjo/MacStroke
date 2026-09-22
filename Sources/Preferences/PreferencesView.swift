@@ -92,6 +92,17 @@ public extension Notification.Name {
     static let macStrokeUpdateSettingsDidChange = Notification.Name("MacStrokeUpdateSettingsDidChange")
 }
 
+/// Original feedback channel for confirmations and guards: a banner-style
+/// `NSUserNotification` titled "MacStroke". The preferences window never uses a
+/// modal alert for these, so the user can keep working without dismissing it.
+func postMacStrokeNotification(_ text: String) {
+    let notification = NSUserNotification()
+    notification.title = "MacStroke"
+    notification.informativeText = text
+    notification.soundName = NSUserNotificationDefaultSoundName
+    NSUserNotificationCenter.default.deliver(notification)
+}
+
 // MARK: - Shortcut Recorder SwiftUI Wrapper
 
 struct ShortcutRecorder: NSViewRepresentable {
@@ -284,15 +295,6 @@ struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @StateObject private var launchController = LaunchAtLoginController.shared
 
-    private static let fontSizeFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .none
-        formatter.minimum = 8
-        formatter.maximum = 96
-        formatter.allowsFloats = false
-        return formatter
-    }()
-
     var body: some View {
         SettingsPage {
             // MARK: General (original xib order: enable / open prefs /
@@ -336,13 +338,17 @@ struct GeneralTabView: View {
                     }
                     RowDivider()
                     SettingsRow(L("Language:")) {
+                        // Original is an editable NSComboBox (width 81) whose
+                        // items are the raw locale codes added in code.
                         Picker(L("Language"), selection: $viewModel.language) {
-                            Text(L("English")).tag("en")
-                            Text(L("简体中文")).tag("zh-Hans")
+                            Text("en").tag("en")
+                            Text("zh-Hans").tag("zh-Hans")
                         }
-                        .pickerStyle(.segmented)
                         .labelsHidden()
-                        .fixedSize()
+                        .frame(width: 81)
+                        .onChange(of: viewModel.language) { _ in
+                            postMacStrokeNotification(L("Restart MacStroke to take effect"))
+                        }
                     }
                 }
             }
@@ -360,7 +366,7 @@ struct GeneralTabView: View {
                                 .foregroundColor(.secondary)
                                 .frame(width: 26, alignment: .trailing)
                             Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
-                                .frame(width: 200)
+                                .frame(width: 210)
                         }
                     }
                     RowDivider()
@@ -373,9 +379,10 @@ struct GeneralTabView: View {
                     }
                     RowDivider()
                     SettingsRow(L("Line color:")) {
+                        // Original: NSColorWell bound to lineColor, 100pt wide.
                         ColorPicker("", selection: $viewModel.lineColor)
                             .labelsHidden()
-                            .fixedSize()
+                            .frame(width: 100)
                     }
                 }
             }
@@ -389,13 +396,13 @@ struct GeneralTabView: View {
                     RowDivider()
                     SettingsRow(L("Font:")) {
                         HStack(spacing: 8) {
+                            // Original binds these two fields read-only; the
+                            // font panel is the only way to change them.
                             Text(viewModel.noteFontName)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
-                            TextField("", value: $viewModel.noteFontSize, formatter: Self.fontSizeFormatter)
-                                .textFieldStyle(.roundedBorder)
-                                .labelsHidden()
-                                .frame(width: 48)
+                            Text("\(Int(viewModel.noteFontSize))")
+                                .foregroundColor(.secondary)
                             Button(L("Choose")) { openFontPanel() }
                         }
                     }
@@ -419,7 +426,7 @@ struct GeneralTabView: View {
                     RowDivider()
                     SettingsRow(L("Background Apha:")) {
                         Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
-                            .frame(width: 200)
+                            .frame(width: 210)
                     }
                     RowDivider()
                     SettingsRow(L("Retention Time:")) {
@@ -431,7 +438,7 @@ struct GeneralTabView: View {
                                 get: { Double(viewModel.noteRetentionTime) },
                                 set: { viewModel.noteRetentionTime = Int($0) }
                             ), in: 1...4, step: 1)
-                            .frame(width: 200)
+                            .frame(width: 210)
                         }
                     }
                 }
@@ -456,6 +463,9 @@ struct GeneralTabView: View {
                 viewModel.noteFontName = name
             }
             viewModel.noteFontSize = defaults.double(forKey: "noteFontSize")
+            if let noteColor = defaults.string(forKey: "defaultNoteColor") {
+                viewModel.defaultNoteColor = noteColor
+            }
         }
     }
 
@@ -465,7 +475,14 @@ struct GeneralTabView: View {
         if let current = NSFont(name: viewModel.noteFontName, size: CGFloat(viewModel.noteFontSize)) {
             fontManager.setSelectedFont(current, isMultiple: false)
         }
-        fontManager.orderFrontFontPanel(self)
+        fontManager.fontPanel(true)?.makeKeyAndOrderFront(self)
+        // Original comment: "must setup color AFTER displayed or it will keeps
+        // black" — this is what lets the panel's colour well edit the note colour.
+        // "NSColor" is NSForegroundColorAttributeName — the same key the panel
+        // hands back to setColor(_:forAttribute:).
+        fontManager.setSelectedAttributes(
+            ["NSColor": NSColor(viewModel.noteColor)],
+            isMultiple: false)
     }
 
     private func exportPreferences() {
@@ -485,7 +502,7 @@ struct GeneralTabView: View {
             } as [String: Any]
             do {
                 try (ourKeys as NSDictionary).write(to: url)
-                showNotification(L("Export succeeded"))
+                postMacStrokeNotification(L("Export succeeded"))
             } catch {
                 NSAlert.showError(error)
             }
@@ -509,28 +526,22 @@ struct GeneralTabView: View {
                 defaults.set(value, forKey: key)
             }
             defaults.synchronize()
-            showNotification(L("Restart MacStroke to take effect"))
+            postMacStrokeNotification(L("Restart MacStroke to take effect"))
         }
     }
 
+    /// Original resetDefaults: only re-applies DefaultPreferences.plist and lets
+    /// the bound rows refresh. No confirmation, and the language, login item and
+    /// black/white filter lists are deliberately untouched.
     private func resetDefaults() {
         viewModel.resetToDefaults()
-        BlackWhiteFilter.shared.blackListText = ""
-        BlackWhiteFilter.shared.whiteListText = ""
-        showNotification(L("Restart MacStroke to take effect"))
-    }
-
-    private func showNotification(_ message: String) {
-        let alert = NSAlert()
-        alert.messageText = "MacStroke"
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        alert.runModal()
     }
 }
 
 /// Receives font-panel change callbacks and mirrors them into UserDefaults
-/// (original: changeFont: writing noteFontName / noteFontSize).
+/// (original: changeFont: writing noteFontName / noteFontSize, and
+/// setColor:forAttribute: writing noteColor when the panel's own color
+/// attribute changes).
 final class FontPanelObserver: NSObject {
     static let shared = FontPanelObserver()
 
@@ -539,6 +550,12 @@ final class FontPanelObserver: NSObject {
         let font = sender.convert(NSFont.systemFont(ofSize: NSFont.systemFontSize))
         UserDefaults.standard.set(font.fontName, forKey: "noteFontName")
         UserDefaults.standard.set(Double(font.pointSize), forKey: "noteFontSize")
+        NotificationCenter.default.post(name: NSNotification.Name("MacStrokeNoteFontDidChange"), object: nil)
+    }
+
+    @objc func setColor(_ color: NSColor, forAttribute attribute: String) {
+        guard attribute == "NSColor" else { return }
+        UserDefaults.standard.set(Color(nsColor: color).hexString, forKey: "defaultNoteColor")
         NotificationCenter.default.post(name: NSNotification.Name("MacStrokeNoteFontDidChange"), object: nil)
     }
 }
@@ -786,11 +803,7 @@ struct RulesTabView: View {
     /// Original removeRule:/pickBtnDidClick: guard: a NSUserNotification toast,
     /// not a disabled button.
     private func needRuleSelection() {
-        let notification = NSUserNotification()
-        notification.title = "MacStroke"
-        notification.informativeText = L("Select a filter first!")
-        notification.soundName = NSUserNotificationDefaultSoundName
-        NSUserNotificationCenter.default.deliver(notification)
+        postMacStrokeNotification(L("Select a filter first!"))
     }
 
     private func drawGesture(_ ruleName: String) {
@@ -879,11 +892,7 @@ struct RulesTabView: View {
     }
 
     private static func postGestureCompleteNotification() {
-        let notification = NSUserNotification()
-        notification.title = "MacStroke"
-        notification.informativeText = L("Gesture draw complete!")
-        notification.soundName = NSUserNotificationDefaultSoundName
-        NSUserNotificationCenter.default.deliver(notification)
+        postMacStrokeNotification(L("Gesture draw complete!"))
     }
 
     /// Original bottom-bar button: multi-select running apps (AppPicker-
@@ -1588,10 +1597,7 @@ struct AppleScriptTabView: View {
 
         guard let index = selectedIndex else {
             // Original still fires the notification because its button never disables.
-            let notification = NSUserNotification()
-            notification.title = "MacStroke"
-            notification.informativeText = L("Select a AppleScript first!")
-            NSUserNotificationCenter.default.deliver(notification)
+            postMacStrokeNotification(L("Select a AppleScript first!"))
             return
         }
 

@@ -26,7 +26,6 @@ final class StorageTests: XCTestCase {
         let defaults = UserDefaults.standard
         XCTAssertTrue(defaults.bool(forKey: "enableHistoryClipboard"))
         XCTAssertTrue(defaults.bool(forKey: "clipoardStroageLocal"))
-        XCTAssertTrue(defaults.bool(forKey: "isEnabled"))
         XCTAssertTrue(defaults.bool(forKey: "showGestureNote"))
         XCTAssertTrue(defaults.bool(forKey: "enableLimitTop"))
         XCTAssertEqual(defaults.integer(forKey: "limitTop"), 15)

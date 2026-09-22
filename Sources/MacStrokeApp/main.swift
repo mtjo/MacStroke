@@ -122,9 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             RightClicksList.shared.needRightClick(byAppname: bundleID)
         }
 
-        // Master enable switch.
-        canvas.isEnabled = storage.getBoolOptional(forKey: .isEnabled) ?? StorageDefaults.isEnabled
-
         if capture.start() {
             eventCapture = capture
             canvasManager = canvas

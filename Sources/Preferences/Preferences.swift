@@ -16,9 +16,10 @@ public final class UserPreferences: ObservableObject {
     private let storage: PreferencesStorage
 
     // MARK: - General
-    @Published public var isEnabled: Bool {
-        didSet { storage.setBool(isEnabled, forKey: .isEnabled) }
-    }
+    /// Master switch. Original: `static BOOL isEnabled` in AppDelegate — it is
+    /// runtime state only, re-initialised to YES on every launch and never
+    /// written to UserDefaults, so the checkbox always starts ticked.
+    @Published public var isEnabled: Bool = true
     @Published public var showIconInStatusBar: Bool {
         didSet { storage.setBool(showIconInStatusBar, forKey: .showIconInStatusBar) }
     }
@@ -169,7 +170,6 @@ public final class UserPreferences: ObservableObject {
 
     public init(storage: PreferencesStorage = PreferencesStorage()) {
         self.storage = storage
-        self.isEnabled = storage.getBoolOptional(forKey: .isEnabled) ?? StorageDefaults.isEnabled
         self.showIconInStatusBar = storage.getBoolOptional(forKey: .showIconInStatusBar) ?? StorageDefaults.showIconInStatusBar
         self.launchAtLogin = storage.getBoolOptional(forKey: .launchAtLogin) ?? StorageDefaults.launchAtLogin
         self.showUIInWhateverApp = storage.getBoolOptional(forKey: .showUIInWhateverApp) ?? StorageDefaults.showUIInWhateverApp
@@ -219,21 +219,18 @@ public final class UserPreferences: ObservableObject {
         storage.synchronize()
     }
 
-    /// Reset all preferences to their default values.
+    /// Reset preferences the way the original `resetDefaults:` does — iterate the
+    /// keys of `DefaultPreferences.plist` and write each back to UserDefaults.
+    /// Keys that plist does not carry are therefore left alone: language, the
+    /// black/white filter lists and mode, the login item, the minimum-points
+    /// threshold, the mouse-path switch, update settings and the master switch.
     public func resetToDefaults() {
-        storage.setBool(StorageDefaults.isEnabled, forKey: .isEnabled)
         storage.setBool(StorageDefaults.showIconInStatusBar, forKey: .showIconInStatusBar)
-        storage.setBool(StorageDefaults.launchAtLogin, forKey: .launchAtLogin)
         storage.setBool(StorageDefaults.showUIInWhateverApp, forKey: .showUIInWhateverApp)
-        storage.setString(StorageDefaults.blockFilter, forKey: .blockFilter)
-        storage.setBool(StorageDefaults.whiteListMode, forKey: .whiteListMode)
-        storage.setString(StorageDefaults.whiteList, forKey: .whiteList)
-        storage.setString("en", forKey: .language)
         storage.setBool(StorageDefaults.openPrefOnStartup, forKey: .openPrefOnStartup)
         storage.setBool(StorageDefaults.mergeConsecutiveIdenticalGestures, forKey: .mergeConsecutiveIdenticalGestures)
         storage.setString(StorageDefaults.defaultLineColor, forKey: .defaultLineColor)
         storage.setString(StorageDefaults.defaultNoteColor, forKey: .defaultNoteColor)
-        storage.setInt(StorageDefaults.minimumPoints, forKey: .minimumPoints)
         storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
         storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
         storage.setBool(StorageDefaults.showGestureNote, forKey: .showGestureNote)
@@ -243,12 +240,14 @@ public final class UserPreferences: ObservableObject {
         storage.setString(StorageDefaults.noteFontName, forKey: .noteFontName)
         storage.setDouble(StorageDefaults.noteFontSize, forKey: .noteFontSize)
         storage.setBool(StorageDefaults.showNoteIcon, forKey: .showNoteIcon)
-        storage.setBool(StorageDefaults.disableMousePath, forKey: .disableMousePath)
-        storage.setString(StorageDefaults.lineColorHex, forKey: .lineColorHex)
+        // Original MGOptionsDefine resetColors: re-derive the live colors from
+        // the defaultLineColor / defaultNoteColor strings.
+        storage.setString(StorageDefaults.defaultLineColor, forKey: .lineColorHex)
         storage.setBool(StorageDefaults.enableRightClickMenu, forKey: .enableRightClickMenu)
         storage.setBool(StorageDefaults.enableNewFile, forKey: .enableNewFile)
         storage.setBool(StorageDefaults.enableOpenInTerminal, forKey: .enableOpenInTerminal)
         storage.setBool(StorageDefaults.enableCopyFilePath, forKey: .enableCopyFilePath)
+        storage.setString(StorageDefaults.userTerminal, forKey: .userTerminal)
         storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
         storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
@@ -258,11 +257,44 @@ public final class UserPreferences: ObservableObject {
         storage.setInt(StorageDefaults.limitTotal, forKey: .limitTotal)
         storage.setBool(StorageDefaults.enableLimitSaveDays, forKey: .enableLimitSaveDays)
         storage.setInt(StorageDefaults.limitSaveDays, forKey: .limitSaveDays)
-        storage.setString(StorageDefaults.userTerminal, forKey: .userTerminal)
-        storage.setBool(StorageDefaults.autoCheckUpdates, forKey: .autoCheckUpdates)
-        storage.setBool(StorageDefaults.showToast, forKey: .showToast)
-        storage.setInt(StorageDefaults.clipboardHistoryLimit, forKey: .clipboardHistoryLimit)
         storage.synchronize()
+        reloadResetValues()
+    }
+
+    /// The original refreshes its bound controls automatically through the
+    /// shared `NSUserDefaultsController`; SwiftUI holds its own copies, so push
+    /// the just-written defaults back into the published properties.
+    private func reloadResetValues() {
+        showIconInStatusBar = storage.getBool(forKey: .showIconInStatusBar)
+        showUIInWhateverApp = storage.getBool(forKey: .showUIInWhateverApp)
+        openPrefOnStartup = storage.getBool(forKey: .openPrefOnStartup)
+        mergeConsecutiveIdenticalGestures = storage.getBool(forKey: .mergeConsecutiveIdenticalGestures)
+        defaultLineColor = storage.getString(forKey: .defaultLineColor) ?? StorageDefaults.defaultLineColor
+        defaultNoteColor = storage.getString(forKey: .defaultNoteColor) ?? StorageDefaults.defaultNoteColor
+        minSimilarityScore = storage.getDouble(forKey: .minSimilarityScore)
+        enableGestureMinScore = storage.getBool(forKey: .enableGestureMinScore)
+        showGestureNote = storage.getBool(forKey: .showGestureNote)
+        noteRetentionTime = storage.getInt(forKey: .noteRetentionTime)
+        notePosition = storage.getInt(forKey: .notePosition)
+        noteBackgroundAlpha = storage.getDouble(forKey: .noteBackgroundAlpha)
+        noteFontName = storage.getString(forKey: .noteFontName) ?? StorageDefaults.noteFontName
+        noteFontSize = storage.getDouble(forKey: .noteFontSize)
+        showNoteIcon = storage.getBool(forKey: .showNoteIcon)
+        lineColorHex = storage.getString(forKey: .lineColorHex) ?? StorageDefaults.defaultLineColor
+        enableRightClickMenu = storage.getBool(forKey: .enableRightClickMenu)
+        enableNewFile = storage.getBool(forKey: .enableNewFile)
+        enableOpenInTerminal = storage.getBool(forKey: .enableOpenInTerminal)
+        enableCopyFilePath = storage.getBool(forKey: .enableCopyFilePath)
+        userTerminal = storage.getString(forKey: .userTerminal) ?? StorageDefaults.userTerminal
+        enableHistoryClipboard = storage.getBool(forKey: .enableHistoryClipboard)
+        clipoardStroageLocal = storage.getBool(forKey: .clipoardStroageLocal)
+        historyCilpboardListShortcut = storage.getString(forKey: .historyCilpboardListShortcut) ?? StorageDefaults.historyCilpboardListShortcut
+        enableLimitTop = storage.getBool(forKey: .enableLimitTop)
+        limitTop = storage.getInt(forKey: .limitTop)
+        enableLimitTotal = storage.getBool(forKey: .enableLimitTotal)
+        limitTotal = storage.getInt(forKey: .limitTotal)
+        enableLimitSaveDays = storage.getBool(forKey: .enableLimitSaveDays)
+        limitSaveDays = storage.getInt(forKey: .limitSaveDays)
     }
 }
 

@@ -6,6 +6,7 @@
 import XCTest
 @testable import WindowManager
 @testable import Preferences
+import Storage
 
 final class WindowManagerTests: XCTestCase {
 
@@ -24,19 +25,65 @@ final class WindowManagerTests: XCTestCase {
 
     func testUserPreferencesSaveAndLoad() {
         let prefs = UserPreferences()
-        prefs.isEnabled = false
         prefs.minimumPoints = 15
         prefs.save()
 
         let loadedPrefs = UserPreferences()
-        XCTAssertEqual(loadedPrefs.isEnabled, false)
         XCTAssertEqual(loadedPrefs.minimumPoints, 15)
 
         // Reset
         let resetPrefs = UserPreferences()
-        resetPrefs.isEnabled = true
         resetPrefs.minimumPoints = 10
         resetPrefs.save()
+    }
+
+    /// 原版把总开关放在 AppDelegate 的 `static BOOL isEnabled`，每次启动都回到
+    /// YES 且从不写 UserDefaults，所以偏好里的勾选状态不是持久状态。
+    func testIsEnabledIsRuntimeOnly() {
+        let prefs = isolatedPreferences()
+        prefs.isEnabled = false
+        prefs.save()
+        XCTAssertTrue(isolatedPreferences().isEnabled)
+    }
+
+    /// 原版 `resetDefaults:` 只把 DefaultPreferences.plist 里的键写回 UserDefaults，
+    /// 语言、黑白名单、登录项与总开关都不在 plist 中所以保持不变；写完后绑定控件
+    /// 立即看到新值（SwiftUI 侧靠 reloadResetValues 回读）。
+    func testResetToDefaultsKeepsUntouchedKeysAndRefreshesModel() {
+        let storage = PreferencesStorage(defaults: isolatedSuite())
+        // Seed through storage so the model picks the values up at init time
+        // (assigning `language` afterwards would trigger a live language switch).
+        storage.setString("zh-Hans", forKey: .language)
+        storage.setString("com.example.blocked", forKey: .blockFilter)
+        storage.setString("com.example.allowed", forKey: .whiteList)
+        let prefs = UserPreferences(storage: storage)
+        prefs.minSimilarityScore = 95
+        prefs.noteFontSize = 18
+        prefs.noteFontName = "Courier"
+        prefs.lineColorHex = "#FF0000"
+        prefs.showGestureNote = false
+
+        prefs.resetToDefaults()
+
+        XCTAssertEqual(prefs.language, "zh-Hans")
+        XCTAssertEqual(prefs.blockFilter, "com.example.blocked")
+        XCTAssertEqual(prefs.whiteList, "com.example.allowed")
+        XCTAssertEqual(prefs.minSimilarityScore, StorageDefaults.minSimilarityScore)
+        XCTAssertEqual(prefs.noteFontSize, StorageDefaults.noteFontSize)
+        XCTAssertEqual(prefs.noteFontName, StorageDefaults.noteFontName)
+        XCTAssertEqual(prefs.lineColorHex, StorageDefaults.defaultLineColor)
+        XCTAssertTrue(prefs.showGestureNote)
+    }
+
+    private func isolatedSuite() -> UserDefaults {
+        let name = "MacStrokeTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return defaults
+    }
+
+    private func isolatedPreferences() -> UserPreferences {
+        UserPreferences(storage: PreferencesStorage(defaults: isolatedSuite()))
     }
 
     // MARK: - Toast 位置

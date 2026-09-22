@@ -22,8 +22,6 @@
 "The current directory: %@ does not have write permission!" = "The current directory: %@ does not have write permission!";
 "General" = "General";
 "Language" = "Language";
-"English" = "English";
-"简体中文" = "简体中文";
 "Version" = "Version";
 "Build" = "Build";
 "General" = "General";
