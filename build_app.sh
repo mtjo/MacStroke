@@ -130,6 +130,9 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "${APP_DIR}/Conten
 find "${APP_DIR}/Contents/Frameworks" -name "Sparkle" -type f -exec install_name_tool -id "@rpath/Sparkle.framework/Versions/B/Sparkle" {} \; 2>/dev/null
 
 # 7. Info.plist
+# SUPublicEDKey：Sparkle 2 硬性要求 EdDSA 公钥，缺失时 startUpdater 抛出致命错误
+# 并弹出模态框，主线程停在 runModal 里（连 DistributedNotificationCenter 都收不到，
+# Finder 右键菜单随之失效）。私钥在 .sparkle/ed25519-private.pem（未入库）。
 cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -171,8 +174,10 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <string>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</string>
     <key>SUPublicDSAKeyFile</key>
     <string>dsa_pub.pem</string>
+    <key>SUPublicEDKey</key>
+    <string>z7QoxopiJmon580ha8Kl8tI6m+Jq+xSZ9Oz/CCVqUAU=</string>
     <key>SUEnableAutomaticChecks</key>
-    <true/>
+    <false/>
 </dict>
 </plist>
 PLIST

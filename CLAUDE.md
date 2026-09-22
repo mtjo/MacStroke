@@ -63,7 +63,7 @@ swift test --list-tests
   - `initRightClickMenu`（RightClickMenuManager 分布式通知 + pluginkit 延迟启用）
   - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ^⇧V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
   - 创建状态栏项目，使用模板图片（`menu_icon_16x16.png` / disabled 版本）
-  - 初始化 Sparkle 更新器（feed URL 为占位符；About 页 "Check Now" 通过 `.macStrokeCheckForUpdates` 通知触发）
+  - 初始化 Sparkle 更新器（沿用原版 appcast；Info.plist 必须带 `SUPublicEDKey`，否则 Sparkle 2 启动即弹致命错误模态框）
 
 - **Sources/EventCapture/EventCapture.swift** — 在 `.cghidEventTap` 使用 `CGEventTap` 拦截右键手势事件（rightMouseDown/Dragged/Up + leftMouseDown）。**只有右键开始手势**；delegate 返回 `true` 时事件被吞掉（返回 NULL），`false` 时放行。坐标在边界处转换为 AppKit 底左原点（`primaryScreenHeight - cgY`），与手势模板坐标系一致。`kCGEventTapDisabledByTimeout` 时自动重新启用 tap。`isEnabled` 主开关对应状态栏"Enable MacStroke"。
 
@@ -125,9 +125,9 @@ swift test --list-tests
 - **DrawGesture 缩放** — `computeScaledPoints` 使用 `bounds.width/height`（不是硬编码常量）；`layout()` 覆写会在 bounds 变化时重新计算；`clipsToBounds = true`，背景透明
 - **手势录入** — 规则表 Image 列双击（或编辑器里的"在屏幕上绘制"按钮）→ 发送 `.macStrokeRecordGesture`（userInfo 带规则名；编辑器发起时额外带 `deferStoreUpdate: true`）→ AppDelegate 进入录制模式 → 画完 `onGestureRecorded` 写回规则并广播 `.macStrokeGestureDidRecord`（编辑器据此回填轨迹）。编辑器发起的录制只回填表单、不写库，点保存才落盘
 - **Toast 位置** — `ToastPosition` 原始值对齐原版 `notePostion`：0=跟随鼠标、1=屏幕中央、2=右上、3=右下、4=左上、5=左下
-- **FinderSync 通信** — 主 app → 扩展：`SyncSharedDefaultsNotification`（object=主 app bundleID，userInfo 带开关与菜单标题，扩展收到后写入自己的 UserDefaults）；扩展启动时发 `RequestObservingPathNotification`，主 app 回 `ObservingPathSetNotification`（根路径 "/"）；扩展 → 主 app：`CustomMessageReceivedNotification`（object=JSON 字符串，解析 operation/path/items）。主 app 端解析在 `RightClickMenuManager.customMessageReceivedFromFinder`
+- **FinderSync 通信** — 主 app → 扩展：`SyncSharedDefaultsNotification`（object=主 app bundleID，userInfo 带开关与菜单标题，扩展收到后写入自己的 UserDefaults；开关值按原版编码为 `"1"/"0"` 字符串，扩展用 `intValue` 解析，发 `"true"/"false"` 会一律读成 0 导致菜单为空）；扩展启动时发 `RequestObservingPathNotification`，主 app 回 `ObservingPathSetNotification`（根路径 "/"）；扩展 → 主 app：`CustomMessageReceivedNotification`（object=JSON 字符串，解析 operation/path/items）。主 app 端解析在 `RightClickMenuManager.customMessageReceivedFromFinder`，两个 DNC 观察者必须带 `suspensionBehavior: .deliverImmediately`（后台 agent 会被节流丢包）
 - **无障碍权限** — 启动时通过 `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` 检查；会显示带 "Open System Settings" 按钮的模态提示
-- **Sparkle** — `SPUStandardUpdaterController` 在 `AppDelegate.initSparkleUpdater()` 中初始化；feed URL 是占位符（`https://example.com/updates/feed.xml`）
+- **Sparkle** — `SPUStandardUpdaterController` 在 `AppDelegate.initSparkleUpdater()` 中初始化；feed URL 与原版一致（`mtjo/MacStroke` release 分支的 AppCast），但 Sparkle 2 要求 `SUPublicEDKey`（缺了会在 `startUpdater:` 直接弹模态致命错误、冻结主线程，Finder 菜单随之失效），私钥在本地 `.sparkle/ed25519-private.pem`（未入库）。移植期启动自动检查关闭（`SUEnableAutomaticChecks=false`、`StorageDefaults.autoCheckUpdates=false`），因为该 feed 只发布 ObjC 版且仅有 DSA 签名——自动检查会提示把 Swift 版覆盖成另一条代码线的构建；关于页"Check Now"（`.macStrokeCheckForUpdates`）仍可手动触发。
 
 ### 测试
 

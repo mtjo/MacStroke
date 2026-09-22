@@ -202,7 +202,10 @@ public enum StorageDefaults {
     public static let userTerminal: String = "Terminal"
 
     // Updates
-    public static let autoCheckUpdates: Bool = true
+    // 原版默认为 true，但共享的 appcast 目前只发布 ObjC 版（现 2.0.5，且只有 DSA 签名），
+    // 自动检查会提示把 Swift 版覆盖成另一条代码线的构建，所以移植期先默认关自动检查，
+    // 关于页的「检查更新」按钮仍可手动触发。
+    public static let autoCheckUpdates: Bool = false
 
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true

@@ -58,3 +58,5 @@ fastlane/Report.xml
 fastlane/Preview.html
 fastlane/screenshots
 **/fastlane.json
+# Sparkle EdDSA 私钥（只留公钥在 build_app.sh 里）
+.sparkle/
