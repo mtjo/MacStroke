@@ -27,9 +27,6 @@ public final class RightClicksList {
         } else {
             self.list = []
         }
-        if list.isEmpty {
-            reInit()
-        }
     }
 
     // MARK: - Public Properties
@@ -64,12 +61,11 @@ public final class RightClicksList {
         return list[index]
     }
 
-    /// Add an app (supports wildcards like com.jetbrains.*)
+    /// Add an app (supports wildcards like com.jetbrains.*).
+    /// The original appends unconditionally — duplicates are allowed.
     public func add(_ appname: String) {
-        if !list.contains(appname) {
-            list.append(appname)
-            save()
-        }
+        list.append(appname)
+        save()
     }
 
     /// Remove app at index

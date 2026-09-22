@@ -12,12 +12,24 @@ final class RightClicksListTests: XCTestCase {
         UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
     }
 
-    func testInitialListContainsJetBrainsWildcard() {
+    func testStartsEmptyUntilFirstLaunchReInit() {
         let list = RightClicksList(defaults: makeDefaults())
+        XCTAssertEqual(list.count, 0)
+        XCTAssertFalse(list.needRightClick(byAppname: "com.jetbrains.intellij"))
 
+        list.reInit()
         XCTAssertEqual(list.count, 1)
         XCTAssertEqual(list.appname(at: 0), "com.jetbrains.*")
         XCTAssertTrue(list.needRightClick(byAppname: "com.jetbrains.intellij"))
+    }
+
+    func testEmptyListStaysEmptyAfterReload() {
+        let defaults = makeDefaults()
+        RightClicksList(defaults: defaults).reInit()
+        let cleared = RightClicksList(defaults: defaults)
+        cleared.clear()
+
+        XCTAssertEqual(RightClicksList(defaults: defaults).count, 0)
     }
 
     func testNeedRightClickMatchesExactBundleIdentifier() {
@@ -50,11 +62,12 @@ final class RightClicksListTests: XCTestCase {
         let list = RightClicksList(defaults: makeDefaults())
         list.add("com.example.app")
 
-        list.setAppname(at: 1, appname: "org.example.app")
-        XCTAssertEqual(list.appname(at: 1), "org.example.app")
-        XCTAssertTrue(list.remove(at: 1))
-        XCTAssertFalse(list.remove(at: 1))
+        list.setAppname(at: 0, appname: "org.example.app")
+        XCTAssertEqual(list.appname(at: 0), "org.example.app")
+        XCTAssertTrue(list.remove(at: 0))
+        XCTAssertFalse(list.remove(at: 0))
 
+        list.add("com.jetbrains.*")
         list.clear()
         XCTAssertEqual(list.count, 0)
         XCTAssertFalse(list.needRightClick(byAppname: "com.jetbrains.intellij"))

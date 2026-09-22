@@ -260,8 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Right-click menu / FinderSync
 
     private func initRightClickMenu() {
-        RightClickMenuManager.shared.initFinderSyncExtension()
-        RightClickMenuManager.shared.delayedEnableFinderExtension()
+        RightClickMenuManager.shared.reinitFinderSyncExtension()
     }
 
     // MARK: - Clipboard history

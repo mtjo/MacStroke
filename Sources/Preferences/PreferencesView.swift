@@ -1976,7 +1976,7 @@ struct RightClickMenuTabView: View {
                             }
                         )) {
                             Text("Terminal").tag("Terminal")
-                            Text("Iterm").tag("iTerm")
+                            Text("Iterm").tag("Iterm")
                         }
                         .labelsHidden()
                         .fixedSize()
@@ -1996,22 +1996,14 @@ struct RightClickMenuTabView: View {
             .padding(.leading, 22)
             .disabled(!viewModel.enableRightClickMenu)
 
-            HStack(spacing: 12) {
-                Button(L("Re-enable Extension")) {
-                    RightClickMenuManager.shared.reEnableFinderExtension()
-                }
-                Button(L("Delayed Re-enable")) {
-                    RightClickMenuManager.shared.delayedEnableFinderExtension()
-                }
-                Spacer()
-            }
         }
     }
 
-    /// Push the enable flags + localized menu titles to the FinderSync
-    /// extension (original: onToggleRightClickMenu → initRightClickMenu).
+    /// Original: every toggle on this page re-runs `initRightClickMenu`, which
+    /// re-registers the notification handlers, re-schedules the delayed
+    /// pluginkit enable (10s / 120s) and pushes flags + titles to the extension.
     private func syncToExtension() {
-        RightClickMenuManager.shared.syncSharedDefaultsToFinderSyncExtension()
+        RightClickMenuManager.shared.reinitFinderSyncExtension()
     }
 }
 

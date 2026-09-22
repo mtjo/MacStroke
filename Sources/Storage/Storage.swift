@@ -44,10 +44,13 @@ public enum StorageKey: String, CaseIterable {
     case lineWidth = "lineWidth"
 
     // Right-click menu
+    // The rawValues are the original key names: the FinderSync payload is built
+    // from `newFile`/`openInTerminal`/`copyFilePath`, so the UI has to write the
+    // same keys (the Swift enum cases keep the longer names for readability).
     case enableRightClickMenu = "enableRightClickMenu"
-    case enableNewFile = "enableNewFile"
-    case enableOpenInTerminal = "enableOpenInTerminal"
-    case enableCopyFilePath = "enableCopyFilePath"
+    case enableNewFile = "newFile"
+    case enableOpenInTerminal = "openInTerminal"
+    case enableCopyFilePath = "copyFilePath"
 
     // Clipboard
     case clipboardLimitTop = "clipboardLimitTop"
@@ -269,10 +272,6 @@ public func registerUserDefaultsDefaults() {
         StorageKey.autoCheckUpdates.rawValue: StorageDefaults.autoCheckUpdates,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
-        // Right-click menu keys as read by the FinderSync extension.
-        "newFile": StorageDefaults.enableNewFile,
-        "openInTerminal": StorageDefaults.enableOpenInTerminal,
-        "copyFilePath": StorageDefaults.enableCopyFilePath,
     ]
     UserDefaults.standard.register(defaults: defaults)
 
@@ -300,6 +299,20 @@ private func migrateLegacyPreferenceKeys() {
         if defaults.object(forKey: legacy) != nil {
             if defaults.object(forKey: key) == nil {
                 defaults.set(defaults.integer(forKey: legacy), forKey: key)
+            }
+            defaults.removeObject(forKey: legacy)
+        }
+    }
+    // Early Swift builds stored the Finder sub-switches under "enable…"; the
+    // original (and the extension payload) use the short names.
+    for (legacy, key) in [
+        ("enableNewFile", "newFile"),
+        ("enableOpenInTerminal", "openInTerminal"),
+        ("enableCopyFilePath", "copyFilePath"),
+    ] {
+        if defaults.object(forKey: legacy) != nil {
+            if defaults.object(forKey: key) == nil {
+                defaults.set(defaults.bool(forKey: legacy), forKey: key)
             }
             defaults.removeObject(forKey: legacy)
         }

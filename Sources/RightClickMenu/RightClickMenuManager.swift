@@ -107,9 +107,10 @@ public final class RightClickMenuManager {
         }
     }
 
-    /// Delayed re-enable: disable, then re-enable after 10s and again after 120s
+    /// Delayed re-enable: enable after 10s and again after 120s.
+    /// The original never disables here — a disable would leave the extension
+    /// switched off for the first 10 seconds, which kills the Finder menu.
     public func delayedEnableFinderExtension() {
-        disableFinderExtension()
         Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
             self?.enableFinderExtension()
         }
@@ -118,18 +119,33 @@ public final class RightClickMenuManager {
         }
     }
 
+    /// Original `-initRightClickMenu`: rebuild the channel, re-schedule the
+    /// delayed pluginkit enable, then push flags + titles to the extension.
+    public func reinitFinderSyncExtension() {
+        DistributedNotificationCenter.default().removeObserver(self)
+        delayedEnableFinderExtension()
+        initFinderSyncExtension()
+    }
+
     // MARK: - File Operations
 
     /// Create a new text file in the given Finder directory path.
-    /// Handles filename collisions by appending a counter (newTextFile, newTextFile1, …).
+    /// Collisions are resolved against the *base* name (新建文本文档, …1, …2),
+    /// exactly like the original — accumulating onto the previous candidate
+    /// would produce 新建文本文档123.
     /// Falls back to an AppleScript `do shell script` if direct creation fails.
     public func newFile(path: String) {
         let fileManager = FileManager.default
-        var filepath = path + Bundle.main.localizedString(forKey: "newTextFile", value: nil, table: nil)
+        let base = path + Bundle.main.localizedString(forKey: "newTextFile", value: nil, table: nil)
+        var filepath = base
         var i = 1
         while fileManager.fileExists(atPath: filepath) {
-            filepath = filepath + "\(i)"
+            let candidate = base + "\(i)"
             i += 1
+            if !fileManager.fileExists(atPath: candidate) {
+                filepath = candidate
+                break
+            }
         }
 
         if fileManager.createFile(atPath: filepath, contents: nil, attributes: nil) {
