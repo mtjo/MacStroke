@@ -1571,8 +1571,41 @@ struct ClipboardTabView: View {
                         showHistoryList()
                     }
                     .disabled(!featureOn)
+                    // Moved out of the history panel: the panel is search + list
+                    // only, so the original's three clear buttons live here.
+                    Button(L("clearTop")) {
+                        confirm(L("Are you sure to clear all top records?")) {
+                            HistoryClipboardManager().clearTop()
+                        }
+                    }
+                    .disabled(!featureOn)
+                    Button(L("clear")) {
+                        confirm(L("Are you sure to clear all history clipboard records?")) {
+                            HistoryClipboardManager().clearHistoryList()
+                        }
+                    }
+                    .disabled(!featureOn)
+                    Button(L("clearAll")) {
+                        confirm(L("Are you sure to clear all top records and history clipboard records?")) {
+                            HistoryClipboardManager().clearAll()
+                        }
+                    }
+                    .disabled(!featureOn)
                 }
             }
+        }
+    }
+
+    /// Original confirmation sheet from the history clipboard window.
+    private func confirm(_ informative: String, action: () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = L("warning!")
+        alert.informativeText = informative
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: L("Ok"))
+        alert.addButton(withTitle: L("Cancel"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            action()
         }
     }
 

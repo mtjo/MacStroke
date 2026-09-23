@@ -13,9 +13,9 @@
 //  - text rows show their content; image rows show the PNG as a thumbnail and
 //    file rows the real Finder icon, with a searchable name/dimension summary
 //  - original features kept: double-click copy + close, pin / unpin,
-//    clear / clearTop / clearAll with sheet confirmations, bottom tips label,
 //    scroll-to-bottom pagination (30 per page), Esc close from any focus,
-//    floating level 21
+//    floating level 21. The clear / clearTop / clearAll buttons moved to the
+//    preferences Clipboard tab, so the panel is search + list only.
 //
 
 import Foundation
@@ -134,31 +134,13 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         clip.addSubview(search)
         self.searchField = search
 
-        // Bottom-right buttons, left to right: clearTop / clear / clearAll.
-        for (title, action, frame) in [
-            (L("clearTop"), #selector(clearAllTop(_:)), NSRect(x: Layout.width - 14 - 244, y: 8, width: 90, height: 28)),
-            (L("clear"), #selector(clearHistoryList(_:)), NSRect(x: Layout.width - 14 - 150, y: 8, width: 70, height: 28)),
-            (L("clearAll"), #selector(clearAll(_:)), NSRect(x: Layout.width - 14 - 76, y: 8, width: 76, height: 28)),
-        ] {
-            let button = NSButton(frame: frame)
-            button.title = title
-            button.bezelStyle = .rounded
-            button.controlSize = .small
-            button.font = NSFont.systemFont(ofSize: 11)
-            button.autoresizingMask = [.minXMargin, .maxYMargin]
-            button.target = self
-            button.action = action
-            clip.addSubview(button)
-        }
-
-        // Bottom-left tips label; wide enough for the localized sentence and
-        // allowed to wrap, so it never clips.
+        // Bottom tips label; the clear buttons live in the preferences page.
         let tips = NSTextField(labelWithString: L(
             "tips: Type to search, Enter copies the selected content to the clipboard so you can paste it anywhere."
         ))
         tips.font = NSFont.systemFont(ofSize: 10)
         tips.textColor = .secondaryLabelColor
-        tips.frame = NSRect(x: 14, y: 8, width: 380, height: 28)
+        tips.frame = NSRect(x: 14, y: 8, width: Layout.width - 28, height: 28)
         tips.autoresizingMask = [.maxXMargin, .maxYMargin]
         tips.maximumNumberOfLines = 2
         tips.lineBreakMode = .byWordWrapping
@@ -384,42 +366,6 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
     /// Resolve the entry behind a per-row button by its stable database id.
     private func entry(for button: NSButton) -> HistoryClipboardEntry? {
         displayedEntries.first { $0.id == Int64(button.tag) }
-    }
-
-    @objc private func clearAll(_ sender: Any?) {
-        confirm(L("Are you sure to clear all top records and history clipboard records?")) { [weak self] in
-            self?.entriesStore.clearAll()
-            self?.reload()
-        }
-    }
-
-    @objc private func clearHistoryList(_ sender: Any?) {
-        confirm(L("Are you sure to clear all history clipboard records?")) { [weak self] in
-            self?.entriesStore.clearHistoryList()
-            self?.reload()
-        }
-    }
-
-    @objc private func clearAllTop(_ sender: Any?) {
-        confirm(L("Are you sure to clear all top records?")) { [weak self] in
-            self?.entriesStore.clearTop()
-            self?.reload()
-        }
-    }
-
-    private func confirm(_ informative: String, action: @escaping () -> Void) {
-        guard let window = window else { action(); return }
-        let alert = NSAlert()
-        alert.messageText = L("warning!")
-        alert.informativeText = informative
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: L("Ok"))
-        alert.addButton(withTitle: L("Cancel"))
-        alert.beginSheetModal(for: window) { response in
-            if response == .alertFirstButtonReturn {
-                action()
-            }
-        }
     }
 
     // MARK: - Entry text and image previews
