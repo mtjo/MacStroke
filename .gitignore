@@ -60,3 +60,6 @@ fastlane/screenshots
 **/fastlane.json
 # Sparkle EdDSA 私钥（只留公钥在 build_app.sh 里）
 .sparkle/
+
+# 发版产物（zip 与 appcast 片段，含签名，不入库）
+release_out/

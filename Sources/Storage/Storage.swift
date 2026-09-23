@@ -192,10 +192,10 @@ public enum StorageDefaults {
     public static let userTerminal: String = "Terminal"
 
     // Updates
-    // 原版默认为 true。移植版号已接上发布线（2.1.0 高于 appcast 里的 2.0.5，不会再提示
-    // 降级覆盖），但共享 appcast 仍只有 ObjC 版条目、且只带 Sparkle 1.x 的 DSA 签名，
-    // Sparkle 2 无法校验，所以移植期先默认关自动检查，关于页的「检查更新」仍可手动触发。
-    public static let autoCheckUpdates: Bool = false
+    // 原版默认为 true（偏好窗复选框绑 SUUpdater.automaticallyChecksForUpdates，
+    // Info.plist 未覆盖该键）。共享 appcast 里现在有本线的双签条目（DSA 给老版
+    // Sparkle 1.x、EdDSA 给 Sparkle 2），所以恢复默认开自动检查。
+    public static let autoCheckUpdates: Bool = true
 
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true

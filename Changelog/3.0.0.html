@@ -1,0 +1,19 @@
++ Rewritten in Swift (whole code base migrated from Objective-C)
++ 用 Swift 重写整个程序（原 Objective-C 代码库全量移植），行为与界面尽量与原版保持一致
+
+! Requires macOS 13 Ventura or later
+! 需要 macOS 13 Ventura 或更新系统（低于 13 的机器收不到本次自动更新，请手动下载安装）
+
++ Universal binary (Apple Silicon + Intel), no Rosetta 2 needed
++ 通用二进制（Apple Silicon + Intel），Apple Silicon 上原生运行，不需要 Rosetta 2
+
+- Fix preset gesture shapes that did not match the original (V / W / Z and the four corners were drawn upside down)
+- 修复预设手势形状与原版不符（V、W、Z 与四个直角上下颠倒），旧规则里的错误轨迹会自动纠正
+
++ Clipboard history: image and file entries, de-duplication, search, Esc to close
++ 历史粘贴板：支持图片与文件条目、重复内容去重、关键词搜索、Esc 关闭窗口
+
++ AppleScript list and rule tables use inline editing like the original
++ AppleScript 列表与规则表格改为原版风格的就地编辑
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.0.0/MacStroke.zip
