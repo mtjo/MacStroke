@@ -2,7 +2,6 @@
 set -e
 
 APP_NAME="MacStroke"
-BUILD_DIR=".build/x86_64-apple-macosx/release"
 APP_DIR="./${APP_NAME}.app"
 
 # 版本号要接上原版的发布线：release 分支 appcast 最新条目是 2.0.5，移植版从 2.1.0 起。
@@ -20,8 +19,22 @@ if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "${SIGN_IDEN
     SIGN_IDENTITY="-"
 fi
 
-echo "🔨 Building release..."
-swift build --configuration release
+echo "🔨 Building release (universal: arm64 + x86_64)..."
+# 跟 Xcode 的 ARCHS_STANDARD 一样出双架构包：Apple Silicon 原生运行，不需要 Rosetta。
+swift build --configuration release --arch arm64 --arch x86_64
+
+# 多架构产物落在 .build/apple/Products/Release；单架构（如手工改回 host 架构编译）
+# 仍落在 .build/<triple>/release，这里都认。
+BUILD_DIR=""
+for candidate in .build/apple/Products/Release \
+                 .build/$(uname -m)-apple-macosx/release; do
+    if [ -x "${candidate}/MacStrokeApp" ]; then BUILD_DIR="${candidate}"; break; fi
+done
+if [ -z "${BUILD_DIR}" ]; then
+    echo "❌ 找不到 release 产物（.build/apple/Products/Release 或 .build/*-apple-macosx/release）"
+    exit 1
+fi
+echo "📂 产物目录: ${BUILD_DIR}"
 
 echo "📦 Creating .app bundle at ${APP_DIR}..."
 rm -rf "${APP_DIR}"
@@ -198,6 +211,20 @@ rm -f "${APPEX_ENT}"
 # 9. Verify framework linkage
 echo "🔍 Verifying framework linkage..."
 otool -L "${APP_DIR}/Contents/MacOS/${APP_NAME}" | grep -E "Sparkle|rpath"
+
+# 10. 双架构校验：少任一架构就说明上面的 --arch 编译没生效，
+#     那样的包在 Apple Silicon 上要装 Rosetta，直接失败比静默出包好。
+echo "🔍 Verifying architectures..."
+for exe in "${APP_DIR}/Contents/MacOS/${APP_NAME}" \
+           "${APPEX_DIR}/Contents/MacOS/FinderSyncExtension" \
+           "${APP_DIR}/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"; do
+    archs=$(lipo -archs "${exe}")
+    if ! (echo "${archs}" | grep -q x86_64 && echo "${archs}" | grep -q arm64); then
+        echo "❌ ${exe} 不是 universal 包：${archs}"
+        exit 1
+    fi
+    echo "   ${archs}  <- ${exe}"
+done
 
 echo "✅ Done! App at: ${APP_DIR}"
 echo "📏 Size: $(du -sh "${APP_DIR}" | cut -f1)"
