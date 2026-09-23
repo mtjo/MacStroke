@@ -163,36 +163,36 @@ public enum PresetGesture: String, CaseIterable {
         case .letterY:
             return makeYShapePoints()
         case .arrowDownLeft:
-            return makeArrowPoints(direction: .downLeft)
+            return makeDiagonalPoints(right: false, up: false)
         case .arrowDownRight:
-            return makeArrowPoints(direction: .downRight)
+            return makeDiagonalPoints(right: true, up: false)
         case .arrowUpLeft:
-            return makeArrowPoints(direction: .upLeft)
+            return makeDiagonalPoints(right: false, up: true)
         case .arrowUpRight:
-            return makeArrowPoints(direction: .upRight)
+            return makeDiagonalPoints(right: true, up: true)
         case .boxTopLeft:
-            return makeBoxTopLeftPoints()
+            return makeCornerPoints(up: true, right: true)
         case .boxTopRight:
-            return makeBoxTopRightPoints()
+            return makeCornerPoints(up: true, right: false)
         case .boxBottomLeft:
-            return makeBoxBottomLeftPoints()
+            return makeCornerPoints(up: false, right: true)
         case .boxBottomRight:
-            return makeBoxBottomRightPoints()
+            return makeCornerPoints(up: false, right: false)
         case .arrowLeftSymbol:
-            return makeSwipePoints(direction: .left)
+            return makeCardinalPoints(horizontal: true, positive: false)
         case .arrowUpSymbol:
-            return makeSwipePoints(direction: .up)
+            return makeCardinalPoints(horizontal: false, positive: true)
         case .arrowRightSymbol:
-            return makeSwipePoints(direction: .right)
+            return makeCardinalPoints(horizontal: true, positive: true)
         case .arrowDownSymbol:
-            return makeSwipePoints(direction: .down)
+            return makeCardinalPoints(horizontal: false, positive: false)
         }
     }
 
     // MARK: - Shape generators
 
     private enum SwipeDirection { case up, down, left, right }
-    private enum ArrowDirection { case up, down, left, right, downLeft, downRight, upLeft, upRight }
+    private enum ArrowDirection { case up, down, left, right }
 
     private static func makeArrowPoints(direction: ArrowDirection) -> [GesturePoint] {
         let count = 35
@@ -205,14 +205,6 @@ public enum PresetGesture: String, CaseIterable {
             return (0..<count).map { i in GesturePoint(x: 100.0 - Double(i) * 3, y: 50.0) }
         case .right:
             return (0..<count).map { i in GesturePoint(x: Double(i) * 3, y: 50.0) }
-        case .downLeft:
-            return (0..<count).map { i in GesturePoint(x: 100.0 - Double(i) * 3, y: 100.0 - Double(i) * 3) }
-        case .downRight:
-            return (0..<count).map { i in GesturePoint(x: Double(i) * 3, y: 100.0 - Double(i) * 3) }
-        case .upLeft:
-            return (0..<count).map { i in GesturePoint(x: 100.0 - Double(i) * 3, y: Double(i) * 3) }
-        case .upRight:
-            return (0..<count).map { i in GesturePoint(x: Double(i) * 3, y: Double(i) * 3) }
         }
     }
 
@@ -267,44 +259,38 @@ public enum PresetGesture: String, CaseIterable {
         ]
     }
 
-    private static func makeZShapePoints() -> [GesturePoint] {
-        return (0..<20).map { i in
-            let t = Double(i) / 19.0
-            let y: Double
-            if t < 0.33 {
-                y = 20.0
-            } else if t < 0.66 {
-                y = 50.0
-            } else {
-                y = 80.0
-            }
-            return GesturePoint(x: t * 100.0, y: y)
-        }
-    }
-
     private static func makeVShapePoints() -> [GesturePoint] {
-        return (0..<20).map { i in
-            let t = Double(i) / 19.0
-            let y = t < 0.5 ? t * 100.0 : (1.0 - t) * 100.0
-            return GesturePoint(x: t * 100.0, y: y)
-        }
+        // PreGesture.m case 21: y drops then climbs while x advances, i.e. a
+        // valley. Drawn in the (non-flipped) gesture canvas that reads as "V".
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for _ in 0..<20 { y -= 1; x += 0.4; points.append(GesturePoint(x: x, y: y)) }
+        for _ in 0..<20 { y += 1; x += 0.4; points.append(GesturePoint(x: x, y: y)) }
+        return points
     }
 
     private static func makeWShapePoints() -> [GesturePoint] {
-        return (0..<30).map { i in
-            let t = Double(i) / 29.0
-            let y: Double
-            if t < 0.25 {
-                y = t * 100.0
-            } else if t < 0.5 {
-                y = 25.0 - (t - 0.25) * 100.0
-            } else if t < 0.75 {
-                y = (t - 0.5) * 100.0
-            } else {
-                y = 25.0 - (t - 0.75) * 100.0
+        // PreGesture.m case 22: four 20-point legs, down-up-down-up.
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for delta in [-1.0, 1.0, -1.0, 1.0] {
+            for _ in 0..<20 {
+                y += delta
+                x += 0.3
+                points.append(GesturePoint(x: x, y: y))
             }
-            return GesturePoint(x: t * 100.0, y: y)
         }
+        return points
+    }
+
+    private static func makeZShapePoints() -> [GesturePoint] {
+        // PreGesture.m case 25: top bar right, diagonal down-left, bottom bar right.
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for _ in 0..<20 { x += 1; points.append(GesturePoint(x: x, y: y)) }
+        for _ in 0..<20 { x -= 1; y -= 1; points.append(GesturePoint(x: x, y: y)) }
+        for _ in 0..<20 { x += 1; points.append(GesturePoint(x: x, y: y)) }
+        return points
     }
     // MARK: - Letter shape generators (A-Z based on original PreGesture.m)
 
@@ -641,26 +627,45 @@ public enum PresetGesture: String, CaseIterable {
         return points
     }
 
-    // MARK: - Box drawing shapes
+    // MARK: - Picker strokes, translated straight from PreGesture.m
 
-    private static func makeBoxTopLeftPoints() -> [GesturePoint] {
-        return (0..<20).map { i in GesturePoint(x: 200.0 - Double(i), y: 200.0) } +
-               (0..<15).map { i in GesturePoint(x: 200.0 - 15.0, y: 200.0 + Double(i)) }
+    /// `PreGesture.m` cases 26-29: 40 points at a 1pt step on both axes.
+    private static func makeDiagonalPoints(right: Bool, up: Bool) -> [GesturePoint] {
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for _ in 0..<40 {
+            x += right ? 1 : -1
+            y += up ? 1 : -1
+            points.append(GesturePoint(x: x, y: y))
+        }
+        return points
     }
 
-    private static func makeBoxTopRightPoints() -> [GesturePoint] {
-        return (0..<20).map { i in GesturePoint(x: 200.0 + Double(i), y: 200.0) } +
-               (0..<15).map { i in GesturePoint(x: 200.0 + 15.0, y: 200.0 + Double(i)) }
+    /// `PreGesture.m` cases 34-37: 35 points at a 1pt step on one axis.
+    private static func makeCardinalPoints(horizontal: Bool, positive: Bool) -> [GesturePoint] {
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for _ in 0..<35 {
+            if horizontal { x += positive ? 1 : -1 } else { y += positive ? 1 : -1 }
+            points.append(GesturePoint(x: x, y: y))
+        }
+        return points
     }
 
-    private static func makeBoxBottomLeftPoints() -> [GesturePoint] {
-        return (0..<20).map { i in GesturePoint(x: 200.0 - Double(i), y: 200.0) } +
-               (0..<15).map { i in GesturePoint(x: 200.0 - 15.0, y: 200.0 - Double(i)) }
-    }
-
-    private static func makeBoxBottomRightPoints() -> [GesturePoint] {
-        return (0..<20).map { i in GesturePoint(x: 200.0 + Double(i), y: 200.0) } +
-               (0..<15).map { i in GesturePoint(x: 200.0 + 15.0, y: 200.0 - Double(i)) }
+    /// `PreGesture.m` cases 30-33: a 20-point vertical leg then a 15-point
+    /// horizontal leg, both starting from the corner's free end.
+    private static func makeCornerPoints(up: Bool, right: Bool) -> [GesturePoint] {
+        var points: [GesturePoint] = []
+        var x = 200.0, y = 200.0
+        for _ in 0..<20 {
+            y += up ? 1 : -1
+            points.append(GesturePoint(x: x, y: y))
+        }
+        for _ in 0..<15 {
+            x += right ? 1 : -1
+            points.append(GesturePoint(x: x, y: y))
+        }
+        return points
     }
 }
 
