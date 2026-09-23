@@ -877,27 +877,9 @@ struct AppleScriptTabView: View {
     private var isEditingExternally: Bool { externalSession != nil }
 
     private var titleTable: some View {
-        Table(scripts, selection: $selectedId) {
-            // Original: one editable "Title" column, header left blank. The
-            // model is written as the user types but only persisted when the
-            // field editor closes (`control:textShouldEndEditing:` + save).
-            TableColumn("") { script in
-                TextField("", text: Binding(
-                    get: { scriptList.index(of: script.id).map { scriptList.title(at: $0) } ?? script.name },
-                    set: { newValue in
-                        if let index = scriptList.index(of: script.id) {
-                            scriptList.setTitle(at: index, newValue)
-                        }
-                    }),
-                    onCommit: { scriptList.save() })
-                    .textFieldStyle(.plain)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .width(min: 40, ideal: 140, max: 1000)
-        }
-        .tableStyle(.inset)
-        .disabled(isEditingExternally)
+        AppleScriptTitleTable(scriptList: scriptList,
+                              selectedId: $selectedId,
+                              enabled: !isEditingExternally)
     }
 
     private var sourceEditor: some View {
@@ -986,6 +968,114 @@ struct AppleScriptTabView: View {
         try? scriptList.script(at: index).write(to: url, atomically: true, encoding: .utf8)
         NSWorkspace.shared.open(url)
         externalSession = ExternalScriptSession(id: id, path: url.path)
+    }
+}
+
+/// The original AppleScript list is a **headerless** view-based `NSTableView`
+/// (Preferences.xib:1015 has no `headerView`) whose cells are inline-editable
+/// borderless text fields (`tableViewForAppleScripts:`). SwiftUI's `Table`
+/// cannot drop its header row on macOS 13, so this is the AppKit equivalent.
+/// Titles commit through `control:textShouldEndEditing:`, i.e. only when the
+/// field editor closes, and key off the table's selected row.
+private struct AppleScriptTitleTable: NSViewRepresentable {
+    @ObservedObject var scriptList: AppleScriptsList
+    @Binding var selectedId: UUID?
+    let enabled: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(scriptList: scriptList, selectedId: $selectedId)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let tableView = NSTableView()
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Title"))
+        column.width = 200
+        column.resizingMask = .autoresizingMask
+        tableView.addTableColumn(column)
+        tableView.headerView = nil
+        tableView.rowHeight = 19
+        tableView.usesAlternatingRowBackgroundColors = true
+        tableView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
+        tableView.allowsMultipleSelection = false
+        tableView.allowsEmptySelection = true
+        tableView.dataSource = context.coordinator
+        tableView.delegate = context.coordinator
+
+        let coordinator = context.coordinator
+        coordinator.table = tableView
+        coordinator.ids = scriptList.getAllScripts().map(\.id)
+        tableView.reloadData()
+
+        let scroll = NSScrollView()
+        scroll.documentView = tableView
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let tableView = scroll.documentView as? NSTableView else { return }
+        let coordinator = context.coordinator
+        coordinator.selectedId = $selectedId
+        tableView.isEnabled = enabled
+        // Reload only when rows appear or vanish: reloading while a cell field
+        // is being typed into would throw away the field editor.
+        let ids = scriptList.getAllScripts().map(\.id)
+        if coordinator.ids != ids {
+            coordinator.ids = ids
+            tableView.reloadData()
+        }
+        let row = selectedId.flatMap { scriptList.index(of: $0) } ?? -1
+        if tableView.selectedRow != row {
+            if row >= 0 {
+                tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            } else {
+                tableView.deselectAll(nil)
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
+        let scriptList: AppleScriptsList
+        var selectedId: Binding<UUID?>
+        var ids: [UUID] = []
+        weak var table: NSTableView?
+
+        init(scriptList: AppleScriptsList, selectedId: Binding<UUID?>) {
+            self.scriptList = scriptList
+            self.selectedId = selectedId
+        }
+
+        func numberOfRows(in tableView: NSTableView) -> Int { ids.count }
+
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            let textField = NSTextField()
+            textField.isEditable = true
+            textField.isBordered = false
+            textField.drawsBackground = false
+            textField.lineBreakMode = .byTruncatingMiddle
+            textField.cell?.isScrollable = true
+            textField.cell?.wraps = false
+            textField.delegate = self
+            textField.identifier = NSUserInterfaceItemIdentifier("Title")
+            textField.stringValue = row < scriptList.count ? scriptList.title(at: row) : ""
+            return textField
+        }
+
+        func tableViewSelectionDidChange(_ notification: Notification) {
+            guard let table else { return }
+            selectedId.wrappedValue = table.selectedRow >= 0 ? scriptList.id(at: table.selectedRow) : nil
+        }
+
+        func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool {
+            guard let table, table.selectedRow >= 0,
+                  let field = control as? NSTextField else { return true }
+            // Original writes by selected row, not by the edited row.
+            scriptList.setTitle(at: table.selectedRow, field.stringValue)
+            scriptList.save()
+            return true
+        }
     }
 }
 
