@@ -212,6 +212,10 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         search.font = NSFont.systemFont(ofSize: 22, weight: .light)
         search.focusRingType = .none
         search.delegate = self
+        // The × button rewrites the value programmatically, which never posts
+        // the text-did-change notification, so keep the action in sync too.
+        search.target = self
+        search.action = #selector(searchFieldAction(_:))
         ((search.cell as? NSSearchFieldCell)?.searchButtonCell as? NSButtonCell)?
             .imageScaling = .scaleProportionallyDown
         return search
@@ -254,8 +258,13 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
     // MARK: - Search
 
     public func controlTextDidChange(_ obj: Notification) {
-        guard let field = obj.userInfo?["NSControl"] as? NSSearchField else { return }
-        controlTextDidChangeForSearch(field)
+        // AppKit doesn't guarantee the NSControl userInfo key, so read our own field.
+        guard let field = searchField else { return }
+        applyQuery(field.stringValue)
+    }
+
+    @objc private func searchFieldAction(_ sender: NSSearchField) {
+        applyQuery(sender.stringValue)
     }
 
     /// Spotlight keyboard flow: arrows move the result selection, Return
@@ -281,8 +290,8 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         }
     }
 
-    private func controlTextDidChangeForSearch(_ field: NSSearchField) {
-        query = field.stringValue
+    private func applyQuery(_ text: String) {
+        query = text
         rebuildFiltered()
         scrollListToTop()
     }
