@@ -1605,7 +1605,8 @@ struct AboutTabView: View {
     @AppStorage("SUAutomaticallyUpdate") private var automaticallyDownloadsUpdates = false
 
     private var versionString: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        // 真实版本来自 build_app.sh 写入的 Info.plist；这里只是离屏测试/未打包时的兜底。
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.1.0"
     }
 
     var body: some View {

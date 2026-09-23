@@ -5,6 +5,12 @@ APP_NAME="MacStroke"
 BUILD_DIR=".build/x86_64-apple-macosx/release"
 APP_DIR="./${APP_NAME}.app"
 
+# 版本号要接上原版的发布线：release 分支 appcast 最新条目是 2.0.5，移植版从 2.1.0 起。
+# 若低于 appcast（例如写死 1.0.0），Sparkle 会把另一条代码线的 2.0.5 当成「有新版本」，
+# 用户点更新就会把本机移植构建覆盖回 ObjC 版。发新版只改这一行，主程序与扩展共用。
+# CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
+APP_VERSION="2.1.0"
+
 # 稳定的自签名代码签名身份（见 README-签名.md /钥匙串里 "MacStroke Self Signed"）。
 # 用它签名可让 cdhash 在重装后保持不变，辅助功能(TCC)授权不被重置。
 # 若身份不存在则自动回退为 ad-hoc 签名。
@@ -77,7 +83,7 @@ if [ -x "${EXT_EXE}" ]; then
     cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APPEX_DIR}/Contents/Resources/"
     cp -R Sources/FinderSyncExtension/Resources/en.lproj "${APPEX_DIR}/Contents/Resources/"
     cp -R Sources/FinderSyncExtension/Resources/zh-Hans.lproj "${APPEX_DIR}/Contents/Resources/"
-    cat > "${APPEX_DIR}/Contents/Info.plist" <<'APPEX'
+    cat > "${APPEX_DIR}/Contents/Info.plist" <<APPEX
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -97,9 +103,9 @@ if [ -x "${EXT_EXE}" ]; then
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>${APP_VERSION}</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>${APP_VERSION}</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -151,9 +157,9 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>LSUIElement</key>
