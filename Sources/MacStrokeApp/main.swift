@@ -490,7 +490,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Feed URL & DSA key come from Info.plist (SUFeedURL / SUPublicDSAKeyFile),
         // same appcast as the original MacStroke release.
         let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-        controller.updater.automaticallyChecksForUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
+        // 不再在启动时回写 automaticallyChecksForUpdates：那个键就是 Sparkle 自己的
+        // SUEnableAutomaticChecks（StorageKey.autoCheckUpdates 已指向它），开机就赋值
+        // 只会把「用户从未设置」变成「已显式写死」，以后改默认值就不生效了。
         controller.updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
         self.updaterController = controller
         NSLog("%@", "[AppDelegate] Sparkle updater initialized")

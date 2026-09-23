@@ -62,7 +62,12 @@ public enum StorageKey: String, CaseIterable {
     case userTerminal = "userTerminal"
 
     // Updates
-    case autoCheckUpdates = "autoCheckUpdates"
+    /// 原版没有自己的键：偏好窗「自动检查更新」复选框绑
+    /// SUUpdater.automaticallyChecksForUpdates，值落在 Sparkle 自己的
+    /// SUEnableAutomaticChecks 上。移植版早期自造了 "autoCheckUpdates" 键，
+    /// 写进去的旧值会永久压掉后改的默认值（老移植版用户升上来再也不自动检查），
+    /// 所以改回 Sparkle 的键，旧键在 migrateLegacyPreferenceKeys 里清掉。
+    case autoCheckUpdates = "SUEnableAutomaticChecks"
 
     // Legacy (kept for compatibility)
     case showToast = "showToast"
@@ -192,9 +197,9 @@ public enum StorageDefaults {
     public static let userTerminal: String = "Terminal"
 
     // Updates
-    // 原版默认为 true（偏好窗复选框绑 SUUpdater.automaticallyChecksForUpdates，
-    // Info.plist 未覆盖该键）。共享 appcast 里现在有本线的双签条目（DSA 给老版
-    // Sparkle 1.x、EdDSA 给 Sparkle 2），所以恢复默认开自动检查。
+    // 原版默认为 true（复选框绑 SUUpdater.automaticallyChecksForUpdates，原版
+    // Info.plist 里也没有 SUEnableAutomaticChecks，即走 Sparkle 的默认开）。
+    // build_app.sh 生成的 Info.plist 同写 SUEnableAutomaticChecks=true，两处一致。
     public static let autoCheckUpdates: Bool = true
 
     // Legacy (keep for compatibility)
@@ -301,4 +306,12 @@ private func migrateLegacyPreferenceKeys() {
     // original; early Swift builds read it as a live switch, so drop any value
     // they wrote. Storage backend is decided by "clipoardStroageLocal" alone.
     defaults.removeObject(forKey: "clipoardStroageRam")
+
+    // 早期 Swift 构建把「自动检查更新」存在自造的 "autoCheckUpdates" 键下，并且
+    // 在启动时把它回写进 Sparkle 的 SUEnableAutomaticChecks。两处都留着旧值的话，
+    // 默认值改再多也压不回来，所以对跑过那些构建的机器各清一次（用户可在关于页重设）。
+    if defaults.object(forKey: "autoCheckUpdates") != nil {
+        defaults.removeObject(forKey: "autoCheckUpdates")
+        defaults.removeObject(forKey: "SUEnableAutomaticChecks")
+    }
 }
