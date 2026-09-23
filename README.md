@@ -41,10 +41,15 @@ macOS上一款高度可配置的全局鼠标手势软件。
 
 homebrew 安装
 ```
-brew install --cask macstroke
+brew tap mtjo/tap
+brew install --cask mtjo/tap/macstroke
 ```
 
-> ⚠️ 这条命令目前装不了：官方 homebrew-cask 已在 2026-09-01 把 `macstroke` 标记为 `disable! :fails_gatekeeper_check`（发布包用的是自签名证书，`spctl` 判定过不了 Gatekeeper），并且 cask 里还停在 2.0.5。请先用上面的 releases 链接手动下载。要恢复 homebrew 分发，需要给发布包换成 Developer ID 签名 + 公证（notarization），之后向 homebrew-cask 提 PR 把版本升到 3.0.0 并去掉 `disable!`。
+> 必须写完整的 token `mtjo/tap/macstroke`。官方 homebrew-cask 里同名的 `macstroke` 已在 2026-09-01 被标记为 `disable! date: "2026-09-01", because: :fails_gatekeeper_check`（发布包用的是自签名证书，`spctl` 判定过不了 Gatekeeper），版本还停在 2.0.5，所以 `brew install --cask macstroke` 只会报「已被禁用」。自己的 tap 不受这条限制。
+>
+> 首次启动仍会被 Gatekeeper 拦一次（自签名，无 Developer ID）：右键应用 →「打开」，或者 `xattr -dr com.apple.quarantine /Applications/MacStroke.app`。
+>
+> 想恢复官方 cask：给发布包换成 Developer ID 签名 + 公证（notarization），再向 homebrew-cask 提 PR 把版本升到当前版并去掉 `disable!`。装完后记得手动开辅助功能（见上面「权限」）。
 
 ### 反馈
 [反馈BUG&建义](https://github.com/mtjo/MacStroke/issues)
