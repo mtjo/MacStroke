@@ -7,9 +7,9 @@
 //  - a large Spotlight-style search field on top: typing filters the loaded
 //    entries instantly, Arrow keys drive the row selection, Return copies the
 //    selected entry (the original's entry point was double-click)
-//  - single source-list style result column: "[n] content" for pinned rows
-//    (gray) and "n content" for history rows; the pin button (↑ / −) is
-//    revealed on row hover or selection, Spotlight-style
+//  - single source-list style result column showing just the content (no row
+//    numbering); pinned rows are gray, and the pin button (↑ / −) is revealed
+//    on row hover or selection, Spotlight-style
 //  - text rows show their content; image rows show the PNG as a thumbnail and
 //    file rows the real Finder icon, with a searchable name/dimension summary
 //  - original features kept: double-click copy + close, pin / unpin,
@@ -528,11 +528,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         let entry = displayedEntries[row]
         let cell = ResultCellView()
 
-        // Pinned rows keep the original's gray "[n]" numbering.
         let isPinned = entry.isTop
-        let globalIndex = fullEntries.firstIndex(where: { $0.id == entry.id }) ?? row
-        let topCount = entriesStore.topCount
-        let number = isPinned ? "[\(globalIndex + 1)]" : "\(max(1, globalIndex - topCount + 1))"
 
         if let image = thumbnail(for: entry) {
             let thumb = NSImageView()
@@ -546,7 +542,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
             cell.thumbnail = thumb
         }
 
-        let label = NSTextField(labelWithString: "\(number) \(summary(for: entry))")
+        let label = NSTextField(labelWithString: summary(for: entry))
         label.lineBreakMode = .byTruncatingTail
         label.font = NSFont.systemFont(ofSize: 13)
         label.textColor = isPinned ? NSColor.secondaryLabelColor : NSColor.labelColor
