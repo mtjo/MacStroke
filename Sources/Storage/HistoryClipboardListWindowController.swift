@@ -14,7 +14,8 @@
 //    file rows the real Finder icon, with a searchable name/dimension summary
 //  - original features kept: double-click copy + close, pin / unpin,
 //    clear / clearTop / clearAll with sheet confirmations, bottom tips label,
-//    scroll-to-bottom pagination (30 per page), Esc close, floating level 21
+//    scroll-to-bottom pagination (30 per page), Esc close from any focus,
+//    floating level 21
 //
 
 import Foundation
@@ -115,7 +116,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         effect.autoresizingMask = [.width, .height]
         window.contentView = effect
 
-        let clip = NSView()
+        let clip = EscClosesView()
         clip.wantsLayer = true
         clip.layer?.cornerRadius = 12
         clip.layer?.masksToBounds = true
@@ -254,22 +255,20 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
 
     public func controlTextDidChange(_ obj: Notification) {
         guard let field = obj.userInfo?["NSControl"] as? NSSearchField else { return }
-        query = field.stringValue
-        rebuildFiltered()
-        scrollListToTop()
+        controlTextDidChangeForSearch(field)
     }
 
     /// Spotlight keyboard flow: arrows move the result selection, Return
-    /// copies, Esc clears the query first and closes the panel when empty.
+    /// copies, Esc closes the panel.
     public func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertTab(_:)):
             copyRowToPasteboardAndClose(tableView?.selectedRow ?? -1)
             return true
         case #selector(NSResponder.cancelOperation(_:)):
-            guard let search = searchField, !search.stringValue.isEmpty else { return false }
-            search.stringValue = ""
-            controlTextDidChangeForSearch(search)
+            // The field editor owns Esc while the search field is focused, so
+            // close the panel here instead of walking up the responder chain.
+            window?.close()
             return true
         case #selector(NSResponder.moveDown(_:)):
             moveSelection { current, count in (current + 1) % count }
@@ -412,11 +411,6 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
                 action()
             }
         }
-    }
-
-    /// Esc closes the window (original: cancelOperation:).
-    override public func cancelOperation(_ sender: Any?) {
-        window?.close()
     }
 
     // MARK: - Entry text and image previews
@@ -640,6 +634,15 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         private func refreshReveal() {
             revealButton?.isHidden = !(hovered || isSelected || isEmphasized)
         }
+    }
+}
+
+/// Panel container: Esc pressed while the result list (or a button) holds the
+/// focus travels the responder chain here, matching the original's
+/// `cancelOperation:` close behavior.
+private final class EscClosesView: NSView {
+    override func cancelOperation(_ sender: Any?) {
+        window?.close()
     }
 }
 

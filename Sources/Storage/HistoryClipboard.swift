@@ -8,6 +8,7 @@
 import Foundation
 import SQLite
 import AppKit
+import CryptoKit
 
 /// What a clipboard entry holds. The original MacStroke only ever stored
 /// strings; images and files were added on top of that schema with a `type`
@@ -136,10 +137,68 @@ public final class HistoryClipboardManager {
             }
             self.db = try Connection(databasePath)
             createTable()
+            if databasePath == Self.defaultDatabasePath {
+                collapseDuplicateEntries()
+            }
         } catch {
             NSLog("%@", "[HistoryClipboard] Failed to create database: \(error)")
             self.db = nil
         }
+    }
+
+    /// Collapse the duplicate rows that piled up before repeated copies were
+    /// deduplicated: inside each group (pinned or unpinned) only the newest copy
+    /// of identical content survives. Text and file rows are matched by their
+    /// stored content; image rows additionally by payload bytes, because the same
+    /// screenshot copied twice got one file each.
+    @discardableResult
+    func collapseDuplicateEntries() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let db = db else { return 0 }
+
+        var doomedIds: [Int64] = []
+        var doomedImages: [String] = []
+        var seen = Set<String>()
+        let fm = FileManager.default
+
+        do {
+            // Newest first, so the first sighting of a payload is the survivor.
+            let rows = try db.prepare(table.order(idCol.desc))
+            for row in rows {
+                let id: Int64 = row[idCol]
+                let content: String = row[contentCol]
+                let type: Int64 = row[typeCol]
+                let isTop: Int64 = row[isTopCol]
+                let isImage = type == Int64(HistoryClipboardKind.image.rawValue)
+                var identity = "\(isTop)|\(type)|\(content)"
+                if isImage, let payload = fm.contents(atPath: content) {
+                    let digest = SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined()
+                    identity = "\(isTop)|image|\(payload.count)|\(digest)"
+                }
+                if seen.contains(identity) {
+                    doomedIds.append(id)
+                    if isImage { doomedImages.append(content) }
+                } else {
+                    seen.insert(identity)
+                }
+            }
+        } catch {
+            NSLog("%@", "[HistoryClipboard] Failed to scan duplicates: \(error)")
+            return 0
+        }
+
+        guard !doomedIds.isEmpty else { return 0 }
+        do {
+            // Ids come from our own table, never from user input.
+            try db.run("DELETE FROM \(Self.tableName) WHERE id IN (\(doomedIds.map(String.init).joined(separator: ",")))")
+            unlinkImageFiles(doomedImages)
+        } catch {
+            NSLog("%@", "[HistoryClipboard] Failed to drop duplicates: \(error)")
+            return 0
+        }
+        NSLog("%@", "[HistoryClipboard] Dropped \(doomedIds.count) duplicate clipboard rows")
+        return doomedIds.count
     }
 
     /// The original ObjC MacStroke kept the same `local_history_clipoard`
@@ -237,9 +296,9 @@ public final class HistoryClipboardManager {
     @discardableResult
     private func insertLocalImageInternal(data: Data, isTop: Bool) -> HistoryClipboardEntry? {
         guard let png = HistoryClipboardManager.pngData(from: data) else { return nil }
-        // Identical bytes already sitting in the history reuse that payload file
+        // Identical bytes already in the same group reuse that payload file
         // instead of writing a second one for the row the insert replaces.
-        let reusedPath = isTop ? nil : matchingHistoryImagePath(for: png)
+        let reusedPath = matchingImagePath(for: png, isTop: isTop)
         guard let path = reusedPath ?? writeImageFile(png) else { return nil }
         let entry = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: isTop)
         if entry == nil, reusedPath == nil { unlinkImageFiles([path]) }
@@ -289,13 +348,14 @@ public final class HistoryClipboardManager {
             .map(String.init)
     }
 
-    /// Payload file of an identical PNG that is already unpinned in the history,
-    /// or nil when the image is new. Reusing the file keeps a repeated screenshot
-    /// copy from leaking a second payload next to the row it also replaces.
-    private func matchingHistoryImagePath(for png: Data) -> String? {
+    /// Payload file of an identical PNG already stored in the same group (pinned
+    /// or unpinned), or nil when these bytes are new there. Reusing the file keeps
+    /// a repeated copy from leaking a second payload next to the row it replaces.
+    private func matchingImagePath(for png: Data, isTop: Bool) -> String? {
         guard let db = db else { return nil }
         let fm = FileManager.default
-        let query = table.filter(isTopCol == 0 && typeCol == Int64(HistoryClipboardKind.image.rawValue))
+        let isTopValue = isTop ? Int64(1) : Int64(0)
+        let query = table.filter(isTopCol == isTopValue && typeCol == Int64(HistoryClipboardKind.image.rawValue))
 
         do {
             for row in try db.prepare(query) {
@@ -310,14 +370,14 @@ public final class HistoryClipboardManager {
         return nil
     }
 
-    /// Drop the unpinned rows holding this exact payload before an insert, so
-    /// copying the same content again moves it to the top instead of piling up
-    /// duplicates. The list is ordered by id, hence the delete + re-insert.
-    /// Pinned rows are user-curated and stay untouched, and image payloads are
-    /// never unlinked here because the caller re-inserts the same path.
-    private func dropDuplicateHistoryRows(content: String, type: Int64) throws {
+    /// Drop the rows of the same group holding this exact payload before an
+    /// insert, so copying or pinning the same content again moves it to the front
+    /// instead of piling up duplicates. The list is ordered by id, hence the
+    /// delete + re-insert. Image payloads are never unlinked here because the
+    /// caller re-inserts the same path.
+    private func dropDuplicateRows(content: String, type: Int64, isTop: Int64) throws {
         guard let db = db else { return }
-        try db.run(table.filter(isTopCol == 0 && typeCol == type && contentCol == content).delete())
+        try db.run(table.filter(isTopCol == isTop && typeCol == type && contentCol == content).delete())
     }
 
     private func insertLocalHistoryClipboardInternal(content: String,
@@ -330,9 +390,7 @@ public final class HistoryClipboardManager {
         let isTopValue = isTop ? Int64(1) : Int64(0)
 
         do {
-            if !isTop {
-                try dropDuplicateHistoryRows(content: storedContent, type: Int64(kind.rawValue))
-            }
+            try dropDuplicateRows(content: storedContent, type: Int64(kind.rawValue), isTop: isTopValue)
 
             let rowId = try db.run(table.insert(
                 contentCol <- storedContent,
@@ -760,16 +818,15 @@ public final class HistoryClipboardManager {
         return entry
     }
 
-    /// Pin an existing image entry. The payload file is copied so unpinning
-    /// one of the two rows cannot break the other.
+    /// Pin an existing image entry. The payload is stored as its own file (only
+    /// pinned rows are searched for a byte match), so unpinning either of two
+    /// rows cannot break the other.
     @discardableResult
     public func addTopImage(for entry: HistoryClipboardEntry) -> HistoryClipboardEntry? {
         lock.lock()
         defer { lock.unlock() }
         guard entry.kind == .image, let data = imageData(for: entry) else { return nil }
-        guard let png = Self.pngData(from: data), let path = writeImageFile(png) else { return nil }
-        let pinned = insertLocalHistoryClipboardInternal(content: path, kind: .image, isTop: true)
-        if pinned == nil { unlinkImageFiles([path]) }
+        let pinned = insertLocalImageInternal(data: data, isTop: true)
         enforceTopLimit()
         return pinned
     }

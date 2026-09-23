@@ -996,7 +996,7 @@ final class HistoryClipboardTests: XCTestCase {
         _ = manager.insertLocalHistoryClipboard(content: "kept", isTop: false)
         _ = manager.insertLocalHistoryClipboard(content: "kept", isTop: false)
 
-        XCTAssertEqual(manager.getTopList().count, 1, "pinning is the user's own list, dedupe stays out of it")
+        XCTAssertEqual(manager.getTopList().count, 1, "dedupe stays inside the history group")
         XCTAssertEqual(manager.getCount(isTop: false), 1)
         XCTAssertEqual(manager.textContent(for: manager.getHistoryClipboardList(firstPage: true)[0]), "kept")
     }
@@ -1036,6 +1036,84 @@ final class HistoryClipboardTests: XCTestCase {
         XCTAssertEqual(files.count, 2, "one payload per remaining row")
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: second.content)),
                        manager.imageData(for: manager.getHistoryClipboardList(firstPage: true)[0]))
+    }
+
+    func testRepeatedPinKeepsOnePinnedRow() {
+        let manager = createManager()
+
+        _ = manager.addTop(content: "pinned twice")
+        _ = manager.addTop(content: "pinned twice")
+        let second = manager.addTop(content: "pinned twice")
+
+        XCTAssertEqual(manager.getTopList().count, 1)
+        XCTAssertEqual(manager.getTopList().first?.id, second?.id, "the newest pin leads")
+        XCTAssertEqual(manager.getCount(isTop: false), 0, "pinning never touches history rows")
+    }
+
+    func testPinnedAndHistoryCopiesOfSameTextCoexist() {
+        let manager = createManager()
+
+        _ = manager.insertLocalHistoryClipboard(content: "shared", isTop: false)
+        _ = manager.addTop(content: "shared")
+        _ = manager.insertLocalHistoryClipboard(content: "shared", isTop: false)
+
+        XCTAssertEqual(manager.getTopList().count, 1)
+        XCTAssertEqual(manager.getCount(isTop: false), 1)
+    }
+
+    func testCollapseDuplicateEntriesKeepsNewestOfEachGroup() throws {
+        let path = getTestDatabasePath()
+        let manager = HistoryClipboardManager(databasePath: path)
+        let db = try Connection(path)
+        @discardableResult
+        func insertLegacy(_ content: String, isTop: Int) throws -> Int64 {
+            try db.run("INSERT INTO local_history_clipoard (content, type, is_top, create_time, modify_time) "
+                + "VALUES (?, 0, ?, 0, 0)", [content, isTop] as [Binding])
+            return try XCTUnwrap(db.lastInsertRowid)
+        }
+
+        // Rows as they piled up before repeated copies were deduplicated.
+        try insertLegacy("old pin", isTop: 1)
+        let newestPinnedId = try insertLegacy("old pin", isTop: 1)
+        try insertLegacy("keep me", isTop: 0)
+        try insertLegacy("keep me", isTop: 0)
+        try insertLegacy("fresh", isTop: 0)
+        XCTAssertEqual(manager.getTopList().count, 2)
+        XCTAssertEqual(manager.getCount(isTop: false), 3)
+
+        let dropped = manager.collapseDuplicateEntries()
+
+        XCTAssertEqual(dropped, 2)
+        XCTAssertEqual(manager.getTopList().count, 1, "one pin per content stays")
+        XCTAssertEqual(manager.getTopList().first?.id, newestPinnedId, "the newest copy survives")
+        XCTAssertEqual(manager.getCount(isTop: false), 2)
+        let remaining = manager.getHistoryClipboardList(firstPage: true)
+        XCTAssertEqual(manager.textContent(for: remaining[0]), "old pin", "the pinned group still leads the list")
+        XCTAssertEqual(manager.textContent(for: remaining[1]), "fresh")
+        XCTAssertEqual(manager.textContent(for: remaining[2]), "keep me")
+        XCTAssertEqual(manager.collapseDuplicateEntries(), 0, "a second sweep changes nothing")
+    }
+
+    func testCollapseDuplicatedImagesUnlinkTheLoserPayload() throws {
+        let path = getTestDatabasePath()
+        let manager = HistoryClipboardManager(databasePath: path)
+        let db = try Connection(path)
+        let png = pngData()
+        let older = try makeTempFile("dup_old.png")
+        let newer = try makeTempFile("dup_new.png")
+        try png.write(to: URL(fileURLWithPath: older))
+        try png.write(to: URL(fileURLWithPath: newer))
+        for file in [older, newer] {
+            try db.run("INSERT INTO local_history_clipoard (content, type, is_top, create_time, modify_time) "
+                + "VALUES (?, 1, 0, 0, 0)", [file] as [Binding])
+        }
+
+        XCTAssertEqual(manager.collapseDuplicateEntries(), 1)
+
+        XCTAssertEqual(manager.getCount(isTop: false), 1, "identical bytes are one row even in two files")
+        XCTAssertEqual(manager.getHistoryClipboardList(firstPage: true)[0].content, newer)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: older), "the dropped payload file is unlinked")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: newer))
     }
 
     func testPinKeepsItsOwnCopyOfAnIdenticalImage() throws {
