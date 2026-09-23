@@ -126,4 +126,4 @@ echo
 echo "下一步（都是改动公开仓库的动作，需人工确认后再做）："
 echo "  1. 把 ${ITEM} 的内容追加到 release 分支 AppCast.xml，并同步 Changelog/${APP_VERSION}.html"
 echo "  2. 上传 ${ZIP} 为 GitHub release tag ${APP_VERSION} 的资源 MacStroke.zip"
-echo "  3. 校验：./verify_appcast.sh 或让一台旧版机器点「检查更新」"
+echo "  3. 发布后校验：curl -sL https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml | grep -A3 ${APP_VERSION}"
