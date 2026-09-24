@@ -147,6 +147,7 @@ extension RulesTable {
         /// cell field is being typed into would throw away the field editor.
         private var isEditing = false
         private var signature = ""
+        private var reloadedRowCount: Int?
 
         init(store: RuleStore, onDrawGesture: @escaping (Int) -> Void) {
             self.store = store
@@ -186,7 +187,14 @@ extension RulesTable {
         func reloadIfNeeded() {
             guard !isEditing, signature != currentSignature() else { return }
             signature = currentSignature()
+            // The first reload only fills the table; a later one that grows it
+            // means "+" appended a rule at the bottom, off-screen on a long list.
+            let appended = reloadedRowCount.map { store.rules.count > $0 } ?? false
+            reloadedRowCount = store.rules.count
             table?.reloadData()
+            if appended, let last = store.rules.indices.last {
+                table?.scrollRowToVisible(last)
+            }
             publishSelection()
         }
 
@@ -194,6 +202,7 @@ extension RulesTable {
         /// `reloadData` after the action type or the gesture changes).
         func forceReload() {
             signature = currentSignature()
+            reloadedRowCount = store.rules.count
             table?.reloadData()
             publishSelection()
         }
