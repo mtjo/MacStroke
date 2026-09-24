@@ -25,6 +25,7 @@ public final class FinderSyncExtensionController: FIFinderSync {
     private var enableOpenInTerminal = false
     private var enableCopyFilePath = false
     private var items: [String] = []
+    private var root: URL?
     private let sharedDefaults = UserDefaults.standard
 
     // MARK: - Lifecycle
@@ -76,12 +77,30 @@ public final class FinderSyncExtensionController: FIFinderSync {
         )
 
         // The extension is launching: ask the main app which root to observe.
-        center.postNotificationName(
+        requestObservingPath()
+        retryObservingPathRequest(after: 5, attemptsLeft: 11)
+    }
+
+    private func requestObservingPath() {
+        DistributedNotificationCenter.default().postNotificationName(
             NSNotification.Name("RequestObservingPathNotification"),
-            object: mainAppBundleID,
+            object: Self.mainAppBundleID,
             userInfo: nil,
             deliverImmediately: true
         )
+    }
+
+    /// When Finder starts this extension at login the main app may not have
+    /// registered its notification listeners yet, so the first request is
+    /// dropped and we are left with no observed directory — which means Finder
+    /// never even asks us for a menu. Keep asking until a root arrives.
+    private func retryObservingPathRequest(after delay: TimeInterval, attemptsLeft: Int) {
+        guard attemptsLeft > 0 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.root == nil else { return }
+            self.requestObservingPath()
+            self.retryObservingPathRequest(after: delay, attemptsLeft: attemptsLeft - 1)
+        }
     }
 
     /// The main app's bundle ID, inferred by dropping the extension's last
@@ -119,13 +138,14 @@ public final class FinderSyncExtensionController: FIFinderSync {
         return 0
     }
 
-    /// Receive the observing root from the main app (original: setRoot).
+    /// Receive the observing root from the main app (original: `setRoot:`, which
+    /// also keeps the last value so a repeat broadcast is a no-op).
     @objc private func observingPathSet(_ notification: Notification) {
         guard let path = notification.userInfo?["path"] as? String else { return }
-        let root = URL(fileURLWithPath: path)
-        if FIFinderSyncController.default().directoryURLs != [root] {
-            FIFinderSyncController.default().directoryURLs = [root]
-        }
+        let url = URL(fileURLWithPath: path)
+        guard url != root else { return }
+        root = url
+        FIFinderSyncController.default().directoryURLs = [url]
     }
 
     // MARK: - Directory observation
@@ -161,19 +181,28 @@ public final class FinderSyncExtensionController: FIFinderSync {
         let menu = NSMenu(title: "")
         if enableRightClickMenu {
             if enableNewFile, !items.isEmpty {
-                let item = menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
-                item.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
+                menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
+                    .image = menuIcon("doc.badge.plus")
             }
             if enableOpenInTerminal, items.count > 1 {
-                let item = menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
-                item.image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: nil)
+                menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
+                    .image = menuIcon("terminal.fill")
             }
             if enableCopyFilePath, items.count > 2 {
-                let item = menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
-                item.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
+                menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
+                    .image = menuIcon("doc.on.clipboard")
             }
         }
         return menu
+    }
+
+    /// Finder draws this menu in its own appearance, so the glyphs have to be
+    /// handed over as masks; kept in their default palette they render black and
+    /// vanish on a dark context menu.
+    private func menuIcon(_ symbol: String) -> NSImage? {
+        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
+        image.isTemplate = true
+        return image
     }
 
     // MARK: - Menu item actions
