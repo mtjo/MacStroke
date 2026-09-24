@@ -383,10 +383,8 @@ struct GeneralTabView: View {
                     }
                     RowDivider()
                     SettingsRow(L("Line color:")) {
-                        // Original: NSColorWell bound to lineColor, 100pt wide.
-                        ColorPicker("", selection: $viewModel.lineColor)
-                            .labelsHidden()
-                            .frame(width: 100)
+                        ColorWellField(color: $viewModel.lineColor)
+                            .frame(width: 100, height: 18)
                     }
                 }
             }
@@ -1264,6 +1262,42 @@ private struct ModeRadio: NSViewRepresentable {
         var action: () -> Void
         init(action: @escaping () -> Void) { self.action = action }
         @objc func clicked() { action() }
+    }
+}
+
+/// The original's colour control is a plain `NSColorWell`, 100×18 in the xib
+/// (`lineColorWell`). SwiftUI's `ColorPicker` keeps its own small square whatever
+/// frame it is handed, so the row stuck out from the switches beside it.
+struct ColorWellField: NSViewRepresentable {
+    @Binding var color: Color
+
+    func makeNSView(context: Context) -> NSColorWell {
+        let well = NSColorWell()
+        // Minimal: the colour fills the whole 100pt with no palette chip, which is
+        // how the classic well in the xib reads.
+        well.colorWellStyle = .minimal
+        well.color = NSColor(color)
+        well.target = context.coordinator
+        well.action = #selector(Coordinator.colorChanged(_:))
+        return well
+    }
+
+    func updateNSView(_ well: NSColorWell, context: Context) {
+        context.coordinator.color = $color
+        let next = NSColor(color)
+        if well.color != next { well.color = next }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(color: $color) }
+
+    final class Coordinator: NSObject {
+        var color: Binding<Color>
+
+        init(color: Binding<Color>) { self.color = color }
+
+        @objc func colorChanged(_ sender: NSColorWell) {
+            color.wrappedValue = Color(nsColor: sender.color)
+        }
     }
 }
 
