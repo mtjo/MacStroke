@@ -27,12 +27,7 @@ public final class ShortcutRecorderView: NSView {
 
     /// Whether the recorder is currently listening for input.
     @Published public var isRecording = false {
-        didSet {
-            needsDisplay = true
-            layer?.borderColor = isRecording
-                ? NSColor.controlAccentColor.cgColor
-                : NSColor.separatorColor.cgColor
-        }
+        didSet { needsDisplay = true }
     }
 
     /// Live modifier flags echoed while recording (SRModifierOptionView).
@@ -43,15 +38,15 @@ public final class ShortcutRecorderView: NSView {
 
     public override var isFlipped: Bool { true }
 
+    public override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
     // MARK: - Initialization
 
     public init() {
         super.init(frame: NSRect(x: 0, y: 0, width: 150, height: 24))
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.cgColor
-        layer?.borderWidth = 1
-        layer?.cornerRadius = 4
     }
 
     required init?(coder: NSCoder) {
@@ -77,6 +72,17 @@ public final class ShortcutRecorderView: NSView {
 
     public override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+
+        // Painted here instead of via layer.backgroundColor: a CGColor is frozen
+        // to whichever appearance was current when it was captured, so a recorder
+        // built before the view joined the window came out a black box on macOS 26.
+        let frame = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let box = NSBezierPath(roundedRect: frame, xRadius: 4, yRadius: 4)
+        NSColor.controlBackgroundColor.setFill()
+        box.fill()
+        (isRecording ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
+        box.lineWidth = 1
+        box.stroke()
 
         let text: String
         if isRecording {
