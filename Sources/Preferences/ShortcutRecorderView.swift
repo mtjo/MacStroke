@@ -33,6 +33,17 @@ public final class ShortcutRecorderView: NSView {
     /// Live modifier flags echoed while recording (SRModifierOptionView).
     private var pressedFlags: UInt = 0
 
+    /// Appearance to draw with, decided by whoever hosts this view.
+    ///
+    /// SwiftUI gives an `NSViewRepresentable` an appearance of its own — measured on
+    /// macOS 26/27 it follows the *system* setting instead of the page it is drawn
+    /// in, so a recorder on a light preferences page resolved the dark variants of
+    /// every dynamic colour and came out black. The SwiftUI wrapper sets this to the
+    /// scheme the page really uses; AppKit hosts leave it nil and keep the window's.
+    public var drawAppearance: NSAppearance? {
+        didSet { needsDisplay = true }
+    }
+
     /// Callback when shortcut recording completes.
     var onShortcutChanged: ((UInt16, UInt) -> Void)?
 
@@ -72,7 +83,15 @@ public final class ShortcutRecorderView: NSView {
 
     public override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        // Resolve every colour against the appearance the host asks for (see
+        // `drawAppearance`) rather than the one AppKit happens to have current.
+        (drawAppearance ?? window?.effectiveAppearance ?? effectiveAppearance)
+            .performAsCurrentDrawingAppearance {
+                drawContent()
+            }
+    }
 
+    private func drawContent() {
         // Painted here instead of via layer.backgroundColor: a CGColor is frozen
         // to whichever appearance was current when it was captured, so a recorder
         // built before the view joined the window came out a black box on macOS 26.

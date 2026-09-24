@@ -111,10 +111,20 @@ func postMacStrokeNotification(_ text: String) {
 struct ShortcutRecorder: NSViewRepresentable {
     @Binding var text: String
     var onShortcutChanged: ((String) -> Void)?
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// The scheme this page is actually drawing in, translated for the AppKit view.
+    /// SwiftUI hands a representable its own appearance and on macOS 26/27 that one
+    /// tracks the system setting, not the page, which made the recorder render with
+    /// dark colours on a light window.
+    private var hostAppearance: NSAppearance? {
+        NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
+    }
 
     func makeNSView(context: Context) -> ShortcutRecorderView {
         let view = ShortcutRecorderView()
-        // Show the persisted shortcut (e.g. the ⌘⌥V default) right away.
+        view.drawAppearance = hostAppearance
+        // Show the persisted shortcut (e.g. the ⌘V default) right away.
         if let parsed = Self.parse(text) {
             view.keyCode = parsed.keyCode
             view.flags = parsed.flags
@@ -127,6 +137,9 @@ struct ShortcutRecorder: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {
+        if nsView.drawAppearance?.name != hostAppearance?.name {
+            nsView.drawAppearance = hostAppearance
+        }
         // Sync external changes (reset to defaults etc.) into the view
         // while the user is not actively recording.
         if !nsView.isRecording, let parsed = Self.parse(text) {
