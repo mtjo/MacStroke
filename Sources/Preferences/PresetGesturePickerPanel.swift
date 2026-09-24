@@ -4,7 +4,7 @@
 //
 //  The "Draw Gesture!" dialog: every preset gesture the original picker offers
 //  (8 arrows + 4 box corners and 26 letters, each with a reversed twin = 68)
-//  laid out as a scrollable grid of thumbnails, so the shape is visible before
+//  laid out as a one-page grid of thumbnails, so the shape is visible before
 //  it is chosen. A single click applies it. Drawing on the live overlay still
 //  works, which is what the hint text has to spell out.
 //
@@ -20,10 +20,10 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
         let stroke: Stroke
     }
 
-    private static let columns = 8
-    private static let cellSide: CGFloat = 68
-    private static let gridPadding: CGFloat = 10
-    private static let gridVisibleHeight: CGFloat = 300
+    /// Sized so all 68 presets fit on one page — the grid never scrolls.
+    private static let columns = 10
+    private static let cellSide: CGFloat = 56
+    private static let gridPadding: CGFloat = 8
 
     private var window: NSWindow!
     private var cells: [PresetGestureCell] = []
@@ -60,10 +60,12 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
     // MARK: Window
 
     func makeWindow(entries: [(name: String, stroke: Stroke)]) -> NSWindow {
+        let rows = (entries.count + Self.columns - 1) / Self.columns
         let gridWidth = Self.cellSide * CGFloat(Self.columns) + Self.gridPadding * 2
+        let gridHeight = Self.cellSide * CGFloat(rows) + Self.gridPadding * 2
         let contentWidth = gridWidth + 20
         let hintHeight: CGFloat = 84
-        let contentHeight = Self.gridVisibleHeight + hintHeight + 46
+        let contentHeight = gridHeight + hintHeight + 46
 
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: contentWidth, height: contentHeight),
                               styleMask: [.titled, .closable],
@@ -93,15 +95,12 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
         header.font = .systemFont(ofSize: 11, weight: .medium)
         header.frame = NSRect(x: 18, y: contentHeight - 88, width: contentWidth - 36, height: 16)
 
-        let scroll = NSScrollView(frame: NSRect(x: 10, y: 46, width: gridWidth, height: Self.gridVisibleHeight))
-        scroll.hasVerticalScroller = true
-        scroll.autohidesScrollers = true
-        scroll.borderType = .bezelBorder
-        scroll.drawsBackground = false
-
-        let rows = (entries.count + Self.columns - 1) / Self.columns
-        let grid = FlippedGrid(frame: NSRect(x: 0, y: 0, width: gridWidth,
-                                            height: CGFloat(rows) * Self.cellSide + Self.gridPadding * 2))
+        let grid = FlippedGrid(frame: NSRect(x: 10, y: 46, width: gridWidth, height: gridHeight))
+        grid.identifier = NSUserInterfaceItemIdentifier("PresetGestureGrid")
+        grid.wantsLayer = true
+        grid.layer?.borderColor = NSColor.separatorColor.cgColor
+        grid.layer?.borderWidth = 1
+        grid.layer?.cornerRadius = 6
         for (index, entry) in entries.enumerated() {
             let column = index % Self.columns
             let row = index / Self.columns
@@ -117,14 +116,13 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
             grid.addSubview(cell)
             cells.append(cell)
         }
-        scroll.documentView = grid
 
         let cancel = NSButton(title: L("Cancel"), target: self, action: #selector(cancelClicked))
         cancel.bezelStyle = .rounded
         cancel.keyEquivalent = "\u{1b}"
         cancel.frame = NSRect(x: contentWidth - 96, y: 10, width: 86, height: 28)
 
-        [title, hint, clickHint, header, scroll, cancel].forEach(content.addSubview)
+        [title, hint, clickHint, header, grid, cancel].forEach(content.addSubview)
         window.contentView = content
         return window
     }
