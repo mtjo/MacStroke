@@ -161,6 +161,7 @@
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "您可以在屏幕任意位置绘制手势，或在下方选择预设手势。";
 "Click a preset gesture to apply it at once" = "单击任一预设图标即可直接采用它";
 "Preset Gestures (%d)" = "预设手势（共 %d 个）";
+"Hover a preset to replay how it is drawn" = "鼠标悬停在预设图标上可回放它的绘制顺序";
 "Black list mode" = "黑名单模式";
 "White list mode" = "白名单模式";
 "add.." = "添加..";

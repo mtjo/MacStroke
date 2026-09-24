@@ -55,6 +55,11 @@ final class GestureThumbView: NSView {
     /// preset-gesture modal as the "Draw Gesture" button.
     var onDoubleClick: (() -> Void)?
 
+    /// Hovering replays the drawing order — the only way to tell a gesture apart
+    /// from its reversed twin, whose static thumbnail is the same shape.
+    private lazy var replay = GestureReplayAnimator(view: self)
+    private var trackingArea: NSTrackingArea?
+
     override func draw(_ dirtyRect: NSRect) {
         guard points.count > 1 else { return }
         let xs = points.map(\.x)
@@ -71,22 +76,29 @@ final class GestureThumbView: NSView {
         let scaled = points.map { point in
             CGPoint(x: (point.x - minX) / zoom + fixX, y: (point.y - minY) / zoom + fixY)
         }
-
-        let path = NSBezierPath()
-        path.lineWidth = 2
-        let total = Double(points.count)
-        for i in 0..<(scaled.count - 1) {
-            let t = Double(i) / total
-            NSColor(red: 0.5 * t, green: 0.47 + 0.53 * t, blue: 0.9, alpha: 1).setStroke()
-            path.move(to: scaled[i])
-            path.line(to: scaled[i + 1])
-            path.stroke()
-            path.removeAllPoints()
-        }
+        GestureStrokeRenderer.draw(scaled, progress: replay.progress)
     }
 
     override func mouseDown(with event: NSEvent) {
         if event.clickCount == 2 { onDoubleClick?() }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea { removeTrackingArea(trackingArea) }
+        let area = NSTrackingArea(rect: .zero,
+                                  options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        replay.start()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        replay.stop()
     }
 }
 

@@ -5,8 +5,9 @@
 //  The "Draw Gesture!" dialog: every preset gesture the original picker offers
 //  (8 arrows + 4 box corners and 26 letters, each with a reversed twin = 68)
 //  laid out as a one-page grid of thumbnails, so the shape is visible before
-//  it is chosen. A single click applies it. Drawing on the live overlay still
-//  works, which is what the hint text has to spell out.
+//  it is chosen. A single click applies it, hovering replays the drawing order.
+//  Drawing on the live overlay still works, which is what the hint text has to
+//  spell out.
 //
 
 import AppKit
@@ -29,8 +30,9 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
     private var cells: [PresetGestureCell] = []
     private var choice: Choice?
 
-    /// Show the grid modally. Returns the preset the user clicked, `nil` when it
-    /// was cancelled or when a gesture was drawn on the screen instead.
+    /// Show the grid modally. Returns the preset the user clicked; `nil` when the
+    /// dialog was closed or cancelled. A gesture drawn on the live overlay saves
+    /// itself, so the caller only has to tell "drew one" apart from "cancelled".
     static func pick() -> (name: String, stroke: Stroke)? {
         let panel = PresetGesturePickerPanel()
         guard let choice = panel.run() else { return nil }
@@ -53,6 +55,8 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
         window.center()
         window.makeKeyAndOrderFront(nil)
         _ = NSApp.runModal(for: window)
+        // A cell hovered when the dialog closed would otherwise keep replaying.
+        cells.forEach { $0.stopReplay() }
         window.orderOut(nil)
         return choice
     }
@@ -93,7 +97,15 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
 
         let header = NSTextField(labelWithString: LFormat("Preset Gestures (%d)", entries.count))
         header.font = .systemFont(ofSize: 11, weight: .medium)
-        header.frame = NSRect(x: 18, y: contentHeight - 88, width: contentWidth - 36, height: 16)
+        header.frame = NSRect(x: 18, y: contentHeight - 82, width: 150, height: 14)
+
+        // Without the replay there is no way to tell a preset from its reversed twin.
+        let hoverHint = NSTextField(labelWithString: L("Hover a preset to replay how it is drawn"))
+        hoverHint.font = .systemFont(ofSize: 11)
+        hoverHint.textColor = .secondaryLabelColor
+        hoverHint.alignment = .right
+        hoverHint.frame = NSRect(x: 174, y: contentHeight - 82,
+                                 width: contentWidth - 192, height: 14)
 
         let grid = FlippedGrid(frame: NSRect(x: 10, y: 46, width: gridWidth, height: gridHeight))
         grid.identifier = NSUserInterfaceItemIdentifier("PresetGestureGrid")
@@ -122,13 +134,12 @@ final class PresetGesturePickerPanel: NSObject, NSWindowDelegate {
         cancel.keyEquivalent = "\u{1b}"
         cancel.frame = NSRect(x: contentWidth - 96, y: 10, width: 86, height: 28)
 
-        [title, hint, clickHint, header, grid, cancel].forEach(content.addSubview)
+        [title, hint, clickHint, header, hoverHint, grid, cancel].forEach(content.addSubview)
         window.contentView = content
         return window
     }
 
     @objc private func cellClicked(_ sender: PresetGestureCell) {
-        cells.forEach { $0.isSelected = $0 === sender }
         choice = Choice(name: sender.gestureName, stroke: sender.stroke)
         close()
     }
@@ -158,7 +169,8 @@ private final class PresetGestureCell: NSControl {
     let gestureName: String
     let stroke: Stroke
     private let points: [CGPoint]
-    var isSelected = false { didSet { needsDisplay = true } }
+    private lazy var replay = GestureReplayAnimator(view: self)
+    private var trackingArea: NSTrackingArea?
 
     init(stroke: Stroke, title: String, frame: NSRect) {
         self.stroke = stroke
@@ -180,27 +192,19 @@ private final class PresetGestureCell: NSControl {
     override func draw(_ dirtyRect: NSRect) {
         let tile = bounds.insetBy(dx: 3, dy: 3)
         let background = NSBezierPath(roundedRect: tile, xRadius: 6, yRadius: 6)
-        if isSelected {
-            NSColor.selectedControlColor.setFill()
-            background.fill()
-        }
-        NSColor.separatorColor.setStroke()
         background.lineWidth = 1
+        let replaying = replay.progress < 1
+        if replaying {
+            NSColor.selectedControlColor.withAlphaComponent(0.3).setFill()
+            background.fill()
+            NSColor.controlAccentColor.setStroke()
+        } else {
+            NSColor.separatorColor.setStroke()
+        }
         background.stroke()
 
         guard let scaled = scaledPoints(fit: tile.insetBy(dx: 11, dy: 11)) else { return }
-        let segments = Double(scaled.count - 1)
-        for i in 0..<(scaled.count - 1) {
-            // Same ramp the rule table's gesture column uses (DrawGesture.m).
-            let t = Double(i) / max(segments, 1)
-            NSColor(red: 0.5 * t, green: 0.47 + 0.53 * t, blue: 0.9, alpha: 1).setStroke()
-            let path = NSBezierPath()
-            path.lineWidth = 2
-            path.lineCapStyle = .round
-            path.move(to: scaled[i])
-            path.line(to: scaled[i + 1])
-            path.stroke()
-        }
+        GestureStrokeRenderer.draw(scaled, progress: replay.progress)
     }
 
     /// Fit the stroke's bounding box into `rect`, keeping its aspect and centring
@@ -226,5 +230,28 @@ private final class PresetGestureCell: NSControl {
     override func mouseDown(with event: NSEvent) {
         guard let action else { return }
         NSApp.sendAction(action, to: target, from: self)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea { removeTrackingArea(trackingArea) }
+        let area = NSTrackingArea(rect: .zero,
+                                  options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        replay.start()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        replay.stop()
+    }
+
+    /// Called when the dialog closes while the pointer still rests on the cell.
+    func stopReplay() {
+        replay.stop()
     }
 }

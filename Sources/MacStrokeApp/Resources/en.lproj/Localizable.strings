@@ -161,6 +161,7 @@
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "You can draw a gesture anywhere on the screen, or select the preset gesture below.";
 "Click a preset gesture to apply it at once" = "Click a preset gesture to apply it at once";
 "Preset Gestures (%d)" = "Preset Gestures (%d)";
+"Hover a preset to replay how it is drawn" = "Hover a preset to replay how it is drawn";
 "Black list mode" = "Black list mode";
 "White list mode" = "White list mode";
 "add.." = "add..";
