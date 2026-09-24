@@ -1,0 +1,28 @@
++ New square app icon in macOS style (light rounded tile with a gesture stroke); README and the About page logo follow it
++ App 图标换成 macOS 方形风格：浅色圆角底 + 一条手势笔画，README 与关于页的 logo 一并更新
+
+- Fix the shortcut recorder rendering as a black box on a light preferences page (macOS 26 / 27)
+- 修复浅色模式下快捷键输入框整块变黑、内容看不清（macOS 26 / 27）
+
+- Fix the Finder right-click menu not showing at all when the extension was started before the app: it now keeps asking for the observed folder until it gets one
+- 修复 Finder 右键菜单整个不出现：开机时扩展比主程序先启动、拿不到观察目录，现在会持续补发请求直到拿到
+
+- Fix the Finder menu icons staying dark on a dark context menu
+- 修复深色上下文菜单里右键菜单图标仍是黑色、看不清
+
+- Fix the "simulate right click" sidebar icon in dark mode
+- 修复侧栏「模拟右键」图标在深色模式下不跟随配色
+
++ Gesture picker now shows all 68 preset shapes on one page, click to pick; hovering a preset or a rule row replays how it is drawn
++ 绘制手势弹窗改为一页展示 68 个预设图标、单击即选用；悬停预设或规则表缩略图会回放落笔顺序
+
++ Line colour uses the native colour well, same 100×18 size as the original
++ 鼠标路径颜色改用原生颜色框，与原版一样 100×18 并与其他行对齐
+
++ Adding a rule on the rules page scrolls straight to the new row
++ 规则页点「+」新增规则后自动滚到最新一行
+
+! Homebrew: the official cask is disabled upstream, install from the maintainer tap with the full token: brew tap mtjo/tap && brew install --cask mtjo/tap/macstroke
+! 安装方式：官方 homebrew cask 已被上游禁用，请带完整 token 从维护者 tap 安装：brew tap mtjo/tap && brew install --cask mtjo/tap/macstroke
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.0.1/MacStroke.zip

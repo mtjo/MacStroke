@@ -9,7 +9,7 @@ APP_DIR="./${APP_NAME}.app"
 # 若低于 appcast（例如写死 1.0.0），Sparkle 会把另一条代码线的 2.0.5 当成「有新版本」，
 # 用户点更新就会把本机移植构建覆盖回 ObjC 版。发新版只改这一行，主程序与扩展共用。
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
-APP_VERSION="3.0.0"
+APP_VERSION="3.0.1"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
