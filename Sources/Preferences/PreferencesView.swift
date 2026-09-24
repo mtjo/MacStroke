@@ -264,7 +264,8 @@ struct TabButton: View {
     @ViewBuilder
     private var icon: some View {
         if let name = tab.iconResourceName, let nsImage = NSImage(named: name) {
-            Image(nsImage: nsImage)
+            Image(nsImage: sidebarIconImage(nsImage))
+                .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 18, height: 18)
@@ -272,6 +273,18 @@ struct TabButton: View {
             Image(systemName: tab.systemImage)
         }
     }
+}
+
+/// The original's toolbar PNGs are flat black glyphs, which disappear on the dark
+/// sidebar. Marked as a template the image is just a mask, so it takes the row's
+/// text colour (primary, or white on the selected highlight).
+func sidebarIconImage(_ image: NSImage) -> NSImage {
+    guard let copy = image.copy() as? NSImage else {
+        image.isTemplate = true
+        return image
+    }
+    copy.isTemplate = true
+    return copy
 }
 
 // MARK: - General Tab
