@@ -659,56 +659,25 @@ struct RulesTabView: View {
             userInfo: ["ruleName": ruleName]
         )
 
-        let alert = NSAlert()
-        alert.messageText = L("Draw Gesture!")
-        alert.informativeText = L("You can draw a gesture anywhere on the screen, or select the preset gesture below.")
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: L("Ok"))
-        alert.addButton(withTitle: L("Cancel"))
-
-        // Original: NSComboBox(0,0,100,25), not editable, and the "Plase Select"
-        // (sic) hint is the field's *value*, not a placeholder — a non-editable
-        // combo never shows a placeholder.
-        let combo = NSComboBox(frame: NSRect(x: 0, y: 0, width: 100, height: 25))
-        combo.isEditable = false
-        combo.completes = false
-        combo.addItems(withObjectValues: GestureTemplateProvider.shared.presetPickerEntries.map(\.name))
-        combo.stringValue = L("Plase Select")
-        alert.accessoryView = combo
-
-        var presetApplied = false
+        // A gesture drawn on the live overlay saves itself and closes the picker,
+        // like the original's synthetic Return key press.
         var drawnOnScreen = false
-        let store = ruleStore
-        let obs = NotificationCenter.default.addObserver(
-            forName: NSComboBox.selectionDidChangeNotification,
-            object: combo, queue: .main
-        ) { _ in
-            let idx = combo.indexOfSelectedItem
-            guard idx >= 0, let title = combo.itemObjectValue(at: idx) as? String else { return }
-            guard Self.applyPresetGesture(title, toRuleNamed: ruleName, store: store) else { return }
-            presetApplied = true
-            NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
-            Self.postGestureCompleteNotification()
-            NSApp.stopModal(withCode: .alertFirstButtonReturn)
-        }
-        // A gesture drawn on the live overlay saves itself and dismisses the
-        // dialog, like the original's synthetic Return key press.
         let drawnObs = NotificationCenter.default.addObserver(
             forName: .macStrokeGestureDidRecord, object: nil, queue: .main
         ) { _ in
             drawnOnScreen = true
-            NSApp.stopModal(withCode: .alertFirstButtonReturn)
         }
-        defer {
-            NotificationCenter.default.removeObserver(obs)
-            NotificationCenter.default.removeObserver(drawnObs)
-        }
+        defer { NotificationCenter.default.removeObserver(drawnObs) }
 
-        let response = alert.runModal()
-        if presetApplied || drawnOnScreen { return }
-        if response != .alertFirstButtonReturn {
-            NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
+        guard let preset = PresetGesturePickerPanel.pick() else {
+            if !drawnOnScreen {
+                NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
+            }
+            return
         }
+        NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
+        guard Self.applyPresetGesture(preset.name, toRuleNamed: ruleName, store: ruleStore) else { return }
+        Self.postGestureCompleteNotification()
     }
 
     /// Map a combo title ("M", "M Revered", "┏"…) to a preset template and

@@ -159,6 +159,8 @@
 "Draw Gesture!" = "Draw Gesture!";
 "Select a filter first!" = "Select a filter first!";
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "You can draw a gesture anywhere on the screen, or select the preset gesture below.";
+"Click a preset gesture to apply it at once" = "Click a preset gesture to apply it at once";
+"Preset Gestures (%d)" = "Preset Gestures (%d)";
 "Black list mode" = "Black list mode";
 "White list mode" = "White list mode";
 "add.." = "add..";
