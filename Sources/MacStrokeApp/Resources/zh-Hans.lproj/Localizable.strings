@@ -278,3 +278,8 @@
 "Press a mouse button" = "请按下鼠标键";
 "Not recorded" = "未录制";
 "Button %d" = "按键 %d";
+"Hold ⌘ To Skip Gesture" = "按住 ⌘ 时不触发手势";
+"Hold ⌃ To Skip Gesture" = "按住 ⌃ 时不触发手势";
+"Hold ⇧ To Skip Gesture" = "按住 ⇧ 时不触发手势";
+"Hold ⌥ To Skip Gesture" = "按住 ⌥ 时不触发手势";
+"Hold Fn To Skip Gesture" = "按住 fn 时不触发手势";

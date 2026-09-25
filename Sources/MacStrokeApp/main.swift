@@ -151,6 +151,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
         }
 
+        // Which modifiers must not start a gesture (issue #59). Same per-event
+        // read, so ticking a checkbox applies to the very next click.
+        canvas.suppressedModifiers = { [weak self] in
+            guard let self = self else { return [] }
+            return Set(tokenList: self.storage.getStringOptional(forKey: .gestureSuppressedModifiers)
+                ?? StorageDefaults.gestureSuppressedModifiers)
+        }
+
         if capture.start() {
             eventCapture = capture
             canvasManager = canvas

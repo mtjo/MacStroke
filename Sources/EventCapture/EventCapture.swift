@@ -11,6 +11,9 @@
 //  - Right-button drags start gestures; the left button is observed but passed
 //    through. The original had no other trigger; the port additionally listens
 //    for middle/extra buttons and lets CanvasManager decide (issue #53).
+//  - Every event carries the modifier keys held with it, so CanvasManager can
+//    let a modified drag through untouched (issue #59). The original never
+//    looked at flags, so nothing is suppressed until the user opts in.
 //  - The delegate decides whether to consume (swallow) each event; consumed
 //    events do not propagate to other applications (returns NULL from the tap)
 //  - The tap is automatically re-enabled after a timeout disable
@@ -28,11 +31,52 @@ public struct MouseEvent {
     public let point: GesturePoint
     public let button: MouseButton
     public let phase: MousePhase
+    /// The modifier keys held when the event was captured.
+    public let modifiers: Set<GestureModifier>
 
-    public init(point: GesturePoint, button: MouseButton, phase: MousePhase) {
+    public init(point: GesturePoint, button: MouseButton, phase: MousePhase, modifiers: Set<GestureModifier> = []) {
         self.point = point
         self.button = button
         self.phase = phase
+        self.modifiers = modifiers
+    }
+}
+
+/// A modifier key, named by the token stored in the `gestureSuppressedModifiers`
+/// preference so the capture layer and the preferences share one vocabulary.
+public enum GestureModifier: String, CaseIterable {
+    case command = "cmd"
+    case control = "ctrl"
+    case shift = "shift"
+    case option = "opt"
+    case function = "fn"
+
+    var cgFlag: CGEventFlags {
+        switch self {
+        case .command: return .maskCommand
+        case .control: return .maskControl
+        case .shift: return .maskShift
+        case .option: return .maskAlternate
+        case .function: return .maskSecondaryFn
+        }
+    }
+
+    /// The flags held by a captured event, in the enum's declaration order.
+    static func all(in flags: CGEventFlags) -> Set<GestureModifier> {
+        Set(allCases.filter { flags.contains($0.cgFlag) })
+    }
+}
+
+extension Set where Element == GestureModifier {
+    /// Preference form: the chosen tokens joined by commas, in `allCases` order
+    /// so the stored string stays stable across get/set round-trips.
+    public init(tokenList: String) {
+        let tokens = Set<String>(tokenList.split(separator: ",").map(String.init))
+        self = Set<GestureModifier>(GestureModifier.allCases.filter { tokens.contains($0.rawValue) })
+    }
+
+    public var tokenList: String {
+        GestureModifier.allCases.filter { contains($0) }.map(\.rawValue).joined(separator: ",")
     }
 }
 
@@ -227,7 +271,12 @@ public class EventCapture: NSObject {
             return Unmanaged.passRetained(event)
         }
 
-        let mouseEvent = MouseEvent(point: gesturePoint, button: button, phase: phase)
+        let mouseEvent = MouseEvent(
+            point: gesturePoint,
+            button: button,
+            phase: phase,
+            modifiers: GestureModifier.all(in: event.flags)
+        )
         let consume = delegate?.eventCapture(self, didReceive: mouseEvent) ?? false
 
         if consume {

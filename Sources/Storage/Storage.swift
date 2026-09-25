@@ -36,6 +36,10 @@ public enum StorageKey: String, CaseIterable {
     case enableCustomButtonGesture = "enableCustomButtonGesture"
     case customGestureButton = "customGestureButton"
 
+    // 移植版扩展（issue #59）：按住这些修饰键时不起手。同样没有原版键名，
+    // 值是逗号分隔的 token（cmd/ctrl/shift/opt/fn），空串表示不因修饰键暂停。
+    case gestureSuppressedModifiers = "gestureSuppressedModifiers"
+
     // Note/Toast
     case noteRetentionTime = "noteRetetionTime"
     case notePosition = "notePostion"
@@ -180,6 +184,8 @@ public enum StorageDefaults {
     public static let enableCustomButtonGesture: Bool = false
     /// 0 = 尚未录制过按键。
     public static let customGestureButton: Int = 0
+    /// 空 = 按住任何修饰键都照常起手，和原版一致。
+    public static let gestureSuppressedModifiers: String = ""
 
     // Note/Toast
     public static let noteRetentionTime: Int = 1
@@ -252,6 +258,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.enableSideButtonGesture.rawValue: StorageDefaults.enableSideButtonGesture,
         StorageKey.enableCustomButtonGesture.rawValue: StorageDefaults.enableCustomButtonGesture,
         StorageKey.customGestureButton.rawValue: StorageDefaults.customGestureButton,
+        StorageKey.gestureSuppressedModifiers.rawValue: StorageDefaults.gestureSuppressedModifiers,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
         StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
         StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,

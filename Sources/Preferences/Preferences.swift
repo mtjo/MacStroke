@@ -10,6 +10,7 @@ import Foundation
 import AppKit
 import SwiftUI
 import Storage
+import EventCapture
 
 /// User preferences model - mirrors the design doc's PreferencesModel.
 public final class UserPreferences: ObservableObject {
@@ -76,6 +77,28 @@ public final class UserPreferences: ObservableObject {
     /// 录制到的 CoreGraphics 按键编号（3 起），0 表示还没录过。
     @Published public var customGestureButton: Int {
         didSet { storage.setInt(customGestureButton, forKey: .customGestureButton) }
+    }
+
+    // MARK: - Gesture suppression modifiers
+    // 移植版扩展（issue #59）：按住这些修饰键时不起手，整段拖拽原样交给前台 App。
+    // 一个键一个开关，但只存一个键名，值是按 allCases 顺序拼出的 token 串。
+    @Published public var gestureSuppressedModifiers: String {
+        didSet { storage.setString(gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers) }
+    }
+
+    public func suppressionBinding(for modifier: GestureModifier) -> Binding<Bool> {
+        Binding(
+            get: { Set(tokenList: self.gestureSuppressedModifiers).contains(modifier) },
+            set: { ticked in
+                var modifiers = Set(tokenList: self.gestureSuppressedModifiers)
+                if ticked {
+                    modifiers.insert(modifier)
+                } else {
+                    modifiers.remove(modifier)
+                }
+                self.gestureSuppressedModifiers = modifiers.tokenList
+            }
+        )
     }
 
     // MARK: - Note/Toast
@@ -197,6 +220,7 @@ public final class UserPreferences: ObservableObject {
         self.enableSideButtonGesture = storage.getBoolOptional(forKey: .enableSideButtonGesture) ?? StorageDefaults.enableSideButtonGesture
         self.enableCustomButtonGesture = storage.getBoolOptional(forKey: .enableCustomButtonGesture) ?? StorageDefaults.enableCustomButtonGesture
         self.customGestureButton = storage.getIntOptional(forKey: .customGestureButton) ?? StorageDefaults.customGestureButton
+        self.gestureSuppressedModifiers = storage.getStringOptional(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
         self.noteRetentionTime = storage.getIntOptional(forKey: .noteRetentionTime) ?? StorageDefaults.noteRetentionTime
         self.notePosition = storage.getIntOptional(forKey: .notePosition) ?? StorageDefaults.notePosition
         self.noteBackgroundAlpha = storage.getDoubleOptional(forKey: .noteBackgroundAlpha) ?? StorageDefaults.noteBackgroundAlpha
@@ -252,6 +276,7 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.enableSideButtonGesture, forKey: .enableSideButtonGesture)
         storage.setBool(StorageDefaults.enableCustomButtonGesture, forKey: .enableCustomButtonGesture)
         storage.setInt(StorageDefaults.customGestureButton, forKey: .customGestureButton)
+        storage.setString(StorageDefaults.gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers)
         storage.setInt(StorageDefaults.noteRetentionTime, forKey: .noteRetentionTime)
         storage.setInt(StorageDefaults.notePosition, forKey: .notePosition)
         storage.setDouble(StorageDefaults.noteBackgroundAlpha, forKey: .noteBackgroundAlpha)
@@ -296,6 +321,7 @@ public final class UserPreferences: ObservableObject {
         enableSideButtonGesture = storage.getBool(forKey: .enableSideButtonGesture)
         enableCustomButtonGesture = storage.getBool(forKey: .enableCustomButtonGesture)
         customGestureButton = storage.getInt(forKey: .customGestureButton)
+        gestureSuppressedModifiers = storage.getString(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
         noteRetentionTime = storage.getInt(forKey: .noteRetentionTime)
         notePosition = storage.getInt(forKey: .notePosition)
         noteBackgroundAlpha = storage.getDouble(forKey: .noteBackgroundAlpha)

@@ -311,4 +311,119 @@ final class CanvasManagerTests: XCTestCase {
         XCTAssertFalse(consumed, "录制按键期间的试按不能被当起手")
         XCTAssertFalse(manager.capturing)
     }
+
+    // MARK: - Suppressing modifiers (issue #59)
+
+    func testNoSuppressionHookKeepsOriginalBehaviourWithModifiers() {
+        // 没接线 = 原版行为：按住任何修饰键，右键轨迹照样是手势。
+        let consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: 0, y: 0),
+                button: .right,
+                phase: .down,
+                modifiers: [.command, .shift]
+            )
+        )
+
+        XCTAssertTrue(consumed)
+        XCTAssertTrue(manager.capturing)
+    }
+
+    func testSuppressedModifierBlocksGestureStart() {
+        manager.suppressedModifiers = { [.command] }
+
+        let consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: 0, y: 0),
+                button: .right,
+                phase: .down,
+                modifiers: [.command]
+            )
+        )
+
+        XCTAssertFalse(consumed, "按住 ⌘ 时这次右键必须原样交给前台 App")
+        XCTAssertFalse(manager.capturing)
+        XCTAssertTrue(delegate.completedStrokes.isEmpty)
+    }
+
+    func testUnlistedModifierStillStartsGesture() {
+        // 反向对照：只勾了 ⌘，按 ⇧ 不该有任何影响。
+        manager.suppressedModifiers = { [.command] }
+
+        let consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: 0, y: 0),
+                button: .right,
+                phase: .down,
+                modifiers: [.shift]
+            )
+        )
+
+        XCTAssertTrue(consumed)
+        XCTAssertTrue(manager.capturing)
+    }
+
+    func testSuppressionAppliesToEveryTriggerButton() {
+        manager.isTriggerButtonAllowed = { $0 == .middle }
+        manager.suppressedModifiers = { [.option] }
+
+        let consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: 0, y: 0),
+                button: .middle,
+                phase: .down,
+                modifiers: [.option]
+            )
+        )
+
+        XCTAssertFalse(consumed, "修饰键让位规则对中键/侧键一样成立")
+        XCTAssertFalse(manager.capturing)
+    }
+
+    func testModifierPressedMidStrokeDoesNotCancelGesture() {
+        // 只判起手那一刻：起手后中途按下勾选的修饰键，这趟轨迹照常识别。
+        manager.suppressedModifiers = { [.command] }
+
+        let start = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(point: GesturePoint(x: 0, y: 0), button: .right, phase: .down)
+        )
+        XCTAssertTrue(start)
+
+        for i in 1..<13 {
+            manager.eventCapture(
+                capture,
+                didReceive: MouseEvent(
+                    point: GesturePoint(x: Double(i), y: Double(i)),
+                    button: .right,
+                    phase: .moved,
+                    modifiers: [.command]
+                )
+            )
+        }
+
+        let up = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: 13, y: 13),
+                button: .right,
+                phase: .up,
+                modifiers: [.command]
+            )
+        )
+        XCTAssertTrue(up)
+        XCTAssertEqual(delegate.completedStrokes.count, 1)
+    }
+
+    func testModifierTokenListRoundTrip() {
+        XCTAssertEqual(Set(tokenList: "cmd,shift"), [.command, .shift])
+        XCTAssertEqual(Set(tokenList: ""), [])
+        XCTAssertEqual(Set(tokenList: "cmd,unknown"), [.command], "认不出的 token 直接忽略")
+        // 存出来的串固定按 allCases 顺序，勾选先后不会改变磁盘内容。
+        XCTAssertEqual(Set([.option, .command, .function]).tokenList, "cmd,opt,fn")
+    }
 }

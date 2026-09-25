@@ -410,6 +410,28 @@ struct GeneralTabView: View {
                             MouseButtonRecorder(buttonNumber: $viewModel.customGestureButton)
                         }
                     }
+                    // 按住修饰键时不起手（issue #59）。同样是每键一行开关，
+                    // 勾选任意一个即代表按住它（或含它的组合）时手势让位给前台 App。
+                    RowDivider()
+                    SettingsRow(L("Hold ⌘ To Skip Gesture")) {
+                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .command))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Hold ⌃ To Skip Gesture")) {
+                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .control))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Hold ⇧ To Skip Gesture")) {
+                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .shift))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Hold ⌥ To Skip Gesture")) {
+                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .option))
+                    }
+                    RowDivider()
+                    SettingsRow(L("Hold Fn To Skip Gesture")) {
+                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .function))
+                    }
                     RowDivider()
                     SettingsRow(L("Line color:")) {
                         ColorWellField(color: $viewModel.lineColor)

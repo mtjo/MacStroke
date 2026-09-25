@@ -276,3 +276,8 @@
 "Press a mouse button" = "Press a mouse button";
 "Not recorded" = "Not recorded";
 "Button %d" = "Button %d";
+"Hold ⌘ To Skip Gesture" = "Hold ⌘ To Skip Gesture";
+"Hold ⌃ To Skip Gesture" = "Hold ⌃ To Skip Gesture";
+"Hold ⇧ To Skip Gesture" = "Hold ⇧ To Skip Gesture";
+"Hold ⌥ To Skip Gesture" = "Hold ⌥ To Skip Gesture";
+"Hold Fn To Skip Gesture" = "Hold Fn To Skip Gesture";

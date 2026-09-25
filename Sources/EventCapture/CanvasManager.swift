@@ -33,9 +33,10 @@ public protocol CanvasManagerDelegate: AnyObject {
 ///
 /// Event flow (mirrors the original, with the trigger button widened to
 /// middle/side/extra buttons when the user enables them):
-/// 1. Trigger-mouse-down → check the button is an allowed trigger, then the
-///    filters (black/white list, "show UI in any app", app has a suited rule).
-///    If allowed, begin capture, show the canvas.
+/// 1. Trigger-mouse-down → check the button is an allowed trigger and no
+///    suppressing modifier is held, then the filters (black/white list, "show UI
+///    in any app", app has a suited rule). If allowed, begin capture, show the
+///    canvas.
 /// 2. Same-button mouse-dragged → record points, draw on canvas.
 /// 3. Same-button mouse-up → try rule matching via the delegate. If nothing
 ///    matched:
@@ -64,6 +65,12 @@ public class CanvasManager: EventCaptureDelegate {
     /// restarting or rebuilding the event tap. Unset means right-button-only,
     /// i.e. exactly the original's behaviour.
     public var isTriggerButtonAllowed: ((MouseButton) -> Bool)?
+
+    /// The modifier keys that must not start a gesture (issue #59). Asked per
+    /// event, like the trigger-button check, so the preferences apply at once.
+    /// Unset or empty means modifiers never interfere — the original's
+    /// behaviour, since it never looked at the flags a click arrived with.
+    public var suppressedModifiers: (() -> Set<GestureModifier>)?
 
     /// Ignore gesture starts for a moment, while preferences are waiting for
     /// the user to press the button they want to bind. Deliberately separate
@@ -181,10 +188,27 @@ public class CanvasManager: EventCaptureDelegate {
         return isTriggerButtonAllowed?(button) ?? false
     }
 
+    /// Whether any modifier that must suppress gestures is currently held.
+    /// Holding one of several configured modifiers is enough — the request was
+    /// for "certain modifiers, or combinations of them", and a combination
+    /// always includes at least one single modifier.
+    private func isSuppressedByModifiers(_ modifiers: Set<GestureModifier>) -> Bool {
+        guard let suppressed = suppressedModifiers else { return false }
+        return !suppressed().isDisjoint(with: modifiers)
+    }
+
     // MARK: - Gesture trigger handling
 
     private func handleTriggerMouseDown(_ event: MouseEvent) -> Bool {
         guard isEnabled, !isSuspended else {
+            shouldShow = false
+            return false
+        }
+
+        // A suppressed modifier held at mouse-down hands the whole click-drag
+        // back to the front app untouched (issue #59). Only the down phase is
+        // checked: pressing a modifier mid-stroke stays as it always was.
+        if isSuppressedByModifiers(event.modifiers) {
             shouldShow = false
             return false
         }
