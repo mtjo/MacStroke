@@ -185,4 +185,130 @@ final class CanvasManagerTests: XCTestCase {
         XCTAssertEqual(recordedPoints.count, 16)
         XCTAssertTrue(delegate.completedStrokes.isEmpty, "recorded gestures are not matched")
     }
+
+    // MARK: - 额外触发按键（issue #53：中键 / 侧键 / 自定义键）
+
+    /// 用同一个按键画一条足够长的轨迹（down + moves + up），返回是否至少吃掉了一个事件。
+    @discardableResult
+    private func drawStroke(with button: MouseButton, pointCount: Int = 20) -> Bool {
+        var consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(point: GesturePoint(x: 0, y: 0), button: button, phase: .down)
+        )
+        for i in 1..<pointCount {
+            let handled = manager.eventCapture(
+                capture,
+                didReceive: MouseEvent(
+                    point: GesturePoint(x: Double(i), y: Double(i)),
+                    button: button,
+                    phase: .moved
+                )
+            )
+            consumed = consumed || handled
+        }
+        let handled = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(
+                point: GesturePoint(x: Double(pointCount), y: Double(pointCount)),
+                button: button,
+                phase: .up
+            )
+        )
+        return consumed || handled
+    }
+
+    func testMiddleButtonStartsGestureWhenEnabled() {
+        manager.isTriggerButtonAllowed = { $0 == .middle }
+
+        XCTAssertTrue(drawStroke(with: .middle))
+        XCTAssertEqual(delegate.completedStrokes.count, 1, "中键起手应产出一条轨迹")
+        XCTAssertFalse(manager.capturing)
+    }
+
+    func testMiddleButtonPassesThroughWhenDisabled() {
+        // 反向对照：不勾任何额外按键时（默认状态），行为必须与原版一致。
+        manager.isTriggerButtonAllowed = { _ in false }
+
+        XCTAssertFalse(drawStroke(with: .middle), "关闭时中键事件必须原样放行")
+        XCTAssertTrue(delegate.completedStrokes.isEmpty)
+        XCTAssertFalse(manager.capturing)
+    }
+
+    func testRightButtonAlwaysStartsGestureRegardlessOfPreference() {
+        // 右键是原版唯一的起手键，偏好判定不能把它关掉。
+        manager.isTriggerButtonAllowed = { _ in false }
+
+        XCTAssertTrue(drawStroke(with: .right))
+        XCTAssertEqual(delegate.completedStrokes.count, 1)
+    }
+
+    func testExtraButtonOnlyMatchesTheRecordedNumber() {
+        // 复刻 AppDelegate 的判定：编号 5 被录为自定义触发键。
+        manager.isTriggerButtonAllowed = { $0 == .extra(5) }
+
+        XCTAssertFalse(drawStroke(with: .extra(3)), "未绑定的侧键必须放行")
+        XCTAssertTrue(delegate.completedStrokes.isEmpty)
+
+        XCTAssertTrue(drawStroke(with: .extra(5)))
+        XCTAssertEqual(delegate.completedStrokes.count, 1, "绑定的按键应产出一条轨迹")
+    }
+
+    func testDragOfAnotherButtonDoesNotJoinActiveGesture() {
+        manager.isTriggerButtonAllowed = { $0 == .middle }
+
+        let down = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(point: GesturePoint(x: 0, y: 0), button: .right, phase: .down)
+        )
+        XCTAssertTrue(down)
+
+        for i in 1...4 {
+            let handled = manager.eventCapture(
+                capture,
+                didReceive: MouseEvent(
+                    point: GesturePoint(x: Double(i), y: 200 + Double(i)),
+                    button: .middle,
+                    phase: .moved
+                )
+            )
+            XCTAssertFalse(handled, "进行中手势是右键，中键拖动不该并进来也不该被吃掉")
+        }
+
+        for i in 1...12 {
+            XCTAssertTrue(
+                manager.eventCapture(
+                    capture,
+                    didReceive: MouseEvent(
+                        point: GesturePoint(x: Double(i), y: Double(i)),
+                        button: .right,
+                        phase: .moved
+                    )
+                ),
+                "右键自己的拖动必须收进轨迹"
+            )
+        }
+
+        let up = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(point: GesturePoint(x: 13, y: 13), button: .right, phase: .up)
+        )
+        XCTAssertTrue(up)
+        XCTAssertEqual(delegate.completedStrokes.count, 1)
+        XCTAssertEqual(
+            delegate.completedStrokes.first?.count, 14,
+            "起点 + 12 个右键拖动 + 终点，不含中键那几个点"
+        )
+    }
+
+    func testSuspendedWhileRecordingTriggerButton() {
+        manager.isSuspended = true
+
+        let consumed = manager.eventCapture(
+            capture,
+            didReceive: MouseEvent(point: GesturePoint(x: 0, y: 0), button: .right, phase: .down)
+        )
+
+        XCTAssertFalse(consumed, "录制按键期间的试按不能被当起手")
+        XCTAssertFalse(manager.capturing)
+    }
 }

@@ -18,6 +18,10 @@ public extension Notification.Name {
     /// Posted after a screen-drawn gesture has been recorded into a rule, so
     /// the preferences rule table can refresh.
     static let macStrokeRuleStoreDidChange = Notification.Name("MacStrokeRuleStoreDidChange")
+    /// Posted while the preferences window is waiting for the user to press the
+    /// mouse button they want to bind as a gesture trigger. Object is a Bool:
+    /// gesture starts are suspended so the trial press is not eaten as a stroke.
+    static let gestureTriggerRecordingDidChange = Notification.Name("MacStrokeGestureTriggerRecordingDidChange")
 }
 
 /// Returns the bundle that should be used for localized strings and images.

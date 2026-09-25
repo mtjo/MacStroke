@@ -62,6 +62,22 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setBool(showGestureNote, forKey: .showGestureNote) }
     }
 
+    // MARK: - Gesture trigger buttons
+    // 移植版扩展（issue #53）：原版只有右键，这三个开关默认全关，关掉时行为与原版一致。
+    @Published public var enableMiddleButtonGesture: Bool {
+        didSet { storage.setBool(enableMiddleButtonGesture, forKey: .enableMiddleButtonGesture) }
+    }
+    @Published public var enableSideButtonGesture: Bool {
+        didSet { storage.setBool(enableSideButtonGesture, forKey: .enableSideButtonGesture) }
+    }
+    @Published public var enableCustomButtonGesture: Bool {
+        didSet { storage.setBool(enableCustomButtonGesture, forKey: .enableCustomButtonGesture) }
+    }
+    /// 录制到的 CoreGraphics 按键编号（3 起），0 表示还没录过。
+    @Published public var customGestureButton: Int {
+        didSet { storage.setInt(customGestureButton, forKey: .customGestureButton) }
+    }
+
     // MARK: - Note/Toast
     @Published public var noteRetentionTime: Int {
         didSet { storage.setInt(noteRetentionTime, forKey: .noteRetentionTime) }
@@ -177,6 +193,10 @@ public final class UserPreferences: ObservableObject {
         self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
         self.enableGestureMinScore = storage.getBoolOptional(forKey: .enableGestureMinScore) ?? StorageDefaults.enableGestureMinScore
         self.showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
+        self.enableMiddleButtonGesture = storage.getBoolOptional(forKey: .enableMiddleButtonGesture) ?? StorageDefaults.enableMiddleButtonGesture
+        self.enableSideButtonGesture = storage.getBoolOptional(forKey: .enableSideButtonGesture) ?? StorageDefaults.enableSideButtonGesture
+        self.enableCustomButtonGesture = storage.getBoolOptional(forKey: .enableCustomButtonGesture) ?? StorageDefaults.enableCustomButtonGesture
+        self.customGestureButton = storage.getIntOptional(forKey: .customGestureButton) ?? StorageDefaults.customGestureButton
         self.noteRetentionTime = storage.getIntOptional(forKey: .noteRetentionTime) ?? StorageDefaults.noteRetentionTime
         self.notePosition = storage.getIntOptional(forKey: .notePosition) ?? StorageDefaults.notePosition
         self.noteBackgroundAlpha = storage.getDoubleOptional(forKey: .noteBackgroundAlpha) ?? StorageDefaults.noteBackgroundAlpha
@@ -226,6 +246,12 @@ public final class UserPreferences: ObservableObject {
         storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
         storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
         storage.setBool(StorageDefaults.showGestureNote, forKey: .showGestureNote)
+        // 原版没有这几个键，但「恢复默认」把额外触发键关掉才是用户期待的结果
+        // （否则重置后中键/侧键依旧在起手，界面却显示为关）。
+        storage.setBool(StorageDefaults.enableMiddleButtonGesture, forKey: .enableMiddleButtonGesture)
+        storage.setBool(StorageDefaults.enableSideButtonGesture, forKey: .enableSideButtonGesture)
+        storage.setBool(StorageDefaults.enableCustomButtonGesture, forKey: .enableCustomButtonGesture)
+        storage.setInt(StorageDefaults.customGestureButton, forKey: .customGestureButton)
         storage.setInt(StorageDefaults.noteRetentionTime, forKey: .noteRetentionTime)
         storage.setInt(StorageDefaults.notePosition, forKey: .notePosition)
         storage.setDouble(StorageDefaults.noteBackgroundAlpha, forKey: .noteBackgroundAlpha)
@@ -266,6 +292,10 @@ public final class UserPreferences: ObservableObject {
         minSimilarityScore = storage.getDouble(forKey: .minSimilarityScore)
         enableGestureMinScore = storage.getBool(forKey: .enableGestureMinScore)
         showGestureNote = storage.getBool(forKey: .showGestureNote)
+        enableMiddleButtonGesture = storage.getBool(forKey: .enableMiddleButtonGesture)
+        enableSideButtonGesture = storage.getBool(forKey: .enableSideButtonGesture)
+        enableCustomButtonGesture = storage.getBool(forKey: .enableCustomButtonGesture)
+        customGestureButton = storage.getInt(forKey: .customGestureButton)
         noteRetentionTime = storage.getInt(forKey: .noteRetentionTime)
         notePosition = storage.getInt(forKey: .notePosition)
         noteBackgroundAlpha = storage.getDouble(forKey: .noteBackgroundAlpha)

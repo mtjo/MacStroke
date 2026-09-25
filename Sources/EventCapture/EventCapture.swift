@@ -3,11 +3,14 @@
 //  MacStroke
 //
 //  Global mouse event capture using CGEventTap.
-//  Captures right-mouse gesture events (down/dragged/up) and left-mouse-down,
-//  converting them to GesturePoint values for the GestureEngine to consume.
+//  Captures the gesture trigger button (right, plus any enabled middle/extra
+//  button) in its down/dragged/up phases and left-mouse-down, converting the
+//  points into GesturePoint values for the GestureEngine to consume.
 //
 //  Mirrors the original MacStroke behavior:
-//  - Only right-button drags start gestures (left button is observed but passed through)
+//  - Right-button drags start gestures; the left button is observed but passed
+//    through. The original had no other trigger; the port additionally listens
+//    for middle/extra buttons and lets CanvasManager decide (issue #53).
 //  - The delegate decides whether to consume (swallow) each event; consumed
 //    events do not propagate to other applications (returns NULL from the tap)
 //  - The tap is automatically re-enabled after a timeout disable
@@ -33,10 +36,24 @@ public struct MouseEvent {
     }
 }
 
-public enum MouseButton {
+public enum MouseButton: Equatable {
     case left
     case right
-    case other
+    case middle
+    /// An extra button on a multi-button mouse. CoreGraphics numbers them from
+    /// 3 up (3 = back, 4 = forward); the number is what re-synthesizing the
+    /// click needs, so it travels with the case.
+    case extra(Int)
+
+    /// CoreGraphics button number (`CGEvent`'s `mouseEventButtonNumber`).
+    public var cgNumber: Int {
+        switch self {
+        case .left: return 0
+        case .right: return 1
+        case .middle: return 2
+        case .extra(let number): return number
+        }
+    }
 }
 
 public enum MousePhase {
@@ -75,14 +92,20 @@ public class EventCapture: NSObject {
     /// When false, all events pass through untouched.
     public var isEnabled = true
 
-    /// The CGEventMask for mouse events we care about — the same set the
-    /// original MacStroke listens for.
+    /// The CGEventMask for mouse events we care about — the original's right
+    /// button set plus `otherMouse*`, which is how middle/extra button
+    /// gestures reach CanvasManager. Events for a disabled trigger button are
+    /// simply passed through, so toggling the preference needs no tap rebuild.
     private let mouseEventMask: CGEventMask = {
-        let rightDownMask = (1 << CGEventType.rightMouseDown.rawValue)
-        let rightDraggedMask = (1 << CGEventType.rightMouseDragged.rawValue)
-        let rightUpMask = (1 << CGEventType.rightMouseUp.rawValue)
-        let leftDownMask = (1 << CGEventType.leftMouseDown.rawValue)
-        return CGEventMask(rightDownMask | rightDraggedMask | rightUpMask | leftDownMask)
+        var mask: CGEventMask = 0
+        for type in [
+            CGEventType.rightMouseDown, .rightMouseDragged, .rightMouseUp,
+            .leftMouseDown,
+            .otherMouseDown, .otherMouseDragged, .otherMouseUp,
+        ] {
+            mask |= CGEventMask(1 << type.rawValue)
+        }
+        return mask
     }()
 
     /// Height of the primary screen, used to convert CG (top-left origin)
@@ -177,6 +200,11 @@ public class EventCapture: NSObject {
         let appKitY = Self.primaryScreenHeight - location.y
         let gesturePoint = GesturePoint(x: location.x, y: appKitY)
 
+        // `otherMouse*` covers every button outside left/right, so the button
+        // number in the event payload is what separates the middle button (2)
+        // from the side/extra ones (3, 4, …).
+        let buttonNumber = Int(event.getIntegerValueField(.mouseEventButtonNumber))
+
         let button: MouseButton
         let phase: MousePhase
         switch type {
@@ -192,9 +220,11 @@ public class EventCapture: NSObject {
         case .rightMouseDragged:
             button = .right
             phase = .moved
+        case .otherMouseDown, .otherMouseUp, .otherMouseDragged:
+            button = buttonNumber == 2 ? .middle : .extra(max(buttonNumber, 3))
+            phase = type == .otherMouseDown ? .down : (type == .otherMouseUp ? .up : .moved)
         default:
-            button = .other
-            phase = .moved
+            return Unmanaged.passRetained(event)
         }
 
         let mouseEvent = MouseEvent(point: gesturePoint, button: button, phase: phase)

@@ -27,6 +27,15 @@ public enum StorageKey: String, CaseIterable {
     case enableGestureMinScore = "enableGestureMinScore"
     case showGestureNote = "showGestureNote"
 
+    // Gesture trigger buttons
+    // 移植版扩展（issue #53）：原版只监听右键，连 DefaultPreferences.plist 里都
+    // 没有按键相关的键，所以这几个键名是新造的，不需要对原版兼容。
+    // customGestureButton 存 CoreGraphics 的按键编号（3 起，0 表示还没录制）。
+    case enableMiddleButtonGesture = "enableMiddleButtonGesture"
+    case enableSideButtonGesture = "enableSideButtonGesture"
+    case enableCustomButtonGesture = "enableCustomButtonGesture"
+    case customGestureButton = "customGestureButton"
+
     // Note/Toast
     case noteRetentionTime = "noteRetetionTime"
     case notePosition = "notePostion"
@@ -164,6 +173,14 @@ public enum StorageDefaults {
     public static let enableGestureMinScore: Bool = true
     public static let showGestureNote: Bool = true
 
+    // Gesture trigger buttons — off by default: the shipped behaviour stays
+    // right-button-only, exactly like the original.
+    public static let enableMiddleButtonGesture: Bool = false
+    public static let enableSideButtonGesture: Bool = false
+    public static let enableCustomButtonGesture: Bool = false
+    /// 0 = 尚未录制过按键。
+    public static let customGestureButton: Int = 0
+
     // Note/Toast
     public static let noteRetentionTime: Int = 1
     public static let notePosition: Int = 1              // 0鼠标 1屏幕中心 2右上...
@@ -231,6 +248,10 @@ public func registerUserDefaultsDefaults() {
         StorageKey.minSimilarityScore.rawValue: StorageDefaults.minSimilarityScore,
         StorageKey.enableGestureMinScore.rawValue: StorageDefaults.enableGestureMinScore,
         StorageKey.showGestureNote.rawValue: StorageDefaults.showGestureNote,
+        StorageKey.enableMiddleButtonGesture.rawValue: StorageDefaults.enableMiddleButtonGesture,
+        StorageKey.enableSideButtonGesture.rawValue: StorageDefaults.enableSideButtonGesture,
+        StorageKey.enableCustomButtonGesture.rawValue: StorageDefaults.enableCustomButtonGesture,
+        StorageKey.customGestureButton.rawValue: StorageDefaults.customGestureButton,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
         StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
         StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,

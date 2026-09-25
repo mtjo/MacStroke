@@ -394,6 +394,22 @@ struct GeneralTabView: View {
                     SettingsRow(L("Show Gesture In Whatever App")) {
                         TrailingSwitch(isOn: $viewModel.showUIInWhateverApp)
                     }
+                    // 额外触发按键（issue #53）。AppDelegate 每事件现读偏好，
+                    // 所以开关不需要重启即生效。
+                    RowDivider()
+                    SettingsRow(L("Trigger Gesture With Middle Button")) {
+                        TrailingSwitch(isOn: $viewModel.enableMiddleButtonGesture)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Trigger Gesture With Side Buttons")) {
+                        TrailingSwitch(isOn: $viewModel.enableSideButtonGesture)
+                    }
+                    RowDivider()
+                    SettingsRow(L("Custom Trigger Button")) {
+                        TrailingSwitch(isOn: $viewModel.enableCustomButtonGesture) {
+                            MouseButtonRecorder(buttonNumber: $viewModel.customGestureButton)
+                        }
+                    }
                     RowDivider()
                     SettingsRow(L("Line color:")) {
                         ColorWellField(color: $viewModel.lineColor)

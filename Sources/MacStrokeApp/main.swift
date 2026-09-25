@@ -122,6 +122,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             RightClicksList.shared.needRightClick(byAppname: bundleID)
         }
 
+        // Which buttons may start a gesture (issue #53). Read from UserDefaults
+        // per event so a preferences toggle takes effect immediately, with no
+        // restart and no event-tap rebuild. Right stays allowed unconditionally
+        // — that is the original's only trigger.
+        canvas.isTriggerButtonAllowed = { [weak self] button in
+            guard let self = self else { return false }
+            switch button {
+            case .left:
+                return false
+            case .right:
+                return true
+            case .middle:
+                return self.storage.getBoolOptional(forKey: .enableMiddleButtonGesture)
+                    ?? StorageDefaults.enableMiddleButtonGesture
+            case .extra(let number):
+                // 3 = 后退、4 = 前进，两个一起由「侧键」开关管；其余编号归自定义按键。
+                if number == 3 || number == 4,
+                   self.storage.getBoolOptional(forKey: .enableSideButtonGesture)
+                    ?? StorageDefaults.enableSideButtonGesture {
+                    return true
+                }
+                guard self.storage.getBoolOptional(forKey: .enableCustomButtonGesture)
+                        ?? StorageDefaults.enableCustomButtonGesture else { return false }
+                let recorded = self.storage.getIntOptional(forKey: .customGestureButton)
+                    ?? StorageDefaults.customGestureButton
+                return recorded != StorageDefaults.customGestureButton && recorded == number
+            }
+        }
+
         if capture.start() {
             eventCapture = capture
             canvasManager = canvas
@@ -439,6 +468,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: .languageDidChange,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(gestureTriggerRecordingDidChange(_:)),
+            name: .gestureTriggerRecordingDidChange,
+            object: nil
+        )
+    }
+
+    /// While the preferences window is capturing which mouse button to bind,
+    /// stop treating presses as gestures — otherwise the trial press of an
+    /// already-enabled trigger button gets eaten as the start of a stroke.
+    @objc private func gestureTriggerRecordingDidChange(_ notification: Notification) {
+        let recording = (notification.object as? Bool) ?? false
+        canvasManager?.isSuspended = recording
+        if recording {
+            canvasManager?.cancelStroke()
+        }
     }
 
     @objc private func openPreferencesFromNotification(_ notification: Notification) {

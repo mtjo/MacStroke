@@ -270,3 +270,9 @@
 "Filter hint" = "Separate bundle IDs with |; * matches every app, empty matches none";
 "Show" = "Show";
 "Hide" = "Hide";
+"Trigger Gesture With Middle Button" = "Trigger Gesture With Middle Button";
+"Trigger Gesture With Side Buttons" = "Trigger Gesture With Side Buttons";
+"Custom Trigger Button" = "Custom Trigger Button";
+"Press a mouse button" = "Press a mouse button";
+"Not recorded" = "Not recorded";
+"Button %d" = "Button %d";
