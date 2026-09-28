@@ -30,14 +30,16 @@ echo "🔨 Building release (universal: arm64 + x86_64)..."
 swift build --configuration release --arch arm64 --arch x86_64
 
 # 多架构产物落在 .build/apple/Products/Release；单架构（如手工改回 host 架构编译）
-# 仍落在 .build/<triple>/release，这里都认。
+# 仍落在 .build/<triple>/release；更新的 Swift build 系统把它放在 .build/out/Products/
+# Release（.build/release 是指向那里的符号链接）。这里都认。
 BUILD_DIR=""
 for candidate in .build/apple/Products/Release \
+                 .build/out/Products/Release \
                  .build/$(uname -m)-apple-macosx/release; do
     if [ -x "${candidate}/MacStrokeApp" ]; then BUILD_DIR="${candidate}"; break; fi
 done
 if [ -z "${BUILD_DIR}" ]; then
-    echo "❌ 找不到 release 产物（.build/apple/Products/Release 或 .build/*-apple-macosx/release）"
+    echo "❌ 找不到 release 产物（.build/apple/Products/Release、.build/out/Products/Release 或 .build/*-apple-macosx/release）"
     exit 1
 fi
 echo "📂 产物目录: ${BUILD_DIR}"
