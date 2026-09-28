@@ -1,0 +1,19 @@
+- Fix all gesture rules disappearing after upgrading from 2.x to 3.0: the rules the old build kept in its preferences are now read across on first launch, and AppleScript actions still point at the script they were imported as (issue #67)
+- 修复升级到 3.0 后手势配置整页清空（issue #67）：2.x 存在偏好里的规则会在首次启动时自动读回，AppleScript 动作也仍然指向导入进来的那个脚本，不用再重配一遍
+
+- Fix an old backup (exported by 2.x) restoring every page except the rules: importing that plist now feeds the rules and the script list into their own importers too
+- 修复用 2.x 导出的备份 plist 恢复时只有「过滤」页回来、规则页依旧空白：导入这个 plist 现在会同时把规则和脚本列表交给各自的导入器
+
+! If you already edited rules inside 3.0.x, the upgrade import will not overwrite them; your 2.x rules are left in place and can be restored by importing an old backup from the General page
+! 如果你在 3.0.x 里已经自己改过规则，升级导入不会覆盖你的改动；2.x 的旧规则仍留在偏好里，可在常规页「导入」一份旧备份来恢复
+
++ Gestures can now start from the middle button, the sidebar buttons, or a custom button (issue #53)
++ 手势支持中键、鼠标侧键与自定义按键起手（issue #53）
+
++ Holding a modifier key no longer starts a gesture, so Ctrl/Cmd/Option drags reach the app as before (issue #59)
++ 按住修饰键时不再起手手势，Ctrl / Cmd / Option 的拖拽照常交给当前应用（issue #59）
+
+- The About page now uses WKWebView: the old same-process WebView class was removed from the macOS 27 SDK
+- 关于页改用 WKWebView：同进程的旧 WebView 类在 macOS 27 SDK 里已被移除，沿用则编译不过
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.0.2/MacStroke.zip
