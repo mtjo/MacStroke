@@ -7,6 +7,7 @@
 //  - Single-instance check (second launch posts MacStrokeOpenPreferences and quits)
 //  - First-launch initialization of default rules / right-click list
 //  - Legacy blockFilter migration (BlackWhiteFilter.compatibleProcedure)
+//  - Legacy rules migration (RuleStore.importLegacyRulesIfNeeded, issue #67)
 //  - openPrefOnStartup / applicationShouldHandleReopen open the preferences
 //  - RightClickMenu (FinderSync extension communication) initialization
 //  - Clipboard history monitoring + global shortcut to open the history list
@@ -159,6 +160,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 ?? StorageDefaults.gestureSuppressedModifiers)
         }
 
+        // Initialize rule store / engine. The pre-3.0 build archived its rules
+        // in UserDefaults while this one keeps rules.json, so an upgraded
+        // preferences domain has to be read across before anything else touches
+        // the rules (issue #67). `RuleStore.shared` seeds the presets when
+        // rules.json is missing, so the import recognises an untouched preset
+        // list and replaces it rather than treating it as the user's own work.
+        ruleStore = RuleStore.shared
+        ruleStore?.importLegacyRulesIfNeeded()
+        ruleEngine = RuleEngine()
+
         if capture.start() {
             eventCapture = capture
             canvasManager = canvas
@@ -166,10 +177,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             NSLog("%@", "[AppDelegate] Failed to start event capture - check accessibility permissions")
         }
-
-        // Initialize rule store / engine
-        ruleStore = RuleStore.shared
-        ruleEngine = RuleEngine()
 
         // Initialize Sparkle updater
         initSparkleUpdater()

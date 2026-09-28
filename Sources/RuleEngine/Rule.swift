@@ -14,7 +14,7 @@ import Foundation
 import GestureEngine
 
 /// An action that can be executed when a gesture rule matches.
-public enum RuleAction: Codable {
+public enum RuleAction: Codable, Equatable {
     /// Execute an AppleScript string
     case applescript(String)
     /// Simulate a key press

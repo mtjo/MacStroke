@@ -339,9 +339,51 @@ final class AppleScriptsListTests: XCTestCase {
         XCTAssertNotEqual(imported[0].id, imported[1].id)
     }
 
+    /// The ObjC build archived `[{title, script, id}]` into
+    /// `UserDefaults["appleScripts"]`; the importer keeps title/script and mints
+    /// UUIDs, but the legacy id has to survive as an alias because pre-3.0 rules
+    /// reference their script by it (issue #67).
+    func testLegacyImportKeepsTheLegacyIDAsAnAlias() throws {
+        let data = legacyArchive([
+            ["title": "Close Tabs", "script": "tell application \"Chrome\"", "id": "ABC-hostname-1"],
+        ])
+
+        let imported = try XCTUnwrap(AppleScriptsList.scripts(fromLegacyArchive: data))
+
+        XCTAssertEqual(imported.first?.legacyID, "ABC-hostname-1")
+        XCTAssertNotEqual(imported.first?.id.uuidString, "ABC-hostname-1")
+    }
+
+    func testLegacyIDResolvesToTheImportedScript() throws {
+        XCTAssertTrue(testList.importLegacyScripts(
+            from: legacyArchive([["title": "A", "script": "return 1", "id": "old-a"],
+                                 ["title": "B", "script": "return 2", "id": "old-b"]])
+        ))
+
+        let resolved = try XCTUnwrap(testList.scriptID(forLegacyID: "old-b"))
+
+        XCTAssertEqual(testList.title(at: testList.index(of: resolved)!), "B")
+        XCTAssertNil(testList.scriptID(forLegacyID: "missing"))
+        // 别名跟着列表一起落库，下次启动还能解出同一条规则。
+        XCTAssertEqual(AppleScriptsList(storageURL: testStorageURL).scriptID(forLegacyID: "old-b"), resolved)
+    }
+
+    func testLegacyScriptsImportIgnoresArchivesOfOtherContent() throws {
+        XCTAssertFalse(testList.importLegacyScripts(
+            from: try NSKeyedArchiver.archivedData(withRootObject: ["not", "scripts"] as NSArray,
+                                                   requiringSecureCoding: false)
+        ))
+        XCTAssertEqual(testList.count, 0)
+    }
+
     func testLegacyArchiveOfOtherContentIsIgnored() throws {
         let data = try NSKeyedArchiver.archivedData(withRootObject: ["not", "scripts"] as NSArray,
                                                     requiringSecureCoding: false)
         XCTAssertNil(AppleScriptsList.scripts(fromLegacyArchive: data))
+    }
+
+    private func legacyArchive(_ dictionaries: [[String: String]]) -> Data {
+        try! NSKeyedArchiver.archivedData(withRootObject: dictionaries as NSArray,
+                                          requiringSecureCoding: false)
     }
 }

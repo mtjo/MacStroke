@@ -18,6 +18,11 @@ public struct AppleScriptItem: Codable, Equatable, Sendable, Identifiable {
     public var source: String
     /// Timestamp when the script was created
     public let createTime: Date
+    /// The id the pre-3.0 (Objective-C) build gave this script when it was
+    /// imported from that build's archived preferences. Pre-3.0 rules reference
+    /// scripts by that string, so it is what lets an imported rule keep pointing
+    /// at its script (`nil` for scripts created in this build).
+    public var legacyID: String?
 
     /// Create a new AppleScript item.
     /// - Parameters:
@@ -25,16 +30,19 @@ public struct AppleScriptItem: Codable, Equatable, Sendable, Identifiable {
     ///   - name: Human-readable name for the script
     ///   - source: The AppleScript source code
     ///   - createTime: Creation timestamp (defaults to now)
+    ///   - legacyID: Pre-3.0 identifier this script was imported under
     public init(
         id: UUID = UUID(),
         name: String,
         source: String,
-        createTime: Date = Date()
+        createTime: Date = Date(),
+        legacyID: String? = nil
     ) {
         self.id = id
         self.name = name
         self.source = source
         self.createTime = createTime
+        self.legacyID = legacyID
     }
 }
 
@@ -215,6 +223,31 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         return scripts
     }
 
+    /// Resolve the identifier a pre-3.0 rule carries (`apple_script_id`, an
+    /// `NSProcessInfo` globally unique string rather than a UUID) to the script
+    /// this build imported it as.
+    public func scriptID(forLegacyID legacyID: String) -> UUID? {
+        lock.lock()
+        defer { lock.unlock() }
+        return scripts.first { $0.legacyID == legacyID }?.id
+    }
+
+    /// Restore the script list from a pre-3.0 archived array (the format the
+    /// Objective-C build exported), replacing what is stored now. The legacy
+    /// identifiers are kept as aliases so rules imported from the same snapshot
+    /// still resolve.
+    /// - Returns: true when the archive held scripts and they were written out.
+    @discardableResult
+    public func importLegacyScripts(from archive: Data) -> Bool {
+        guard let imported = Self.scripts(fromLegacyArchive: archive), !imported.isEmpty else { return false }
+        lock.lock()
+        scripts = imported
+        lock.unlock()
+        objectWillChange.send()
+        save()
+        return true
+    }
+
     private func mutate(at index: Int,
                         notify: Bool = true,
                         persist: Bool = true,
@@ -254,8 +287,9 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
 
     /// One-time import of the ObjC build's storage. It archived an array of
     /// `{title, script, id}` dictionaries into `UserDefaults["appleScripts"]`,
-    /// while this port keeps a JSON file; the legacy ids are dropped because
-    /// rules are not read from UserDefaults, so nothing can reference them.
+    /// while this port keeps a JSON file. This has to run before the rule
+    /// import (RuleStore.importLegacyRulesIfNeeded) because the rules reference
+    /// these scripts by their legacy id.
     private func importLegacyUserDefaultsScripts() {
         let key = "appleScripts"
         guard !FileManager.default.fileExists(atPath: storageURL.path),
@@ -268,13 +302,16 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
     }
 
     /// Decode the ObjC build's archived script dictionaries (`nil` when the
-    /// blob holds something else).
+    /// blob holds something else). The legacy ids are kept as aliases because
+    /// pre-3.0 rules reference scripts by them.
     static func scripts(fromLegacyArchive data: Data) -> [AppleScriptItem]? {
         guard let archived = try? NSKeyedUnarchiver.unarchivedObject(
             ofClasses: [NSArray.self, NSDictionary.self, NSString.self], from: data)
         else { return nil }
         guard let dictionaries = archived as? [[String: String]] else { return nil }
-        return dictionaries.map { AppleScriptItem(name: $0["title"] ?? "", source: $0["script"] ?? "") }
+        return dictionaries.map {
+            AppleScriptItem(name: $0["title"] ?? "", source: $0["script"] ?? "", legacyID: $0["id"])
+        }
     }
 
     /// Load scripts from disk

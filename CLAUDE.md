@@ -78,6 +78,7 @@ swift test --list-tests
   - `WildcardMatch.swift`：原版 `utils.m` 的 `wildcardArray` / `wildcardString`，即 `NSPredicate "self LIKE %@"` 语义 —— 整串锚定、`*` 任意串、`?` 单个字符、大小写由两侧 lowercase 实现（不做 trim、不丢弃空片段，因此空 filter 永不匹配）；`BlackWhiteFilter` 与规则 filter 的通配匹配共用此实现（`regex:` 前缀等自创语法已删除）
   - `RuleEngine.match(stroke:bundleID:)` 的 `bundleID` 必传（无 bundle id 时传 `""`，对齐 `frontBundleName()`），**每条规则的 filter 都会参与判定**；遍历**所有**过滤匹配的规则取**最高分**（对齐原版 `setActionIndex`），并接入全局 `enableGestureMinScore` / `minScore`（默认 85）门槛；`appSuitedRule(bundleID:)` 判断某 app 是否有适用规则
   - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；`defaultRules()` 提供与原版 `RulesList.reInit` 相同的 15 条默认规则（首条 direction 为小写 `password`，description 即 note，带修饰键的 shortcut 动作、Reversed 点序反转模板、text/password 动作）
+  - `LegacyRulesImport.swift`（`extension RuleStore`）修 issue #67：2.x 把规则用 NSKeyedArchiver 塞在 `UserDefaults["rules"]`，3.0 只读 `rules.json`，升级后手势配置整页清空。`importLegacyRulesIfNeeded()` 逐行解码（一行坏数据只跳过该行，不按全有或全无丢弃）、按归档顺序落库、direction 重名加 `(2)` 后缀（本移植版按 name 定位规则）、按别名把 `apple_script_id` 换成导入后的 UUID；`Rule/rules(fromLegacyArchive:)` 是无副作用的解码入口（偏好页导入与测试都走它）
   - `ActionExecutor.typeText` 使用 `CGEventKeyboardSetUnicodeString` 模拟键入（对齐原版 `typeSting`）
   - **不可变性**：更新规则时，创建新的 `Rule` 实例并调用 `RuleStore.update()`
 
@@ -105,7 +106,7 @@ swift test --list-tests
   - 右键列表页（xib 里 userLabel 拼作 `RithtClick`）照搬原版：顶部一行 tips 文案（`tips:Simulate right mouse click ,support '*'...`）+ **无表头单列**表格（`RightClicksTable`，每格是一个无边框、无背景、可内联编辑的 NSTextField，提交走 `setAppnameAtIndex:[tableView selectedRow]` —— 原版按选中行而非被编辑行落库）+ 底部 `+` `-` 与右侧 `Pick a running app`。`+` 追加字面量占位符 `"appname"` 并选中新末行；`-` 未选中时**静默不动作**（原版这里不弹通知）；`Pick a running app` 未选中弹 `Select a filter first!`，选中后以 `selectOne` 模式**替换**该行内容而非追加。原版的 `resetRightClick:`（Defaults）在 xib 里**没有任何按钮连接**，因此该页没有"载入预设/清除"按钮
   - 规则页右下按钮文案是原版的 `Defaults`（载入预设）与 `Clear`（清除），不是"重置到预设/清除全部"；表格最后一列原版表头是 `Note`（中文"说明"，与 General 页 NSBox 的 "Note"=提示 同词不同值，因为原版按 ObjectID 取文案），Swift 侧用 `L("Description")` 拿到同一个"说明"
   - AppleScript 页的源码框是**一个 bezel 边框的 NSTextField**（原版 identifier `"Apple Script"`、545x358、非 TextEditor；多行只是源文本里的换行符被逐行画出来），未选中行时 `isEnabled=false` 且清空。标题列与源码框都**只在结束编辑时落库**（原版 `control:textShouldEndEditing:` 末尾统一 `save`），所以 `setTitle(at:)` / `setScript(at:)` 只改内存，视图在 `onCommit` / 外部编辑器"停止"时显式调用 `save()`；`addScript` / `remove(at:)` 仍立即保存（对应原版各自 handler 里的 save）
-  - 旧版（ObjC）把脚本数组 `[{title, script, id}]` 用 NSKeyedArchiver 塞在 `UserDefaults["appleScripts"]`，移植版存 JSON 文件：单例初始化时若 JSON 尚不存在就一次性导入并删除该键，旧 id 直接丢弃换新生 UUID（规则不读 UserDefaults，没有需要保持稳定的引用）
+  - 旧版（ObjC）把脚本数组 `[{title, script, id}]` 用 NSKeyedArchiver 塞在 `UserDefaults["appleScripts"]`，移植版存 JSON 文件：单例初始化时若 JSON 尚不存在就一次性导入并删除该键。旧 id 是 `NSProcessInfo.globallyUniqueString`、本移植版用 `UUID`，所以导入时把旧 id 原样记在 `AppleScriptItem.legacyID` 当别名（`scriptID(forLegacyID:)` 反查新 UUID）——2.x 的规则按旧 id 引用脚本，规则导入必须能在脚本之前拿到这个映射，否则升级后 AppleScript 动作会全部指向不存在的 id
   - "绘制手势！"模态框的预设下拉是 `NSComboBox(0,0,100,25)`、`editable=NO`，且 `"Plase Select"`（原版拼错的串）是 **stringValue 而不是 placeholderString**（不可编辑的 combo 永远不显示占位串）
   - 右键菜单页（xib userLabel `RithtClickMenu`）整页只有**一个无标题 box**（`grE-O7-8pa` 上的 "Right Click Menu" 只是 userLabel），所以 Swift 侧不加 `SettingsSection` 标题。主开关没有 `enabled` 绑定；三个子开关各自绑 `enabled → enableRightClickMenu`，而终端下拉 `kKY-rl-9o4` **只有 selectedValue 绑定**——主开关关掉时它依旧可点，因此禁用要逐控件加而不是整卡 `.disabled`。中文取原版译文：`new text file` = 新建文本文档、`copy file path` = 复制路径
   - 剪贴板页：外层 box `vXG-SA-jyX` 也没有标题（"Clipboard Setting" 只是 userLabel），只有内层 `6mQ-De-QqJ` 带真标题 "Storage limit"（本地存储限制）。`keyboard shortcut:` 与 `show history clipboard` 是内层 box 的**兄弟节点**，不属于"本地存储限制"卡。三个数量框在 `awakeFromNib`（AppPrefsWindowController.m:139-158）各配 formatter：置顶 1…9999、总数 1…999999、保存天数 1…9999，越界或非数字解析失败即不改值（原版那个 `textField:shouldChangeCharactersInRange:` 并非 AppKit 代理方法，逐字符过滤实际从未生效，所以 Swift 侧不补）。"显示记录"走进程内 `NotificationCenter`（`.macStrokeShowHistoryClipboard`）：原版经响应链直接调 `showHistoryCilpboardList:`，用分布式通知会广播到同机另一个 MacStroke
@@ -141,6 +142,9 @@ swift test --list-tests
 
 - **Rule 是不可变的** — 不要修改 `rule.template` 或其他 `let` 属性；始终构造新的 `Rule` 并调用 `RuleStore.update(newRule)`
 - **规则文件坏数据** — `RuleStore.load()` 只在文件不存在时直接写默认规则；文件存在但解码失败会先把它改名成 `rules.json.bak` 再落默认规则（Swift 解码器全有或全无，一条坏数据就会让整份规则失效，原版 `reInit`+save 是无声覆盖）
+- **2.x → 3.x 升级不能丢手势配置（issue #67）** — `AppDelegate` 里 `RuleStore.shared` 之后立刻 `importLegacyRulesIfNeeded()`，且必须在 `capture.start()` 之前（事件捕获一开就会读规则）。导入只在"本移植版没动过规则"时执行：无 `rules.json`，或文件内容持久化后与 `defaultRules()` 逐字节相同（3.0.0/3.0.1 首启就写过预设，这两代升级的用户正落在这一档）；`legacyRulesImported` 标记保证不重复导入，清过的规则不会被归档复活。导入失败/被拒时**保留** `UserDefaults["rules"]`，无损导入后才删除该键（否则偏好页导出会把陈旧快照当现状备份）
+- **偏好页 导入/导出（plist）** — 导出只写 `StorageKey` + `filter*` + `rightClicksList`，**故意不含 `rules`**：本移植版的规则不在 UserDefaults 里，那个键若存在就是 2.x 的归档。导入把键原样写回 UserDefaults 后，额外把 plist 里的 `appleScripts` / `rules` 两段归档喂给各自的导入器（`importLegacyRulesIfNeeded(force: true)`：用户点导入就是明确的恢复请求，不再受"编辑过就不动"限制）。因此旧版导出的 plist 是可用的一键恢复工具；**已知限制**：3.0 之间导出的 plist 仍不含规则（`PreferencesView.swift:828/846` 那对 JSON `exportRules()`/`importRules()` 至今没有任何调用点，且它们用的键 `L("Export Rules")` / `L("Import Rules")` 与本地化表里的 `"Export Rules…"` / `"Import Rules…"` 差一个省略号，即使接上按钮也拿不到译文）
+- **升级后 AppleScript 动作的引用完整性** — 脚本导入（`legacyID` 别名）必须先于规则导入解析 id；已经自己编辑过规则的 3.0.0/3.0.1 用户不会被导入覆盖，但他们的 `appleScripts` 归档早被上一版迁移删除，别名无从恢复，这些行仍指向旧 id、点击后无动作，需要重新在 Action 列选一次脚本
 - **DrawGesture 缩放** — `computeScaledPoints` 使用 `bounds.width/height`（不是硬编码常量）；`layout()` 覆写会在 bounds 变化时重新计算；`clipsToBounds = true`，背景透明
 - **手势录入** — 规则表 Image 列双击（或编辑器里的"在屏幕上绘制"按钮）→ 发送 `.macStrokeRecordGesture`（userInfo 带规则名；编辑器发起时额外带 `deferStoreUpdate: true`）→ AppDelegate 进入录制模式 → 画完 `onGestureRecorded` 写回规则并广播 `.macStrokeGestureDidRecord`（编辑器据此回填轨迹）。编辑器发起的录制只回填表单、不写库，点保存才落盘
 - **Toast 位置** — `ToastPosition` 原始值对齐原版 `notePostion`：0=跟随鼠标、1=屏幕中央、2=右上、3=右下、4=左上、5=左下
@@ -153,7 +157,7 @@ swift test --list-tests
 ### 测试
 
 - 7 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`
-- 全部 105 个测试通过（`swift test`）
+- 全部 217 个测试中 215 通过（`swift test`）。剩下 2 个与本次改动无关、在干净 HEAD 上同样失败，都是本机 macOS 27 SDK 环境所致：`WindowManagerTests.ShortcutRecorderAppearanceTests/testLightSchemePageKeepsLightBackgroundWhenHostedBySwiftUI`（SwiftUI 宿主下取到"设备RGB colorspace 0 0 0 0"，颜色读不出来）与 `StorageTests.HistoryClipboardPanelInteractionTests/testEscapeInResultListClosesPanel`
 
 ### 仓库中不存在的文件
 
