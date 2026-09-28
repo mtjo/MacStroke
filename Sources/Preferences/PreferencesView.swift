@@ -2043,17 +2043,18 @@ struct SectionHeader: View {
 
 // MARK: - README 网页（原版 About 页内嵌 README.html，AppPrefsWindowController.m:126）
 
-/// 原版用的是同进程 WebView（xib 里的 webView outlet），这里保持一致：
-/// WKWebView 每次都要拉起 WebContent 子进程，首次打开 About 会卡近 1 秒。
+/// 原版用的是同进程 WebView（xib 里的 webView outlet）。那颗类在 macOS 27 SDK 里
+/// 已经连头文件一起删掉了（`WebKit.framework/Headers/Web/` 整个不在），所以这里只能
+/// 用 WKWebView：代价是拉起 WebContent 子进程、首次打开 About 慢一下。
 private struct READMEWebView: NSViewRepresentable {
-    func makeNSView(context: Context) -> WebView {
-        let webView = WebView()
+    func makeNSView(context: Context) -> WKWebView {
+        let webView = WKWebView()
         if let url = Bundle.main.url(forResource: "README", withExtension: "html"),
            let body = try? String(contentsOf: url, encoding: .utf8) {
-            webView.mainFrame.loadHTMLString(body, baseURL: url)
+            webView.loadHTMLString(body, baseURL: url)
         }
         return webView
     }
 
-    func updateNSView(_ nsView: WebView, context: Context) {}
+    func updateNSView(_ nsView: WKWebView, context: Context) {}
 }
