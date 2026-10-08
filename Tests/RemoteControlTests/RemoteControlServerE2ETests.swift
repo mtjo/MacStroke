@@ -6,15 +6,17 @@
 // 而 XCTest 用例正占着主线程。所以整段对话跑在后台线程，主线程只管抽干主队列，
 // 断言仍留在主线程。
 //
-// 真实点击会落到光标底下那个窗口上，测试里不合成点击——那条链路留给手机扫码实测。
+// 真实点击会落到光标底下那个窗口上，除「按住后掉线」那条外都不合成点击——
+// 完整点击链路留给手机扫码实测。
 import XCTest
 import Foundation
 import Darwin
+import CoreGraphics
 @testable import RemoteControl
 
 /// 端口和配对码是文件级常量：@escaping 的对话闭包里引用实例属性要写 self.，
 /// 而闭体长得像协议报文，加前缀只是噪音。
-private let testPort = 48848
+private let testPort = 48849
 private let testToken = "TESTAB"
 
 final class RemoteControlServerE2ETests: XCTestCase {
@@ -138,6 +140,37 @@ final class RemoteControlServerE2ETests: XCTestCase {
 
     // MARK: - 驱动
 
+    /// 按住左键后手机掉线：服务端必须自己补一个松开，否则 Mac 卡在拖拽状态，
+    /// 用户只能狂点鼠标才解得开。
+    ///
+    /// 取证用只读事件 tap 直接数左键的 down/up，不看系统按钮状态：
+    /// XCTest 宿主里 `CGEventSource.buttonState` 恒为 false（无 GUI 连接，读不到
+    /// 服务端那份状态表），拿它当判据会假绿。
+    func testDroppingWhileHoldingReleasesTheButton() throws {
+        let log = MouseButtonLog()
+        guard let tap = log.start() else {
+            throw XCTSkip("测试进程没有权限挂事件 tap（辅助功能未授权）")
+        }
+        defer { log.stop(tap: tap) }
+
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"button","btn":"left","down":true}"#)
+            _ = try pipe.readJSON()
+            pipe.close()               // 模拟手机断网/杀进程
+        }
+
+        // tap 真的看得见合成事件，否则下面的断言就是空转。
+        waitUntil(timeout: 1) { log.leftDowns > 0 }
+        XCTAssertGreaterThan(log.leftDowns, 0, "事件 tap 没抓到按下，用例无法证明任何事")
+
+        let upsBeforeRelease = log.leftUps
+        waitUntil(timeout: 2) { log.leftUps > upsBeforeRelease }
+        XCTAssertGreaterThan(log.leftUps, upsBeforeRelease,
+                             "掉线之后左键还按着，Mac 会一直停在拖拽里")
+    }
+
     /// 整段对话跑在后台线程，主线程抽干主队列让服务端得以回执。
     @discardableResult
     private func converse<T>(_ script: @escaping (ClientPipe) throws -> T) throws -> T {
@@ -238,5 +271,43 @@ private final class ClientPipe {
         let line = try readRaw()
         XCTAssertFalse(line.isEmpty, "没读到回执行")
         return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+    }
+}
+
+/// 只读事件 tap：数左键的按下与松开，用来证明服务端真的补发了松开。
+/// 计数器只能在 C 回调里写，所以靠 userInfo 传实例指针。
+private final class MouseButtonLog {
+    private(set) var leftDowns = 0
+    private(set) var leftUps = 0
+
+    func start() -> CFMachPort? {
+        let mask = (1 << CGEventType.leftMouseDown.rawValue) | (1 << CGEventType.leftMouseUp.rawValue)
+        guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
+                                          options: .listenOnly,
+                                          eventsOfInterest: CGEventMask(mask),
+                                          callback: MouseButtonLog.onEvent,
+                                          userInfo: Unmanaged.passUnretained(self).toOpaque())
+        else { return nil }
+        let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        return tap
+    }
+
+    func stop(tap: CFMachPort) {
+        CGEvent.tapEnable(tap: tap, enable: false)
+        CFMachPortInvalidate(tap)
+    }
+
+    private static let onEvent: CGEventTapCallBack = { _, type, event, userInfo in
+        if let userInfo {
+            let log = Unmanaged<MouseButtonLog>.fromOpaque(userInfo).takeUnretainedValue()
+            switch type {
+            case .leftMouseDown: log.leftDowns += 1
+            case .leftMouseUp: log.leftUps += 1
+            default: break
+            }
+        }
+        return Unmanaged.passUnretained(event)
     }
 }

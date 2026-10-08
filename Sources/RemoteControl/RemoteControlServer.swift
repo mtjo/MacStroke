@@ -49,6 +49,11 @@ public final class RemoteControlServer: ObservableObject {
     private var clients: [ObjectIdentifier: Client] = [:]
     private var settings = RemoteControlSettings.current()
 
+    /// 各连接按住的鼠标键。**只在主队列读写**（命令本来就在那里执行）。
+    /// 手机断线、退出小程序或关掉开关时若不补一个松开，Mac 会一直停在拖拽状态，
+    /// 用户只能狂点鼠标才解得开。
+    private var heldButtons: [ObjectIdentifier: RemoteMouseButton] = [:]
+
     private final class Client {
         let connection: NWConnection
         var buffer = Data()
@@ -89,11 +94,13 @@ public final class RemoteControlServer: ObservableObject {
     public func stop() {
         queue.async { [weak self] in
             guard let self else { return }
-            for client in self.clients.values { client.connection.cancel() }
+            let dying = Array(self.clients.values)
+            for client in dying { client.connection.cancel() }
             self.clients.removeAll()
             self.listener?.cancel()
             self.listener = nil
             DispatchQueue.main.async {
+                dying.forEach(self.releaseHeldButton)
                 self.isRunning = false
                 self.peers = []
             }
@@ -260,9 +267,23 @@ public final class RemoteControlServer: ObservableObject {
         case .button(let button, let pressed):
             DispatchQueue.main.async {
                 RemoteClickExecutor.setButton(button, pressed: pressed)
+                let key = ObjectIdentifier(client.connection)
+                if pressed {
+                    self.heldButtons[key] = button
+                } else {
+                    self.heldButtons[key] = nil
+                }
                 self.ack("button", to: client, cursor: true)
             }
         }
+    }
+
+    /// 补发一个松开并把这台手机从「按住中」里划掉。主队列调用。
+    private func releaseHeldButton(for client: Client) {
+        guard let button = heldButtons.removeValue(forKey: ObjectIdentifier(client.connection)) else {
+            return
+        }
+        RemoteClickExecutor.setButton(button, pressed: false)
     }
 
     private func authenticateRecheck(_ client: Client) {
@@ -306,6 +327,7 @@ public final class RemoteControlServer: ObservableObject {
         guard clients.removeValue(forKey: key) != nil else { return }
         if client.authenticated {
             DispatchQueue.main.async {
+                self.releaseHeldButton(for: client)
                 self.peers.removeAll { $0.name == client.name && $0.address == client.address }
             }
         }

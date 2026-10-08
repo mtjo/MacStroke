@@ -131,7 +131,7 @@ swift test --list-tests
 - **Sources/RemoteControl/** — 局域网 TCP 远程控制（移植版新增，原版没有任何网络接口）：
   - `RemoteControlSettings` — 三个偏好键的读写；`isPortAllowed` 抄微信 `wx.createTCPSocket` 的端口黑名单（1024 以下、8000–8100、3306/6379/3389/5432/8443/8888/9200/9300/27017…），因为"能监听"不等于"手机连得上"；`current(from:)` 每次读都复核端口，导入的旧 plist 里塞了黑名单端口就退回默认值。`RemoteNetworkAddress` 用 `getifaddrs` 挑局域网 IPv4（跳过 loopback/down/169.254.*，优先 `en0`）
   - `RemoteCommand` — 线协议：**换行分隔的 JSON**，一行一条。客户端→服务端 `hello{token,name}` / `ping` / `move{dx,dy}` / `click{btn,double}` / `button{btn,down}`；服务端→客户端 `welcome` / `error{code,message}` / `ack{cmd,cursor,screen}`。`parse(line:)` 宽容（省略 `btn` 当左键、字符串数字也收），`reply(fields:)` 丢 nil 键不发 `null`
-  - `RemoteControlServer` — `NWListener` 单例。配对码只卡**第一包** hello（10 秒不发即断），之后同一连接自由发令；最多 4 台、单连接缓冲上限 64KB。**报错必须先 flush 再断开**（`fail` 走 `send(..., then:)` 的 `contentProcessed` 回调）——同一拍里 `cancel()` 会把错误包丢掉，手机端就只知道"断了"而看不到"配对码不对"。命令一律 `DispatchQueue.main.async` 执行，和手势事件 tap 串行，避免远程点击插进一段正在画的手势里
+  - `RemoteControlServer` — `NWListener` 单例。配对码只卡**第一包** hello（10 秒不发即断），之后同一连接自由发令；最多 4 台、单连接缓冲上限 64KB。**报错必须先 flush 再断开**（`fail` 走 `send(..., then:)` 的 `contentProcessed` 回调）——同一拍里 `cancel()` 会把错误包丢掉，手机端就只知道"断了"而看不到"配对码不对"。`heldButtons` 记着每条连接按住的键（只在主队列读写），连接断开或服务停止时补发一次松开——手机在按住状态下断网/杀进程，不补这一脚 Mac 就一直停在拖拽里，用户只能狂点鼠标才解得开。命令一律 `DispatchQueue.main.async` 执行，和手势事件 tap 串行，避免远程点击插进一段正在画的手势里
   - `RemoteClickExecutor` — `CGWarpMouseCursorPosition` + `CGAssociateMouseAndMouseCursorPosition(1)` + 补发 `mouseMoved` 移动光标；点击/按下经 `post(tap: .cgSessionEventTap)`，**session 层在自家 HID tap 下游**，所以远程点击不会被再识别成手势。单次位移上限 500pt，再夹到屏幕内
   - `RemotePairing` / `RemoteQRCode` — 配对串是 `macstroke://pair?host=…&port=…&token=…`（不用小程序码：那要求已发布的 appid 加服务端换码），二维码由 `CIQRCodeGenerator` 生成、校正级别 M
   - 默认关：`StorageDefaults.enableRemoteControl = false`，且这三个键**不进** `resetToDefaults()`（原版的 `DefaultPreferences.plist` 没有它们）
@@ -169,7 +169,7 @@ swift test --list-tests
 ### 测试
 
 - 8 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`、`RemoteControlTests`
-- `swift test` 全绿（当前 266 个用例）。远程控制有两条会碰真机状态的用例：`RemoteControlServerE2ETests` 真的在 48848 端口起监听并用 TCP 客户端走协议，其中一条会**真的挪动光标** ±40/30 再挪回去；`testMoveActuallyRelocatesTheCursor` 跑的时候别把手放在触摸板上
+- `swift test` 全绿（当前 265 个用例）。远程控制有两条会碰真机状态的用例：`RemoteControlServerE2ETests` 真的在 48849 端口起监听并用 TCP 客户端走协议，`testMoveActuallyRelocatesTheCursor` 会**真的挪动光标** ±40/30 再挪回去，`testDroppingWhileHoldingReleasesTheButton` 会**真的按住左键再断开**（跑的时候别把手放在触摸板上、光标底下别摆着会误点的窗口）。取证判据是临时挂一个 `.listenOnly` 的 CGEvent tap 数左键 down/up —— `CGEventSource.buttonState(.combinedSessionState, button:)` 在 XCTest 宿主里恒为 false（那个进程没有 GUI 连接），拿它当判据会假绿；同样的读法在普通命令行工具里是准的。
 
 ### 仓库中不存在的文件
 
