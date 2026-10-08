@@ -58,7 +58,6 @@ chmod +x "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 # 2. Icons & Resources (main app)
 cp Sources/MacStrokeApp/Resources/menu_icon_16x16.png "${APP_DIR}/Contents/Resources/"
 cp Sources/MacStrokeApp/Resources/menu_icon_disabled_16x16.png "${APP_DIR}/Contents/Resources/"
-cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APP_DIR}/Contents/Resources/"
 # 偏好窗口侧边栏图标（沿用原版素材）
 cp Sources/MacStrokeApp/Resources/RightClick.png "${APP_DIR}/Contents/Resources/"
 
@@ -101,7 +100,6 @@ if [ -x "${EXT_EXE}" ]; then
     rm -rf "${APPEX_DIR}"
     mkdir -p "${APPEX_DIR}/Contents/MacOS" "${APPEX_DIR}/Contents/Resources"
     cp "${EXT_EXE}" "${APPEX_DIR}/Contents/MacOS/FinderSyncExtension"
-    cp Sources/FinderSyncExtension/Resources/toolbarIcon.png "${APPEX_DIR}/Contents/Resources/"
     cp -R Sources/FinderSyncExtension/Resources/en.lproj "${APPEX_DIR}/Contents/Resources/"
     cp -R Sources/FinderSyncExtension/Resources/zh-Hans.lproj "${APPEX_DIR}/Contents/Resources/"
     cat > "${APPEX_DIR}/Contents/Info.plist" <<APPEX

@@ -167,12 +167,7 @@ public final class FinderSyncExtensionController: FIFinderSync {
         Bundle.main.localizedString(forKey: "FinderSyncToolbarTooltip", value: "MacStroke", table: nil)
     }
     override public var toolbarItemImage: NSImage {
-        if let url = Bundle.main.url(forResource: "toolbarIcon", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
-            image.isTemplate = true
-            return image
-        }
-        return NSImage(systemSymbolName: "gesture", accessibilityDescription: nil) ?? NSImage()
+        iconImage("folder.badge.plus", side: 22, pointSize: 15, ink: nil) ?? NSImage()
     }
 
     // MARK: - Menu
@@ -182,30 +177,27 @@ public final class FinderSyncExtensionController: FIFinderSync {
         if enableRightClickMenu {
             if enableNewFile, !items.isEmpty {
                 menu.addItem(withTitle: items[0], action: #selector(newFile(_:)), keyEquivalent: "")
-                    .image = menuIcon("doc.badge.plus")
+                    .image = iconImage("doc.badge.plus", side: 16, pointSize: 13, ink: Self.menuInkColor())
             }
             if enableOpenInTerminal, items.count > 1 {
                 menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
-                    .image = menuIcon("terminal")
+                    .image = iconImage("terminal", side: 16, pointSize: 13, ink: Self.menuInkColor())
             }
             if enableCopyFilePath, items.count > 2 {
                 menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
-                    .image = menuIcon("doc.on.clipboard")
+                    .image = iconImage("doc.on.clipboard", side: 16, pointSize: 13, ink: Self.menuInkColor())
             }
         }
         return menu
     }
 
-    /// Finder paints an extension's menu icon exactly as handed over — it ignores
-    /// `isTemplate` there — so the glyph has to arrive already coloured. `labelColor`
-    /// in the current system appearance is the ink Finder draws the menu's own text
-    /// with, so light and dark each get their own rasterisation instead of a second
-    /// asset set. `menu(for:)` runs on every right-click, so switching appearance
-    /// is picked up by the next menu without restarting the extension.
-    private func menuIcon(_ symbol: String) -> NSImage? {
+    /// Finder draws an extension's images in its own process and cannot render an
+    /// SF Symbol rep, so every glyph is rasterised here. A context menu ignores
+    /// `isTemplate` and paints the bitmap as given, so its ink has to be baked in;
+    /// the toolbar does honour the flag, so there the glyph stays a plain mask and
+    /// Finder tints it like its own buttons.
+    private func iconImage(_ symbol: String, side: CGFloat, pointSize: CGFloat, ink: NSColor?) -> NSImage? {
         guard let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
-        let side: CGFloat = 16
-        let ink = Self.menuInkColor()
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: Int(side * 2), pixelsHigh: Int(side * 2),
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
@@ -215,13 +207,13 @@ public final class FinderSyncExtensionController: FIFinderSync {
 
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        let tinted = glyph.withSymbolConfiguration(
-            NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [ink]))
-        ) ?? glyph
-        // Draw at the symbol's own size: scaling a 13pt glyph up to fill the box
-        // thickens its strokes, which is what made these three look heavier than
-        // Finder's own menu icons.
+        var configuration = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+        if let ink {
+            configuration = configuration.applying(NSImage.SymbolConfiguration(paletteColors: [ink]))
+        }
+        let tinted = glyph.withSymbolConfiguration(configuration) ?? glyph
+        // Draw at the glyph's own size: scaling it up to fill the box thickens the
+        // strokes, which is what made these icons look heavier than Finder's.
         let natural = tinted.size
         let fit = min(1, side / max(natural.width, natural.height))
         let target = NSSize(width: natural.width * fit, height: natural.height * fit)
@@ -233,6 +225,7 @@ public final class FinderSyncExtensionController: FIFinderSync {
 
         let image = NSImage(size: NSSize(width: side, height: side))
         image.addRepresentation(rep)
+        image.isTemplate = ink == nil
         return image
     }
 
