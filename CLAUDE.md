@@ -26,7 +26,7 @@ swift test --list-tests
 
 ### 包结构（Package.swift）
 
-13 个 target，由多个库和一个可执行文件组成：
+19 个 target（11 个库/可执行 + 8 个测试），下表只列非测试 target：
 
 | Target | 作用 | 关键依赖 |
 |--------|------|----------|
@@ -34,12 +34,13 @@ swift test --list-tests
 | `EventCapture` | 通过 CGEventTap 进行全局鼠标捕获 | `GestureEngine` |
 | `RuleEngine` | 规则、动作、模板匹配 | `GestureEngine`, `AppleScriptRunner` |
 | `Storage` | 偏好设置（UserDefaults）+ 剪贴板历史（SQLite.swift） | `SQLite` |
-| `Preferences` | SwiftUI + AppKit 偏好设置 UI | `Storage`, `RuleEngine`, `AppleScriptRunner`, `RightClickMenu`, `EventCapture` |
+| `Preferences` | SwiftUI + AppKit 偏好设置 UI | `Storage`, `RuleEngine`, `AppleScriptRunner`, `RightClickMenu`, `EventCapture`, `RemoteControl` |
 | `WindowManager` | 状态栏项目、Toast 通知 | `GestureEngine`, `RuleEngine`, `Storage`, `Preferences` |
 | `AppleScriptRunner` | 通过 `osascript` 执行 AppleScript | — |
 | `RightClickMenu` | Finder 右键菜单管理 | — |
+| `RemoteControl` | 局域网 TCP 远程控制（原版没有，见下） | `Storage` |
 | `FinderSyncExtension` | Finder Sync 扩展（独立 bundle） | `RuleEngine` |
-| `MacStrokeApp` | 主应用可执行文件（accessory policy） | `EventCapture`, `WindowManager`, `Preferences`, `AppleScriptRunner`, `Sparkle` |
+| `MacStrokeApp` | 主应用可执行文件（accessory policy） | `EventCapture`, `WindowManager`, `Preferences`, `AppleScriptRunner`, `RemoteControl`, `Sparkle` |
 
 外部依赖：`SQLite.swift`（剪贴板历史）、`Sparkle`（自动更新）。
 
@@ -62,6 +63,7 @@ swift test --list-tests
   - 启动 `EventCapture` → `CanvasManager` → `RuleEngine` 处理链，并注入 `shouldCaptureGesture` / `needsRightClickMenu` 闭包
   - `initRightClickMenu`（RightClickMenuManager 分布式通知 + pluginkit 延迟启用）
   - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ⌘⌥V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
+  - 远程控制服务生命周期：启动即 `RemoteControlServer.shared.apply()`（读偏好，关着就不监听），并观察 `.macStrokeRemoteControlDidChange` 重新 apply（开关/端口/配对码任一改动都重启监听）
   - 创建状态栏项目，使用模板图片（`menu_icon_16x16.png` / disabled 版本）
   - 初始化 Sparkle 更新器（沿用原版 appcast；Info.plist 必须带 `SUPublicEDKey`，否则 Sparkle 2 启动即弹致命错误模态框）
 
@@ -92,7 +94,7 @@ swift test --list-tests
 
 - **Sources/Preferences/** —
   - `UserPreferences`（`ObservableObject`）将每个设置绑定到 `PreferencesStorage`（`StorageKey` enum 中的 UserDefaults key）
-  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、About（8 个，对齐原版 `AppPrefsWindowController.setupToolbar`；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
+  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、RemoteControl、About（9 个：原版的 8 个对齐 `AppPrefsWindowController.setupToolbar`，"远程控制"是移植版新增页，插在 Clipboard 与 About 之间；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
   - 视觉风格参照 macOS 系统设置：`SettingsChrome` 常量 + `SettingsPage` / `SettingsFillingPage`（含表格的页不滚动）+ `SettingsSection` / `SettingsCard` / `SettingsRow` / `TrailingSwitch`；侧栏圆角高亮、灰底页面、白色圆角卡片、左标题右控件
   - 规则表格列（`RulesTable`，视图型 `NSTableView` + `NSViewRepresentable`）：Gesture_Image 84 / Gesture 98 / Type 96 / Action 104 / Filter 138.8515625 / Description 221，行高 84，`usesAlternatingRowBackgroundColors`，最后一列自适应宽度，每格都放一个活控件（原版 `tableViewForRules:row:` 就是 view-based）。Image 列轨迹为空时放 80x25 的 `Draw Gesture` 按钮（texturedSquare，y=28），有轨迹时是 `GestureThumbView`；两者与原版一致——双击/点击都走 `preSetRuleGestureAtIndex:` 语义，即弹出带 68 项预设下拉的"绘制手势！"模态框，选中预设或屏幕画完立刻落库 `gestureData`
   - `GestureThumbView`（RulesTable.swift，NSView）复刻原版 `DrawGesture setPoints:` 的数学：60pt 画布、`zoo = max(w/60, h/60)`、只在短轴居中、整体右下偏移 12pt、逐段渐变 `(0.5t, 0.47+0.53t, 0.9)` 且 `t = i / points.count`（不是 count-1）；非 flipped 视图所以 y 不翻转
@@ -110,6 +112,7 @@ swift test --list-tests
   - "绘制手势！"模态框的预设下拉是 `NSComboBox(0,0,100,25)`、`editable=NO`，且 `"Plase Select"`（原版拼错的串）是 **stringValue 而不是 placeholderString**（不可编辑的 combo 永远不显示占位串）
   - 右键菜单页（xib userLabel `RithtClickMenu`）整页只有**一个无标题 box**（`grE-O7-8pa` 上的 "Right Click Menu" 只是 userLabel），所以 Swift 侧不加 `SettingsSection` 标题。主开关没有 `enabled` 绑定；三个子开关各自绑 `enabled → enableRightClickMenu`，而终端下拉 `kKY-rl-9o4` **只有 selectedValue 绑定**——主开关关掉时它依旧可点，因此禁用要逐控件加而不是整卡 `.disabled`。中文取原版译文：`new text file` = 新建文本文档、`copy file path` = 复制路径
   - 剪贴板页：外层 box `vXG-SA-jyX` 也没有标题（"Clipboard Setting" 只是 userLabel），只有内层 `6mQ-De-QqJ` 带真标题 "Storage limit"（本地存储限制）。`keyboard shortcut:` 与 `show history clipboard` 是内层 box 的**兄弟节点**，不属于"本地存储限制"卡。三个数量框在 `awakeFromNib`（AppPrefsWindowController.m:139-158）各配 formatter：置顶 1…9999、总数 1…999999、保存天数 1…9999，越界或非数字解析失败即不改值（原版那个 `textField:shouldChangeCharactersInRange:` 并非 AppKit 代理方法，逐字符过滤实际从未生效，所以 Swift 侧不补）。"显示记录"走进程内 `NotificationCenter`（`.macStrokeShowHistoryClipboard`）：原版经响应链直接调 `showHistoryCilpboardList:`，用分布式通知会广播到同机另一个 MacStroke
+  - 远程控制页（`RemoteControlTabView`，移植版新增）：一张设置卡（开关 / 端口 / 配对码 + 重新生成 / 状态）+ 一张扫码卡（190pt 二维码 + 说明 + `Address: ip:port`）。开关**默认关**，关掉时一个端口都不监听，行为回到原版；打开时若还没有配对码就现生成一个 6 位码。端口框改动即校验（黑名单端口回滚并在下方红字提示，见 `lastRejectedPort`）。二维码只在开关打开且有局域网地址时出现，否则是占位灰块，避免让人误以为"能扫就能连"
   - 关于页只有 Sparkle 两个开关 + Version/Check Now/issues + Author + README.html WebView；原版是 `LSUIElement` 常驻 accessory 应用，主菜单（`MainMenu.xib` 里那套 "About MenuBarApp" 模板残留）**永远不会显示**，因此标准关于面板与 Credits.rtf 无需移植
 
 - **Sources/Storage/** —
@@ -124,6 +127,15 @@ swift test --list-tests
   - 通过 `SyncSharedDefaultsNotification` 将启用开关 + 本地化菜单标题同步到扩展
   - 操作：创建文本文件（`touch` + AppleScript 回退）、在终端中打开（`open -a`）、复制路径到剪贴板
   - 通过 `pluginkit -e use|ignore -i net.mtjo.MacStroke.FinderSyncExtension` 启用/禁用扩展
+
+- **Sources/RemoteControl/** — 局域网 TCP 远程控制（移植版新增，原版没有任何网络接口）：
+  - `RemoteControlSettings` — 三个偏好键的读写；`isPortAllowed` 抄微信 `wx.createTCPSocket` 的端口黑名单（1024 以下、8000–8100、3306/6379/3389/5432/8443/8888/9200/9300/27017…），因为"能监听"不等于"手机连得上"；`current(from:)` 每次读都复核端口，导入的旧 plist 里塞了黑名单端口就退回默认值。`RemoteNetworkAddress` 用 `getifaddrs` 挑局域网 IPv4（跳过 loopback/down/169.254.*，优先 `en0`）
+  - `RemoteCommand` — 线协议：**换行分隔的 JSON**，一行一条。客户端→服务端 `hello{token,name}` / `ping` / `move{dx,dy}` / `click{btn,double}` / `button{btn,down}`；服务端→客户端 `welcome` / `error{code,message}` / `ack{cmd,cursor,screen}`。`parse(line:)` 宽容（省略 `btn` 当左键、字符串数字也收），`reply(fields:)` 丢 nil 键不发 `null`
+  - `RemoteControlServer` — `NWListener` 单例。配对码只卡**第一包** hello（10 秒不发即断），之后同一连接自由发令；最多 4 台、单连接缓冲上限 64KB。**报错必须先 flush 再断开**（`fail` 走 `send(..., then:)` 的 `contentProcessed` 回调）——同一拍里 `cancel()` 会把错误包丢掉，手机端就只知道"断了"而看不到"配对码不对"。命令一律 `DispatchQueue.main.async` 执行，和手势事件 tap 串行，避免远程点击插进一段正在画的手势里
+  - `RemoteClickExecutor` — `CGWarpMouseCursorPosition` + `CGAssociateMouseAndMouseCursorPosition(1)` + 补发 `mouseMoved` 移动光标；点击/按下经 `post(tap: .cgSessionEventTap)`，**session 层在自家 HID tap 下游**，所以远程点击不会被再识别成手势。单次位移上限 500pt，再夹到屏幕内
+  - `RemotePairing` / `RemoteQRCode` — 配对串是 `macstroke://pair?host=…&port=…&token=…`（不用小程序码：那要求已发布的 appid 加服务端换码），二维码由 `CIQRCodeGenerator` 生成、校正级别 M
+  - 默认关：`StorageDefaults.enableRemoteControl = false`，且这三个键**不进** `resetToDefaults()`（原版的 `DefaultPreferences.plist` 没有它们）
+  - 小程序端在同级仓库 `/Users/mtjo/work/MacStroke-Mini`（uni-app）
 
 - **Sources/FinderSyncExtension/FinderSync.swift** — `FIFinderSync` 子类：
   - 工具栏项目，使用 `toolbarIcon` 图片
@@ -156,8 +168,8 @@ swift test --list-tests
 
 ### 测试
 
-- 7 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`
-- 全部 217 个测试中 215 通过（`swift test`）。剩下 2 个与本次改动无关、在干净 HEAD 上同样失败，都是本机 macOS 27 SDK 环境所致：`WindowManagerTests.ShortcutRecorderAppearanceTests/testLightSchemePageKeepsLightBackgroundWhenHostedBySwiftUI`（SwiftUI 宿主下取到"设备RGB colorspace 0 0 0 0"，颜色读不出来）与 `StorageTests.HistoryClipboardPanelInteractionTests/testEscapeInResultListClosesPanel`
+- 8 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`、`RemoteControlTests`
+- `swift test` 全绿（当前 266 个用例）。远程控制有两条会碰真机状态的用例：`RemoteControlServerE2ETests` 真的在 48848 端口起监听并用 TCP 客户端走协议，其中一条会**真的挪动光标** ±40/30 再挪回去；`testMoveActuallyRelocatesTheCursor` 跑的时候别把手放在触摸板上
 
 ### 仓库中不存在的文件
 

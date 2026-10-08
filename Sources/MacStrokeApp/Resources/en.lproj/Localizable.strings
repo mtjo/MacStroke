@@ -279,3 +279,23 @@
 "Forward Button" = "Forward Button";
 "Button %d" = "Button %d";
 "Hold Modifiers To Skip Gesture" = "Hold Modifiers To Skip Gesture";
+
+/* Remote Control tab (port extension, not in the original) */
+"Remote Control" = "Remote Control";
+"Enable remote control" = "Enable remote control";
+"Port:" = "Port:";
+"This port cannot be reached by the mini program" = "This port cannot be reached by the mini program";
+"Pairing code:" = "Pairing code:";
+"Generated when you switch it on" = "Generated when you switch it on";
+"Regenerate" = "Regenerate";
+"Status:" = "Status:";
+"Pair with the mini program" = "Pair with the mini program";
+"Scan this code inside the mini program to connect." = "Scan this code inside the mini program to connect.";
+"The phone and this Mac must be on the same Wi-Fi." = "The phone and this Mac must be on the same Wi-Fi.";
+"A new pairing code disconnects every phone already paired." = "A new pairing code disconnects every phone already paired.";
+"Address:" = "Address:";
+"No local network address was found." = "No local network address was found.";
+"Turn the switch on to show the QR code." = "Turn the switch on to show the QR code.";
+"Stopped" = "Stopped";
+"Listening, no device connected" = "Listening, no device connected";
+"Connected:" = "Connected:";

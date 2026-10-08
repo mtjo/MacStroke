@@ -81,6 +81,15 @@ public enum StorageKey: String, CaseIterable {
     /// 所以改回 Sparkle 的键，旧键在 migrateLegacyPreferenceKeys 里清掉。
     case autoCheckUpdates = "SUEnableAutomaticChecks"
 
+    // Remote control
+    // 移植版扩展（超出原版）：手机小程序经局域网 TCP 远程点击。原版没有任何
+    // 网络接口，所以三个键名都是新造的。开关默认关 —— 关掉时行为和原版一致，
+    // 不会有多开放的端口。端口默认 8848，避开微信 TCP 的端口黑名单；
+    // 配对码首次启用时生成，存成 6 位大写字母数字串。
+    case enableRemoteControl = "enableRemoteControl"
+    case remoteControlPort = "remoteControlPort"
+    case remoteControlToken = "remoteControlToken"
+
     // Legacy (kept for compatibility)
     case showToast = "showToast"
     case clipboardHistoryLimit = "clipboardHistoryLimit"
@@ -223,6 +232,12 @@ public enum StorageDefaults {
     // build_app.sh 生成的 Info.plist 同写 SUEnableAutomaticChecks=true，两处一致。
     public static let autoCheckUpdates: Bool = true
 
+    // Remote control
+    public static let enableRemoteControl: Bool = false
+    public static let remoteControlPort: Int = 8848
+    /// 空串 = 还没生成过配对码（首次打开远程控制时由 RemoteControl 模块生成并落库）。
+    public static let remoteControlToken: String = ""
+
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
@@ -279,6 +294,9 @@ public func registerUserDefaultsDefaults() {
         StorageKey.limitSaveDays.rawValue: StorageDefaults.limitSaveDays,
         StorageKey.userTerminal.rawValue: StorageDefaults.userTerminal,
         StorageKey.autoCheckUpdates.rawValue: StorageDefaults.autoCheckUpdates,
+        StorageKey.enableRemoteControl.rawValue: StorageDefaults.enableRemoteControl,
+        StorageKey.remoteControlPort.rawValue: StorageDefaults.remoteControlPort,
+        StorageKey.remoteControlToken.rawValue: StorageDefaults.remoteControlToken,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

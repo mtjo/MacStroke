@@ -71,7 +71,7 @@ let package = Package(
         // ============ Preferences management (SwiftUI + AppKit) ============
         .target(
             name: "Preferences",
-            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture"]),
+            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture", "RemoteControl"]),
         // ============ Window management (status bar, canvas, toast) ============
         .target(
             name: "WindowManager",
@@ -80,6 +80,10 @@ let package = Package(
         .target(
             name: "AppleScriptRunner",
             dependencies: []),
+        // ============ LAN remote control (mini program click relay) ============
+        .target(
+            name: "RemoteControl",
+            dependencies: ["Storage"]),
         // ============ Main app executable ============
         .executableTarget(
             name: "MacStrokeApp",
@@ -90,6 +94,7 @@ let package = Package(
                 "WindowManager",
                 "Preferences",
                 "AppleScriptRunner",
+                "RemoteControl",
                 "Sparkle"
             ],
             resources: [
@@ -131,6 +136,9 @@ let package = Package(
             dependencies: ["AppleScriptRunner"]),
         .testTarget(
             name: "RightClickMenuTests",
-            dependencies: ["RightClickMenu"])
+            dependencies: ["RightClickMenu"]),
+        .testTarget(
+            name: "RemoteControlTests",
+            dependencies: ["RemoteControl", "Storage"])
     ]
 )

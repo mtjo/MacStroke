@@ -281,3 +281,23 @@
 "Forward Button" = "侧键（前进）";
 "Button %d" = "按键 %d";
 "Hold Modifiers To Skip Gesture" = "按住修饰键时不触发手势";
+
+/* 远程控制页（移植版新增，原版没有） */
+"Remote Control" = "远程控制";
+"Enable remote control" = "启用远程控制";
+"Port:" = "端口：";
+"This port cannot be reached by the mini program" = "这个端口小程序连不上，请换一个";
+"Pairing code:" = "配对码：";
+"Generated when you switch it on" = "开启后自动生成";
+"Regenerate" = "重新生成";
+"Status:" = "状态：";
+"Pair with the mini program" = "与小程序配对";
+"Scan this code inside the mini program to connect." = "在小程序里点「扫码连接」扫这个码。";
+"The phone and this Mac must be on the same Wi-Fi." = "手机必须和这台 Mac 在同一个局域网。";
+"A new pairing code disconnects every phone already paired." = "换了配对码，已配对的手机要重新扫。";
+"Address:" = "地址：";
+"No local network address was found." = "没找到可用的局域网地址。";
+"Turn the switch on to show the QR code." = "打开开关后这里显示二维码。";
+"Stopped" = "未启动";
+"Listening, no device connected" = "正在监听，还没有设备连接";
+"Connected:" = "已连接：";

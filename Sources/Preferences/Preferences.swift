@@ -11,6 +11,7 @@ import AppKit
 import SwiftUI
 import Storage
 import EventCapture
+import RemoteControl
 
 /// User preferences model - mirrors the design doc's PreferencesModel.
 public final class UserPreferences: ObservableObject {
@@ -183,6 +184,48 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setBool(autoCheckUpdates, forKey: .autoCheckUpdates) }
     }
 
+    // MARK: - Remote control
+    // 移植版扩展（超出原版）：手机小程序经局域网 TCP 远程点击。开关默认关，
+    // 关着时不监听任何端口，行为与原版一致。
+    @Published public var enableRemoteControl: Bool {
+        didSet {
+            storage.setBool(enableRemoteControl, forKey: .enableRemoteControl)
+            if enableRemoteControl, remoteControlToken.isEmpty {
+                // 开关刚打开时先备好配对码：服务一启动就要能校验，二维码也要能立刻显示。
+                remoteControlToken = RemoteControlSettings.makeToken()
+            }
+            NotificationCenter.default.post(name: .macStrokeRemoteControlDidChange, object: nil)
+        }
+    }
+    @Published public var remoteControlPort: Int {
+        didSet {
+            // A port the mini program may not reach would make the service
+            // silently unusable, so an invalid edit is dropped instead of saved.
+            guard RemoteControlSettings.isPortAllowed(remoteControlPort) else {
+                remoteControlPort = oldValue
+                lastRejectedPort = oldValue
+                return
+            }
+            lastRejectedPort = nil
+            storage.setInt(remoteControlPort, forKey: .remoteControlPort)
+            NotificationCenter.default.post(name: .macStrokeRemoteControlDidChange, object: nil)
+        }
+    }
+    /// The port the last rejected edit was trying to keep (drives the hint text).
+    @Published public private(set) var lastRejectedPort: Int? = nil
+
+    @Published public var remoteControlToken: String {
+        didSet {
+            storage.setString(remoteControlToken, forKey: .remoteControlToken)
+            NotificationCenter.default.post(name: .macStrokeRemoteControlDidChange, object: nil)
+        }
+    }
+
+    /// 换配对码等于把已配对的手机全部踢掉：旧码立刻失效，二维码要重新扫。
+    public func regenerateRemoteToken() {
+        remoteControlToken = RemoteControlSettings.makeToken()
+    }
+
     // MARK: - Legacy
     @Published public var showToast: Bool {
         didSet { storage.setBool(showToast, forKey: .showToast) }
@@ -234,6 +277,12 @@ public final class UserPreferences: ObservableObject {
         self.limitSaveDays = storage.getIntOptional(forKey: .limitSaveDays) ?? StorageDefaults.limitSaveDays
         self.userTerminal = storage.getStringOptional(forKey: .userTerminal) ?? StorageDefaults.userTerminal
         self.autoCheckUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
+        self.enableRemoteControl = storage.getBoolOptional(forKey: .enableRemoteControl) ?? StorageDefaults.enableRemoteControl
+        // 端口走同一份校验：导入进来的旧 plist 里可能是微信黑名单端口，落到默认值才连得上。
+        let storedRemotePort = storage.getIntOptional(forKey: .remoteControlPort) ?? StorageDefaults.remoteControlPort
+        self.remoteControlPort = RemoteControlSettings.isPortAllowed(storedRemotePort)
+            ? storedRemotePort : StorageDefaults.remoteControlPort
+        self.remoteControlToken = storage.getStringOptional(forKey: .remoteControlToken) ?? StorageDefaults.remoteControlToken
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }

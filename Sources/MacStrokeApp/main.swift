@@ -25,6 +25,7 @@ import Storage
 import Preferences
 import RightClickMenu
 import WindowManager
+import RemoteControl
 import Sparkle
 
 /// Notifications used between the preferences UI and the running capture chain.
@@ -192,6 +193,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Init clipboard history monitoring + global shortcut.
         initHistoryClipboard()
 
+        // LAN remote control (偏好页「远程控制」)。默认关着，关掉时一个端口都不监听，
+        // 行为和原版一致。
+        RemoteControlServer.shared.apply()
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteControlSettingsDidChange),
+            name: .macStrokeRemoteControlDidChange, object: nil)
+
         // Distributed notification from a second app instance.
         DistributedNotificationCenter.default().addObserver(
             self,
@@ -351,6 +360,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.showHistoryClipboard(nil)
         }
         _ = shortcutMonitor?.start()
+    }
+
+    /// 远程控制开关/端口/配对码变了：重启监听或关掉服务。
+    @objc private func remoteControlSettingsDidChange(_ notification: Notification) {
+        RemoteControlServer.shared.apply()
     }
 
     @objc private func userDefaultsDidChange(_ notification: Notification) {

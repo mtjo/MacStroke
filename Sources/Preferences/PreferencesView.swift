@@ -36,6 +36,8 @@ enum PreferencesTab: CaseIterable {
     case rightClick
     case rightClickMenu
     case clipboard
+    // 移植版新增页（超出原版）：手机小程序远程控制，放在粘贴板与关于之间。
+    case remoteControl
     case about
 
     var title: String {
@@ -47,6 +49,7 @@ enum PreferencesTab: CaseIterable {
         case .rightClick: return L("RightClick")
         case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
+        case .remoteControl: return L("Remote Control")
         case .about: return L("About")
         }
     }
@@ -60,6 +63,7 @@ enum PreferencesTab: CaseIterable {
         case .rightClick: return "mouse"
         case .rightClickMenu: return "list.bullet.rectangle"
         case .clipboard: return "doc.on.clipboard"
+        case .remoteControl: return "dot.radiowaves.left.and.right"
         case .about: return "info.circle"
         }
     }
@@ -225,6 +229,8 @@ public struct PreferencesView: View {
                     RightClickMenuTabView(viewModel: viewModel)
                 case .clipboard:
                     ClipboardTabView(viewModel: viewModel)
+                case .remoteControl:
+                    RemoteControlTabView(viewModel: viewModel)
                 case .about:
                     AboutTabView(viewModel: viewModel)
                 }
