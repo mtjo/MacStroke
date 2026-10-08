@@ -186,7 +186,7 @@ public final class FinderSyncExtensionController: FIFinderSync {
             }
             if enableOpenInTerminal, items.count > 1 {
                 menu.addItem(withTitle: items[1], action: #selector(openInTerminal(_:)), keyEquivalent: "")
-                    .image = menuIcon("terminal.fill")
+                    .image = menuIcon("terminal")
             }
             if enableCopyFilePath, items.count > 2 {
                 menu.addItem(withTitle: items[2], action: #selector(copyFilePath(_:)), keyEquivalent: "")
@@ -196,18 +196,18 @@ public final class FinderSyncExtensionController: FIFinderSync {
         return menu
     }
 
-    /// Finder cannot draw the symbol rep this extension hands over, so an SF
-    /// Symbol reaches its menu already flattened to black and vanishes on a dark
-    /// context menu. Rasterising the glyph here into a plain bitmap rep, marked
-    /// as a template, gives Finder a mask it can tint with the menu's text
-    /// colour. The neutral tone is what shows through if a host ignores the flag:
-    /// readable on a light menu and on a dark one.
+    /// Finder paints an extension's menu icon exactly as handed over — it ignores
+    /// `isTemplate` there — so the glyph has to arrive already coloured. `labelColor`
+    /// in the current system appearance is the ink Finder draws the menu's own text
+    /// with, so light and dark each get their own rasterisation instead of a second
+    /// asset set. `menu(for:)` runs on every right-click, so switching appearance
+    /// is picked up by the next menu without restarting the extension.
     private func menuIcon(_ symbol: String) -> NSImage? {
         guard let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
         let side: CGFloat = 16
-        let pixels = Int(side * 2)  // two device pixels per point, so Retina stays crisp
+        let ink = Self.menuInkColor()
         guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
+            bitmapDataPlanes: nil, pixelsWide: Int(side * 2), pixelsHigh: Int(side * 2),
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
         ) else { return nil }
@@ -216,10 +216,14 @@ public final class FinderSyncExtensionController: FIFinderSync {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
         let tinted = glyph.withSymbolConfiguration(
-            NSImage.SymbolConfiguration(paletteColors: [NSColor(white: 0.45, alpha: 1)])
+            NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [ink]))
         ) ?? glyph
+        // Draw at the symbol's own size: scaling a 13pt glyph up to fill the box
+        // thickens its strokes, which is what made these three look heavier than
+        // Finder's own menu icons.
         let natural = tinted.size
-        let fit = min(side / natural.width, side / natural.height)
+        let fit = min(1, side / max(natural.width, natural.height))
         let target = NSSize(width: natural.width * fit, height: natural.height * fit)
         tinted.draw(
             in: NSRect(x: (side - target.width) / 2, y: (side - target.height) / 2,
@@ -229,8 +233,18 @@ public final class FinderSyncExtensionController: FIFinderSync {
 
         let image = NSImage(size: NSSize(width: side, height: side))
         image.addRepresentation(rep)
-        image.isTemplate = true
         return image
+    }
+
+    /// The colour this menu's text is drawn in, resolved to fixed RGB under the
+    /// system appearance. Left dynamic it would flatten to light-mode black when
+    /// the image is encoded for the trip to Finder's process.
+    private static func menuInkColor() -> NSColor {
+        var color = NSColor.labelColor
+        NSApplication.shared.effectiveAppearance.performAsCurrentDrawingAppearance {
+            color = NSColor.labelColor.usingColorSpace(.deviceRGB) ?? NSColor.labelColor
+        }
+        return color
     }
 
     // MARK: - Menu item actions
