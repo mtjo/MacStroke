@@ -2,7 +2,7 @@
 //  MouseButtonRecorder.swift
 //  MacStroke
 //
-//  Binds an extra mouse button as a gesture trigger (issue #53). The original
+//  Picks the one mouse button a gesture starts from (issue #53). The original
 //  never had this control — it only ever watched the right button — so this is
 //  a port-level extension; it borrows the bordered-box look of the shortcut
 //  recorder so the row does not read as a foreign control.
@@ -12,8 +12,8 @@ import AppKit
 import SwiftUI
 import Storage
 
-/// Shows the bound CoreGraphics button number (0 = none recorded) and captures
-/// a new one from the next press.
+/// Shows the bound CoreGraphics button number by name and captures a new one
+/// from the next press.
 struct MouseButtonRecorder: View {
     @Binding var buttonNumber: Int
     @State private var isWaiting = false
@@ -31,8 +31,13 @@ struct MouseButtonRecorder: View {
 
     private var label: String {
         if isWaiting { return L("Press a mouse button") }
-        guard buttonNumber > 0 else { return L("Not recorded") }
-        return LFormat("Button %d", buttonNumber)
+        switch buttonNumber {
+        case 1: return L("Right Button")
+        case 2: return L("Middle Button")
+        case 3: return L("Back Button")
+        case 4: return L("Forward Button")
+        default: return LFormat("Button %d", buttonNumber)
+        }
     }
 
     private func toggle() {
@@ -46,13 +51,13 @@ struct MouseButtonRecorder: View {
     private func start() {
         isWaiting = true
         // Suspend gesture starts while waiting: the trial press could otherwise
-        // be a button that is already an enabled trigger, which would swallow it
-        // as the beginning of a stroke.
+        // be the button that is already the trigger, which would swallow it as
+        // the beginning of a stroke.
         NotificationCenter.default.post(name: .gestureTriggerRecordingDidChange, object: true)
         MouseButtonWatcher.shared.start { number in
-            // Left (0) and right (1) are not this control's business: right is
-            // always a trigger and left deliberately never starts a gesture.
-            guard number >= 2 else { return }
+            // The left button is deliberately not a trigger (CanvasManager never
+            // starts a gesture from it), so a press there just keeps waiting.
+            guard number >= 1 else { return }
             buttonNumber = number
             stop()
         }

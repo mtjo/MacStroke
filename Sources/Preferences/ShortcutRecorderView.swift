@@ -10,6 +10,7 @@
 import Foundation
 import AppKit
 import Carbon.HIToolbox
+import EventCapture
 import Storage
 
 /// A view that records a keyboard shortcut (key code + modifier flags).
@@ -27,6 +28,14 @@ public final class ShortcutRecorderView: NSView {
 
     /// Whether the recorder is currently listening for input.
     @Published public var isRecording = false {
+        didSet { needsDisplay = true }
+    }
+
+    /// Modifiers-only mode: the key itself is irrelevant and the recorded
+    /// combination is committed when the user lets go of the last modifier, so
+    /// the gesture-suppression row can ask for "⌥⇧" without a letter. The key
+    /// code stays 0 and only the five `GestureModifier` bits are kept.
+    public var modifiersOnly = false {
         didSet { needsDisplay = true }
     }
 
@@ -67,8 +76,10 @@ public final class ShortcutRecorderView: NSView {
     // MARK: - Display
 
     /// Human-readable shortcut like "⌃⇧V" (mirrors ShortcutRecorder's display).
+    /// keyCode 0 means nothing was pressed with the modifiers, which is how the
+    /// modifiers-only recorder stores its combination.
     public var displayString: String {
-        if keyCode == 0 && flags == 0 { return "" }
+        if keyCode == 0 { return Self.modifierSymbols(flags) }
         return Self.modifierSymbols(flags) + Self.keyName(for: keyCode)
     }
 
@@ -78,6 +89,7 @@ public final class ShortcutRecorderView: NSView {
         if flags & 0x80000 != 0 { symbols += "⌥" }    // option
         if flags & 0x40000 != 0 { symbols += "⌃" }    // control
         if flags & 0x20000 != 0 { symbols += "⇧" }    // shift
+        if flags & 0x800000 != 0 { symbols += "fn" }  // function
         return symbols
     }
 
@@ -107,7 +119,9 @@ public final class ShortcutRecorderView: NSView {
         if isRecording {
             text = pressedFlags != 0
                 ? Self.modifierSymbols(pressedFlags) + "…"
-                : L("Recording… press a key (Esc to cancel)")
+                : L(modifiersOnly
+                    ? "Recording… hold modifiers (Esc to cancel)"
+                    : "Recording… press a key (Esc to cancel)")
         } else if keyCode == 0 && flags == 0 {
             text = L("Click to Record")
         } else {
@@ -178,8 +192,17 @@ public final class ShortcutRecorderView: NSView {
             cancelRecording()
             return
         }
+        let held = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        // A key struck while modifiers are down still settles the modifiers-only
+        // recorder — the letter is what the user meant to leave out, not extra data.
+        if modifiersOnly {
+            keyCode = 0
+            flags = Self.modeledFlags(held)
+            stopRecording()
+            return
+        }
         keyCode = event.keyCode
-        flags = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        flags = held
         stopRecording()
     }
 
@@ -188,8 +211,29 @@ public final class ShortcutRecorderView: NSView {
             super.flagsChanged(with: event)
             return
         }
-        pressedFlags = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        let current = UInt(event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        if modifiersOnly {
+            let held = Self.modeledFlags(current)
+            // Letting go of the last modifier finishes the recording; before that
+            // the view just echoes what is being held.
+            if pressedFlags != 0 && held == 0 {
+                flags = pressedFlags
+                keyCode = 0
+                stopRecording()
+                return
+            }
+            pressedFlags = held
+            needsDisplay = true
+            return
+        }
+        pressedFlags = current
         needsDisplay = true
+    }
+
+    /// The modifier bits `GestureModifier` models (⌘⌃⇧⌥fn), dropping caps-lock
+    /// and anything else that shares the device-independent mask.
+    static func modeledFlags(_ flags: UInt) -> UInt {
+        UInt(Set(eventFlags: flags).eventFlags)
     }
 
     // MARK: - Public API
@@ -197,7 +241,8 @@ public final class ShortcutRecorderView: NSView {
     /// Starts listening for keyboard input.
     public func startRecording() {
         guard !isRecording else { return }
-        pressedFlags = UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        let current = UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        pressedFlags = modifiersOnly ? Self.modeledFlags(current) : current
         isRecording = true
     }
 

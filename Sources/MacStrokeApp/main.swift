@@ -123,39 +123,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             RightClicksList.shared.needRightClick(byAppname: bundleID)
         }
 
-        // Which buttons may start a gesture (issue #53). Read from UserDefaults
-        // per event so a preferences toggle takes effect immediately, with no
-        // restart and no event-tap rebuild. Right stays allowed unconditionally
-        // — that is the original's only trigger.
+        // Which button starts a gesture (issue #53). Read from UserDefaults per
+        // event so re-recording it takes effect immediately, with no restart and
+        // no event-tap rebuild. The default is the right button, the original's
+        // only trigger; CanvasManager never lets the left button start one.
         canvas.isTriggerButtonAllowed = { [weak self] button in
             guard let self = self else { return false }
-            switch button {
-            case .left:
-                return false
-            case .right:
-                return true
-            case .middle:
-                return self.storage.getBoolOptional(forKey: .enableMiddleButtonGesture)
-                    ?? StorageDefaults.enableMiddleButtonGesture
-            case .extra(let number):
-                // 3 = 后退、4 = 前进，两个一起由「侧键」开关管；其余编号归自定义按键。
-                if number == 3 || number == 4,
-                   self.storage.getBoolOptional(forKey: .enableSideButtonGesture)
-                    ?? StorageDefaults.enableSideButtonGesture {
-                    return true
-                }
-                guard self.storage.getBoolOptional(forKey: .enableCustomButtonGesture)
-                        ?? StorageDefaults.enableCustomButtonGesture else { return false }
-                let recorded = self.storage.getIntOptional(forKey: .customGestureButton)
-                    ?? StorageDefaults.customGestureButton
-                return recorded != StorageDefaults.customGestureButton && recorded == number
-            }
+            let configured = self.storage.getIntOptional(forKey: .gestureTriggerButton)
+                ?? StorageDefaults.gestureTriggerButton
+            return button.cgNumber == configured
         }
 
         // Which modifiers must not start a gesture (issue #59). Same per-event
-        // read, so ticking a checkbox applies to the very next click.
+        // read, so the switch and the recorded modifiers apply to the very next
+        // click. Off, or nothing recorded, means modifiers never interfere.
         canvas.suppressedModifiers = { [weak self] in
-            guard let self = self else { return [] }
+            guard let self = self,
+                  self.storage.getBoolOptional(forKey: .enableGestureSuppression)
+                    ?? StorageDefaults.enableGestureSuppression else { return [] }
             return Set(tokenList: self.storage.getStringOptional(forKey: .gestureSuppressedModifiers)
                 ?? StorageDefaults.gestureSuppressedModifiers)
         }

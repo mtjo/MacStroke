@@ -63,40 +63,30 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setBool(showGestureNote, forKey: .showGestureNote) }
     }
 
-    // MARK: - Gesture trigger buttons
-    // 移植版扩展（issue #53）：原版只有右键，这三个开关默认全关，关掉时行为与原版一致。
-    @Published public var enableMiddleButtonGesture: Bool {
-        didSet { storage.setBool(enableMiddleButtonGesture, forKey: .enableMiddleButtonGesture) }
-    }
-    @Published public var enableSideButtonGesture: Bool {
-        didSet { storage.setBool(enableSideButtonGesture, forKey: .enableSideButtonGesture) }
-    }
-    @Published public var enableCustomButtonGesture: Bool {
-        didSet { storage.setBool(enableCustomButtonGesture, forKey: .enableCustomButtonGesture) }
-    }
-    /// 录制到的 CoreGraphics 按键编号（3 起），0 表示还没录过。
-    @Published public var customGestureButton: Int {
-        didSet { storage.setInt(customGestureButton, forKey: .customGestureButton) }
+    // MARK: - Gesture trigger button
+    // 移植版扩展（issue #53）：原版只有右键，这里收成「一个起手键」，默认 1 = 右键。
+    // 存 CoreGraphics 的按键编号，录成别的键就改用那个，永远只有一个键能起手。
+    @Published public var gestureTriggerButton: Int {
+        didSet { storage.setInt(gestureTriggerButton, forKey: .gestureTriggerButton) }
     }
 
     // MARK: - Gesture suppression modifiers
-    // 移植版扩展（issue #59）：按住这些修饰键时不起手，整段拖拽原样交给前台 App。
-    // 一个键一个开关，但只存一个键名，值是按 allCases 顺序拼出的 token 串。
+    // 移植版扩展（issue #59）：按住录到的修饰键组合时不起手，整段拖拽原样交给前台
+    // App。开关默认关，值仍是一份 token 串（cmd/ctrl/shift/opt/fn）。
+    @Published public var enableGestureSuppression: Bool {
+        didSet { storage.setBool(enableGestureSuppression, forKey: .enableGestureSuppression) }
+    }
     @Published public var gestureSuppressedModifiers: String {
         didSet { storage.setString(gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers) }
     }
 
-    public func suppressionBinding(for modifier: GestureModifier) -> Binding<Bool> {
+    /// 修饰键录制框讲的是「keyCode=…, flags=…」，存的还是同一份 token 串，这里做转换：
+    /// key code 恒为 0，只有 ⌘⌃⇧⌥fn 五个键位会被认下来。
+    public func suppressedModifiersBinding() -> Binding<String> {
         Binding(
-            get: { Set(tokenList: self.gestureSuppressedModifiers).contains(modifier) },
-            set: { ticked in
-                var modifiers = Set(tokenList: self.gestureSuppressedModifiers)
-                if ticked {
-                    modifiers.insert(modifier)
-                } else {
-                    modifiers.remove(modifier)
-                }
-                self.gestureSuppressedModifiers = modifiers.tokenList
+            get: { "keyCode=0, flags=\(Set(tokenList: self.gestureSuppressedModifiers).eventFlags)" },
+            set: { raw in
+                self.gestureSuppressedModifiers = Set(eventFlags: ShortcutRecorder.parse(raw)?.flags ?? 0).tokenList
             }
         )
     }
@@ -216,10 +206,8 @@ public final class UserPreferences: ObservableObject {
         self.minSimilarityScore = storage.getDoubleOptional(forKey: .minSimilarityScore) ?? StorageDefaults.minSimilarityScore
         self.enableGestureMinScore = storage.getBoolOptional(forKey: .enableGestureMinScore) ?? StorageDefaults.enableGestureMinScore
         self.showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
-        self.enableMiddleButtonGesture = storage.getBoolOptional(forKey: .enableMiddleButtonGesture) ?? StorageDefaults.enableMiddleButtonGesture
-        self.enableSideButtonGesture = storage.getBoolOptional(forKey: .enableSideButtonGesture) ?? StorageDefaults.enableSideButtonGesture
-        self.enableCustomButtonGesture = storage.getBoolOptional(forKey: .enableCustomButtonGesture) ?? StorageDefaults.enableCustomButtonGesture
-        self.customGestureButton = storage.getIntOptional(forKey: .customGestureButton) ?? StorageDefaults.customGestureButton
+        self.gestureTriggerButton = storage.getIntOptional(forKey: .gestureTriggerButton) ?? StorageDefaults.gestureTriggerButton
+        self.enableGestureSuppression = storage.getBoolOptional(forKey: .enableGestureSuppression) ?? StorageDefaults.enableGestureSuppression
         self.gestureSuppressedModifiers = storage.getStringOptional(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
         self.noteRetentionTime = storage.getIntOptional(forKey: .noteRetentionTime) ?? StorageDefaults.noteRetentionTime
         self.notePosition = storage.getIntOptional(forKey: .notePosition) ?? StorageDefaults.notePosition
@@ -270,12 +258,10 @@ public final class UserPreferences: ObservableObject {
         storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
         storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
         storage.setBool(StorageDefaults.showGestureNote, forKey: .showGestureNote)
-        // 原版没有这几个键，但「恢复默认」把额外触发键关掉才是用户期待的结果
-        // （否则重置后中键/侧键依旧在起手，界面却显示为关）。
-        storage.setBool(StorageDefaults.enableMiddleButtonGesture, forKey: .enableMiddleButtonGesture)
-        storage.setBool(StorageDefaults.enableSideButtonGesture, forKey: .enableSideButtonGesture)
-        storage.setBool(StorageDefaults.enableCustomButtonGesture, forKey: .enableCustomButtonGesture)
-        storage.setInt(StorageDefaults.customGestureButton, forKey: .customGestureButton)
+        // 原版没有这几个键，但「恢复默认」要把手势的起手键让回右键、修饰键让位关掉，
+        // 才是用户期待的结果（否则重置后还在用录进去的键，界面却显示为默认值）。
+        storage.setInt(StorageDefaults.gestureTriggerButton, forKey: .gestureTriggerButton)
+        storage.setBool(StorageDefaults.enableGestureSuppression, forKey: .enableGestureSuppression)
         storage.setString(StorageDefaults.gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers)
         storage.setInt(StorageDefaults.noteRetentionTime, forKey: .noteRetentionTime)
         storage.setInt(StorageDefaults.notePosition, forKey: .notePosition)
@@ -317,10 +303,8 @@ public final class UserPreferences: ObservableObject {
         minSimilarityScore = storage.getDouble(forKey: .minSimilarityScore)
         enableGestureMinScore = storage.getBool(forKey: .enableGestureMinScore)
         showGestureNote = storage.getBool(forKey: .showGestureNote)
-        enableMiddleButtonGesture = storage.getBool(forKey: .enableMiddleButtonGesture)
-        enableSideButtonGesture = storage.getBool(forKey: .enableSideButtonGesture)
-        enableCustomButtonGesture = storage.getBool(forKey: .enableCustomButtonGesture)
-        customGestureButton = storage.getInt(forKey: .customGestureButton)
+        gestureTriggerButton = storage.getInt(forKey: .gestureTriggerButton)
+        enableGestureSuppression = storage.getBool(forKey: .enableGestureSuppression)
         gestureSuppressedModifiers = storage.getString(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
         noteRetentionTime = storage.getInt(forKey: .noteRetentionTime)
         notePosition = storage.getInt(forKey: .notePosition)

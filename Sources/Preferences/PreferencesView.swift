@@ -111,6 +111,9 @@ func postMacStrokeNotification(_ text: String) {
 struct ShortcutRecorder: NSViewRepresentable {
     @Binding var text: String
     var onShortcutChanged: ((String) -> Void)?
+    /// Records a modifier combination only, committed when the keys are
+    /// released (the gesture-suppression row, issue #59).
+    var modifiersOnly = false
     @Environment(\.colorScheme) private var colorScheme
 
     /// The scheme this page is actually drawing in, translated for the AppKit view.
@@ -124,6 +127,7 @@ struct ShortcutRecorder: NSViewRepresentable {
     func makeNSView(context: Context) -> ShortcutRecorderView {
         let view = ShortcutRecorderView()
         view.drawAppearance = hostAppearance
+        view.modifiersOnly = modifiersOnly
         // Show the persisted shortcut (e.g. the ⌘V default) right away.
         if let parsed = Self.parse(text) {
             view.keyCode = parsed.keyCode
@@ -137,6 +141,7 @@ struct ShortcutRecorder: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {
+        nsView.modifiersOnly = modifiersOnly
         if nsView.drawAppearance?.name != hostAppearance?.name {
             nsView.drawAppearance = hostAppearance
         }
@@ -394,43 +399,23 @@ struct GeneralTabView: View {
                     SettingsRow(L("Show Gesture In Whatever App")) {
                         TrailingSwitch(isOn: $viewModel.showUIInWhateverApp)
                     }
-                    // 额外触发按键（issue #53）。AppDelegate 每事件现读偏好，
-                    // 所以开关不需要重启即生效。
+                    // 手势起手键（issue #53）：一个录制框，默认右键，也就是原版的
+                    // 唯一起手键。AppDelegate 每事件现读偏好，录完不用重启即生效。
                     RowDivider()
-                    SettingsRow(L("Trigger Gesture With Middle Button")) {
-                        TrailingSwitch(isOn: $viewModel.enableMiddleButtonGesture)
+                    SettingsRow(L("Gesture Trigger Button")) {
+                        MouseButtonRecorder(buttonNumber: $viewModel.gestureTriggerButton)
                     }
+                    // 按住修饰键时不起手（issue #59）：一个开关配一个只录修饰键的
+                    // 快捷键框，录到什么组合就避让什么，含它的组合键同样让位。
                     RowDivider()
-                    SettingsRow(L("Trigger Gesture With Side Buttons")) {
-                        TrailingSwitch(isOn: $viewModel.enableSideButtonGesture)
-                    }
-                    RowDivider()
-                    SettingsRow(L("Custom Trigger Button")) {
-                        TrailingSwitch(isOn: $viewModel.enableCustomButtonGesture) {
-                            MouseButtonRecorder(buttonNumber: $viewModel.customGestureButton)
+                    SettingsRow(L("Hold Modifiers To Skip Gesture")) {
+                        TrailingSwitch(isOn: $viewModel.enableGestureSuppression) {
+                            ShortcutRecorder(
+                                text: viewModel.suppressedModifiersBinding(),
+                                modifiersOnly: true
+                            )
+                            .frame(width: 130, height: 24)
                         }
-                    }
-                    // 按住修饰键时不起手（issue #59）。同样是每键一行开关，
-                    // 勾选任意一个即代表按住它（或含它的组合）时手势让位给前台 App。
-                    RowDivider()
-                    SettingsRow(L("Hold ⌘ To Skip Gesture")) {
-                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .command))
-                    }
-                    RowDivider()
-                    SettingsRow(L("Hold ⌃ To Skip Gesture")) {
-                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .control))
-                    }
-                    RowDivider()
-                    SettingsRow(L("Hold ⇧ To Skip Gesture")) {
-                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .shift))
-                    }
-                    RowDivider()
-                    SettingsRow(L("Hold ⌥ To Skip Gesture")) {
-                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .option))
-                    }
-                    RowDivider()
-                    SettingsRow(L("Hold Fn To Skip Gesture")) {
-                        TrailingSwitch(isOn: viewModel.suppressionBinding(for: .function))
                     }
                     RowDivider()
                     SettingsRow(L("Line color:")) {

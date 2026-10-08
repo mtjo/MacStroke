@@ -59,11 +59,11 @@ public class CanvasManager: EventCaptureDelegate {
 
     /// Whether a gesture may start from the given mouse button.
     ///
-    /// The original only ever watched the right button; the port additionally
-    /// takes middle / side / user-bound extra buttons (issue #53) and asks the
-    /// app layer per event, so flipping a preferences toggle applies without
-    /// restarting or rebuilding the event tap. Unset means right-button-only,
-    /// i.e. exactly the original's behaviour.
+    /// The original only ever watched the right button. The port has one
+    /// configurable trigger button (issue #53) and asks the app layer per
+    /// event, so changing it in the preferences applies without restarting or
+    /// rebuilding the event tap. Unset means right-button-only, which is
+    /// exactly the original's behaviour and also the shipped default.
     public var isTriggerButtonAllowed: ((MouseButton) -> Bool)?
 
     /// The modifier keys that must not start a gesture (issue #59). Asked per
@@ -152,8 +152,6 @@ public class CanvasManager: EventCaptureDelegate {
                 // Original AppDelegate.m:431-438 — while a gesture is in
                 // progress, left clicks are swallowed to avoid mis-fires.
                 return shouldShow && isCapturing
-            case .right:
-                return handleTriggerMouseDown(event)
             default:
                 guard isTriggerAllowed(event.button) else { return false }
                 return handleTriggerMouseDown(event)
@@ -180,12 +178,12 @@ public class CanvasManager: EventCaptureDelegate {
         }
     }
 
-    /// Whether the given button may start a gesture. The right button is always
-    /// allowed (that is the original's only trigger); everything else goes
-    /// through the app-layer preference check.
+    /// Whether the given button may start a gesture. The app layer owns the
+    /// single configured trigger button; without its answer nothing is allowed,
+    /// which leaves the right button as the only trigger.
     private func isTriggerAllowed(_ button: MouseButton) -> Bool {
-        if button == .right { return true }
-        return isTriggerButtonAllowed?(button) ?? false
+        guard let isTriggerButtonAllowed else { return button == .right }
+        return isTriggerButtonAllowed(button)
     }
 
     /// Whether any modifier that must suppress gestures is currently held.

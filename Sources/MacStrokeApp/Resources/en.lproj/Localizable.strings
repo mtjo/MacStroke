@@ -232,6 +232,7 @@
 
 "Click to Record" = "Click to Record";
 "Recording… press a key (Esc to cancel)" = "Recording… press a key (Esc to cancel)";
+"Recording… hold modifiers (Esc to cancel)" = "Recording… hold modifiers (Esc to cancel)";
 
 /* General tab */
 "Show Icon In Status Bar" = "Show Icon In Status Bar";
@@ -270,14 +271,11 @@
 "Filter hint" = "Separate bundle IDs with |; * matches every app, empty matches none";
 "Show" = "Show";
 "Hide" = "Hide";
-"Trigger Gesture With Middle Button" = "Trigger Gesture With Middle Button";
-"Trigger Gesture With Side Buttons" = "Trigger Gesture With Side Buttons";
-"Custom Trigger Button" = "Custom Trigger Button";
+"Gesture Trigger Button" = "Gesture Trigger Button";
 "Press a mouse button" = "Press a mouse button";
-"Not recorded" = "Not recorded";
+"Right Button" = "Right Button";
+"Middle Button" = "Middle Button";
+"Back Button" = "Back Button";
+"Forward Button" = "Forward Button";
 "Button %d" = "Button %d";
-"Hold ⌘ To Skip Gesture" = "Hold ⌘ To Skip Gesture";
-"Hold ⌃ To Skip Gesture" = "Hold ⌃ To Skip Gesture";
-"Hold ⇧ To Skip Gesture" = "Hold ⇧ To Skip Gesture";
-"Hold ⌥ To Skip Gesture" = "Hold ⌥ To Skip Gesture";
-"Hold Fn To Skip Gesture" = "Hold Fn To Skip Gesture";
+"Hold Modifiers To Skip Gesture" = "Hold Modifiers To Skip Gesture";

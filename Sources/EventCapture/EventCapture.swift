@@ -78,6 +78,17 @@ extension Set where Element == GestureModifier {
     public var tokenList: String {
         GestureModifier.allCases.filter { contains($0) }.map(\.rawValue).joined(separator: ",")
     }
+
+    /// Recorder form: the device-independent modifier flags a shortcut control
+    /// reports. Only the five bits `GestureModifier` knows about survive, so a
+    /// recorded key code's own flags cannot smuggle anything in.
+    public init(eventFlags: UInt) {
+        self = GestureModifier.all(in: CGEventFlags(rawValue: UInt64(eventFlags)))
+    }
+
+    public var eventFlags: UInt {
+        UInt(GestureModifier.allCases.filter { contains($0) }.reduce(0) { $0 | $1.cgFlag.rawValue })
+    }
 }
 
 public enum MouseButton: Equatable {

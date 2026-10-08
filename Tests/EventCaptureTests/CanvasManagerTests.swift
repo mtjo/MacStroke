@@ -186,7 +186,7 @@ final class CanvasManagerTests: XCTestCase {
         XCTAssertTrue(delegate.completedStrokes.isEmpty, "recorded gestures are not matched")
     }
 
-    // MARK: - 额外触发按键（issue #53：中键 / 侧键 / 自定义键）
+    // MARK: - 手势起手键（issue #53：中键 / 侧键 / 自定义键合成一个）
 
     /// 用同一个按键画一条足够长的轨迹（down + moves + up），返回是否至少吃掉了一个事件。
     @discardableResult
@@ -217,7 +217,7 @@ final class CanvasManagerTests: XCTestCase {
         return consumed || handled
     }
 
-    func testMiddleButtonStartsGestureWhenEnabled() {
+    func testMiddleButtonStartsGestureWhenRecorded() {
         manager.isTriggerButtonAllowed = { $0 == .middle }
 
         XCTAssertTrue(drawStroke(with: .middle))
@@ -225,20 +225,31 @@ final class CanvasManagerTests: XCTestCase {
         XCTAssertFalse(manager.capturing)
     }
 
-    func testMiddleButtonPassesThroughWhenDisabled() {
-        // 反向对照：不勾任何额外按键时（默认状态），行为必须与原版一致。
-        manager.isTriggerButtonAllowed = { _ in false }
+    func testMiddleButtonPassesThroughWhenNotRecorded() {
+        // 反向对照：起手键是别的键时（默认右键），中键行为必须与原版一致 = 放行。
+        manager.isTriggerButtonAllowed = { $0 == .right }
 
-        XCTAssertFalse(drawStroke(with: .middle), "关闭时中键事件必须原样放行")
+        XCTAssertFalse(drawStroke(with: .middle), "未录成起手键时中键事件必须原样放行")
         XCTAssertTrue(delegate.completedStrokes.isEmpty)
         XCTAssertFalse(manager.capturing)
     }
 
-    func testRightButtonAlwaysStartsGestureRegardlessOfPreference() {
-        // 右键是原版唯一的起手键，偏好判定不能把它关掉。
-        manager.isTriggerButtonAllowed = { _ in false }
+    func testRecordedButtonReplacesTheRightButton() {
+        // 合并成单个起手键后（issue #53）偏好判定说了算：录成中键，右键就原样
+        // 交还给前台 App，不会再起手。
+        manager.isTriggerButtonAllowed = { $0 == .middle }
 
+        XCTAssertFalse(drawStroke(with: .right), "右键已不是起手键")
+        XCTAssertTrue(delegate.completedStrokes.isEmpty)
+
+        XCTAssertTrue(drawStroke(with: .middle))
+        XCTAssertEqual(delegate.completedStrokes.count, 1)
+    }
+
+    func testUnsetTriggerCheckLeavesRightButtonAsTheOnlyTrigger() {
+        // 没接线 = 原版：只有右键起手。
         XCTAssertTrue(drawStroke(with: .right))
+        XCTAssertFalse(drawStroke(with: .middle))
         XCTAssertEqual(delegate.completedStrokes.count, 1)
     }
 
@@ -254,7 +265,8 @@ final class CanvasManagerTests: XCTestCase {
     }
 
     func testDragOfAnotherButtonDoesNotJoinActiveGesture() {
-        manager.isTriggerButtonAllowed = { $0 == .middle }
+        // 起手键录成右键（默认），中键的拖动不该并进这趟手势。
+        manager.isTriggerButtonAllowed = { $0 == .right }
 
         let down = manager.eventCapture(
             capture,
@@ -425,5 +437,16 @@ final class CanvasManagerTests: XCTestCase {
         XCTAssertEqual(Set(tokenList: "cmd,unknown"), [.command], "认不出的 token 直接忽略")
         // 存出来的串固定按 allCases 顺序，勾选先后不会改变磁盘内容。
         XCTAssertEqual(Set([.option, .command, .function]).tokenList, "cmd,opt,fn")
+    }
+
+    func testModifierEventFlagsRoundTrip() {
+        // 录制框报的是 device-independent flags，存的还是同一份 token 串。
+        XCTAssertEqual(Set(eventFlags: 0x100000 | 0x20000).tokenList, "cmd,shift")
+        XCTAssertEqual(Set(eventFlags: 0x800000).tokenList, "fn")
+        XCTAssertEqual(Set([.command, .option]).eventFlags, 0x180000)
+        // 反向对照：caps-lock 这类没建模的位一律丢掉，录到的快捷键里
+        // key code 自带的 flags 混不进来。
+        XCTAssertEqual(Set(eventFlags: 0x10000).tokenList, "")
+        XCTAssertEqual(Set<GestureModifier>().eventFlags, 0)
     }
 }
