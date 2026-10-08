@@ -196,11 +196,39 @@ public final class FinderSyncExtensionController: FIFinderSync {
         return menu
     }
 
-    /// Finder draws this menu in its own appearance, so the glyphs have to be
-    /// handed over as masks; kept in their default palette they render black and
-    /// vanish on a dark context menu.
+    /// Finder cannot draw the symbol rep this extension hands over, so an SF
+    /// Symbol reaches its menu already flattened to black and vanishes on a dark
+    /// context menu. Rasterising the glyph here into a plain bitmap rep, marked
+    /// as a template, gives Finder a mask it can tint with the menu's text
+    /// colour. The neutral tone is what shows through if a host ignores the flag:
+    /// readable on a light menu and on a dark one.
     private func menuIcon(_ symbol: String) -> NSImage? {
-        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
+        guard let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
+        let side: CGFloat = 16
+        let pixels = Int(side * 2)  // two device pixels per point, so Retina stays crisp
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ) else { return nil }
+        rep.size = NSSize(width: side, height: side)
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        let tinted = glyph.withSymbolConfiguration(
+            NSImage.SymbolConfiguration(paletteColors: [NSColor(white: 0.45, alpha: 1)])
+        ) ?? glyph
+        let natural = tinted.size
+        let fit = min(side / natural.width, side / natural.height)
+        let target = NSSize(width: natural.width * fit, height: natural.height * fit)
+        tinted.draw(
+            in: NSRect(x: (side - target.width) / 2, y: (side - target.height) / 2,
+                       width: target.width, height: target.height),
+            from: .zero, operation: .sourceOver, fraction: 1.0)
+        NSGraphicsContext.restoreGraphicsState()
+
+        let image = NSImage(size: NSSize(width: side, height: side))
+        image.addRepresentation(rep)
         image.isTemplate = true
         return image
     }
