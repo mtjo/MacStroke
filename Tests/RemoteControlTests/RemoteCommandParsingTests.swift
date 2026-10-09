@@ -20,6 +20,8 @@ final class RemoteCommandParsingTests: XCTestCase {
                        .command(.click(button: .right, doubleClick: true)))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"button","btn":"middle","down":false}"#),
                        .command(.button(button: .middle, pressed: false)))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"scroll","dx":0,"dy":-40}"#),
+                       .command(.scroll(dx: 0, dy: -40)))
     }
 
     /// 省略 btn 就是左键：小程序的主按钮不必带字段。
@@ -38,7 +40,8 @@ final class RemoteCommandParsingTests: XCTestCase {
         XCTAssertEqual(RemoteCommand.parse(line: "not json"), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"move","dx":1}"#), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"click","btn":"side4"}"#), .error(.malformed))
-        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"scroll","dy":3}"#), .error(.unknownCommand))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"scroll","dx":3}"#), .error(.malformed))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"warp","x":10,"y":20}"#), .error(.unknownCommand))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"dx":1,"dy":2}"#), .error(.malformed))
     }
 
@@ -143,6 +146,17 @@ final class RemoteClickExecutorMathTests: XCTestCase {
         let target = RemoteClickExecutor.moveTarget(from: RemoteScreenPoint(x: 900, y: 500),
                                                     size: size, dx: 100_000, dy: -100_000)
         XCTAssertEqual(target, CGPoint(x: 1400, y: 0))
+    }
+
+    /// 滚动同样要夹（一条命令不超过 300px），并且小数位移得取整，
+    /// 否则零头会被一点点丢掉，越滚越慢。
+    func testScrollDeltaIsClampedAndRounded() {
+        let delta = RemoteClickExecutor.scrollDelta(dx: 12.4, dy: -7.6)
+        XCTAssertEqual(delta.x, 12)
+        XCTAssertEqual(delta.y, -8)
+        let clamped = RemoteClickExecutor.scrollDelta(dx: 100_000, dy: -100_000)
+        XCTAssertEqual(clamped.x, 300)
+        XCTAssertEqual(clamped.y, -300)
     }
 }
 

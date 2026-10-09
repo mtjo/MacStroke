@@ -25,6 +25,9 @@ public enum RemoteClickExecutor {
     /// across every screen in one packet.
     static let maxMoveDelta: CGFloat = 500
 
+    /// Same idea for `scroll`: one packet should not blow past a whole page.
+    static let maxScrollDelta: CGFloat = 300
+
     /// Screen size and cursor position in CoreGraphics coordinates
     /// (top-left origin, y grows downward) — the space the wire protocol uses.
     public static func state() -> ScreenState {
@@ -80,6 +83,29 @@ public enum RemoteClickExecutor {
         usleep(60_000)
         press(button, at: point, pressed: true, clickState: 2)
         press(button, at: point, pressed: false, clickState: 2)
+    }
+
+    /// 双指滑动 → 滚轮事件。单位取像素不取「行」：行到像素由系统按当前设置换算
+    /// （实测固定 10px/行），手机预知不了，只有像素才谈得上跟手。
+    ///
+    /// 2026-10-09 用真窗口实测：dy=+100 三条 → 内容原点 -300，也就是 dy 为正
+    /// （手指往下划）页面往下走、看到更靠前的内容，和手机上的手感一致，
+    /// 所以这里不做任何翻号，方向就是协议里写的那个方向。
+    public static func scrollBy(x dx: CGFloat, y dy: CGFloat) {
+        let delta = scrollDelta(dx: dx, dy: dy)
+        guard delta.x != 0 || delta.y != 0 else { return }
+        guard let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2,
+                                  wheel1: delta.y, wheel2: delta.x, wheel3: 0) else { return }
+        // 滚轮事件作用于指针底下的窗口，位置不填就落到 (0,0)。
+        event.location = cgPoint(state().cursor)
+        event.post(tap: .cgSessionEventTap)
+    }
+
+    /// 纯计算部分：夹取上限并取整，wheel1 是垂直轴、wheel2 是水平轴。
+    static func scrollDelta(dx: CGFloat, dy: CGFloat) -> (x: Int32, y: Int32) {
+        let clampedX = min(max(dx, -maxScrollDelta), maxScrollDelta).rounded()
+        let clampedY = min(max(dy, -maxScrollDelta), maxScrollDelta).rounded()
+        return (x: Int32(clampedX), y: Int32(clampedY))
     }
 
     private static func press(_ button: RemoteMouseButton, at point: RemoteScreenPoint,

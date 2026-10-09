@@ -11,6 +11,7 @@
 //    {"t":"move","dx":12,"dy":-8}                      光标位移（像素，x 右 y 下）
 //    {"t":"click","btn":"right","double":false}        在当前光标处点击
 //    {"t":"button","btn":"left","down":true}           按住/松开（拖窗口、长按）
+//    {"t":"scroll","dx":0,"dy":-40}                    滚动（像素，x 右 y 下，同手指方向）
 //
 //  server → client
 //    {"t":"welcome","ok":true,"proto":1,"screen":{…},"cursor":{…}}
@@ -66,6 +67,7 @@ public enum RemoteCommand: Equatable {
     case move(dx: Double, dy: Double)
     case click(button: RemoteMouseButton, doubleClick: Bool)
     case button(button: RemoteMouseButton, pressed: Bool)
+    case scroll(dx: Double, dy: Double)
 
     /// Protocol revision the client must speak.
     public static let revision = 1
@@ -127,6 +129,12 @@ public extension RemoteCommand {
         case "button":
             guard let button = button(fields[Field.button]) else { return .error(.malformed) }
             return .command(.button(button: button, pressed: flag(fields[Field.down])))
+        case "scroll":
+            // 滚动和移动共用 dx/dy：手机端两根手指的位移本来就是同一套坐标语义。
+            guard let dx = number(fields[Field.dx]), let dy = number(fields[Field.dy]) else {
+                return .error(.malformed)
+            }
+            return .command(.scroll(dx: dx, dy: dy))
         default:
             return .error(.unknownCommand)
         }

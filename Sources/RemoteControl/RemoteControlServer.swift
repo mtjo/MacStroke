@@ -275,6 +275,12 @@ public final class RemoteControlServer: ObservableObject {
                 }
                 self.ack("button", to: client, cursor: true)
             }
+        case .scroll(let dx, let dy):
+            DispatchQueue.main.async {
+                RemoteClickExecutor.scrollBy(x: CGFloat(dx), y: CGFloat(dy))
+                // 滚动不动指针，回执不必带坐标——手机每秒可能发十几条，省一字节是一字节。
+                self.ack("scroll", to: client, cursor: false)
+            }
         }
     }
 

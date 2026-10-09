@@ -140,6 +140,37 @@ final class RemoteControlServerE2ETests: XCTestCase {
 
     // MARK: - 驱动
 
+    /// 双指滚动：服务端要真的往 session 里丢一条滚轮事件，并把手机给的像素增量
+    /// 原样带进事件字段。内容到底滚多少是窗口服务器的事，这里只证明报文发对了。
+    func testScrollPostsAWheelEventWithTheGivenDelta() throws {
+        let log = WheelLog()
+        guard let tap = log.start() else {
+            throw XCTSkip("测试进程没有权限挂事件 tap（辅助功能未授权）")
+        }
+        defer { log.stop(tap: tap) }
+
+        let ack = try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"scroll","dx":6,"dy":-120}"#)
+            return try pipe.readJSON()
+        }
+
+        XCTAssertEqual(ack["t"] as? String, "ack")
+        XCTAssertEqual(ack["cmd"] as? String, "scroll")
+        XCTAssertNil(ack["cursor"], "滚动不动指针，回执不该再带坐标浪费带宽")
+
+        waitUntil(timeout: 1) { log.events > 0 }
+        XCTAssertEqual(log.events, 1, "事件 tap 没抓到滚轮事件，用例无法证明任何事")
+        // 实测（2026-10-09）：像素单位的事件会把原值放进 point 场，同时按
+        // 10px/行折出行场，两条读法（scrollingDeltaY 与 deltaY）都拿得到数。
+        XCTAssertEqual(log.lastPoint1, -120, "像素增量要原样落在 point 场上")
+        XCTAssertEqual(log.lastAxis1, -12, "同一个值折算成行是 12 行")
+        XCTAssertEqual(log.lastPoint2, 6)
+        XCTAssertEqual(log.lastAxis2, 1, "6px 折成 1 行")
+        XCTAssertEqual(log.lastContinuous, 1, "连续标记决定 AppKit 按像素读还是按行读")
+    }
+
     /// 按住左键后手机掉线：服务端必须自己补一个松开，否则 Mac 卡在拖拽状态，
     /// 用户只能狂点鼠标才解得开。
     ///
@@ -307,6 +338,47 @@ private final class MouseButtonLog {
             case .leftMouseUp: log.leftUps += 1
             default: break
             }
+        }
+        return Unmanaged.passUnretained(event)
+    }
+}
+
+/// 只读事件 tap：抓滚轮事件各场的值，证明服务端发出的报文没被中途改写。
+private final class WheelLog {
+    private(set) var events = 0
+    private(set) var lastAxis1 = 0
+    private(set) var lastAxis2 = 0
+    private(set) var lastPoint1 = 0
+    private(set) var lastPoint2 = 0
+    private(set) var lastContinuous = -1
+
+    func start() -> CFMachPort? {
+        let mask = CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+        guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
+                                          options: .listenOnly, eventsOfInterest: mask,
+                                          callback: WheelLog.onEvent,
+                                          userInfo: Unmanaged.passUnretained(self).toOpaque())
+        else { return nil }
+        let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        return tap
+    }
+
+    func stop(tap: CFMachPort) {
+        CGEvent.tapEnable(tap: tap, enable: false)
+        CFMachPortInvalidate(tap)
+    }
+
+    private static let onEvent: CGEventTapCallBack = { _, type, event, userInfo in
+        if type == .scrollWheel, let userInfo {
+            let log = Unmanaged<WheelLog>.fromOpaque(userInfo).takeUnretainedValue()
+            log.events += 1
+            log.lastAxis1 = Int(event.getIntegerValueField(.scrollWheelEventDeltaAxis1))
+            log.lastAxis2 = Int(event.getIntegerValueField(.scrollWheelEventDeltaAxis2))
+            log.lastPoint1 = Int(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
+            log.lastPoint2 = Int(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
+            log.lastContinuous = Int(event.getIntegerValueField(.scrollWheelEventIsContinuous))
         }
         return Unmanaged.passUnretained(event)
     }
