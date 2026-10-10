@@ -60,6 +60,8 @@ cp Sources/MacStrokeApp/Resources/menu_icon_16x16.png "${APP_DIR}/Contents/Resou
 cp Sources/MacStrokeApp/Resources/menu_icon_disabled_16x16.png "${APP_DIR}/Contents/Resources/"
 # 偏好窗口侧边栏图标（沿用原版素材）
 cp Sources/MacStrokeApp/Resources/RightClick.png "${APP_DIR}/Contents/Resources/"
+# 远程控制页的小程序码（微信后台烤的固定图，本机生成不出来）
+cp Sources/MacStrokeApp/Resources/MiniProgramCode.png "${APP_DIR}/Contents/Resources/"
 
 # Copy main app localization (DO NOT copy FinderSync's - it has its own bundle)
 cp -R Sources/MacStrokeApp/Resources/en.lproj "${APP_DIR}/Contents/Resources/"

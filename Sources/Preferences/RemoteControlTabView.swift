@@ -98,6 +98,44 @@ struct RemoteControlTabView: View {
                 }
             }
 
+            SettingsSection(title: L("Open the mini program")) {
+                SettingsCard {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(spacing: 6) {
+                            if let code = RemoteMiniProgramCode.image {
+                                Image(nsImage: code)
+                                    .resizable()
+                                    // 码是微信后台烤的白底图，深色模式下不垫一层会跟卡片
+                                    // 糊在一起；小程序码也只有在白底上才扫得出来。
+                                    .frame(width: 148, height: 148)
+                                    .background(Color.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            } else {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.primary.opacity(0.05))
+                                    .overlay(Text(L("Mini program code is missing."))
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(8))
+                                    .frame(width: 148, height: 148)
+                            }
+                            Text(L("WeChat Scan"))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L("Scan this code with WeChat to open MacStroke on your phone."))
+                            Text(L("Do it once: afterwards open it from WeChat's recently used list."))
+                        }
+                        .font(.system(size: 12))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+            }
+
             SettingsSection(title: L("Pair with the mini program")) {
                 SettingsCard {
                     HStack(alignment: .top, spacing: 16) {
@@ -213,4 +251,15 @@ struct RemoteControlTabView: View {
             side: 380
         )
     }
+}
+
+/// 小程序码：微信后台按 AppID 烤出来的固定图，本机算不出来，只能当素材入库。
+/// 它跟上面那张配对码是两回事——这张给微信「扫一扫」打开小程序，那张给小程序自己扫。
+private enum RemoteMiniProgramCode {
+    static let image: NSImage? = {
+        guard let url = appResourceBundle().url(forResource: "MiniProgramCode", withExtension: "png") else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
+    }()
 }
