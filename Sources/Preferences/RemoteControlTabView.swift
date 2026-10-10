@@ -68,6 +68,10 @@ struct RemoteControlTabView: View {
                         }
                     }
                     RowDivider()
+                    // 二维码紧跟配对码那一行：重新生成配对码会连带重画这张码，
+                    // 中间隔着状态、授权两行就看不出这个关系。
+                    pairingBlock
+                    RowDivider()
                     SettingsRow(L("Status:")) {
                         Text(statusText)
                             .foregroundColor(statusColor)
@@ -95,10 +99,6 @@ struct RemoteControlTabView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                    RowDivider()
-                    // 配对码二维码不另起分组：它编的就是上面的端口和配对码，
-                    // 拆开摆会让人以为是两件事。
-                    pairingBlock
                 }
             }
 
@@ -128,9 +128,13 @@ struct RemoteControlTabView: View {
 
     // MARK: - Pieces
 
-    /// 卡片里的最后一块：配对码二维码 + 怎么用它。
+    /// 配对码二维码的边长：右边那段说明是 3 行 12pt + 1 行等宽正文，行距 8，
+    /// 量下来约 86pt，取同高才不显得这张码是另一件独立的东西。
+    private static let pairingQrSide: CGFloat = 86
+
+    /// 紧跟配对码那一行：左边二维码，右边说明与地址。
     private var pairingBlock: some View {
-        HStack(spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             qrBlock
             VStack(alignment: .leading, spacing: 8) {
                 Text(L("Scan this code inside the mini program to connect."))
@@ -194,20 +198,22 @@ struct RemoteControlTabView: View {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.none)
-                    .frame(width: 190, height: 190)
+                    .frame(width: Self.pairingQrSide, height: Self.pairingQrSide)
             } else {
+                // 占位方框跟二维码同高，否则这一格会在两种状态之间跳动；
+                // 86pt 的格子里 11pt 文案会顶出边，所以压到 9pt。
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.primary.opacity(0.05))
                     .overlay(
                         Text(viewModel.enableRemoteControl
                              ? L("No local network address was found.")
                              : L("Turn the switch on to show the QR code."))
-                            .font(.system(size: 11))
+                            .font(.system(size: 9))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
-                            .padding(8)
+                            .padding(4)
                     )
-                    .frame(width: 190, height: 190)
+                    .frame(width: Self.pairingQrSide, height: Self.pairingQrSide)
             }
         }
     }
