@@ -83,6 +83,7 @@ struct RemoteControlTabView: View {
                                     .foregroundColor(screenRecordingGranted ? .primary : .orange)
                                 Button(L("Ask for access")) {
                                     RemoteScreenCapture.requestScreenRecordingPermission()
+                                    RemoteScreenCapture.openScreenRecordingSettings()
                                 }
                                 .disabled(screenRecordingGranted)
                             }

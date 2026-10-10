@@ -13,6 +13,7 @@
 //  壁纸加光标——所有 App 窗口都不画进来。所以权限必须单独 preflight，不能拿图像判。
 //
 
+import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -39,6 +40,16 @@ public enum RemoteScreenCapture {
     @discardableResult
     public static func requestScreenRecordingPermission() -> Bool {
         CGRequestScreenCaptureAccess()
+    }
+
+    /// 把系统设置的「屏幕录制」面板直接拉起来。
+    ///
+    /// 只靠 CGRequestScreenCaptureAccess 不够：它仅在「系统还没问过」时弹框，一旦 App
+    /// 已经进了那张列表（包括拒绝态——服务端收到第一次 mirror 就会把名字写进去），再调
+    /// 它只静默返回 false，用户点「去授权」看着就像没反应。
+    public static func openScreenRecordingSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
+        NSWorkspace.shared.open(url)
     }
 
     /// 抓主屏并缩放到 `maxWidth` 宽以内。显示器休眠、没有外接屏被拔掉之类取不到图时返回 nil。
