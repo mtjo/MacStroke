@@ -14,6 +14,7 @@
 //
 
 import AppKit
+import Accelerate
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -82,7 +83,11 @@ public enum RemoteScreenCapture {
         return buffer as Data
     }
 
+    /// 等比缩放。首选 vImage：`CGContext.draw` 缩一张 1920x1080 的抓屏图会连带做整幅
+    /// 色彩管理重采样，实测单帧 ~200ms、占掉推流循环 71% 的时间，4 fps 直接掉到 1.7。
+    /// 布局对不上（不是 32bpp 小端 A 在前）才退回 CGContext 那条慢路，慢但不花屏。
     private static func resized(_ image: CGImage, to size: (w: Int, h: Int)) -> CGImage? {
+        if let fast = vImageResized(image, to: size) { return fast }
         guard let context = CGContext(data: nil, width: size.w, height: size.h, bitsPerComponent: 8,
                                       bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
@@ -92,5 +97,39 @@ public enum RemoteScreenCapture {
         context.interpolationQuality = .medium
         context.draw(image, in: CGRect(x: 0, y: 0, width: size.w, height: size.h))
         return context.makeImage()
+    }
+
+    /// 一次线性缩放到目标尺寸。不嵌 ICC：JPEG 里本来也不带，手机上按 sRGB 读，
+    /// 跟桌面看到的差别在肉眼之外。
+    ///
+    /// 别想着先 vImageBoxConvolve 折半再缩来压锯齿：它的目标是全尺寸的，半尺寸的
+    /// `vImage_Buffer` 只是让它读了错误的区域（实测整幅糊成红色），而且 2x2 核直接
+    /// 回 kvImageInvalidKernelSize。桌面字形的竖笔画实测和现方案一样，多花的时间买不到东西。
+    static func vImageResized(_ image: CGImage, to size: (w: Int, h: Int)) -> CGImage? {
+        let alpha = image.bitmapInfo.rawValue & 0x1F  // kCGBitmapAlphaInfoMask
+        guard image.bitsPerComponent == 8, image.bitsPerPixel == 32,
+              image.bitmapInfo.contains(.byteOrder32Little),
+              alpha == CGImageAlphaInfo.premultipliedFirst.rawValue
+                || alpha == CGImageAlphaInfo.noneSkipFirst.rawValue,
+              image.bytesPerRow >= image.width * 4,
+              let providerData = image.dataProvider?.data else { return nil }
+        let source = providerData as Data
+
+        return source.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> CGImage? in
+            guard let head = raw.baseAddress,
+                  let out = NSMutableData(length: size.w * size.h * 4) else { return nil }
+            var current = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: head),
+                                        height: vImagePixelCount(image.height),
+                                        width: vImagePixelCount(image.width),
+                                        rowBytes: image.bytesPerRow)
+            var dest = vImage_Buffer(data: out.mutableBytes, height: vImagePixelCount(size.h),
+                                     width: vImagePixelCount(size.w), rowBytes: size.w * 4)
+            guard vImageScale_ARGB8888(&current, &dest, nil, UInt32(kvImageNoFlags)) == 0 else { return nil }
+            guard let provider = CGDataProvider(data: out as CFData) else { return nil }
+            return CGImage(width: size.w, height: size.h, bitsPerComponent: 8, bitsPerPixel: 32,
+                           bytesPerRow: size.w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                           bitmapInfo: image.bitmapInfo, provider: provider, decode: nil,
+                           shouldInterpolate: false, intent: .defaultIntent)
+        }
     }
 }

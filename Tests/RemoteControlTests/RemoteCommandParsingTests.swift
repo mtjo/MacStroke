@@ -210,6 +210,46 @@ final class RemoteScreenFrameTests: XCTestCase {
                        "极扁的画面不能缩成 0 高，否则 CGContext 直接建不出来")
     }
 
+    /// 抓屏图是 32bpp 小端、A 在前，vImage 快路只认这一种布局：判错布局会把 R/B 读反，
+    /// 整屏变成蓝脸。所以既测接得住、也测红蓝没颠倒，并确认别的布局一律退回慢路。
+    func testVImageResizeHandlesCaptureLayoutWithoutSwappingChannels() {
+        let out = RemoteScreenCapture.vImageResized(captureLikeImage(alpha: .premultipliedFirst),
+                                                    to: (640, 360))
+        XCTAssertNotNil(out, "抓屏那种布局必须走快路，退回慢路就等于回到 200ms/帧")
+        XCTAssertEqual(out?.width, 640)
+        XCTAssertEqual(out?.height, 360)
+        if let out {
+            let left = pixel(of: out, x: 60), right = pixel(of: out, x: 580)
+            XCTAssertGreaterThan(left.r, left.b + 100, "左半必须是红的：R/B 反了说明字节序判错")
+            XCTAssertGreaterThan(right.b, right.r + 100, "右半必须是蓝的")
+        }
+        XCTAssertNil(RemoteScreenCapture.vImageResized(captureLikeImage(alpha: .premultipliedLast),
+                                                       to: (640, 360)),
+                     "A 在后的布局字节序不一样，快路必须拒接，交给慢路兜底")
+    }
+
+    private func captureLikeImage(alpha: CGImageAlphaInfo) -> CGImage {
+        let info = CGBitmapInfo(rawValue: alpha.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        let context = CGContext(data: nil, width: 1920, height: 1080, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: info.rawValue)!
+        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 960, height: 1080))
+        context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
+        context.fill(CGRect(x: 960, y: 0, width: 960, height: 1080))
+        return context.makeImage()!
+    }
+
+    private func pixel(of image: CGImage, x: Int) -> (r: Int, g: Int, b: Int) {
+        let context = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.interpolationQuality = .none
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        let row = context.data!.advanced(by: (image.height / 2) * context.bytesPerRow + x * 4)
+        let p = row.assumingMemoryBound(to: UInt8.self)
+        return (Int(p[0]), Int(p[1]), Int(p[2]))
+    }
+
     func testFrameLineCarriesBase64JPEG() {
         let jpeg = Data([0xFF, 0xD8, 0x0A, 0xFF, 0xD9])   // 故意含换行：见协议头注释
         let line = RemoteCommand.frameLine(seq: 7, width: 720, height: 450, jpeg: jpeg)
