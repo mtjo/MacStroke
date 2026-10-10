@@ -95,69 +95,16 @@ struct RemoteControlTabView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                    RowDivider()
+                    // 配对码二维码不另起分组：它编的就是上面的端口和配对码，
+                    // 拆开摆会让人以为是两件事。
+                    pairingBlock
                 }
             }
 
             SettingsSection(title: L("Open the mini program")) {
                 SettingsCard {
-                    HStack(alignment: .top, spacing: 16) {
-                        VStack(spacing: 6) {
-                            if let code = RemoteMiniProgramCode.image {
-                                Image(nsImage: code)
-                                    .resizable()
-                                    // 码是微信后台烤的白底图，深色模式下不垫一层会跟卡片
-                                    // 糊在一起；小程序码也只有在白底上才扫得出来。
-                                    .frame(width: 148, height: 148)
-                                    .background(Color.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            } else {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.primary.opacity(0.05))
-                                    .overlay(Text(L("Mini program code is missing."))
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(8))
-                                    .frame(width: 148, height: 148)
-                            }
-                            Text(L("WeChat Scan"))
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L("Scan this code with WeChat to open MacStroke on your phone."))
-                            Text(L("Do it once: afterwards open it from WeChat's recently used list."))
-                        }
-                        .font(.system(size: 12))
-                        Spacer(minLength: 0)
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
-            }
-
-            SettingsSection(title: L("Pair with the mini program")) {
-                SettingsCard {
-                    HStack(alignment: .top, spacing: 16) {
-                        qrBlock
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L("Scan this code inside the mini program to connect."))
-                            Text(L("The phone and this Mac must be on the same Wi-Fi."))
-                            Text(L("A new pairing code disconnects every phone already paired."))
-                            if let address {
-                                Text(L("Address:") + " \(address):\(viewModel.remoteControlPort)")
-                                    .font(.system(.body, design: .monospaced))
-                                    .textSelection(.enabled)
-                            } else {
-                                Text(L("No local network address was found."))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .font(.system(size: 12))
-                        Spacer(minLength: 0)
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    miniProgramBlock
                 }
             }
         }
@@ -180,6 +127,66 @@ struct RemoteControlTabView: View {
     }
 
     // MARK: - Pieces
+
+    /// 卡片里的最后一块：配对码二维码 + 怎么用它。
+    private var pairingBlock: some View {
+        HStack(spacing: 16) {
+            qrBlock
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Scan this code inside the mini program to connect."))
+                Text(L("The phone and this Mac must be on the same Wi-Fi."))
+                Text(L("A new pairing code disconnects every phone already paired."))
+                if let address {
+                    Text(L("Address:") + " \(address):\(viewModel.remoteControlPort)")
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                } else {
+                    Text(L("No local network address was found."))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .font(.system(size: 12))
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private var miniProgramBlock: some View {
+        HStack(spacing: 16) {
+            VStack(spacing: 6) {
+                if let code = RemoteMiniProgramCode.image {
+                    Image(nsImage: code)
+                        .resizable()
+                        // 码是微信后台烤的白底图，深色模式下不垫一层会跟卡片
+                        // 糊在一起；小程序码也只有在白底上才扫得出来。
+                        .frame(width: 148, height: 148)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.primary.opacity(0.05))
+                        .overlay(Text(L("Mini program code is missing."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(8))
+                        .frame(width: 148, height: 148)
+                }
+                Text(L("WeChat Scan"))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Scan this code with WeChat to open MacStroke on your phone."))
+                Text(L("Do it once: afterwards open it from WeChat's recently used list."))
+            }
+            .font(.system(size: 12))
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
 
     private var qrBlock: some View {
         Group {

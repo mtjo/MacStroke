@@ -296,7 +296,6 @@
 "Scan this code with WeChat to open MacStroke on your phone." = "用微信「扫一扫」打开这张码，手机上就能用 MacStroke。";
 "Do it once: afterwards open it from WeChat's recently used list." = "这步只做一次，之后在微信「最近使用的小程序」里直接打开。";
 "Mini program code is missing." = "小程序码素材缺失。";
-"Pair with the mini program" = "与小程序配对";
 "Scan this code inside the mini program to connect." = "在小程序里点「扫码连接」扫这个码。";
 "The phone and this Mac must be on the same Wi-Fi." = "手机必须和这台 Mac 在同一个局域网。";
 "A new pairing code disconnects every phone already paired." = "换了配对码，已配对的手机要重新扫。";
