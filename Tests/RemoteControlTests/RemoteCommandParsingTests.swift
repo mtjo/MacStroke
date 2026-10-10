@@ -35,13 +35,37 @@ final class RemoteCommandParsingTests: XCTestCase {
                        .command(.move(dx: 30, dy: -4)))
     }
 
+    /// 触屏页只发主屏归一化坐标：它不知道也不需要知道这台 Mac 是 1440 还是 3025 宽。
+    func testWarpTakesNormalizedCoordinates() {
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"warp","x":0.42,"y":0.66}"#),
+                       .command(.warp(x: 0.42, y: 0.66)))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"warp","x":"0.5","y":0}"#),
+                       .command(.warp(x: 0.5, y: 0)))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"warp","x":0.5}"#), .error(.malformed))
+    }
+
+    /// 回显参数全省略就是默认那组；越界不报错而是夹到能用的边界——
+    /// 手机端写错数字不该断连，也不该把 Mac 拖去跑 60 fps 全屏编码。
+    func testMirrorDefaultsAndClamping() {
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"mirror","on":true}"#),
+                       .command(.mirror(RemoteMirrorRequest(on: true))))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"mirror","on":true,"w":640,"fps":5,"q":60}"#),
+                       .command(.mirror(RemoteMirrorRequest(on: true, maxWidth: 640, fps: 5, quality: 60))))
+        let squeezed = RemoteMirrorRequest(on: true, maxWidth: 50, fps: 600, quality: 100).clamped
+        XCTAssertEqual(squeezed.maxWidth, 320)
+        XCTAssertEqual(squeezed.fps, 10)
+        XCTAssertEqual(squeezed.quality, 90)
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"mirror","on":true,"w":99999,"fps":0,"q":0}"#),
+                       .command(.mirror(RemoteMirrorRequest(on: true, maxWidth: 1920, fps: 1, quality: 10))))
+    }
+
     func testMalformedAndUnknownPackets() {
         XCTAssertEqual(RemoteCommand.parse(line: ""), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: "not json"), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"move","dx":1}"#), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"click","btn":"side4"}"#), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"scroll","dx":3}"#), .error(.malformed))
-        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"warp","x":10,"y":20}"#), .error(.unknownCommand))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"zoom","x":10,"y":20}"#), .error(.unknownCommand))
         XCTAssertEqual(RemoteCommand.parse(line: #"{"dx":1,"dy":2}"#), .error(.malformed))
     }
 
@@ -157,6 +181,48 @@ final class RemoteClickExecutorMathTests: XCTestCase {
         let clamped = RemoteClickExecutor.scrollDelta(dx: 100_000, dy: -100_000)
         XCTAssertEqual(clamped.x, 300)
         XCTAssertEqual(clamped.y, -300)
+    }
+
+    /// 归一化坐标摊到屏幕上：中心就是中心，右下角留一像素，越界的夹进来而不是拒掉
+    /// （手机在缩放边界上算出 1.0004 是常态）。
+    func testWarpMapsNormalizedPointOntoTheScreen() {
+        XCTAssertEqual(RemoteClickExecutor.warpTarget(nx: 0, ny: 0, size: size), CGPoint(x: 0, y: 0))
+        XCTAssertEqual(RemoteClickExecutor.warpTarget(nx: 0.5, ny: 0.5, size: size),
+                       CGPoint(x: 959.5, y: 539.5))
+        XCTAssertEqual(RemoteClickExecutor.warpTarget(nx: 1, ny: 1, size: size),
+                       CGPoint(x: 1919, y: 1079))
+        XCTAssertEqual(RemoteClickExecutor.warpTarget(nx: 2, ny: -3, size: size),
+                       CGPoint(x: 1919, y: 0))
+    }
+}
+
+/// 回显帧的编码：一行一条 JSON，JPEG 走 base64。
+final class RemoteScreenFrameTests: XCTestCase {
+    /// 等比缩：只缩不放，宽不超过 maxWidth，高按比例取整且至少 1。
+    func testScaledSizeKeepsAspectRatioAndNeverUpscales() {
+        XCTAssertEqual(RemoteScreenCapture.scaledSize(width: 2880, height: 1800, maxWidth: 720).w, 720)
+        XCTAssertEqual(RemoteScreenCapture.scaledSize(width: 2880, height: 1800, maxWidth: 720).h, 450)
+        XCTAssertEqual(RemoteScreenCapture.scaledSize(width: 640, height: 400, maxWidth: 720).w, 640,
+                       "比 maxWidth 还窄的屏幕不该被放大，只会更糊更大")
+        XCTAssertEqual(RemoteScreenCapture.scaledSize(width: 1000, height: 3, maxWidth: 500).h, 2,
+                       "高度按比例取整，不是无条件压成 1")
+        XCTAssertEqual(RemoteScreenCapture.scaledSize(width: 1000, height: 1, maxWidth: 400).h, 1,
+                       "极扁的画面不能缩成 0 高，否则 CGContext 直接建不出来")
+    }
+
+    func testFrameLineCarriesBase64JPEG() {
+        let jpeg = Data([0xFF, 0xD8, 0x0A, 0xFF, 0xD9])   // 故意含换行：见协议头注释
+        let line = RemoteCommand.frameLine(seq: 7, width: 720, height: 450, jpeg: jpeg)
+        let text = String(decoding: line, as: UTF8.self)
+        XCTAssertFalse(text.contains("\n"), "成帧靠换行，base64 里绝不能出现真的换行字节")
+
+        let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] ?? [:]
+        XCTAssertEqual(object["t"] as? String, "frame")
+        XCTAssertEqual(object["i"] as? Int, 7)
+        XCTAssertEqual(object["w"] as? Int, 720)
+        XCTAssertEqual(object["h"] as? Int, 450)
+        let decoded = Data(base64Encoded: (object["jpg"] as? String) ?? "")
+        XCTAssertEqual(decoded, jpeg, "手机端 base64 解回来必须一个字节都不差")
     }
 }
 

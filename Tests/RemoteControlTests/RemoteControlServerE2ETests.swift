@@ -12,6 +12,7 @@ import XCTest
 import Foundation
 import Darwin
 import CoreGraphics
+import ImageIO
 @testable import RemoteControl
 
 /// 端口和配对码是文件级常量：@escaping 的对话闭包里引用实例属性要写 self.，
@@ -138,6 +139,125 @@ final class RemoteControlServerE2ETests: XCTestCase {
         XCTAssertEqual(RemoteClickExecutor.state().cursor.x, before.cursor.x, accuracy: 1)
     }
 
+    // MARK: - 触屏模式
+
+    /// 绝对坐标：手机点哪儿光标就落哪儿，越界是夹住而不是拒绝。
+    func testWarpMovesTheCursorToAnAbsolutePoint() throws {
+        let before = RemoteClickExecutor.state()
+        let size = before.size
+
+        let ack = try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"warp","x":0.25,"y":0.75}"#)
+            return try pipe.readAck(cmd: "warp")
+        }
+        XCTAssertNil(ack["cursor"], "手机知道自己点在哪，回执再带一次坐标就是浪费带宽")
+
+        let after = RemoteClickExecutor.state()
+        XCTAssertEqual(after.cursor.x, (size.w - 1) * 0.25, accuracy: 1,
+                       "归一化坐标要真的摊到主屏像素上")
+        XCTAssertEqual(after.cursor.y, (size.h - 1) * 0.75, accuracy: 1)
+
+        // 缩放边界上算出 1.0004 是常态：夹进屏幕，别断连也别报错。
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"warp","x":2,"y":-1}"#)
+            _ = try pipe.readAck(cmd: "warp")
+        }
+        let clamped = RemoteClickExecutor.state()
+        XCTAssertEqual(clamped.cursor.x, size.w - 1, accuracy: 1)
+        XCTAssertEqual(clamped.cursor.y, 0, accuracy: 1)
+
+        // 把用户的指针放回原处。
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"warp","x":\#(before.cursor.x / max(size.w - 1, 1)),"y":\#(before.cursor.y / max(size.h - 1, 1))}"#)
+            _ = try pipe.readAck(cmd: "warp")
+        }
+        XCTAssertEqual(RemoteClickExecutor.state().cursor.x, before.cursor.x, accuracy: 2)
+    }
+
+    /// 回显开关的完整往返：不开就一帧都不来（反向对照），开了要收到真能解码的桌面帧，
+    /// 关掉之后必须彻底静默。
+    ///
+    /// 参数刻意用 w=320 fps=5：窗口短、帧小，断言跑得快，也顺手证明夹取之外的
+    /// 自定义尺寸真的被服务端采纳了。
+    func testMirrorFramesFollowTheSwitch() throws {
+        guard RemoteScreenCapture.hasScreenRecordingPermission() else {
+            throw XCTSkip("测试进程没有「屏幕录制」权限，服务端此时只会回 noScreenPermission")
+        }
+        let displaySize = RemoteClickExecutor.state().size
+
+        let outcome = try converse { pipe -> MirrorEvidence in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+
+            // 反向对照：先只 ping，确认没人开回显时真的一帧都没有。
+            try pipe.send(#"{"t":"ping"}"#)
+            _ = try pipe.readAck(cmd: "ping")
+            let beforeOn = try pipe.collectFrames(window: 1.0)
+
+            try pipe.send(#"{"t":"mirror","on":true,"w":320,"fps":5,"q":40}"#)
+            _ = try pipe.readAck(cmd: "mirror")
+            let first = try pipe.readFrame()
+            // 第二帧用来验序号真的在往前走，而不是同一帧被反复重发。
+            let second = try pipe.readFrame()
+            let whileOn = try pipe.collectFrames(window: 1.0)
+
+            try pipe.send(#"{"t":"mirror","on":false}"#)
+            _ = try pipe.readAck(cmd: "mirror")
+            // 已经压在链路里的那一帧容许迟到半秒，先把它冲掉再要静默窗口。
+            usleep(400_000)
+            _ = try pipe.collectFrames(window: 0.6)
+            let afterOff = try pipe.collectFrames(window: 1.4)
+
+            return MirrorEvidence(beforeOn: beforeOn.count, first: first, second: second,
+                                  whileOn: whileOn.count, afterOff: afterOff.count)
+        }
+
+        XCTAssertEqual(outcome.beforeOn, 0, "没发 mirror 就不该推任何帧")
+        XCTAssertLessThanOrEqual(outcome.first.width, 320, "手机要的宽度服务端要认")
+        XCTAssertEqual(CGFloat(outcome.first.height) / CGFloat(outcome.first.width),
+                       displaySize.h / displaySize.w, accuracy: 0.02,
+                       "帧必须是整屏等比缩下来的，不然手机上点的位置对不上")
+        XCTAssertGreaterThan(outcome.second.seq, outcome.first.seq, "序号要单调递增")
+        XCTAssertGreaterThanOrEqual(outcome.whileOn, 2, "5 fps 的一秒窗口里至少该有两帧")
+        XCTAssertEqual(outcome.afterOff, 0, "关掉回显之后还在推流")
+
+        let jpeg = outcome.first.jpeg
+        let decoded = try XCTUnwrap(
+            CGImageSourceCreateWithData(Data(jpeg) as CFData, nil),
+            "帧里的字节解不出图像，手机端只会看到一个灰块")
+        let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(decoded, 0, nil)
+                                       as? [CFString: Any])
+        XCTAssertNotNil(properties[kCGImagePropertyWidth], "JPEG 里没有尺寸信息")
+    }
+
+    /// 没有屏幕录制权限时，服务端要把话说明白并且一个字节画面都不推。
+    /// 权限是环境状态，这里只断言「有权限时不该走这条分支」这一半。
+    func testMirrorWithoutPermissionIsAnExplicitError() throws {
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"mirror","on":true}"#)
+            guard !RemoteScreenCapture.hasScreenRecordingPermission() else {
+                // 有权限：这条分支走不到，确认它真的在推流而不是空报一个错。
+                _ = try pipe.readAck(cmd: "mirror")
+                _ = try pipe.readFrame()
+                try pipe.send(#"{"t":"mirror","on":false}"#)
+                return
+            }
+            let reply = try pipe.readJSON()
+            XCTAssertEqual(reply["t"] as? String, "error")
+            XCTAssertEqual(reply["code"] as? String, "noScreenPermission")
+            XCTAssertNotNil(reply["message"] as? String, "手机端要能直接把这句话给用户看")
+            XCTAssertEqual(try pipe.collectFrames(window: 1.0).count, 0)
+        }
+    }
+
     // MARK: - 驱动
 
     /// 双指滚动：服务端要真的往 session 里丢一条滚轮事件，并把手机给的像素增量
@@ -241,10 +361,22 @@ final class RemoteControlServerE2ETests: XCTestCase {
     }
 }
 
+/// 一条连接上收到的一次「回显往返」的全部计数，一次带回 converse 闭包，
+/// 断言留在主线程里写，免得把它们埋在闭包中看不清顺序。
+private struct MirrorEvidence {
+    var beforeOn: Int
+    var first: (seq: Int, width: Int, height: Int, jpeg: Data)
+    var second: (seq: Int, width: Int, height: Int, jpeg: Data)
+    var whileOn: Int
+    var afterOff: Int
+}
+
 /// 同步的测试用客户端：一行一条 JSON，读满一个换行为止。
 private final class ClientPipe {
     private let port: Int
     private var fd: Int32 = -1
+    private var pending = Data()
+    private var scratch = [UInt8](repeating: 0, count: 16 * 1024)
 
     init(port: Int) { self.port = port }
 
@@ -287,15 +419,19 @@ private final class ClientPipe {
         XCTAssertEqual(written, payload.count, "命令没写完整")
     }
 
-    /// 读到换行为止；对端关闭且没有内容时返回空串。
+    /// 读到换行为止；对端关闭或超时且没有完整行时返回空串。
+    /// 一次读满一缓冲区再找换行：回显帧一行就有几十 KB，逐字节 read 会慢到测不出真相。
     func readRaw() throws -> String {
-        var bytes = [UInt8](repeating: 0, count: 1)
-        var text = ""
-        while Darwin.read(fd, &bytes, 1) == 1 {
-            if bytes[0] == 0x0A { break }
-            text.append(Character(UnicodeScalar(bytes[0])))
+        while true {
+            if let index = pending.firstIndex(of: 0x0A) {
+                let line = pending.subdata(in: pending.startIndex..<index)
+                pending.removeSubrange(pending.startIndex...index)
+                return String(decoding: line, as: UTF8.self)
+            }
+            let read = scratch.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, $0.count) }
+            if read <= 0 { return "" }
+            pending.append(contentsOf: scratch[0..<read])
         }
-        return text
     }
 
     func readJSON() throws -> [String: Any] {
@@ -303,6 +439,54 @@ private final class ClientPipe {
         XCTAssertFalse(line.isEmpty, "没读到回执行")
         return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
     }
+
+    /// 读到指定 cmd 的 ack 为止；推流一旦起来，报文顺序就不再由我们保证了，
+    /// 中途撞上的帧直接跳过。
+    func readAck(cmd: String) throws -> [String: Any] {
+        while true {
+            let object = try readJSON()
+            if (object["t"] as? String) == "ack", object["cmd"] as? String == cmd { return object }
+            if (object["t"] as? String) == "frame" { continue }
+            return object
+        }
+    }
+
+    /// 换一次读超时：负向断言（「这一段时间里不该再来帧」）必须用短超时，
+    /// 不然默认 5 秒的阻塞读会把窗口拖成 5 秒还在猜。
+    func setReadTimeout(_ seconds: Int) {
+        var timeout = timeval(tv_sec: seconds, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+    }
+
+    /// 在 `window` 这段时间里数收到几条 `{"t":"frame"}`，顺带把每条的报文交出来。
+    func collectFrames(window: TimeInterval) throws -> [[String: Any]] {
+        setReadTimeout(1)
+        var frames: [[String: Any]] = []
+        let deadline = Date().addingTimeInterval(window)
+        while Date() < deadline {
+            guard let line = try readRaw().nonEmpty,
+                  let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any]
+            else { continue }
+            if object["t"] as? String == "frame" { frames.append(object) }
+        }
+        setReadTimeout(5)
+        return frames
+    }
+
+    /// 读一条帧并解出 JPEG 字节；不是帧就当场失败，免得断言跑偏。
+    func readFrame() throws -> (seq: Int, width: Int, height: Int, jpeg: Data) {
+        let object = try readJSON()
+        XCTAssertEqual(object["t"] as? String, "frame", "收到的不是帧：\(object)")
+        let base64 = try XCTUnwrap(object["jpg"] as? String, "帧里没有 base64 图像")
+        return (try XCTUnwrap(object["i"] as? Int),
+                try XCTUnwrap(object["w"] as? Int),
+                try XCTUnwrap(object["h"] as? Int),
+                try XCTUnwrap(Data(base64Encoded: base64), "帧里的 base64 解不开"))
+    }
+}
+
+private extension String {
+    var nonEmpty: String? { isEmpty ? nil : self }
 }
 
 /// 只读事件 tap：数左键的按下与松开，用来证明服务端真的补发了松开。

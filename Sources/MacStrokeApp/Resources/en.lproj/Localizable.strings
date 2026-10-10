@@ -299,3 +299,7 @@
 "Stopped" = "Stopped";
 "Listening, no device connected" = "Listening, no device connected";
 "Connected:" = "Connected:";
+"Screen recording (touchscreen view):" = "Screen recording (touchscreen view):";
+"Granted" = "Granted";
+"Not granted" = "Not granted";
+"Ask for access" = "Ask for access";

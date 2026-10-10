@@ -301,3 +301,7 @@
 "Stopped" = "未启动";
 "Listening, no device connected" = "正在监听，还没有设备连接";
 "Connected:" = "已连接：";
+"Screen recording (touchscreen view):" = "屏幕录制（触屏回显）：";
+"Granted" = "已授权";
+"Not granted" = "未授权";
+"Ask for access" = "去授权";

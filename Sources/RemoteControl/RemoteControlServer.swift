@@ -49,6 +49,9 @@ public final class RemoteControlServer: ObservableObject {
     private var clients: [ObjectIdentifier: Client] = [:]
     private var settings = RemoteControlSettings.current()
 
+    /// 桌面回显的推流循环，订阅状态只在这条队列上动。
+    private let streamer: RemoteScreenStreamer
+
     /// 各连接按住的鼠标键。**只在主队列读写**（命令本来就在那里执行）。
     /// 手机断线、退出小程序或关掉开关时若不补一个松开，Mac 会一直停在拖拽状态，
     /// 用户只能狂点鼠标才解得开。
@@ -66,7 +69,9 @@ public final class RemoteControlServer: ObservableObject {
         }
     }
 
-    private init() {}
+    private init() {
+        streamer = RemoteScreenStreamer(queue: queue)
+    }
 
     // MARK: - Lifecycle
 
@@ -99,6 +104,9 @@ public final class RemoteControlServer: ObservableObject {
             self.clients.removeAll()
             self.listener?.cancel()
             self.listener = nil
+            // 回显订阅要一起清掉：不然关服务之后定时器还在每秒抓屏，
+            // 而它发的那个连接已经不存在了。
+            self.streamer.unsubscribeAll()
             DispatchQueue.main.async {
                 dying.forEach(self.releaseHeldButton)
                 self.isRunning = false
@@ -259,6 +267,14 @@ public final class RemoteControlServer: ObservableObject {
                 RemoteClickExecutor.moveCursor(byX: CGFloat(dx), y: CGFloat(dy))
                 self.ack("move", to: client, cursor: true)
             }
+        case .warp(let x, let y):
+            DispatchQueue.main.async {
+                RemoteClickExecutor.warp(x: x, y: y)
+                // 触屏页知道自己点在哪，回执再带一次坐标只是浪费带宽。
+                self.ack("warp", to: client, cursor: false)
+            }
+        case .mirror(let request):
+            startOrStopMirror(request, for: client)
         case .click(let button, let doubleClick):
             DispatchQueue.main.async {
                 RemoteClickExecutor.click(button: button, doubleClick: doubleClick)
@@ -281,6 +297,34 @@ public final class RemoteControlServer: ObservableObject {
                 // 滚动不动指针，回执不必带坐标——手机每秒可能发十几条，省一字节是一字节。
                 self.ack("scroll", to: client, cursor: false)
             }
+        }
+    }
+
+    /// 桌面回显：开或关这台手机的订阅。
+    ///
+    /// 订阅表只在服务端的串行队列上动（发帧的定时器也在那条队列上），所以这里
+    /// 先 hop 一次；权限判定不 hop —— CG 的 TCC 接口线程安全，弹授权框由系统进程
+    /// 负责，不需要主线程。第一次没权限时顺手替用户把系统弹窗点出来，但**不**开始推流：
+    /// 刚授完权的进程往往要重启才真能截到窗口，硬推只会推出一屏壁纸。
+    private func startOrStopMirror(_ request: RemoteMirrorRequest, for client: Client) {
+        let key = ObjectIdentifier(client.connection)
+        guard request.on else {
+            queue.async {
+                self.streamer.unsubscribe(key)
+                self.ack("mirror", to: client, cursor: false)
+            }
+            return
+        }
+        guard RemoteScreenCapture.hasScreenRecordingPermission() else {
+            RemoteScreenCapture.requestScreenRecordingPermission()
+            send(RemoteCommand.errorReply(.noScreenPermission), to: client)
+            return
+        }
+        queue.async {
+            self.streamer.subscribe(key, request: request) { [weak self] data, done in
+                self?.send(data, to: client, then: done)
+            }
+            self.ack("mirror", to: client, cursor: false)
         }
     }
 
@@ -331,6 +375,8 @@ public final class RemoteControlServer: ObservableObject {
     private func disconnect(_ client: Client) {
         let key = ObjectIdentifier(client.connection)
         guard clients.removeValue(forKey: key) != nil else { return }
+        // 回显订阅跟着连接一起掉：不然定时器会一直替一条已经不存在的连接抓屏编码。
+        streamer.unsubscribe(key)
         if client.authenticated {
             DispatchQueue.main.async {
                 self.releaseHeldButton(for: client)

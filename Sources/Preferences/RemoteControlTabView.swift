@@ -19,6 +19,7 @@ struct RemoteControlTabView: View {
 
     @State private var portDraft: String = ""
     @State private var qrImage: NSImage?
+    @State private var screenRecordingGranted = RemoteScreenCapture.hasScreenRecordingPermission()
     @FocusState private var portFocused: Bool
 
     private var address: String? { RemoteNetworkAddress.preferredAddress() }
@@ -72,6 +73,27 @@ struct RemoteControlTabView: View {
                             .foregroundColor(statusColor)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                    RowDivider()
+                    SettingsRow(L("Screen recording (touchscreen view):")) {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            HStack(spacing: 8) {
+                                // 触屏回显唯一会「静默失败」的一关：没授权时截屏 API 不报错，
+                                // 只回一张壁纸，手机上看着像 Mac 卡住了。
+                                Text(screenRecordingGranted ? L("Granted") : L("Not granted"))
+                                    .foregroundColor(screenRecordingGranted ? .primary : .orange)
+                                Button(L("Ask for access")) {
+                                    RemoteScreenCapture.requestScreenRecordingPermission()
+                                }
+                                .disabled(screenRecordingGranted)
+                            }
+                            if !screenRecordingGranted {
+                                Text(L("Restart MacStroke to take effect"))
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
             }
 
@@ -103,6 +125,12 @@ struct RemoteControlTabView: View {
         .onAppear {
             portDraft = String(viewModel.remoteControlPort)
             refreshQR()
+            recheckScreenRecording()
+        }
+        // 授权要在系统设置里点，来回切一次应用就回来了：这时必须重读，
+        // 否则页面一直挂着「未授权」，用户以为没点上。
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            recheckScreenRecording()
         }
         .onChange(of: viewModel.remoteControlPort) { newValue in
             if !portFocused { portDraft = String(newValue) }
@@ -156,6 +184,10 @@ struct RemoteControlTabView: View {
         if !viewModel.enableRemoteControl { return .secondary }
         if server.statusMessage != nil { return .red }
         return server.peers.isEmpty ? .secondary : .primary
+    }
+
+    private func recheckScreenRecording() {
+        screenRecordingGranted = RemoteScreenCapture.hasScreenRecordingPermission()
     }
 
     private func commitPort() {

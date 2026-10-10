@@ -47,6 +47,23 @@ public enum RemoteClickExecutor {
         let current = state()
         let target = moveTarget(from: current.cursor, size: current.size, dx: dx, dy: dy)
         guard target != cgPoint(current.cursor) else { return }
+        placeCursor(at: target)
+    }
+
+    /// 触屏页的「点哪儿就是哪儿」：手机给的是主屏归一化坐标（0…1），
+    /// 所以它不需要知道这台 Mac 是 1440 还是 3025 宽，帧图和坐标天然同一套比例。
+    public static func warp(x: Double, y: Double) {
+        placeCursor(at: warpTarget(nx: x, ny: y, size: state().size))
+    }
+
+    /// 纯换算部分：夹进 0…1 再摊到屏幕上，右下角留一像素，免得贴边点不到。
+    static func warpTarget(nx: Double, ny: Double, size: RemoteScreenSize) -> CGPoint {
+        let fx = min(max(nx, 0), 1)
+        let fy = min(max(ny, 0), 1)
+        return CGPoint(x: fx * max(size.w - 1, 0), y: fy * max(size.h - 1, 0))
+    }
+
+    private static func placeCursor(at target: CGPoint) {
         guard CGWarpMouseCursorPosition(target) == .success else { return }
         // Warping alone does not generate movement events, and the cursor
         // services may have de-associated the HID device while catching up.
