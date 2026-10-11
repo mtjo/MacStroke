@@ -13,10 +13,12 @@
 //    {"t":"click","btn":"right","double":false}        在当前光标处点击
 //    {"t":"button","btn":"left","down":true}           按住/松开（拖窗口、长按）
 //    {"t":"scroll","dx":0,"dy":-40}                    滚动（像素，x 右 y 下，同手指方向）
+//    {"t":"type","s":"文本"}                            往当前焦点注入文本（可含中文/emoji）
+//    {"t":"key","k":"c","m":"cmd+shift"}               快捷键：键名 + 修饰键，m 可省
 //    {"t":"mirror","on":true,"w":720,"fps":3,"q":45}   开关桌面回显，w/fps/q 可省
 //
 //  server → client
-//    {"t":"welcome","ok":true,"proto":2,"screen":{…},"cursor":{…}}
+//    {"t":"welcome","ok":true,"proto":3,"screen":{…},"cursor":{…}}
 //    {"t":"error","code":"badToken"}
 //    {"t":"ack","cmd":"move","cursor":{…}}
 //    {"t":"frame","i":12,"w":720,"h":450,"jpg":"<base64>"}
@@ -107,15 +109,18 @@ public enum RemoteCommand: Equatable {
     case button(button: RemoteMouseButton, pressed: Bool)
     case scroll(dx: Double, dy: Double)
     case mirror(RemoteMirrorRequest)
+    case type(text: String)
+    case key(RemoteKeyCombo)
 
-    /// 协议版本：1 只有位移与点击，2 加了绝对坐标与桌面回显。
-    /// 手机端要靠这句话判断该不该提示「升级 MacStroke」。
-    public static let revision = 2
+    /// 协议版本：1 只有位移与点击，2 加了绝对坐标与桌面回显，
+    /// 3 加文本注入与快捷键（手机端靠它决定输入面板要不要亮着）。
+    public static let revision = 3
 }
 
 public enum RemoteCommandError: String {
     case malformed
     case unknownCommand
+    case unknownKey
     case badToken
     case notAuthenticated
     case busy
@@ -142,6 +147,9 @@ private enum Field {
     static let doubleClick = "double"
     static let down = "down"
     static let on = "on"
+    static let text = "s"
+    static let key = "k"
+    static let modifiers = "m"
     static let maxWidth = "w"
     static let fps = "fps"
     static let quality = "q"
@@ -199,6 +207,21 @@ public extension RemoteCommand {
                 quality: int(fields[Field.quality]) ?? RemoteMirrorRequest.defaultQuality
             ).clamped
             return .command(.mirror(request))
+        case "type":
+            // 文本只当字符串读，不逐个翻译成键码：手机上的中文在 Mac 键盘上没有对应键。
+            guard let text = fields[Field.text] as? String else { return .error(.malformed) }
+            return .command(.type(text: RemoteKeyboardExecutor.clampForInjection(text)))
+        case "key":
+            guard let name = fields[Field.key] as? String else { return .error(.malformed) }
+            guard let keyCode = RemoteKeyboardExecutor.keycode(for: name) else {
+                return .error(.unknownKey)
+            }
+            // m 省略就是不带修饰键；写了却不认识、或者压根不是字符串，都当场拒绝——
+            // 把 ⌘W 猜成 w 等于在用户桌面上多按一个键。
+            guard let modifiers = RemoteKeyModifiers(wireField: fields[Field.modifiers]) else {
+                return .error(.unknownKey)
+            }
+            return .command(.key(RemoteKeyCombo(keyCode: keyCode, modifiers: modifiers)))
         default:
             return .error(.unknownCommand)
         }
@@ -261,6 +284,7 @@ public extension RemoteCommandError {
         switch self {
         case .malformed: return "命令格式不对"
         case .unknownCommand: return "不认识这条命令"
+        case .unknownKey: return "不认识这个按键或修饰键"
         case .badToken: return "配对码不对"
         case .notAuthenticated: return "还没配对"
         case .busy: return "连接的设备太多了"

@@ -59,6 +59,49 @@ final class RemoteCommandParsingTests: XCTestCase {
                        .command(.mirror(RemoteMirrorRequest(on: true, maxWidth: 1920, fps: 1, quality: 10))))
     }
 
+    /// 文本注入：s 原样收下，服务端不猜它对应哪些键位——中文在 Mac 键盘上根本没有键。
+    func testTypeCarriesTheTextVerbatim() {
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"type","s":"hello"}"#),
+                       .command(.type(text: "hello")))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"type","s":"你好 🙏"}"#),
+                       .command(.type(text: "你好 🙏")))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"type","s":""}"#), .command(.type(text: "")))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"type"}"#), .error(.malformed))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"type","s":12}"#), .error(.malformed))
+    }
+
+    /// 快捷键：键名 + 修饰键串。省略 m 就是按纯键。
+    func testKeyTakesAKeyNamePlusModifiers() {
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"c"}"#),
+                       .command(.key(RemoteKeyCombo(keyCode: 0x08, modifiers: []))))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"C","m":"cmd+shift"}"#),
+                       .command(.key(RemoteKeyCombo(keyCode: 0x08, modifiers: [.command, .shift]))))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"return","m":"⌥"}"#),
+                       .command(.key(RemoteKeyCombo(keyCode: 0x24, modifiers: .alternate))))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"tab","m":"ctrl"}"#),
+                       .command(.key(RemoteKeyCombo(keyCode: 0x30, modifiers: .control))))
+    }
+
+    /// 不认识的键名或修饰键写法要回错，而不是猜一个按下去：手机上标着「⌘⇧C」的按钮
+    /// 若在 Mac 端被猜成别的键，用户只会看到一个莫名其妙的结果。
+    func testUnreadableKeyNamesAreAnExplicitError() {
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"banana"}"#), .error(.unknownKey))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"c","m":"cmd+hyper"}"#),
+                       .error(.unknownKey))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key"}"#), .error(.malformed))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":5}"#), .error(.malformed))
+        XCTAssertEqual(RemoteCommand.parse(line: #"{"t":"key","k":"c","m":3}"#), .error(.unknownKey))
+    }
+
+    /// 粘贴一整篇文档不该把主队列钉住：解析时就按字符截到上限，而不是断连。
+    func testOverlongTextIsClampedWhileParsing() {
+        let text = String(repeating: "字", count: RemoteKeyboardExecutor.maxTextUnits + 500)
+        let parsed = RemoteCommand.parse(line: #"{"t":"type","s":"\#(text)"}"#)
+        guard case .command(.type(let kept)) = parsed else { return XCTFail("超长文本不该报错：\(parsed)") }
+        XCTAssertEqual(kept.utf16.count, RemoteKeyboardExecutor.maxTextUnits)
+        XCTAssertEqual(kept, String(repeating: "字", count: RemoteKeyboardExecutor.maxTextUnits))
+    }
+
     func testMalformedAndUnknownPackets() {
         XCTAssertEqual(RemoteCommand.parse(line: ""), .error(.malformed))
         XCTAssertEqual(RemoteCommand.parse(line: "not json"), .error(.malformed))

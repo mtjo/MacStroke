@@ -322,6 +322,57 @@ final class RemoteControlServerE2ETests: XCTestCase {
                              "掉线之后左键还按着，Mac 会一直停在拖拽里")
     }
 
+    // MARK: - 文本与快捷键
+
+    /// 键盘注入的整链取证：手机发一条 `type`/`key`，服务端要真的把它丢进事件流，
+    /// 且组合键的按下顺序、flags 叠加、unicode 文本都得原样到达。
+    ///
+    /// tap 用**活动**模式并把键盘事件吃掉：合成事件和真实按键走同一条会话流，
+    /// 前台是哪个 App 全看用户当下点了什么——往他文档里打字、或者吃一发 ⌘W 都是
+    /// 事故。返回 nil 让这些事件在 tap 这里就到头，用户的桌面什么都收不到。
+    func testTypeAndKeyReachTheEventStream() throws {
+        let log = KeyboardSwallowLog()
+        guard let tap = log.start() else {
+            throw XCTSkip("测试进程没有权限挂事件 tap（辅助功能未授权）")
+        }
+        defer { log.stop(tap: tap) }
+
+        let sentinel = "MacStroke键入取证\(UUID().uuidString.prefix(4))"
+        log.reset()
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"type","s":"\#(sentinel)"}"#)
+            _ = try pipe.readAck(cmd: "type")
+        }
+        waitUntil(timeout: 1) { log.texts.count >= 2 }
+        // 反向对照的前提：这条 sentinel 带随机后缀，用户此刻不可能自己打出来。
+        XCTAssertEqual(log.texts, [sentinel, sentinel], "一条文本应该是一对按下与松开")
+
+        // 快捷键单独一轮：中间清空一次，免得把上一阶段或用户自己碰到的键算进来。
+        log.reset()
+        try converse { pipe in
+            try pipe.hello(token: testToken)
+            _ = try pipe.readJSON()
+            try pipe.send(#"{"t":"key","k":"c","m":"cmd+shift"}"#)
+            _ = try pipe.readAck(cmd: "key")
+        }
+        waitUntil(timeout: 1) { log.keyEvents.count >= 6 }
+
+        // ⌘⇧C：修饰键先按 ⇧→⌘ 的顺序各来一条 flagsChanged，主键带着两位按下再松开，
+        // 最后反序放开修饰键。
+        let shift = CGEventFlags.maskShift.rawValue
+        let both = CGEventFlags.maskShift.union(.maskCommand).rawValue
+        XCTAssertEqual(log.keyEvents.filter { $0.code != 0 }, [
+            KeyStep(kind: "flags", code: 0x38, flags: shift),
+            KeyStep(kind: "flags", code: 0x37, flags: both),
+            KeyStep(kind: "down", code: 0x08, flags: both),
+            KeyStep(kind: "up", code: 0x08, flags: both),
+            KeyStep(kind: "flags", code: 0x37, flags: shift),
+            KeyStep(kind: "flags", code: 0x38, flags: 0),
+        ], "修饰键必须有自己的 flagsChanged：把它们当普通键发 keyDown，会话流里一条都收不到（实测）")
+    }
+
     /// 整段对话跑在后台线程，主线程抽干主队列让服务端得以回执。
     @discardableResult
     private func converse<T>(_ script: @escaping (ClientPipe) throws -> T) throws -> T {
@@ -565,5 +616,90 @@ private final class WheelLog {
             log.lastContinuous = Int(event.getIntegerValueField(.scrollWheelEventIsContinuous))
         }
         return Unmanaged.passUnretained(event)
+    }
+}
+
+/// 「按下 / 松开 / 修饰键变化」+ 键码 + 当时生效的修饰位。
+/// 元组不能当 Equatable 用，而要按序列比对按下顺序，只能自带一个小结构体。
+private struct KeyStep: Equatable {
+    var kind: String
+    var code: Int
+    var flags: UInt64
+}
+
+/// 活动事件 tap：记下每一条键盘事件，然后把它**吞掉**不再往 App 投递。
+///
+/// 和另外两个 log 的区别只在 `options: .defaultTap` 加回调返回 nil：合成键盘事件
+/// 与真实按键共用同一条会话流，测试跑起来时前台是什么 App 取决于用户当下点了什么，
+/// 不吞掉就等于往他正在写的文档里插字。吞掉之后用户的键盘在这几百毫秒里也会被吃掉
+/// 按下的键——所以窗口只圈住这一次往返。
+private final class KeyboardSwallowLog {
+    /// 服务器会往 flags 上补几个文档里没有的位（实测主键事件带 0x20000000），
+    /// 断言只比我们自己设过的那五位，不然这条用例永远在猜系统又加了什么。
+    private static let modifierBits: UInt64 = [CGEventFlags.maskShift, .maskCommand, .maskControl,
+                                              .maskAlternate, .maskSecondaryFn]
+        .reduce(UInt64(0)) { $0 | $1.rawValue }
+
+    private(set) var keyEvents: [KeyStep] = []
+
+    /// 文本注入的事件键码固定是 0，组合键用的是真键码，所以键码 0 的那几条
+    /// 带回来的 unicode 串就是文本，顺序即到达顺序。
+    private(set) var texts: [String] = []
+
+    func reset() {
+        keyEvents = []
+        texts = []
+    }
+
+    func start() -> CFMachPort? {
+        let mask = CGEventMask((1 << CGEventType.keyDown.rawValue)
+                               | (1 << CGEventType.keyUp.rawValue)
+                               | (1 << CGEventType.flagsChanged.rawValue))
+        guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
+                                          options: .defaultTap, eventsOfInterest: mask,
+                                          callback: KeyboardSwallowLog.onEvent,
+                                          userInfo: Unmanaged.passUnretained(self).toOpaque())
+        else { return nil }
+        let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        return tap
+    }
+
+    func stop(tap: CFMachPort) {
+        CGEvent.tapEnable(tap: tap, enable: false)
+        CFMachPortInvalidate(tap)
+    }
+
+    private static let onEvent: CGEventTapCallBack = { _, type, event, userInfo in
+        guard let kind = KeyboardSwallowLog.kind(of: type), let userInfo else {
+            return Unmanaged.passUnretained(event)
+        }
+        let log = Unmanaged<KeyboardSwallowLog>.fromOpaque(userInfo).takeUnretainedValue()
+        let code = Int(event.getIntegerValueField(.keyboardEventKeycode))
+        log.keyEvents.append(KeyStep(kind: kind, code: code,
+                                     flags: event.flags.rawValue & KeyboardSwallowLog.modifierBits))
+        if code == 0 { log.texts.append(KeyboardSwallowLog.text(of: event)) }
+        // nil = 这条事件到此为止，不投给任何 App。
+        return nil
+    }
+
+    private static func kind(of type: CGEventType) -> String? {
+        switch type {
+        case .keyDown: return "down"
+        case .keyUp: return "up"
+        case .flagsChanged: return "flags"
+        default: return nil
+        }
+    }
+
+    private static func text(of event: CGEvent) -> String {
+        var actual = 0
+        event.keyboardGetUnicodeString(maxStringLength: 0, actualStringLength: &actual, unicodeString: nil)
+        guard actual > 0 else { return "" }
+        var buffer = [UniChar](repeating: 0, count: actual)
+        event.keyboardGetUnicodeString(maxStringLength: actual, actualStringLength: &actual,
+                                      unicodeString: &buffer)
+        return String(decoding: buffer.prefix(actual), as: UTF16.self)
     }
 }

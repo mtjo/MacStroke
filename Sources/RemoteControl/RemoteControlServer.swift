@@ -297,6 +297,18 @@ public final class RemoteControlServer: ObservableObject {
                 // 滚动不动指针，回执不必带坐标——手机每秒可能发十几条，省一字节是一字节。
                 self.ack("scroll", to: client, cursor: false)
             }
+        case .type(let text):
+            DispatchQueue.main.async {
+                RemoteKeyboardExecutor.type(text)
+                self.ack("type", to: client, cursor: false)
+            }
+        case .key(let combo):
+            // 一次组合按下自带完整的按下与松开，不像 button 那样会留在按住状态，
+            // 所以掉线不需要给它补释放。
+            DispatchQueue.main.async {
+                RemoteKeyboardExecutor.press(combo: combo)
+                self.ack("key", to: client, cursor: false)
+            }
         }
     }
 
