@@ -1,0 +1,22 @@
++ Remote control over the LAN: a new "Remote Control" page in Preferences starts a TCP server with a pairing code, shown as a QR you scan from the WeChat mini program
++ 新增「远程控制」：偏好设置多出这一页，开一个局域网 TCP 服务，配对码直接画成二维码，用微信小程序扫码就能把手机当遥控器
+
++ Touch mirroring (protocol v2): the Mac's screen is streamed to the phone, so you point at what you actually see; taps are sent as absolute desktop coordinates instead of relative nudges
++ 触屏回显（协议升到 v2）：Mac 桌面实时推到手机上，看着屏幕点；点按发的是桌面绝对坐标，不再让指针一小格一小格地挪
+
++ Scroll commands: two fingers dragged on the phone scroll the window under the pointer on the Mac
++ 手机两指滑动即可滚动 Mac 上指针底下的窗口（新增滚轮指令）
+
++ A dropped connection releases held mouse buttons on its own, so a phone that dies mid-drag no longer leaves the Mac stuck with the button down
++ 掉线自动补发「松开」：手机按住左键时断网，不会把 Mac 卡在拖拽中途
+
++ "Grant access" now opens the Screen Recording pane directly — once macOS has recorded a denial it stops showing the permission prompt at all
++ 「去授权」补上直接打开屏幕录制面板：已经点过拒绝之后系统不再弹授权框，只能自己进去开
+
++ Screen capture scaling moved to vImage: the mirror holds 4 fps instead of collapsing to 1.7
++ 回显的等比缩放换成 vImage：帧率从 1.7 回到稳定的 4.0
+
+! Remote control is off by default and only listens on your LAN (port 8848, changeable on that page); the phone needs the "MacStroke 遥控" mini program
+! 远程控制默认是关的，且只在局域网里监听（端口默认 8848，在那一页可以改）；手机侧配的是「MacStroke 遥控」小程序
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.1.0/MacStroke.zip
