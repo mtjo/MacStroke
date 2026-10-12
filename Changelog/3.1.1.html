@@ -1,0 +1,16 @@
+- Lifting the pen no longer lags a beat behind: action events are injected at the session layer again instead of the HID layer (measured: while the tap callback was busy for 120 ms, downstream saw the event 120.7 ms later; at session level it is 0.23 ms), and the drawn trail is cleared the moment you release instead of waiting 300 ms (issue #68)
+- 手势抬手后不再慢半拍：动作注入从 HID 层改回 session 层（实测回调忙 120ms 时下游要 120.7ms 才收到，改层后 0.23ms），轨迹也改成抬手即清，不再延 300ms（issue #68）
+
+- Picking an entry from the clipboard history list, or leaving it with Esc, no longer throws focus to the Preferences window: closing the panel now hands focus back to whatever app held it before the panel opened
+- 修：粘贴板历史列表选完一条或按 Esc 退出后会跳到偏好设置窗口 —— 关窗现在把焦点还给打开面板前的那个应用
+
++ The remote control protocol is now v3: the mini program can type text straight into the Mac (Chinese and emoji included, injected as CGEvent unicode in chunks) and send shortcuts such as ⌘C or ⌥⌘V by name
++ 远程控制协议升到 v3：小程序可以直接输入文本（含中文/emoji，走 CGEvent unicode 逐块注入）与发送快捷键（⌘C、⌥⌘V 这类按名字表换算）
+
++ Two new status bar menu items: "Clipboard" pops the history panel open right away, "Remote Control" jumps to that page in Preferences
++ 状态栏菜单新增两项：「剪贴板」直接弹出历史记录面板，「远程控制」落到偏好设置那一页
+
+! Text and shortcut input from the phone needs mini program 1.0.3 or later
+! 手机侧的文本输入与快捷键要「MacStroke 遥控」小程序 1.0.3 及以上
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.1.1/MacStroke.zip
