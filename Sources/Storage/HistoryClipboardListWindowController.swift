@@ -21,7 +21,7 @@
 import Foundation
 import AppKit
 
-public final class HistoryClipboardListWindowController: NSWindowController, NSTableViewDelegate, NSTableViewDataSource, NSSearchFieldDelegate {
+public final class HistoryClipboardListWindowController: NSWindowController, NSWindowDelegate, NSTableViewDelegate, NSTableViewDataSource, NSSearchFieldDelegate {
 
     /// All loaded entries (pinned entries first). Setting it resets the query.
     public var entries: [HistoryClipboardEntry] = [] {
@@ -42,6 +42,23 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
     private var fullEntries: [HistoryClipboardEntry] = [] {
         didSet { rebuildFiltered() }
     }
+
+    /// App that held focus before the panel was opened, nil when it was us.
+    /// Focus has to go back to it on close: AppKit otherwise re-keys our own
+    /// next visible window, which at boot is the preferences window the app
+    /// showed on startup — that read as "picking an entry jumps to Preferences".
+    var previouslyFrontmostApplication: NSRunningApplication?
+
+    /// The activation call, replaced by tests to observe it without touching
+    /// the user's real focus.
+    var activateApplication: (NSRunningApplication) -> Void = { app in
+        app.activate(options: [.activateIgnoringOtherApps])
+    }
+
+    /// Latest panel opened. A re-open closes the old panel first, so the old
+    /// panel's deferred hand-back has to notice it was superseded, otherwise it
+    /// would steal focus away from the panel that just appeared.
+    private static var activePanel: HistoryClipboardListWindowController?
 
     private let entriesStore: HistoryClipboardManager
     private var isLoadingNextPage = false
@@ -72,6 +89,11 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         self.entriesStore = manager ?? HistoryClipboardManager()
         super.init(window: nil)
 
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        previouslyFrontmostApplication =
+            frontmost?.processIdentifier == NSRunningApplication.current.processIdentifier ? nil : frontmost
+        Self.activePanel = self
+
         // Spotlight-style panel: no visible titlebar chrome, native rounded
         // corners and shadow, full-size blur content. The titled style is kept
         // so the panel can still become key (typing, Esc, sheet confirmations).
@@ -92,6 +114,7 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
         window.level = NSWindow.Level(rawValue: 21)
         window.isReleasedWhenClosed = false
         window.backgroundColor = .clear
+        window.delegate = self
         self.window = window
 
         buildContentView(in: window)
@@ -220,6 +243,18 @@ public final class HistoryClipboardListWindowController: NSWindowController, NST
     }
 
     // MARK: - Showing
+
+    /// 关窗后把焦点还给面板打开前的那个 App。延到下一个主循环轮次：此刻 AppKit
+    /// 正在挑下一个 key window（会挑到本 App 的偏好窗口），同步激活会被它盖掉。
+    public func windowWillClose(_ notification: Notification) {
+        guard let app = previouslyFrontmostApplication else { return }
+        let activate = activateApplication
+        DispatchQueue.main.async { [weak self] in
+            // 重新打开时调用方先关旧面板再建新的，这里要认出旧面板已被顶替。
+            guard let self, Self.activePanel === self else { return }
+            activate(app)
+        }
+    }
 
     /// Original `windowDidLoad`: drop expired rows, then snapshot page 0.
     public func reload() {
