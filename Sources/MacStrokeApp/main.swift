@@ -592,11 +592,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func statusMenu() -> NSMenu {
         // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only.
-        // 剪贴板 / 远程控制 是移植版自加的入口（原版这两个页面只能从偏好页侧栏进），
-        // 点一下直接落到对应偏好页。
+        // 剪贴板 / 远程控制 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏菜单
+        // 不会把本 App 变成前台，所以面板照样能把焦点还给用户原来那个应用），
+        // 远程控制只能落到偏好页。
         let menu = NSMenu(title: "MacStroke")
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
-        statusMenuItem(to: menu, titleKey: "Clipboard", tab: .clipboard)
+        menu.addItem(withTitle: L("Clipboard"), action: #selector(showHistoryClipboard(_:)), keyEquivalent: "")
         statusMenuItem(to: menu, titleKey: "Remote Control", tab: .remoteControl)
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         return menu
