@@ -293,8 +293,12 @@ public class CanvasManager: EventCaptureDelegate {
         return stroke
     }
 
-    /// Reset gesture state and hide the canvas after a short delay so the
-    /// user still sees the drawn path (matches original reinitWindow timing).
+    /// Reset gesture state and clear the drawn path right away.
+    ///
+    /// The original does the same: `reinitWindow` (AppDelegate.m:392) swaps in a
+    /// fresh empty CanvasView synchronously at the end of the mouseUp branch, so
+    /// the path never outlives the release. Lingering it for 300ms makes every
+    /// gesture look like the action arrived half a beat late (issue #68).
     private func resetGestureState() {
         currentPoints = []
         lastDragPoint = nil
@@ -304,9 +308,7 @@ public class CanvasManager: EventCaptureDelegate {
         downLocation = nil
         shouldShow = false
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.hideAllCanvasWindows()
-        }
+        hideAllCanvasWindows()
     }
 
     /// Original AppDelegate.m:332-357 — previous drag point near a primary

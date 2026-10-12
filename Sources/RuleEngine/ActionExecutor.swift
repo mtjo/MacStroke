@@ -79,25 +79,28 @@ public final class ActionExecutor {
         pressKey(keyCode: keyCode, flags: 0)
     }
 
+    // 注入一律走 session 层（原版 RulesList.m:203/436 也是 kCGSessionEventTap）。
+    // 若投到 .cghidEventTap，事件要先穿过我们自己那只 head-insert HID tap，而回调此刻还
+    // 没返回（后面仍有读偏好与提示气泡）—— 实测回调多忙 120ms，动作就晚 120ms 落地。
     private func pressKey(keyCode: UInt16, flags: UInt) {
         let flagMask: CGEventFlags = CGEventFlags(rawValue: UInt64(flags))
         if let down = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true) {
             down.flags = flagMask
-            down.post(tap: .cghidEventTap)
+            down.post(tap: .cgSessionEventTap)
         }
         if let up = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) {
             up.flags = flagMask
-            up.post(tap: .cghidEventTap)
+            up.post(tap: .cgSessionEventTap)
         }
     }
 
     private func clickMouse(x: Int, y: Int) {
         let point = CGPoint(x: CGFloat(x), y: CGFloat(y))
         if let downEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left) {
-            downEvent.post(tap: .cghidEventTap)
+            downEvent.post(tap: .cgSessionEventTap)
         }
         if let upEvent = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) {
-            upEvent.post(tap: .cghidEventTap)
+            upEvent.post(tap: .cgSessionEventTap)
         }
     }
 
@@ -110,11 +113,11 @@ public final class ActionExecutor {
 
         if let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true) {
             down.keyboardSetUnicodeString(stringLength: length, unicodeString: &chars)
-            down.post(tap: .cghidEventTap)
+            down.post(tap: .cgSessionEventTap)
         }
         if let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) {
             up.keyboardSetUnicodeString(stringLength: length, unicodeString: &chars)
-            up.post(tap: .cghidEventTap)
+            up.post(tap: .cgSessionEventTap)
         }
     }
 
