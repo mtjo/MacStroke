@@ -34,7 +34,9 @@ final class GestureReplayTests: XCTestCase {
         let animator = GestureReplayAnimator(view: view)
         XCTAssertEqual(animator.progress, 1, "an idle thumbnail shows the finished stroke")
         animator.start()
-        XCTAssertEqual(animator.progress, 0)
+        // The progress is wall-clock derived, so a busy test run can already be a
+        // microsecond into the cycle; only "just started" is what this pins down.
+        XCTAssertEqual(animator.progress, 0, accuracy: 0.01)
         animator.stop()
         XCTAssertEqual(animator.progress, 1)
     }
