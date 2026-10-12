@@ -591,12 +591,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func statusMenu() -> NSMenu {
-        // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only;
-        // the clipboard history list is opened by its own shortcut, not the menu.
+        // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only.
+        // 剪贴板 / 远程控制 是移植版自加的入口（原版这两个页面只能从偏好页侧栏进），
+        // 点一下直接落到对应偏好页。
         let menu = NSMenu(title: "MacStroke")
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
+        statusMenuItem(to: menu, titleKey: "Clipboard", tab: .clipboard)
+        statusMenuItem(to: menu, titleKey: "Remote Control", tab: .remoteControl)
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         return menu
+    }
+
+    private func statusMenuItem(to menu: NSMenu, titleKey: String, tab: PreferencesTab) {
+        menu.addItem(withTitle: L(titleKey),
+                     action: #selector(openPreferencesTab(_:)),
+                     keyEquivalent: "").representedObject = tab.rawValue
+    }
+
+    /// 状态栏菜单：打开偏好窗口并停在指定页。
+    @objc func openPreferencesTab(_ sender: NSMenuItem) {
+        guard let key = sender.representedObject as? String,
+              let tab = PreferencesTab(rawValue: key) else { return }
+        showPreferences(tab)
     }
 
     private func menuIcon(enabled: Bool) -> NSImage? {
@@ -611,15 +627,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc func togglePreferences() {
+        showPreferences(nil)
+    }
+
+    /// Show the preferences window. A tab means "open/stay on that page": a
+    /// freshly built window gets it as its initial page, an already visible one
+    /// is told to switch (its view is long since subscribed to the notification).
+    private func showPreferences(_ tab: PreferencesTab?) {
         // If we already have a preferences window that is visible, just bring it to front
         if let existing = preferencesWindow,
            existing.window?.isVisible == true {
             existing.window?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            if let tab {
+                NotificationCenter.default.post(name: .macStrokeShowPreferencesTab, object: tab.rawValue)
+            }
             return
         }
         let viewModel = UserPreferences()
-        let controller = PreferencesWindowController(viewModel: viewModel)
+        let controller = PreferencesWindowController(viewModel: viewModel, initialTab: tab ?? .general)
         // Set the window delegate so we can clear the reference on close
         controller.window?.delegate = self
         preferencesWindow = controller

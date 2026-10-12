@@ -424,12 +424,12 @@ public final class PreferencesWindowController: NSWindowController {
     private let viewModel: UserPreferences
     private var languageObserver: NSObjectProtocol?
 
-    public init(viewModel: UserPreferences) {
+    public init(viewModel: UserPreferences, initialTab: PreferencesTab = .general) {
         self.viewModel = viewModel
         super.init(window: nil)
 
         let hostingController = NSHostingController(
-            rootView: PreferencesView(viewModel: viewModel)
+            rootView: PreferencesView(viewModel: viewModel, initialTab: initialTab)
         )
         hostingController.title = L("MacStroke Preferences")
         self.contentViewController = hostingController

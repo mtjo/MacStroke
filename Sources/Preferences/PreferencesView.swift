@@ -27,8 +27,10 @@ extension Rule: Identifiable {
 // MARK: - Preferences Tab Enumeration
 
 /// Original MacStroke preferences tab enumeration (8 tabs, matching
-/// AppPrefsWindowController.setupToolbar).
-enum PreferencesTab: CaseIterable {
+/// AppPrefsWindowController.setupToolbar) plus the port's Remote Control page.
+/// The raw value is the key external entry points (status bar menu) use to ask
+/// for a page, so it must stay stable.
+public enum PreferencesTab: String, CaseIterable {
     case general
     case rules
     case filters
@@ -97,6 +99,8 @@ public extension Notification.Name {
     /// Ask the AppDelegate to open the clipboard history window (Clipboard tab
     /// "show history clipboard", original `showHistoryCilpboardList:`).
     static let macStrokeShowHistoryClipboard = Notification.Name("MacStrokeShowHistoryClipboard")
+    /// Ask the preferences window to show one page (object: `PreferencesTab.rawValue`).
+    static let macStrokeShowPreferencesTab = Notification.Name("MacStrokeShowPreferencesTab")
 }
 
 /// Original feedback channel for confirmations and guards: a banner-style
@@ -187,8 +191,9 @@ public struct PreferencesView: View {
     /// re-renders with the new localized strings.
     @State private var languageRevision = 0
 
-    public init(viewModel: UserPreferences) {
+    public init(viewModel: UserPreferences, initialTab: PreferencesTab = .general) {
         self.viewModel = viewModel
+        _selectedTab = State(initialValue: initialTab)
     }
 
     public var body: some View {
@@ -250,6 +255,10 @@ public struct PreferencesView: View {
         .onReceive(NotificationCenter.default.publisher(for: .macStrokeRuleStoreDidChange)) { _ in
             // A screen-drawn gesture was recorded into a rule — refresh.
             ruleStore.load()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macStrokeShowPreferencesTab)) { note in
+            guard let key = note.object as? String, let tab = PreferencesTab(rawValue: key) else { return }
+            selectedTab = tab
         }
     }
 }
