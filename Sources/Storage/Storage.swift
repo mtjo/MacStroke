@@ -81,6 +81,18 @@ public enum StorageKey: String, CaseIterable {
     /// 所以改回 Sparkle 的键，旧键在 migrateLegacyPreferenceKeys 里清掉。
     case autoCheckUpdates = "SUEnableAutomaticChecks"
 
+    /// 自动检查的节奏。也是 Sparkle 自己的键：SPUUpdaterSettings 监听这个键的默认值
+    /// 变化并立刻按新节奏重排定时器，所以偏好页选完不用重启。Sparkle 的取值顺序是
+    /// 「用户默认值 > Info.plist」，用户从没选过时仍走 build_app.sh 写进 Info.plist 的
+    /// 默认值 —— 因此这个键故意不进 registerUserDefaultsDefaults()：注册域里的值会被
+    /// Sparkle 当成「用户已显式设置」，以后改 Info.plist 就不生效了（同 autoCheckUpdates
+    /// 踩过的坑）。
+    case updateCheckInterval = "SUScheduledCheckInterval"
+
+    /// 移植版扩展（超出原版）：自动检查发现新版时，改用「菜单栏图标加点 + 系统通知」
+    /// 温和提醒，用户点一下才把更新窗前置。关掉就回到 Sparkle 自己的做法。
+    case enableUpdateReminder = "enableUpdateReminder"
+
     // Remote control
     // 移植版扩展（超出原版）：手机小程序经局域网 TCP 远程点击。原版没有任何
     // 网络接口，所以三个键名都是新造的。开关默认关 —— 关掉时行为和原版一致，
@@ -232,6 +244,9 @@ public enum StorageDefaults {
     // build_app.sh 生成的 Info.plist 同写 SUEnableAutomaticChecks=true，两处一致。
     public static let autoCheckUpdates: Bool = true
 
+    /// 默认开：菜单栏 App 直接抢焦点太打扰，见 StorageKey.enableUpdateReminder。
+    public static let enableUpdateReminder: Bool = true
+
     // Remote control
     public static let enableRemoteControl: Bool = false
     public static let remoteControlPort: Int = 8848
@@ -294,6 +309,8 @@ public func registerUserDefaultsDefaults() {
         StorageKey.limitSaveDays.rawValue: StorageDefaults.limitSaveDays,
         StorageKey.userTerminal.rawValue: StorageDefaults.userTerminal,
         StorageKey.autoCheckUpdates.rawValue: StorageDefaults.autoCheckUpdates,
+        // SUScheduledCheckInterval 不在这里注册，理由见 StorageKey.updateCheckInterval。
+        StorageKey.enableUpdateReminder.rawValue: StorageDefaults.enableUpdateReminder,
         StorageKey.enableRemoteControl.rawValue: StorageDefaults.enableRemoteControl,
         StorageKey.remoteControlPort.rawValue: StorageDefaults.remoteControlPort,
         StorageKey.remoteControlToken.rawValue: StorageDefaults.remoteControlToken,

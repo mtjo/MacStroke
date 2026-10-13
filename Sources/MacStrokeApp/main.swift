@@ -101,6 +101,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var shortcutMonitor: ShortcutMonitor?
     private let storage = PreferencesStorage()
     private var updaterController: SPUStandardUpdaterController?
+    /// 发现新版提醒用的系统通知标记：点了只认这条，其它提示（脚本出错、偏好页确认
+    /// 条）维持原来的「把 App 带到前台」行为。
+    private static let updateNotificationMarker = "MacStrokeUpdateReminder"
+    /// 自动检查发现、但还没被用户看到的更新：菜单栏图标加点并挂一条系统通知，
+    /// 用户点了才把 Sparkle 的更新窗前置（见 extension AppDelegate: SPUStandardUserDriverDelegate）。
+    private var pendingUpdate: SUAppcastItem?
 
     func startCapture() {
         let capture = EventCapture()
@@ -186,6 +192,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         setupStatusBar()
         observeNotifications()
+        // 发现新版的提醒靠这条系统通知，点了才知道（见 NSUserNotificationCenterDelegate）。
+        NSUserNotificationCenter.default.delegate = self
 
         // Init Finder right-click menu (distributed notifications + pluginkit).
         initRightClickMenu()
@@ -229,6 +237,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(updateSettingsDidChange(_:)),
             name: .macStrokeUpdateSettingsDidChange, object: nil)
+
+        // About tab "restore skipped versions".
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(restoreSkippedUpdate(_:)),
+            name: .macStrokeRestoreSkippedUpdate, object: nil)
 
         // Gesture-recording requests from the preferences UI.
         NotificationCenter.default.addObserver(
@@ -554,19 +567,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             updaterDelegate: nil,
             userDriverDelegate: self
         )
-        // 不再在启动时回写 automaticallyChecksForUpdates：那个键就是 Sparkle 自己的
-        // SUEnableAutomaticChecks（StorageKey.autoCheckUpdates 已指向它），开机就赋值
-        // 只会把「用户从未设置」变成「已显式写死」，以后改默认值就不生效了。
-        controller.updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
+        // 启动时什么都不回写。这两个键本来就是 Sparkle 自己的键
+        // （SUEnableAutomaticChecks / SUAutomaticallyUpdate），SPUUpdaterSettings 会按
+        // 「用户默认值 > Info.plist」自己读；开机就赋值等于把「用户从未设置」变成
+        // 「已显式写死」，以后改默认值或 Info.plist 都不生效。
         self.updaterController = controller
         NSLog("%@", "[AppDelegate] Sparkle updater initialized")
     }
 
-    /// About tab checkboxes → apply to the live Sparkle updater.
+    /// About tab update controls → apply to the live Sparkle updater.
     @objc func updateSettingsDidChange(_ notification: Notification) {
         guard let updater = updaterController?.updater else { return }
         updater.automaticallyChecksForUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
-        updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
+        // 自动下载：只有用户动过那个开关才回写。给 updater 赋值会连带把键写进用户
+        // 默认域，无条件写就等于把「从没设过」钉成「显式 false」。
+        if UserDefaults.standard.object(forKey: "SUAutomaticallyUpdate") != nil {
+            updater.automaticallyDownloadsUpdates = UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate")
+        }
+        // 节奏必须走这个 setter：它才会通知 SPUUpdater 重排定时器，只写 UserDefaults
+        // 的话新值要到下一次检查时才生效。0 在 Sparkle 里是「关掉自动检查」的老语义，
+        // 所以只在用户真的选过（键存在）时才写。
+        if let interval = storage.getDoubleOptional(forKey: .updateCheckInterval), interval > 0 {
+            updater.updateCheckInterval = interval
+        }
+    }
+
+    /// About tab「恢复已跳过的版本」：用户在更新窗点过「跳过这个版本」后，Sparkle 把
+    /// 版本号写进这三个键（普通/大版本/大版本的小更新各一个），之后自动检查就永远
+    /// 跳过那一版。清掉记录并重置检查节奏，下一轮检查就会重新提醒。
+    @objc func restoreSkippedUpdate(_ notification: Notification) {
+        let keys = ["SUSkippedVersion", "SUSkippedMajorVersion", "SUSkippedMajorSubreleaseVersion"]
+        for key in keys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        updaterController?.updater.resetUpdateCycle()
+        NSLog("%@", "[AppDelegate] Cleared skipped update records: \(keys)")
+        postMacStrokeToast(L("Skipped update records have been cleared."))
+    }
+
+    /// 与偏好模块同一套提示通道（那边内部用的 NSUserNotification，这里不能跨模块调）。
+    private func postMacStrokeToast(_ text: String) {
+        let toast = NSUserNotification()
+        toast.title = "MacStroke"
+        toast.informativeText = text
+        toast.soundName = NSUserNotificationDefaultSoundName
+        NSUserNotificationCenter.default.deliver(toast)
     }
 
     /// Trigger a Sparkle update check (About tab "Check for Updates" button).
@@ -596,13 +641,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func statusMenu() -> NSMenu {
         // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only.
-        // 剪贴板 / 远程控制 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏菜单
-        // 不会把本 App 变成前台，所以面板照样能把焦点还给用户原来那个应用），
-        // 远程控制只能落到偏好页。
+        // 剪贴板 / 远程控制 / 检查更新 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏
+        // 菜单不会把本 App 变成前台，所以面板照样能把焦点还给用户原来那个应用），
+        // 远程控制只能落到偏好页，检查更新走 Sparkle 的用户主动检查（一定带焦点）。
         let menu = NSMenu(title: "MacStroke")
+        // 温和提醒留下的红点：点了这一项才把已经发现的更新窗拉到前面。
+        if let pending = pendingUpdate {
+            menu.addItem(withTitle: "\(L("Update Available")) \(pending.displayVersionString)",
+                         action: #selector(showPendingUpdate(_:)), keyEquivalent: "")
+            menu.addItem(.separator())
+        }
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
         menu.addItem(withTitle: L("Clipboard"), action: #selector(showHistoryClipboard(_:)), keyEquivalent: "")
         statusMenuItem(to: menu, titleKey: "Remote Control", tab: .remoteControl)
+        menu.addItem(withTitle: L("Check for Updates"), action: #selector(checkForUpdates(_:)), keyEquivalent: "")
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         return menu
     }
@@ -629,6 +681,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         image.isTemplate = true
         return image
+    }
+
+    // MARK: - 发现新版的温和提醒（菜单栏红点 + 系统通知）
+
+    /// 红点叠在 button 的标题上：图标是模板图（要跟菜单栏深浅色走），把点画进图里
+    /// 会让整张图标变成非模板，深色菜单栏下图标就看不见了。
+    private func setUpdateBadge(_ on: Bool) {
+        guard let button = statusItem?.button else { return }
+        if on {
+            button.imagePosition = .imageLeading
+            button.attributedTitle = NSAttributedString(string: "●", attributes: [
+                .foregroundColor: NSColor.systemRed,
+                .font: NSFont.systemFont(ofSize: 9),
+            ])
+        } else {
+            button.imagePosition = .imageOnly
+            button.attributedTitle = NSAttributedString(string: "")
+        }
+    }
+
+    private func rememberPendingUpdate(_ update: SUAppcastItem) {
+        pendingUpdate = update
+        setUpdateBadge(true)
+        statusItem?.menu = statusMenu()
+
+        let toast = NSUserNotification()
+        toast.title = "MacStroke"
+        toast.informativeText = newVersionText(update)
+        toast.soundName = NSUserNotificationDefaultSoundName
+        toast.hasActionButton = true
+        toast.actionButtonTitle = L("View Update")
+        toast.userInfo = [Self.updateNotificationMarker: ""]
+        NSUserNotificationCenter.default.deliver(toast)
+        NSLog("%@", "[AppDelegate] Pending update reminder: \(update.displayVersionString)")
+    }
+
+    private func forgetPendingUpdate() {
+        guard pendingUpdate != nil else { return }
+        pendingUpdate = nil
+        setUpdateBadge(false)
+        statusItem?.menu = statusMenu()
+    }
+
+    private func newVersionText(_ update: SUAppcastItem) -> String {
+        "\(L("Update Available")) \(update.displayVersionString)"
+    }
+
+    /// 菜单里的「发现新版本 x.y.z」和点通知都走这里：交给 Sparkle 的 checkForUpdates，
+    /// 它看到更新窗已经存在（driver.showingUpdate）就直接 showUpdateInFocus 把它前置，
+    /// 不会再跑一次网络检查。
+    @objc func showPendingUpdate(_ sender: Any?) {
+        forgetPendingUpdate()
+        updaterController?.checkForUpdates(sender)
     }
 
     @objc func togglePreferences() {
@@ -751,18 +856,56 @@ final class AccessibilityHelper {
 // MARK: - Sparkle scheduled update presentation
 
 extension AppDelegate: SPUStandardUserDriverDelegate {
-    /// MacStroke 是菜单栏 App，Sparkle 对「自动检查发现的更新」默认排在别的程序后面
+    /// MacStroke 是菜单栏 App。Sparkle 对「自动检查发现的更新」默认排在别的程序后面
     /// （SPUStandardUserDriverDelegate 文档 background app + immediateFocus=NO 那条），
-    /// 用户就是据此报「发了新版却没弹更新窗」。这里认领提醒职责并把更新窗拉到前面。
+    /// 用户就是据此报「发了新版却没弹更新窗」；反过来无条件抢焦点又太打扰。这里认领
+    /// 提醒职责：先只在菜单栏点个红点、发一条系统通知，用户点了才把更新窗前置。
     @objc var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    /// 偏好页「有新版本时提醒我」。每次现读，改完立刻生效，不用重启。
+    fileprivate var updateReminderEnabled: Bool {
+        storage.getBoolOptional(forKey: .enableUpdateReminder) ?? StorageDefaults.enableUpdateReminder
+    }
+
+    /// 返回 NO = 「这一版由我温和提醒」，Sparkle 就不去把更新窗排到后面。
+    /// immediateFocus 是 Sparkle 自己判断的时机（刚启动、或系统空闲很久），那种场合
+    /// 弹窗不扰人，交回给它；关键版本（发版时 CRITICAL=1 打的 <sparkle:criticalUpdate/>）
+    /// 也不进温和通道，它就是要马上被看到；用户关掉提醒开关时同样走 Sparkle 自己的路。
+    @objc func standardUserDriverShouldHandleShowingScheduledUpdate(
+        _ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool
+    ) -> Bool {
+        return immediateFocus || update.isCriticalUpdate || !updateReminderEnabled
+    }
 
     @objc func standardUserDriverWillHandleShowingUpdate(
         _ handleShowingUpdate: Bool,
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
-        guard handleShowingUpdate, !state.userInitiated else { return }
-        NSApp.activate(ignoringOtherApps: true)
+        guard !handleShowingUpdate, !state.userInitiated else { return }
+        rememberPendingUpdate(update)
+    }
+
+    /// 用户已经给了注意力（把更新窗带到前面、安装、跳过都算）：红点和菜单项该收了。
+    @objc func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+        forgetPendingUpdate()
+    }
+
+    @objc func standardUserDriverWillFinishUpdateSession() {
+        forgetPendingUpdate()
+    }
+}
+
+// MARK: - 系统通知点击
+
+extension AppDelegate: NSUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: NSUserNotificationCenter, didActivate notification: NSUserNotification) {
+        guard notification.userInfo?[Self.updateNotificationMarker] != nil else {
+            // 其它提示沿用没设 delegate 时的默认行为：把 App 带到前台。
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        showPendingUpdate(nil)
     }
 }
 

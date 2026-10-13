@@ -183,6 +183,20 @@ public final class UserPreferences: ObservableObject {
     @Published public var autoCheckUpdates: Bool {
         didSet { storage.setBool(autoCheckUpdates, forKey: .autoCheckUpdates) }
     }
+    /// 自动检查的节奏（秒），存的是 Sparkle 自己的 SUScheduledCheckInterval，
+    /// 改了 Sparkle 立刻按新节奏重排定时器。
+    @Published public var updateCheckInterval: Double {
+        didSet { storage.setDouble(updateCheckInterval, forKey: .updateCheckInterval) }
+    }
+    /// 发现新版时先用菜单栏红点 + 系统通知温和提醒，而不是直接把更新窗抢到前面。
+    @Published public var enableUpdateReminder: Bool {
+        didSet { storage.setBool(enableUpdateReminder, forKey: .enableUpdateReminder) }
+    }
+    /// 用户从没在偏好页选过节奏时的当前生效值：读 build_app.sh 写进 Info.plist 的
+    /// SUScheduledCheckInterval（那个数字只在那里维护一份），Info.plist 缺这个键才
+    /// 退回 Sparkle 自己的默认 86400（1 天）。
+    public static let infoPlistUpdateCheckInterval: Double =
+        (Bundle.main.infoDictionary?[StorageKey.updateCheckInterval.rawValue] as? NSNumber)?.doubleValue ?? 86400
 
     // MARK: - Remote control
     // 移植版扩展（超出原版）：手机小程序经局域网 TCP 远程点击。开关默认关，
@@ -277,6 +291,9 @@ public final class UserPreferences: ObservableObject {
         self.limitSaveDays = storage.getIntOptional(forKey: .limitSaveDays) ?? StorageDefaults.limitSaveDays
         self.userTerminal = storage.getStringOptional(forKey: .userTerminal) ?? StorageDefaults.userTerminal
         self.autoCheckUpdates = storage.getBoolOptional(forKey: .autoCheckUpdates) ?? StorageDefaults.autoCheckUpdates
+        self.updateCheckInterval = storage.getDoubleOptional(forKey: .updateCheckInterval)
+            ?? UserPreferences.infoPlistUpdateCheckInterval
+        self.enableUpdateReminder = storage.getBoolOptional(forKey: .enableUpdateReminder) ?? StorageDefaults.enableUpdateReminder
         self.enableRemoteControl = storage.getBoolOptional(forKey: .enableRemoteControl) ?? StorageDefaults.enableRemoteControl
         // 端口走同一份校验：导入进来的旧 plist 里可能是微信黑名单端口，落到默认值才连得上。
         let storedRemotePort = storage.getIntOptional(forKey: .remoteControlPort) ?? StorageDefaults.remoteControlPort

@@ -307,3 +307,17 @@
 "Granted" = "Granted";
 "Not granted" = "Not granted";
 "Ask for access" = "Ask for access";
+
+/* Update checks (port extension: cadence, gentle reminders, skipped versions) */
+"Check for Updates" = "Check for Updates";
+"Check Interval:" = "Check Interval:";
+"Every Day" = "Every Day";
+"Every 12 Hours" = "Every 12 Hours";
+"Every Hour" = "Every Hour";
+"Custom" = "Custom";
+"Remind Me When a New Version Is Found" = "Remind Me When a New Version Is Found";
+"Update Available" = "Update Available:";
+"View Update" = "View Update";
+"Skipped Versions" = "Skipped Versions:";
+"Restore Skipped Versions" = "Restore Skipped Versions";
+"Skipped update records have been cleared." = "Skipped update records have been cleared.";

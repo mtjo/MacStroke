@@ -101,6 +101,9 @@ public extension Notification.Name {
     static let macStrokeShowHistoryClipboard = Notification.Name("MacStrokeShowHistoryClipboard")
     /// Ask the preferences window to show one page (object: `PreferencesTab.rawValue`).
     static let macStrokeShowPreferencesTab = Notification.Name("MacStrokeShowPreferencesTab")
+    /// Ask the AppDelegate to forget the versions the user chose "Skip this
+    /// version" for, and to re-arm the scheduled check (About tab).
+    static let macStrokeRestoreSkippedUpdate = Notification.Name("MacStrokeRestoreSkippedUpdate")
 }
 
 /// Original feedback channel for confirmations and guards: a banner-style
@@ -1803,7 +1806,8 @@ struct ClipboardTabView: View {
 
 /// Original About pane (Preferences.xib "About", 800x519): the two update
 /// checkboxes, the version / author rows and the README.html web view that
-/// fills the rest of the page.
+/// fills the rest of the page. 移植版在此页另加三项：检查节奏、发现新版时的温和
+/// 提醒开关、以及「跳过此版本」的恢复入口。
 struct AboutTabView: View {
     @ObservedObject var viewModel: UserPreferences
     /// Sparkle's own user-default key (original bound the checkbox to
@@ -1815,6 +1819,13 @@ struct AboutTabView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
     }
 
+    /// 检查节奏给的三个档，都是 Sparkle 认的秒数（最小 3600，再小会被夹住）。
+    private static let checkIntervalOptions: [(titleKey: String, seconds: Double)] = [
+        ("Every Day", 86400),
+        ("Every 12 Hours", 43200),
+        ("Every Hour", 3600),
+    ]
+
     var body: some View {
         SettingsFillingPage {
             SettingsCard {
@@ -1825,11 +1836,32 @@ struct AboutTabView: View {
                     NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
                 }
                 RowDivider()
+                SettingsRow(L("Check Interval:")) {
+                    Picker("", selection: checkIntervalBinding) {
+                        ForEach(Self.checkIntervalOptions, id: \.seconds) { option in
+                            Text(L(option.titleKey)).tag(option.seconds)
+                        }
+                        // 手改过 defaults 的用户可能停在别的秒数上，给个能显示出来的选项，
+                        // 不然弹出框会是空的，看不出当前值。
+                        if !Self.checkIntervalOptions.contains(where: { $0.seconds == viewModel.updateCheckInterval }) {
+                            Text(L("Custom") + ": \(Int(viewModel.updateCheckInterval))s")
+                                .tag(viewModel.updateCheckInterval)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 150)
+                    .disabled(!viewModel.autoCheckUpdates)
+                }
+                RowDivider()
                 SettingsRow(L("Automatically Download Updates")) {
                     TrailingSwitch(isOn: $automaticallyDownloadsUpdates)
                 }
                 .onChange(of: automaticallyDownloadsUpdates) { _ in
                     NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+                }
+                RowDivider()
+                SettingsRow(L("Remind Me When a New Version Is Found")) {
+                    TrailingSwitch(isOn: $viewModel.enableUpdateReminder)
                 }
             }
 
@@ -1850,12 +1882,31 @@ struct AboutTabView: View {
                 }
                 RowDivider()
                 SettingsRow(L("Author: mtjo.net@gmail.com"))
+                RowDivider()
+                SettingsRow(L("Skipped Versions")) {
+                    Button(L("Restore Skipped Versions")) {
+                        NotificationCenter.default.post(name: .macStrokeRestoreSkippedUpdate, object: nil)
+                    }
+                }
             }
 
             READMEWebView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .settingsListCard()
         }
+    }
+
+    /// 改节奏要通知 AppDelegate：Sparkle 只认 `SPUUpdater.updateCheckInterval` 这个
+    ///  setter，它才会重排定时器；直接写 UserDefaults 的话值虽然被 Sparkle 读到，
+    /// 当前那一轮的定时器还要等到下次检查才换。
+    private var checkIntervalBinding: Binding<Double> {
+        Binding(
+            get: { viewModel.updateCheckInterval },
+            set: {
+                viewModel.updateCheckInterval = $0
+                NotificationCenter.default.post(name: .macStrokeUpdateSettingsDidChange, object: nil)
+            }
+        )
     }
 }
 

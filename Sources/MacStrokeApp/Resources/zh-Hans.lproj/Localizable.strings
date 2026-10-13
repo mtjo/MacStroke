@@ -309,3 +309,17 @@
 "Granted" = "已授权";
 "Not granted" = "未授权";
 "Ask for access" = "去授权";
+
+/* 更新检查（移植版扩展：检查节奏、温和提醒、跳过版本恢复） */
+"Check for Updates" = "检查更新";
+"Check Interval:" = "检查间隔：";
+"Every Day" = "每天";
+"Every 12 Hours" = "每 12 小时";
+"Every Hour" = "每小时";
+"Custom" = "自定";
+"Remind Me When a New Version Is Found" = "有新版本时提醒我";
+"Update Available" = "发现新版本：";
+"View Update" = "查看更新";
+"Skipped Versions" = "已跳过的版本：";
+"Restore Skipped Versions" = "恢复提醒";
+"Skipped update records have been cleared." = "已清除跳过记录，下次检查会重新提醒。";

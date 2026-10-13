@@ -3,6 +3,8 @@ set -euo pipefail
 
 # 生成 Sparkle 更新包与 appcast 条目。发版顺序：./build_app.sh → ./make_release.sh
 # → 把 release_out/ 里的产物推到 release 分支与 GitHub release tag。
+# 关键版本（必须让用户马上升）用 CRITICAL=1 ./make_release.sh，条目里会多写
+# <sparkle:criticalUpdate/>，Sparkle 发现后立刻前置弹窗且不给「跳过此版本」。
 #
 # 为什么必须「双签」同一条目：
 #   * 老版 MacStroke（ObjC）用 Sparkle 1.24，Info.plist 里只有 SUPublicDSAKeyFile，
@@ -99,6 +101,12 @@ printf '%s' "${DSA_SIG}" | /usr/bin/openssl base64 -d -A > "${TMP_DIR}/dsa_sig.b
 
 ITEM="${OUT_DIR}/AppCast-${APP_VERSION}-item.xml"
 PUB_DATE="$(date '+%Y-%m-%d %H:%M:%S %z')"
+# CRITICAL=1 才写 <sparkle:criticalUpdate/>，非关键版本保持与历史条目一致。
+CRITICAL_ELEMENT=""
+if [ "${CRITICAL:-0}" = "1" ]; then
+    CRITICAL_ELEMENT="<sparkle:criticalUpdate />"
+    echo "🚨 CRITICAL=1：本条目会被当成关键更新（发现后立刻前置弹窗，更新窗不给「跳过此版本」）"
+fi
 # 结构与 release 分支既有 17 条保持一致（每版一个 <channel> 块），
 # 这样老 Sparkle 1.24 与新 Sparkle 2 都能按原样解析。
 cat > "${ITEM}" <<ITEM_EOF
@@ -109,6 +117,7 @@ cat > "${ITEM}" <<ITEM_EOF
     <language>en</language>
     <item>
       <title>Version${APP_VERSION}</title>
+      ${CRITICAL_ELEMENT}
       <sparkle:releaseNotesLink>
         ${NOTES_URL}
       </sparkle:releaseNotesLink>
@@ -118,6 +127,10 @@ cat > "${ITEM}" <<ITEM_EOF
     </item>
   </channel>
 ITEM_EOF
+if [ "${CRITICAL:-0}" != "1" ]; then
+    # 上面那行在非关键版本是空的，删掉空行以免条目结构跟历史不一致
+    sed -i '' '/^[[:space:]]*$/d' "${ITEM}"
+fi
 
 echo "✅ 产物："
 echo "   ${ZIP}  (${LENGTH} bytes, ${ARCHS})"
