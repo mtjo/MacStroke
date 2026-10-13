@@ -174,7 +174,8 @@ jobs:
           echo "🔧 ${ARCHS}"
           echo "${ARCHS}" | grep -q arm64 && echo "${ARCHS}" | grep -q x86_64 \
             || { echo "❌ 不是 arm64+x86_64 通用包：${ARCHS}" >&2; exit 1; }
-          codesign -dv MacStroke.app 2>&1 | tee "${RUNNER_TEMP}/codesign.txt"
+          # codesign -dv 不打印 Authority=（只有 -dvv 起才有），别拿它当签名主体的判据
+          codesign -dvvv MacStroke.app 2>&1 | tee "${RUNNER_TEMP}/codesign.txt"
           # 签名身份直接决定老用户更新后要不要重勾辅助功能，所以这里硬判而不是只提示
           grep -q "Authority=MacStroke Self Signed" "${RUNNER_TEMP}/codesign.txt" \
             || { echo "❌ 包不是用 'MacStroke Self Signed' 签的（见上面的 codesign 输出）" >&2; exit 1; }

@@ -1,7 +1,9 @@
 # MacStroke 本地签名证书
 
 `build_app.sh` 使用登录钥匙串里的自签名身份 **"MacStroke Self Signed"** 签名。
-好处：cdhash 每次构建保持一致 → 重装后辅助功能（TCC）授权不会被重置。
+好处：designated requirement 是 `identifier "net.mtjo.MacStroke" and certificate root = H(33BFE…)`，
+认的是这把证书而不是 cdhash —— 所以重新编译（cdhash 必然变）之后重装或自动更新，
+辅助功能（TCC）授权仍然有效。回退成 ad-hoc 签名就会丢掉这条 DR，用户要重勾一次。
 
 - 证书/私钥备份：`~/Library/Application Support/MacStrokeDev/`
   （`macstroke-signing-cert.pem`、`form_rsa.der`、`macstroke-signing.p12`），有效期 10 年（至 2036-09）。
@@ -27,3 +29,12 @@ security find-identity -v -p codesigning   # 应看到 "MacStroke Self Signed"
 ```
 
 若身份缺失，`build_app.sh` 会打印警告并回退为 ad-hoc 签名（不影响构建，但 TCC 会重置）。
+
+## 发版流水线里的用法
+
+`.github/workflows/release.yml` 在 GitHub 的 macos-14 runner 上重建同一个身份，材料就是上面
+那份备份：`macstroke-signing-cert.pem` 进 secret `CODESIGN_CERT_PEM`，私钥转成
+traditional DER 再 base64 成一行进 `CODESIGN_KEY_DER_B64`（`openssl rsa -outform der -traditional`，
+`security import` 只认这种编码）。导进临时钥匙串后，只有 `find-identity -v` 认不出这个身份时，
+流水线才用 `sudo -n security add-trusted-cert -d …` 补写系统信任域 —— 不带 sudo 的那条命令走
+GUI 授权，无界面环境会永久挂起（dry-run 实测踩过）。
