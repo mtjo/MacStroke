@@ -430,8 +430,9 @@ jobs:
             echo "线上附件 sha256=${LOCAL_SHA256}"
           fi
           # 跨仓库改文件走 contents API：先取下来，替换 version 与 sha256，再带 sha PUT 回去
-          gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" > "${RUNNER_TEMP}/cask.json" \
-            || die "读 ${TAP_REPO} 的 cask 失败，多半是 HOMEBREW_TAP_TOKEN 没有 Contents 读权限"
+          gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" \
+            > "${RUNNER_TEMP}/cask.json" 2> "${RUNNER_TEMP}/get.err" \
+            || die "读 ${TAP_REPO} 的 cask 失败：$(head -c 300 "${RUNNER_TEMP}/get.err")"
           OLD_SHA="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['sha'])" "${RUNNER_TEMP}/cask.json")"
           python3 -c "import json,base64,sys;d=json.load(open(sys.argv[1]));open(sys.argv[2],'wb').write(base64.b64decode(d['content']))" \
             "${RUNNER_TEMP}/cask.json" "${RUNNER_TEMP}/cask.rb"
