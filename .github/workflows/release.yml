@@ -113,30 +113,53 @@ jobs:
             echo "   老用户自动更新后辅助功能(TCC)要重勾一次 —— 视为失败而不是悄悄降级。" >&2
             exit 1
           fi
+          # runner 没有界面，任何走 GUI 授权的 security 调用都会无限挂起（本机实测：
+          # security add-trusted-cert 不配 sudo 时 12 秒内不回话）。所有 security 命令统一
+          # 套看门狗，弹窗一律变成明确失败而不是拖满 6 小时。
+          sec() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+          LOOK_FOR="MacStroke Self Signed"
           KC="${RUNNER_TEMP}/build.keychain-db"
           KPW="$(openssl rand -hex 12)"
-          security create-keychain -p "${KPW}" "${KC}"
-          security set-keychain-settings -t 3600 -u "${KC}"
-          security unlock-keychain -p "${KPW}" "${KC}"
+          sec 60 security create-keychain -p "${KPW}" "${KC}"
+          sec 60 security set-keychain-settings -t 3600 -u "${KC}"
+          sec 60 security unlock-keychain -p "${KPW}" "${KC}"
           printf '%s\n' "${CODESIGN_CERT_PEM}" > "${RUNNER_TEMP}/signing-cert.pem"
           # 用 python3 解码而不是 base64：macOS 是 -D、GNU coreutils 是 -d，runner 上哪个
           # 在 PATH 前面不保证，两边都能跑的写法只有 python3。
           python3 -c "import base64,sys;open(sys.argv[2],'wb').write(base64.b64decode(sys.argv[1]))" \
             "${CODESIGN_KEY_DER_B64}" "${RUNNER_TEMP}/signing-key.der"
-          # -A（允许所有程序访问）而不是 -T：runner 无界面，任何 ACL 弹窗都会把构建卡死。
-          security import "${RUNNER_TEMP}/signing-cert.pem" -k "${KC}" -f openssl -A
-          security import "${RUNNER_TEMP}/signing-key.der"  -k "${KC}" -f openssl -A
-          # 自签证书不进系统信任链，find-identity -v 会把它当无效身份过滤掉，所以补一条
-          # codeSign 信任根（与 docs/signing.md 新机重建那节一致）。
-          security add-trusted-cert -r trustRoot -p codeSign -k "${KC}" "${RUNNER_TEMP}/signing-cert.pem" || true
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KPW}" "${KC}" >/dev/null
-          security default-keychain -s "${KC}"
-          security list-keychains -s "${KC}" "${HOME}/Library/Keychains/login.keychain-db"
-          if ! security find-identity -v -p codesigning | grep -q "MacStroke Self Signed"; then
-            echo "❌ 导入后仍找不到有效身份 'MacStroke Self Signed'，实际列表：" >&2
-            security find-identity -v -p codesigning >&2 || true
-            exit 1
+          # -A（允许所有程序访问）而不是 -T：keychain ACL 一旦要求指定程序，codesign 取密钥
+          # 时同样可能弹框。
+          sec 60 security import "${RUNNER_TEMP}/signing-cert.pem" -k "${KC}" -f openssl -A
+          sec 60 security import "${RUNNER_TEMP}/signing-key.der"  -k "${KC}" -f openssl -A
+          sec 60 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KPW}" "${KC}" >/dev/null
+          sec 60 security default-keychain -s "${KC}"
+          sec 60 security list-keychains -s "${KC}" "${HOME}/Library/Keychains/login.keychain-db"
+
+          # 自签证书不在系统信任链里，find-identity -v 会把它当无效身份过滤掉，而
+          # build_app.sh 正是用它决定「用自签还是 ad-hoc」。有效就先省事，无效才写系统信任域。
+          if sec 60 security find-identity -v -p codesigning | grep -q "${LOOK_FOR}"; then
+            echo "✅ 身份导入后即可用，无需改信任设置"
+          else
+            echo "… 尚未被视为有效身份，写入系统信任域（runner 免密 sudo，-n 保证要密码时直接失败）"
+            sec 60 sudo -n security add-trusted-cert -d -r trustRoot -p codeSign \
+              -k /Library/Keychains/System.keychain "${RUNNER_TEMP}/signing-cert.pem"
+            if ! sec 60 security find-identity -v -p codesigning | grep -q "${LOOK_FOR}"; then
+              echo "❌ 加了信任根仍找不到有效身份 '${LOOK_FOR}'，实际列表：" >&2
+              security find-identity -v -p codesigning >&2 || true
+              exit 1
+            fi
+            echo "✅ 已通过系统信任域启用自签身份"
           fi
+          # 真正要证明的是「无界面条件下 codesign 拿得到这把私钥」，所以做一次真实试签，
+          # 而不是只相信 find-identity 的结论。用现成的 Mach-O 而不是造 .app：
+          # 非二进制的伪 bundle 会被 codesign 直接判 bundle format unrecognized。
+          cp /bin/ls "${RUNNER_TEMP}/probe"
+          sec 120 codesign --force --sign "${LOOK_FOR}" "${RUNNER_TEMP}/probe" \
+            || { echo "❌ 试签失败：codesign 拿不到该身份（多半是 ACL 或信任问题）" >&2; exit 1; }
+          codesign -dvv "${RUNNER_TEMP}/probe" 2>&1 | tee "${RUNNER_TEMP}/probe.txt"
+          grep -q "Authority=${LOOK_FOR}" "${RUNNER_TEMP}/probe.txt" \
+            || { echo "❌ 试签结果的签名主体不是 ${LOOK_FOR}" >&2; exit 1; }
           echo "✅ 签名身份已就绪（指纹应与本机一致：33BFE3CCB6027293E257EA62F131BE834147719E）"
         env:
           CODESIGN_CERT_PEM: ${{ secrets.CODESIGN_CERT_PEM }}
