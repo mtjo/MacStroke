@@ -1,0 +1,331 @@
+# 发版流水线：一条命令跑完「构建 → 双签 → tag → GitHub release + 附件 → release 分支
+# appcast + 更新说明 → 个人 tap 同步」，也就是以前手工做的五步。
+#
+# 版本号的唯一来源仍是 build_app.sh 里的 APP_VERSION（make_release.sh 也读它），所以流程
+# 是：先在 main 上提交「版本号 + Changelog/<ver>.html」，再来手动跑这个 workflow。
+# 故意不挂 push 触发器 —— 误推一个提交就把线上 feed 改了，代价太大。
+#
+# 需要的仓库 secrets（Settings → Secrets and variables → Actions → Repository secrets）：
+#   SPARKLE_ED25519_PRIVATE_KEY  .sparkle/ed25519-private.pem 全文（Sparkle 2 的 EdDSA 私钥）
+#   SPARKLE_DSA_PRIVATE_KEY      ~/bin/dsa_priv.pem 全文（老 2.0.x 那条线的 DSA 私钥）
+#   CODESIGN_CERT_PEM            ~/Library/Application Support/MacStrokeDev/macstroke-signing-cert.pem
+#   CODESIGN_KEY_DER_B64         同一份私钥转成 traditional DER 后 base64 成一行
+#                                （docs/signing.md 用的是 security import PEM/DER 那条已验证配方；
+#                                 这两个缺了会直接失败，想允许 ad-hoc 就把下面那步的 exit 1 去掉）
+#   HOMEBREW_TAP_TOKEN           只能写 mtjo/homebrew-tap 的 fine-grained token（缺了跳过 tap 那步）
+# 建 release / 传附件 / 推 release 分支用的是 GitHub 自带的 GITHUB_TOKEN（靠下面
+# permissions.contents=write 提权），不需要额外配 PAT。
+#
+# dry_run 默认开：只跑到「产物 + 全部校验」就停，不建 tag、不动 release 分支，产物挂在
+# 本次运行页上可以下载回来逐字节比对。dry-run 之后的每一步都带 if: !inputs.dry_run。
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只构建与校验，不落任何公开动作（tag / release / appcast / tap）
+        type: boolean
+        default: true
+      critical:
+        description: 标为关键更新（写 <sparkle:criticalUpdate/>：发现后立刻弹窗且不给「跳过此版本」）
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      OWNER: mtjo
+
+    steps:
+      - name: 检出 main（要全历史，打 tag 与推 release 分支都要用）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 读版本号并做前置检查
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^APP_VERSION="\([^"]*\)".*/\1/p' build_app.sh)"
+          MIN="$(sed -n 's/^MIN_MACOS_VERSION="\([^"]*\)".*/\1/p' build_app.sh)"
+          echo "VERSION=${VER}" >> "$GITHUB_ENV"
+          echo "MIN_MACOS=${MIN}" >> "$GITHUB_ENV"
+          echo "🏷  本次发版 v${VER}（最低系统 ${MIN}）"
+
+          # 只允许从 main 发版，避免在分支上试跑时把线上 feed 改了
+          [ "${GITHUB_REF_NAME}" = "main" ] \
+            || { echo "❌ 当前分支是 ${GITHUB_REF_NAME}，发版必须走 main" >&2; exit 1; }
+          # 说明页必须已经在 main 上：feed 里的 releaseNotesLink 指的就是它，缺页会让用户
+          # 点更新时看到 404。
+          [ -f "Changelog/${VER}.html" ] \
+            || { echo "❌ 找不到 Changelog/${VER}.html —— 先把版本号和说明页提交到 main" >&2; exit 1; }
+          # tag 已存在说明这一版发过了，直接停，别把线上条目改一半
+          git fetch --tags origin >/dev/null 2>&1 || true
+          if git rev-parse -q --verify "refs/tags/${VER}" >/dev/null; then
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "⚠️  tag ${VER} 已存在 —— dry-run 继续，真发时会被拦下"
+            else
+              echo "❌ tag ${VER} 已存在，这一版大概已经发过了" >&2; exit 1
+            fi
+          fi
+          # 后面几步全依赖这两个命令，缺了要在这里就失败，而不是等到要建 release 时
+          command -v gh >/dev/null || { echo "❌ runner 上没有 gh CLI" >&2; exit 1; }
+          command -v xmllint >/dev/null || { echo "❌ runner 上没有 xmllint" >&2; exit 1; }
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+
+      - name: 落地 Sparkle 签名私钥
+        run: |
+          set -euo pipefail
+          umask 077
+          [ -n "${SPARKLE_ED25519_PRIVATE_KEY}" ] || { echo "❌ secret SPARKLE_ED25519_PRIVATE_KEY 是空的" >&2; exit 1; }
+          [ -n "${SPARKLE_DSA_PRIVATE_KEY}" ] || { echo "❌ secret SPARKLE_DSA_PRIVATE_KEY 是空的" >&2; exit 1; }
+          mkdir -p .sparkle
+          printf '%s\n' "${SPARKLE_ED25519_PRIVATE_KEY}" > .sparkle/ed25519-private.pem
+          printf '%s\n' "${SPARKLE_DSA_PRIVATE_KEY}" > "${RUNNER_TEMP}/dsa_priv.pem"
+          echo "MACSTROKE_DSA_KEY=${RUNNER_TEMP}/dsa_priv.pem" >> "$GITHUB_ENV"
+          # 私钥和 app 里的公钥对不上时，签出来的条目会被 Sparkle 静默拒绝，先挡住。
+          # make_release.sh 里也有同样的自检，这里提前是为了在签名前就报清楚。
+          EXPECT="$(awk '/<key>SUPublicEDKey<\/key>/{getline; gsub(/.*<string>|<\/string>.*/, ""); print; exit}' build_app.sh)"
+          ACTUAL="$(openssl pkey -in .sparkle/ed25519-private.pem -pubout -outform DER | tail -c 32 | base64)"
+          [ "${EXPECT}" = "${ACTUAL}" ] \
+            || { echo "❌ EdDSA 私钥推出的公钥 ${ACTUAL} ≠ build_app.sh 里的 ${EXPECT}" >&2; exit 1; }
+          echo "✅ EdDSA 私钥与线上公钥同源"
+        env:
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          SPARKLE_DSA_PRIVATE_KEY: ${{ secrets.SPARKLE_DSA_PRIVATE_KEY }}
+
+      - name: 导入代码签名身份
+        run: |
+          set -euo pipefail
+          umask 077
+          if [ -z "${CODESIGN_CERT_PEM}" ] || [ -z "${CODESIGN_KEY_DER_B64}" ]; then
+            echo "❌ 没配 CODESIGN_CERT_PEM / CODESIGN_KEY_DER_B64" >&2
+            echo "   这样 build_app.sh 会回退 ad-hoc 签名，cdhash 与本机自签不同，" >&2
+            echo "   老用户自动更新后辅助功能(TCC)要重勾一次 —— 视为失败而不是悄悄降级。" >&2
+            exit 1
+          fi
+          KC="${RUNNER_TEMP}/build.keychain-db"
+          KPW="$(openssl rand -hex 12)"
+          security create-keychain -p "${KPW}" "${KC}"
+          security set-keychain-settings -t 3600 -u "${KC}"
+          security unlock-keychain -p "${KPW}" "${KC}"
+          printf '%s\n' "${CODESIGN_CERT_PEM}" > "${RUNNER_TEMP}/signing-cert.pem"
+          # 用 python3 解码而不是 base64：macOS 是 -D、GNU coreutils 是 -d，runner 上哪个
+          # 在 PATH 前面不保证，两边都能跑的写法只有 python3。
+          python3 -c "import base64,sys;open(sys.argv[2],'wb').write(base64.b64decode(sys.argv[1]))" \
+            "${CODESIGN_KEY_DER_B64}" "${RUNNER_TEMP}/signing-key.der"
+          # -A（允许所有程序访问）而不是 -T：runner 无界面，任何 ACL 弹窗都会把构建卡死。
+          security import "${RUNNER_TEMP}/signing-cert.pem" -k "${KC}" -f openssl -A
+          security import "${RUNNER_TEMP}/signing-key.der"  -k "${KC}" -f openssl -A
+          # 自签证书不进系统信任链，find-identity -v 会把它当无效身份过滤掉，所以补一条
+          # codeSign 信任根（与 docs/signing.md 新机重建那节一致）。
+          security add-trusted-cert -r trustRoot -p codeSign -k "${KC}" "${RUNNER_TEMP}/signing-cert.pem" || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KPW}" "${KC}" >/dev/null
+          security default-keychain -s "${KC}"
+          security list-keychains -s "${KC}" "${HOME}/Library/Keychains/login.keychain-db"
+          if ! security find-identity -v -p codesigning | grep -q "MacStroke Self Signed"; then
+            echo "❌ 导入后仍找不到有效身份 'MacStroke Self Signed'，实际列表：" >&2
+            security find-identity -v -p codesigning >&2 || true
+            exit 1
+          fi
+          echo "✅ 签名身份已就绪（指纹应与本机一致：33BFE3CCB6027293E257EA62F131BE834147719E）"
+        env:
+          CODESIGN_CERT_PEM: ${{ secrets.CODESIGN_CERT_PEM }}
+          CODESIGN_KEY_DER_B64: ${{ secrets.CODESIGN_KEY_DER_B64 }}
+
+      - name: 构建通用包
+        run: |
+          set -euo pipefail
+          ./build_app.sh
+          # 双架构是「装了能不能打开」的直接成因（Apple Silicon 上非通用包会走 Rosetta）
+          ARCHS="$(lipo -archs MacStroke.app/Contents/MacOS/MacStroke)"
+          echo "🔧 ${ARCHS}"
+          echo "${ARCHS}" | grep -q arm64 && echo "${ARCHS}" | grep -q x86_64 \
+            || { echo "❌ 不是 arm64+x86_64 通用包：${ARCHS}" >&2; exit 1; }
+          codesign -dv MacStroke.app 2>&1 | tee "${RUNNER_TEMP}/codesign.txt"
+          # 签名身份直接决定老用户更新后要不要重勾辅助功能，所以这里硬判而不是只提示
+          grep -q "Authority=MacStroke Self Signed" "${RUNNER_TEMP}/codesign.txt" \
+            || { echo "❌ 包不是用 'MacStroke Self Signed' 签的（见上面的 codesign 输出）" >&2; exit 1; }
+          echo "✅ 自签身份已生效"
+
+      - name: 生成双签产物与 appcast 条目
+        run: |
+          set -euo pipefail
+          if [ "${CRITICAL}" = "true" ]; then
+            echo "🚨 critical=true：本条目会写成关键更新"
+            CRITICAL=1 ./make_release.sh
+          else
+            ./make_release.sh
+          fi
+          test -s "release_out/MacStroke-${VERSION}.zip"
+          test -s "release_out/AppCast-${VERSION}-item.xml"
+        env:
+          CRITICAL: ${{ inputs.critical }}
+
+      - name: 校验产物
+        run: |
+          set -euo pipefail
+          ZIP="release_out/MacStroke-${VERSION}.zip"
+          ITEM="release_out/AppCast-${VERSION}-item.xml"
+          shasum -a 256 "${ZIP}" | tee "${RUNNER_TEMP}/local.sha256"
+          echo "LOCAL_SHA256=$(awk '{print $1}' "${RUNNER_TEMP}/local.sha256")" >> "$GITHUB_ENV"
+          echo "ZIP_BYTES=$(stat -f %z "${ZIP}")" >> "$GITHUB_ENV"
+          # 条目里的 length 必须等于真实字节数（历史 22 条都对得上）
+          grep -q "length=\"$(stat -f %z "${ZIP}")\"" "${ITEM}" \
+            || { echo "❌ 条目的 length 与 zip 实际大小不符" >&2; exit 1; }
+          # 单个 <channel> 片段 xmllint 不认，套上 rss 壳再验结构
+          {
+            printf '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
+            cat "${ITEM}"
+            printf '</rss>'
+          } > "${RUNNER_TEMP}/wrap.xml"
+          xmllint --noout "${RUNNER_TEMP}/wrap.xml"
+          # 只用公钥复验 EdDSA：签名的包 ≠ 装到用户机器上的包时，这里必须能看出来
+          openssl pkey -in .sparkle/ed25519-private.pem -outform DER | tail -c 32 \
+            | base64 | tr -d '\n' > "${RUNNER_TEMP}/seed.b64"
+          .build/artifacts/sparkle/Sparkle/bin/sign_update --verify \
+            --ed-key-file "${RUNNER_TEMP}/seed.b64" "${ZIP}" \
+            "$(sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p' "${ITEM}")"
+          echo "✅ EdDSA 复验通过"
+
+      - name: 上传本次产物（dry-run 时靠这两个文件核对）
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacStroke-${{ env.VERSION }}
+          path: |
+            release_out/MacStroke-*.zip
+            release_out/AppCast-*-item.xml
+          if-no-files-found: error
+
+      - name: 停在这里（dry-run）
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "🧪 dry_run=true：没建 tag、没建 release、没动 release 分支和 tap。"
+          echo "   把上面的 artifact 下载核对后，关掉 dry_run 再跑一次即可真发。"
+
+      - name: 打 tag 并推送
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          git config user.name "$(git log -1 --format=%an)"
+          git config user.email "$(git log -1 --format=%ae)"
+          git tag -a "${VERSION}" -m "MacStroke ${VERSION}"
+          git push origin "refs/tags/${VERSION}"
+
+      - name: 建 GitHub release 并上传附件
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          # 正文直接用 Changelog/<ver>.html 的要点（去掉末尾那行 download:），再补一句系统要求
+          grep -v '^download:' "Changelog/${VERSION}.html" > "${RUNNER_TEMP}/body.md"
+          printf '\nRequires macOS %s or later. 旧版 2.0.5 与 3.0.x 都能直接自动更新（条目同时带 DSA 与 EdDSA 签名）。\n' \
+            "${MIN_MACOS}" >> "${RUNNER_TEMP}/body.md"
+          # 附件落名必须正好是 MacStroke.zip —— feed 里的 url 就是这个
+          gh release create "${VERSION}" \
+            --target main \
+            --title "MacStroke ${VERSION}" \
+            --notes-file "${RUNNER_TEMP}/body.md" \
+            "release_out/MacStroke-${VERSION}.zip#MacStroke.zip"
+          DOWN="$(mktemp)"
+          curl -sSL "https://github.com/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/download/${VERSION}/MacStroke.zip" -o "${DOWN}"
+          SIZE="$(stat -f %z "${DOWN}")"
+          SHA="$(shasum -a 256 "${DOWN}" | awk '{print $1}')"
+          echo "线上包 ${SIZE} 字节 sha256=${SHA}"
+          # 线上包与本地不一致就别再往 feed 里写，否则用户拿到的是坏包
+          [ "${SHA}" = "${LOCAL_SHA256}" ] \
+            || { echo "❌ 线上包 sha256 与本地不一致" >&2; exit 1; }
+          [ "${SIZE}" = "${ZIP_BYTES}" ] \
+            || { echo "❌ 线上包大小 ${SIZE} ≠ 本地 ${ZIP_BYTES}" >&2; exit 1; }
+          echo "✅ 线上包与本地逐字节一致"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 追加 appcast 条目与说明页到 release 分支
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          git fetch origin release
+          git worktree add "${RUNNER_TEMP}/ms-rel" origin/release >/dev/null
+          cd "${RUNNER_TEMP}/ms-rel"
+          BEFORE=$(grep -c "<channel>" AppCast.xml)
+          # 新块插在文件末尾那个 </rss> 之前，保持与历史条目完全同形状（每版一个 channel 块），
+          # 这样老 Sparkle 1.24 与新 Sparkle 2 都能按原样解析。
+          python3 - "${VERSION}" "${GITHUB_WORKSPACE}" <<'PY'
+          import pathlib, sys
+          ver, ws = sys.argv[1], pathlib.Path(sys.argv[2])
+          item = (ws / f"release_out/AppCast-{ver}-item.xml").read_text().rstrip() + "\n"
+          feed = pathlib.Path("AppCast.xml")
+          text = feed.read_text()
+          idx = text.rstrip().rfind("</rss>")
+          assert idx > 0, "AppCast.xml 里找不到 </rss>"
+          feed.write_text(text[:idx] + item + text[idx:])
+          pathlib.Path(f"Changelog/{ver}.html").parent.mkdir(exist_ok=True)
+          pathlib.Path(f"Changelog/{ver}.html").write_text((ws / f"Changelog/{ver}.html").read_text())
+          PY
+          xmllint --noout AppCast.xml
+          AFTER=$(grep -c "<channel>" AppCast.xml)
+          [ "${AFTER}" = "$((BEFORE + 1))" ] \
+            || { echo "❌ <channel> 数量从 ${BEFORE} 变成 ${AFTER}" >&2; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AppCast.xml "Changelog/${VERSION}.html"
+          git commit -m "发布 ${VERSION}：appcast 追加第 ${AFTER} 条，补更新说明页"
+          git push origin HEAD:release
+
+      - name: 线上 feed 复核
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          sleep 20   # raw.githubusercontent.com 有约 5 分钟缓存，先等一下再判
+          curl -sL "https://raw.githubusercontent.com/${OWNER}/${GITHUB_REPOSITORY#*/}/release/AppCast.xml" \
+            -o "${RUNNER_TEMP}/feed.xml"
+          xmllint --noout "${RUNNER_TEMP}/feed.xml"
+          grep -q "Version${VERSION}" "${RUNNER_TEMP}/feed.xml" \
+            || { echo "❌ 线上 feed 里没有 Version${VERSION}（多半是缓存，稍后手工复核）" >&2; exit 1; }
+          echo "✅ 线上 feed $(grep -c '<channel>' "${RUNNER_TEMP}/feed.xml") 个 <channel>，含 Version${VERSION}"
+          curl -sSL -o /dev/null -w "说明页 HTTP %{http_code}\n" \
+            "https://raw.githubusercontent.com/${OWNER}/${GITHUB_REPOSITORY#*/}/release/Changelog/${VERSION}.html"
+
+      - name: 同步个人 homebrew tap
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
+            echo "⚠️  没配 HOMEBREW_TAP_TOKEN，跳过 tap 同步（要手工改 mtjo/homebrew-tap 的 Casks/macstroke.rb）"
+            exit 0
+          fi
+          # 跨仓库改文件走 contents API：先取下来，替换 version 与 sha256，再带 sha PUT 回去
+          gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" > "${RUNNER_TEMP}/cask.json"
+          OLD_SHA="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['sha'])" "${RUNNER_TEMP}/cask.json")"
+          python3 -c "import json,base64,sys;d=json.load(open(sys.argv[1]));open(sys.argv[2],'wb').write(base64.b64decode(d['content']))" \
+            "${RUNNER_TEMP}/cask.json" "${RUNNER_TEMP}/cask.rb"
+          python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" <<'PY'
+          import pathlib, re, sys
+          ver, sha, path = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
+          text = path.read_text()
+          new = re.sub(r'(version:\s*")[^"]*(")', r'\g<1>' + ver + r'\g<2>', text)
+          new = re.sub(r'(sha256:\s*")[^"]*(")', r'\g<1>' + sha + r'\g<2>', new)
+          assert new != text, "cask 里没匹配到 version/sha256 两行，检查文件格式"
+          path.write_text(new)
+          print(new)
+          PY
+          gh api --method PUT "repos/${TAP_REPO}/contents/Casks/macstroke.rb" \
+            -F branch=main \
+            -F "sha=${OLD_SHA}" \
+            -F "message=macstroke ${VERSION}" \
+            -F "content=$(python3 -c "import base64,sys;print(base64.b64encode(open(sys.argv[1],'rb').read()).decode())" "${RUNNER_TEMP}/cask.rb")" \
+            --jq '.commit.sha' | sed "s/^/tap 已更新: /"
+        env:
+          # 跨仓库写入不能用 GITHUB_TOKEN，必须用 tap 自己的 fine-grained token
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_REPO: mtjo/homebrew-tap
