@@ -16,6 +16,16 @@ APP_VERSION="3.1.1"
 # 机器上要么内核直接拒绝启动（提示难懂），要么用户点更新后拿到一个打不开的 app。
 MIN_MACOS_VERSION="13.0"
 
+# 自动检查的节奏。不写就是 Sparkle 默认的 86400（1 天），而 Sparkle 会把运行中的
+# 定时器夹到最小 1 小时，所以「发版后一直开着的机器」最长要等一天才查一次。
+UPDATE_CHECK_INTERVAL=43200
+
+# 已静默下载完的更新多久之后主动喊用户。MacStroke 是菜单栏 App（LSUIElement），
+# 几乎不会被退出，而开了「自动下载」（SUAutomaticallyUpdate）时 Sparkle 的默认做法是
+# 「等 App 退出时才装」，只有超过这个间隔还没退出才提醒 —— 默认是 604800（1 周），
+# 实测就是「发了新版，另一台开着的机器一直没弹窗」的原因。必须大于上面的检查间隔。
+IMPATIENT_UPDATE_CHECK_INTERVAL=86400
+
 # 稳定的自签名代码签名身份（见 README-签名.md /钥匙串里 "MacStroke Self Signed"）。
 # 用它签名可让 cdhash 在重装后保持不变，辅助功能(TCC)授权不被重置。
 # 若身份不存在则自动回退为 ad-hoc 签名。
@@ -211,6 +221,10 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <string>z7QoxopiJmon580ha8Kl8tI6m+Jq+xSZ9Oz/CCVqUAU=</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>${UPDATE_CHECK_INTERVAL}</integer>
+    <key>SUScheduledImpatientCheckInterval</key>
+    <integer>${IMPATIENT_UPDATE_CHECK_INTERVAL}</integer>
 </dict>
 </plist>
 PLIST

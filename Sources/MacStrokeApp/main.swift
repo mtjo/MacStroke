@@ -549,7 +549,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Use SPUStandardUpdaterController for automatic update checking and UI.
         // Feed URL & DSA key come from Info.plist (SUFeedURL / SUPublicDSAKeyFile),
         // same appcast as the original MacStroke release.
-        let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        let controller = SPUStandardUpdaterController(
+            startingUpdater: true,
+            updaterDelegate: nil,
+            userDriverDelegate: self
+        )
         // 不再在启动时回写 automaticallyChecksForUpdates：那个键就是 Sparkle 自己的
         // SUEnableAutomaticChecks（StorageKey.autoCheckUpdates 已指向它），开机就赋值
         // 只会把「用户从未设置」变成「已显式写死」，以后改默认值就不生效了。
@@ -741,6 +745,24 @@ final class AccessibilityHelper {
 
     static func isAccessibilityTrusted() -> Bool {
         return AXIsProcessTrusted()
+    }
+}
+
+// MARK: - Sparkle scheduled update presentation
+
+extension AppDelegate: SPUStandardUserDriverDelegate {
+    /// MacStroke 是菜单栏 App，Sparkle 对「自动检查发现的更新」默认排在别的程序后面
+    /// （SPUStandardUserDriverDelegate 文档 background app + immediateFocus=NO 那条），
+    /// 用户就是据此报「发了新版却没弹更新窗」。这里认领提醒职责并把更新窗拉到前面。
+    @objc var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    @objc func standardUserDriverWillHandleShowingUpdate(
+        _ handleShowingUpdate: Bool,
+        forUpdate update: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        guard handleShowingUpdate, !state.userInitiated else { return }
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
