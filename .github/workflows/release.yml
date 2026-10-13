@@ -94,7 +94,28 @@ jobs:
           command -v gh >/dev/null || { echo "❌ runner 上没有 gh CLI" >&2; exit 1; }
           command -v xmllint >/dev/null || { echo "❌ runner 上没有 xmllint" >&2; exit 1; }
         env:
+          # workflow_dispatch 的输入不会自动变成 shell 变量，set -u 下不映射就直接报
+          # unbound variable，而且只在「tag 已存在且指向别处」这条分支才触发。
           DRY_RUN: ${{ inputs.dry_run }}
+
+      - name: 这一版是否已经上线
+        id: published
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          # 判据取 release 分支而不是 raw.githubusercontent：raw 有缓存，会漏判
+          git fetch --quiet origin release
+          # 先落盘再 grep：git show | grep -q 命中后 grep 立刻退出，git 可能吃到 SIGPIPE
+          # 返回 141，pipefail 会把「已上线」判成「没上线」，接着就敢重建附件、把
+          # feed 已引用的包换掉。
+          git show origin/release:AppCast.xml > "${RUNNER_TEMP}/relfeed.xml"
+          if grep -q "<title>Version${VERSION}</title>" "${RUNNER_TEMP}/relfeed.xml"; then
+            echo "🔒 线上 feed 里已经有 Version${VERSION} —— 这一版发完了，构建/release/appcast 全部跳过，"
+            echo "    只补跑 tap 同步。绝不能在这里重新构建：附件一变，feed 里的 EdDSA/length 就对不上包了。"
+            echo "already=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=0" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 落地 Sparkle 签名私钥
         run: |
@@ -180,6 +201,7 @@ jobs:
           CODESIGN_KEY_DER_B64: ${{ secrets.CODESIGN_KEY_DER_B64 }}
 
       - name: 构建通用包
+        if: ${{ inputs.dry_run || steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           ./build_app.sh
@@ -196,6 +218,7 @@ jobs:
           echo "✅ 自签身份已生效"
 
       - name: 生成双签产物与 appcast 条目
+        if: ${{ inputs.dry_run || steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           if [ "${CRITICAL}" = "true" ]; then
@@ -210,6 +233,7 @@ jobs:
           CRITICAL: ${{ inputs.critical }}
 
       - name: 校验产物
+        if: ${{ inputs.dry_run || steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           ZIP="release_out/MacStroke-${VERSION}.zip"
@@ -236,6 +260,7 @@ jobs:
           echo "✅ EdDSA 复验通过"
 
       - name: 上传本次产物（dry-run 时靠这两个文件核对）
+        if: ${{ inputs.dry_run || steps.published.outputs.already != '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: MacStroke-${{ env.VERSION }}
@@ -251,7 +276,7 @@ jobs:
           echo "   把上面的 artifact 下载核对后，关掉 dry_run 再跑一次即可真发。"
 
       - name: 打 tag 并推送
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           # 自己判存在性而不是靠 if 表达式：上一版断在 tag 之后时，这一步要能原样跳过
@@ -266,7 +291,7 @@ jobs:
           git push origin "refs/tags/${VERSION}"
 
       - name: 建 GitHub release 并上传附件
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           # 正文直接用 Changelog/<ver>.html 的要点（去掉末尾那行 download:），再补一句系统要求
@@ -316,14 +341,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 追加 appcast 条目与说明页到 release 分支
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
           git fetch origin release
           git worktree add "${RUNNER_TEMP}/ms-rel" origin/release >/dev/null
           cd "${RUNNER_TEMP}/ms-rel"
           # 续跑保护：条目已经在 feed 里就别再追加一次，否则同一版出两块
-          if grep -q "Version${VERSION}" AppCast.xml; then
+          if grep -q "<title>Version${VERSION}</title>" AppCast.xml; then
             echo "♻️  release 分支里已有 Version${VERSION}，跳过 appcast 追加"
             exit 0
           fi
@@ -360,7 +385,7 @@ jobs:
           curl -sL "https://raw.githubusercontent.com/${OWNER}/${GITHUB_REPOSITORY#*/}/release/AppCast.xml" \
             -o "${RUNNER_TEMP}/feed.xml"
           xmllint --noout "${RUNNER_TEMP}/feed.xml"
-          grep -q "Version${VERSION}" "${RUNNER_TEMP}/feed.xml" \
+          grep -q "<title>Version${VERSION}</title>" "${RUNNER_TEMP}/feed.xml" \
             || { echo "❌ 线上 feed 里没有 Version${VERSION}（多半是缓存，稍后手工复核）" >&2; exit 1; }
           echo "✅ 线上 feed $(grep -c '<channel>' "${RUNNER_TEMP}/feed.xml") 个 <channel>，含 Version${VERSION}"
           curl -sSL -o /dev/null -w "说明页 HTTP %{http_code}\n" \
@@ -374,18 +399,45 @@ jobs:
             echo "⚠️  没配 HOMEBREW_TAP_TOKEN，跳过 tap 同步（要手工改 mtjo/homebrew-tap 的 Casks/macstroke.rb）"
             exit 0
           fi
+          # cask 的 sha256 必须等于「用户从 url 下载到的那个包」。上一版已经跑完构建并
+          # 把 feed 定稿时，这里绝不能重新构建（zip 内嵌时间戳，重建必换 sha256），
+          # 改成回读线上附件取值。
+          if [ -z "${LOCAL_SHA256:-}" ]; then
+            echo "♻️  本次跳过了构建，tap 用线上附件的校验值"
+            curl -sSL --fail \
+              "https://github.com/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/download/${VERSION}/MacStroke.zip" \
+              -o "${RUNNER_TEMP}/live.zip"
+            # 只判字节数会放过 404 页（曾经就是 9 字节），所以验 zip 魔数 PK
+            python3 -c "import sys;d=open(sys.argv[1],'rb').read(2);assert d==b'PK',('不是 zip：'+repr(d))" \
+              "${RUNNER_TEMP}/live.zip"
+            LOCAL_SHA256="$(shasum -a 256 "${RUNNER_TEMP}/live.zip" | awk '{print $1}')"
+            echo "线上包 $(stat -f %z "${RUNNER_TEMP}/live.zip") 字节 sha256=${LOCAL_SHA256}"
+          fi
           # 跨仓库改文件走 contents API：先取下来，替换 version 与 sha256，再带 sha PUT 回去
           gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" > "${RUNNER_TEMP}/cask.json"
           OLD_SHA="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['sha'])" "${RUNNER_TEMP}/cask.json")"
           python3 -c "import json,base64,sys;d=json.load(open(sys.argv[1]));open(sys.argv[2],'wb').write(base64.b64decode(d['content']))" \
             "${RUNNER_TEMP}/cask.json" "${RUNNER_TEMP}/cask.rb"
+          if python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" <<'PY'
+          import pathlib, sys
+          ver, sha, path = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
+          text = path.read_text()
+          sys.exit(0 if (f'version "{ver}"' in text and f'sha256 "{sha}"' in text) else 1)
+          PY
+          then
+            echo "♻️  tap 里 macstroke 已经是 ${VERSION} 且 sha256 一致，跳过"
+            exit 0
+          fi
           python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" <<'PY'
           import pathlib, re, sys
           ver, sha, path = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
           text = path.read_text()
-          new = re.sub(r'(version:\s*")[^"]*(")', r'\g<1>' + ver + r'\g<2>', text)
-          new = re.sub(r'(sha256:\s*")[^"]*(")', r'\g<1>' + sha + r'\g<2>', new)
-          assert new != text, "cask 里没匹配到 version/sha256 两行，检查文件格式"
+          # cask 是 Ruby DSL（version "3.1.1"）而不是 YAML（version: "3.1.1"）：按 YAML
+          # 写正则一处都替换不到，而旧判据只比 new != text，报的是「没匹配到两行」。
+          new, n1 = re.subn(r'(?m)^(\s*version\s")[^"\n]*(")', r'\g<1>' + ver + r'\g<2>', text)
+          new, n2 = re.subn(r'(?m)^(\s*sha256\s")[^"\n]*(")', r'\g<1>' + sha + r'\g<2>', new)
+          assert n1 == 1 and n2 == 1, f"version 匹配 {n1} 处、sha256 匹配 {n2} 处，应各 1 处"
+          assert f'version "{ver}"' in new and f'sha256 "{sha}"' in new, "替换后的两行没落进文件"
           path.write_text(new)
           print(new)
           PY
