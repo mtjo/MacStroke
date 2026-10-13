@@ -67,13 +67,22 @@ jobs:
           # 点更新时看到 404。
           [ -f "Changelog/${VER}.html" ] \
             || { echo "❌ 找不到 Changelog/${VER}.html —— 先把版本号和说明页提交到 main" >&2; exit 1; }
-          # tag 已存在说明这一版发过了，直接停，别把线上条目改一半
+          # tag 已存在有两种：指向本次提交 = 上一次跑到一半断了，可以续；指向别处 = 这一版
+          # 真发过了，直接停，别把线上条目改一半。
           git fetch --tags origin >/dev/null 2>&1 || true
-          if git rev-parse -q --verify "refs/tags/${VER}" >/dev/null; then
-            if [ "${DRY_RUN}" = "true" ]; then
-              echo "⚠️  tag ${VER} 已存在 —— dry-run 继续，真发时会被拦下"
+          TAG_REMOTE="$(git ls-remote origin "refs/tags/${VER}" | awk '!/\^\{\}$/{print $1; exit}')"
+          if [ -n "${TAG_REMOTE}" ]; then
+            # 附注 tag 要比它指向的提交：直接向服务端取 peeled ref，不依赖本地有没有这个对象
+            TAG_SHA="$(git ls-remote origin "refs/tags/${VER}^{}" | awk '{print $1; exit}')"
+            TAG_SHA="${TAG_SHA:-${TAG_REMOTE}}"
+            if [ "${TAG_SHA}" = "$(git rev-parse HEAD)" ]; then
+              echo "♻️  tag ${VER} 已指向当前提交，按「续跑」处理（后面的 tag/release/appcast 步骤会各自跳过已完成的部分）"
+            elif [ "${DRY_RUN}" = "true" ]; then
+              echo "⚠️  tag ${VER} 已存在且指向 ${TAG_SHA} —— dry-run 继续，真发时会被拦下"
             else
-              echo "❌ tag ${VER} 已存在，这一版大概已经发过了" >&2; exit 1
+              echo "❌ tag ${VER} 指向 ${TAG_SHA}，与当前提交 $(git rev-parse HEAD) 不同" >&2
+              echo "   这一版已经发过了；要重发请先在 main 上改版本号" >&2
+              exit 1
             fi
           fi
           # 后面几步全依赖这两个命令，缺了要在这里就失败，而不是等到要建 release 时
@@ -240,6 +249,12 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          # 自己判存在性而不是靠 if 表达式：上一版断在 tag 之后时，这一步要能原样跳过
+          EXIST="$(git ls-remote origin "refs/tags/${VERSION}" | awk '!/\^\{\}$/{print $1; exit}')"
+          if [ -n "${EXIST}" ]; then
+            echo "♻️  tag ${VERSION} 已在远端（前置检查已确认它指向当前提交），跳过"
+            exit 0
+          fi
           git config user.name "$(git log -1 --format=%an)"
           git config user.email "$(git log -1 --format=%ae)"
           git tag -a "${VERSION}" -m "MacStroke ${VERSION}"
@@ -253,15 +268,37 @@ jobs:
           grep -v '^download:' "Changelog/${VERSION}.html" > "${RUNNER_TEMP}/body.md"
           printf '\nRequires macOS %s or later. 旧版 2.0.5 与 3.0.x 都能直接自动更新（条目同时带 DSA 与 EdDSA 签名）。\n' \
             "${MIN_MACOS}" >> "${RUNNER_TEMP}/body.md"
-          # 附件落名必须正好是 MacStroke.zip —— feed 里的 url 就是这个
-          gh release create "${VERSION}" \
-            --target main \
-            --title "MacStroke ${VERSION}" \
-            --notes-file "${RUNNER_TEMP}/body.md" \
-            "release_out/MacStroke-${VERSION}.zip#MacStroke.zip"
+          # 附件落名必须正好是 MacStroke.zip —— feed 里的 url 就是这个。
+          # 不用 gh 的 path#改名 语法：上一次真发时它静默失效，附件留在了
+          # MacStroke-3.1.2.zip 上，而历史各版的线上名字都是 MacStroke.zip。
+          STAGE="${RUNNER_TEMP}/asset"
+          mkdir -p "${STAGE}"
+          cp "release_out/MacStroke-${VERSION}.zip" "${STAGE}/MacStroke.zip"
+          if gh release view "${VERSION}" >/dev/null 2>&1; then
+            echo "♻️  release ${VERSION} 已存在，只覆盖附件"
+            gh release upload "${VERSION}" "${STAGE}/MacStroke.zip" --clobber
+          else
+            gh release create "${VERSION}" \
+              --target main \
+              --title "MacStroke ${VERSION}" \
+              --notes-file "${RUNNER_TEMP}/body.md" \
+              "${STAGE}/MacStroke.zip"
+          fi
+          # 名字不对就等于线上 url 404，用户侧表现为「更新失败」，这里必须硬判
+          NAMES="$(gh release view "${VERSION}" --json assets --jq '.assets[].name' | sort | tr '\n' ' ')"
+          echo "附件：${NAMES}"
+          [ "${NAMES}" = "MacStroke.zip " ] \
+            || { echo "❌ 附件名不是唯一的 MacStroke.zip：${NAMES}" >&2; exit 1; }
+          # 刚传完的附件偶尔还会短暂 404，重试到拿到完整包为止
           DOWN="$(mktemp)"
-          curl -sSL "https://github.com/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/download/${VERSION}/MacStroke.zip" -o "${DOWN}"
-          SIZE="$(stat -f %z "${DOWN}")"
+          SIZE=0
+          for i in 1 2 3 4 5 6; do
+            curl -sSL "https://github.com/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/download/${VERSION}/MacStroke.zip" -o "${DOWN}"
+            SIZE="$(stat -f %z "${DOWN}")"
+            [ "${SIZE}" = "${ZIP_BYTES}" ] && break
+            echo "…第 ${i} 次回读得到 ${SIZE} 字节，等 5s 重试"
+            sleep 5
+          done
           SHA="$(shasum -a 256 "${DOWN}" | awk '{print $1}')"
           echo "线上包 ${SIZE} 字节 sha256=${SHA}"
           # 线上包与本地不一致就别再往 feed 里写，否则用户拿到的是坏包
@@ -280,6 +317,11 @@ jobs:
           git fetch origin release
           git worktree add "${RUNNER_TEMP}/ms-rel" origin/release >/dev/null
           cd "${RUNNER_TEMP}/ms-rel"
+          # 续跑保护：条目已经在 feed 里就别再追加一次，否则同一版出两块
+          if grep -q "Version${VERSION}" AppCast.xml; then
+            echo "♻️  release 分支里已有 Version${VERSION}，跳过 appcast 追加"
+            exit 0
+          fi
           BEFORE=$(grep -c "<channel>" AppCast.xml)
           # 新块插在文件末尾那个 </rss> 之前，保持与历史条目完全同形状（每版一个 channel 块），
           # 这样老 Sparkle 1.24 与新 Sparkle 2 都能按原样解析。
