@@ -75,8 +75,13 @@ jobs:
             # 附注 tag 要比它指向的提交：直接向服务端取 peeled ref，不依赖本地有没有这个对象
             TAG_SHA="$(git ls-remote origin "refs/tags/${VER}^{}" | awk '{print $1; exit}')"
             TAG_SHA="${TAG_SHA:-${TAG_REMOTE}}"
-            if [ "${TAG_SHA}" = "$(git rev-parse HEAD)" ]; then
-              echo "♻️  tag ${VER} 已指向当前提交，按「续跑」处理（后面的 tag/release/appcast 步骤会各自跳过已完成的部分）"
+            if [ "${TAG_SHA}" = "$(git rev-parse HEAD)" ] \
+              || git merge-base --is-ancestor "${TAG_SHA}" HEAD 2>/dev/null; then
+              # 断点续跑的典型形态就是「tag 已打，之后又推了一个修流水线的提交」，
+              # 所以这里允许 tag 指向当前提交的任意祖先；真正的重复发版由 appcast
+              # 步骤里「Version<ver> 已在 feed 里就跳过」来兜。
+              echo "♻️  tag ${VER} 指向 ${TAG_SHA}（当前 $(git rev-parse HEAD) 的祖先），按「续跑」处理"
+              echo "   后面各步会各自跳过已完成的部分；附件会用车间里新构建的包覆盖。"
             elif [ "${DRY_RUN}" = "true" ]; then
               echo "⚠️  tag ${VER} 已存在且指向 ${TAG_SHA} —— dry-run 继续，真发时会被拦下"
             else
