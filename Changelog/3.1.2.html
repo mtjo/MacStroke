@@ -1,0 +1,16 @@
+- Automatic update checks no longer sleep for a day: the check cadence is now 12 hours and the "downloaded but not installed" nag is 1 day instead of a week, so an always-on machine really does notice a new release (the old values were Sparkle's own 1 day / 1 week defaults)
+- 修：自动检查的节奏太慢导致「发了新版、常开着的机器一直没提示」—— 检查间隔从 Sparkle 默认的 1 天改成 12 小时，「已下载未安装」的提醒从 1 周改成 1 天
+
++ The status bar menu gains "Check for Updates"; after a scheduled check finds a new version the menu also shows "Update Available x.y.z" at the top
++ 状态栏菜单新增「检查更新」；自动检查发现新版后，菜单顶部多一条「发现新版本 x.y.z」
+
++ A newly found version now reminds you gently — a red dot on the menu bar icon plus one notification — instead of pulling the update window in front of whatever you are doing; click the dot's menu item or the notification to bring it forward. Releases flagged critical in the feed still prompt immediately
++ 发现新版改为温和提醒：菜单栏图标加红点 + 一条系统通知，不再直接把更新窗抢到你面前；点菜单里那条或点通知才前置。发版时标成关键版本的条目仍然立刻弹窗
+
++ Preferences → About gains three controls: check cadence (every day / every 12 hours / every hour), "Remind me when a new version is found", and "Restore skipped versions" for when "Skip this version" was clicked by mistake
++ 偏好设置「关于」页新增三项：检查节奏（每天 / 每 12 小时 / 每小时）、「有新版本时提醒我」开关、「已跳过的版本 → 恢复提醒」（误点「跳过这个版本」后用它找回）
+
+! Turning the reminder switch off returns to Sparkle's own behaviour: for a menu bar app the update window queues behind your current application
+! 关掉「有新版本时提醒我」就回到 Sparkle 原本的做法：菜单栏 App 的更新窗会排在别的程序后面
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.1.2/MacStroke.zip
