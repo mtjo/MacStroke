@@ -395,29 +395,53 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          # 失败同时进日志和 run 摘要页：这一步只在 runner 上跑，摘要页是不靠日志就能定位
+          # 环节的唯一出口（上次它报 1 却看不出挂在哪条命令）。
+          die() { printf '❌ %s\n' "$*" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}" >&2; exit 1; }
           if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
             echo "⚠️  没配 HOMEBREW_TAP_TOKEN，跳过 tap 同步（要手工改 mtjo/homebrew-tap 的 Casks/macstroke.rb）"
             exit 0
           fi
           # cask 的 sha256 必须等于「用户从 url 下载到的那个包」。上一版已经跑完构建并
           # 把 feed 定稿时，这里绝不能重新构建（zip 内嵌时间戳，重建必换 sha256），
-          # 改成回读线上附件取值。
+          # 改成取线上附件的校验值。
           if [ -z "${LOCAL_SHA256:-}" ]; then
             echo "♻️  本次跳过了构建，tap 用线上附件的校验值"
-            curl -sSL --fail \
+            # 取 release API 的 asset digest（GitHub 上传时自己算的 sha256），不在 runner 上
+            # 回读 3.8MB 的包：那一跳 302 之后是带 JWT 的签名 url，既不能打进公开日志，
+            # 失败也只留一个退出码。
+            curl -sSf "https://api.github.com/repos/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/tags/${VERSION}" \
+              -o "${RUNNER_TEMP}/rel.json" \
+              || die "取不到 release ${VERSION} 的 API 信息"
+            LOCAL_SHA256="$(python3 - "${RUNNER_TEMP}/rel.json" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          hit = [a for a in d.get("assets", []) if a["name"] == "MacStroke.zip"]
+          print((hit[0].get("digest") or "").split(":", 1)[-1] if hit else "")
+          PY
+          )"
+            case "${LOCAL_SHA256}" in
+              *[!0-9a-f]*|"") die "release ${VERSION} 里没有带 sha256 digest 的 MacStroke.zip（得到 '${LOCAL_SHA256}'）";;
+            esac
+            [ "${#LOCAL_SHA256}" = 64 ] || die "digest 长度 ${#LOCAL_SHA256} 不是 64"
+            # digest 是上传侧的结论，再独立确认这个 url 真的能下载到（feed 里就指着它）；
+            # 这条只作探活，失败不拦。
+            curl -sSIL --output /dev/null --write-out '线上 url HTTP %{http_code}\n' \
               "https://github.com/${OWNER}/${GITHUB_REPOSITORY#*/}/releases/download/${VERSION}/MacStroke.zip" \
-              -o "${RUNNER_TEMP}/live.zip"
-            # 只判字节数会放过 404 页（曾经就是 9 字节），所以验 zip 魔数 PK
-            python3 -c "import sys;d=open(sys.argv[1],'rb').read(2);assert d==b'PK',('不是 zip：'+repr(d))" \
-              "${RUNNER_TEMP}/live.zip"
-            LOCAL_SHA256="$(shasum -a 256 "${RUNNER_TEMP}/live.zip" | awk '{print $1}')"
-            echo "线上包 $(stat -f %z "${RUNNER_TEMP}/live.zip") 字节 sha256=${LOCAL_SHA256}"
+              2> "${RUNNER_TEMP}/head.err" \
+              || echo "⚠️  线上 url 探活失败：$(head -c 200 "${RUNNER_TEMP}/head.err")（digest 已取到，继续）"
+            echo "线上附件 sha256=${LOCAL_SHA256}"
           fi
           # 跨仓库改文件走 contents API：先取下来，替换 version 与 sha256，再带 sha PUT 回去
-          gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" > "${RUNNER_TEMP}/cask.json"
+          gh api "repos/${TAP_REPO}/contents/Casks/macstroke.rb" > "${RUNNER_TEMP}/cask.json" \
+            || die "读 ${TAP_REPO} 的 cask 失败，多半是 HOMEBREW_TAP_TOKEN 没有 Contents 读权限"
           OLD_SHA="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['sha'])" "${RUNNER_TEMP}/cask.json")"
           python3 -c "import json,base64,sys;d=json.load(open(sys.argv[1]));open(sys.argv[2],'wb').write(base64.b64decode(d['content']))" \
             "${RUNNER_TEMP}/cask.json" "${RUNNER_TEMP}/cask.rb"
+          # 把线上 cask 的两行现值打出来：上次这一步报 1 却看不出是「已经同步过」还是
+          # 「取到的还是旧版」，有这一行就不用猜。
+          grep -nE '^[[:space:]]*(version|sha256)[[:space:]]*"' "${RUNNER_TEMP}/cask.rb" | sed 's/^/cask 现值: /' \
+            || die "取回来的 cask 里没有 version/sha256 行，文件格式变了"
           if python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" <<'PY'
           import pathlib, sys
           ver, sha, path = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
@@ -428,7 +452,8 @@ jobs:
             echo "♻️  tap 里 macstroke 已经是 ${VERSION} 且 sha256 一致，跳过"
             exit 0
           fi
-          python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" <<'PY'
+          if ! python3 - "${VERSION}" "${LOCAL_SHA256}" "${RUNNER_TEMP}/cask.rb" \
+            2> "${RUNNER_TEMP}/rw.err" <<'PY'
           import pathlib, re, sys
           ver, sha, path = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
           text = path.read_text()
@@ -441,12 +466,18 @@ jobs:
           path.write_text(new)
           print(new)
           PY
-          gh api --method PUT "repos/${TAP_REPO}/contents/Casks/macstroke.rb" \
+          then
+            die "cask 的 version/sha256 没改成 ${VERSION}/${LOCAL_SHA256}：$(head -c 300 "${RUNNER_TEMP}/rw.err")"
+          fi
+          if ! gh api --method PUT "repos/${TAP_REPO}/contents/Casks/macstroke.rb" \
             -F branch=main \
             -F "sha=${OLD_SHA}" \
             -F "message=macstroke ${VERSION}" \
             -F "content=$(python3 -c "import base64,sys;print(base64.b64encode(open(sys.argv[1],'rb').read()).decode())" "${RUNNER_TEMP}/cask.rb")" \
-            --jq '.commit.sha' | sed "s/^/tap 已更新: /"
+            --jq '.commit.sha' > "${RUNNER_TEMP}/put.txt" 2> "${RUNNER_TEMP}/put.err"; then
+            die "写 ${TAP_REPO} 的 cask 失败：$(head -c 400 "${RUNNER_TEMP}/put.err")"
+          fi
+          sed "s/^/tap 已更新: /" "${RUNNER_TEMP}/put.txt"
         env:
           # 跨仓库写入不能用 GITHUB_TOKEN，必须用 tap 自己的 fine-grained token
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
