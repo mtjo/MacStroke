@@ -9,10 +9,11 @@ import GestureEngine
 final class LegacyRulesImportTests: XCTestCase {
     private var defaults: UserDefaults!
     private var storeURL: URL!
-    private var suiteName: String { "LegacyRulesImportTests-\(UUID().uuidString)" }
+    private var suiteName: String!
 
     override func setUp() {
         super.setUp()
+        suiteName = "LegacyRulesImportTests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
         storeURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacStrokeTests-\(UUID().uuidString).json")
@@ -21,7 +22,14 @@ final class LegacyRulesImportTests: XCTestCase {
     override func tearDown() {
         defaults.removePersistentDomain(forName: suiteName)
         defaults = nil
+        // removePersistentDomain only empties the domain; the file a suite-based
+        // UserDefaults created under ~/Library/Preferences stays behind, and a
+        // fresh UUID per test meant one new plist per test run.
+        try? FileManager.default.removeItem(
+            at: FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Preferences/\(suiteName!).plist"))
         try? FileManager.default.removeItem(at: storeURL)
+        suiteName = nil
         super.tearDown()
     }
 
