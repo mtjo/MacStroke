@@ -1,0 +1,10 @@
+! The Preferences → General "Export" now writes the gesture rules and the AppleScript list into the backup file (issue #69): up to 3.1.2 it exported only the UserDefaults switches, so a "configuration backup" was a couple of KB with not a single gesture in it
+! 偏好设置「常规」页的「导出」现在把手势规则和 AppleScript 列表一起写进备份文件（issue #69）：3.1.2 及以前的导出只有 UserDefaults 里那些开关，一份「配置备份」2 KB 出头，手势一条都不在里面
+
++ "Import" accepts both shapes: a file exported by this build and a 2.x archive-style export. Rules and the script list come back together, and a rule's reference to its script still resolves
++ 「导入」两种备份都认：这一版导出的文件，以及 2.x 那份归档式的旧导出。手势规则和脚本列表一起回来，规则里指向脚本的引用也照常能解析
+
+! If the rules or scripts inside a backup cannot be parsed, the import reports the error and stops: your existing rules and script list are left byte-for-byte untouched
+! 备份里规则或脚本的内容读不出时，导入直接报错并停下：现有规则和脚本列表一个字节都不会被动过
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.1.3/MacStroke.zip
