@@ -71,6 +71,28 @@ extension RuleStore {
         return true
     }
 
+    /// Restore the rules from a pre-3.0 archive blob the caller already holds —
+    /// the shape a 2.x exported preferences file carries. Unlike
+    /// `importLegacyRulesIfNeeded` this does not look at the preferences domain
+    /// at all, so importing a chosen backup works whatever that domain happens
+    /// to contain, and there is no marker or key to retire.
+    /// - Parameter appleScriptID: rewrites archived script ids; a backup import
+    ///   resolves them against the script list restored from the same file.
+    /// - Returns: true when the archive held rules and they were stored.
+    @discardableResult
+    public func restoreLegacyRules(
+        from archive: Data,
+        appleScriptID: (String) -> String = RuleStore.resolveLegacyAppleScriptID
+    ) -> Bool {
+        guard let decoded = Self.decodeLegacyRules(archive, appleScriptID: appleScriptID),
+              !decoded.rules.isEmpty else { return false }
+        rules = decoded.rules
+        save()
+        NSLog("%@", "[RuleStore] Restored \(decoded.rules.count) rules from a pre-3.0 backup"
+              + (decoded.droppedRows == 0 ? "" : " (\(decoded.droppedRows) rows unreadable)"))
+        return true
+    }
+
     /// Decode the pre-3.0 archived rule array (`nil` when the blob holds
     /// something else).
     /// - Parameter appleScriptID: rewrites a rule's `apple_script_id`, used to

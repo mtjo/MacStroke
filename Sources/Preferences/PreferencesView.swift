@@ -551,17 +551,15 @@ struct GeneralTabView: View {
         guard let keyWindow = NSApp.keyWindow else { return }
         panel.beginSheetModal(for: keyWindow) { response in
             guard response == .OK, let url = panel.url else { return }
-            let dict = UserDefaults.standard.dictionaryRepresentation()
-            // "rules" is deliberately not exported: this build keeps its rules in
-            // rules.json, so whatever the preferences domain holds under that
-            // name is the pre-3.0 archive, and shipping it would put a stale
-            // snapshot into a current backup.
-            let ourKeys = dict.filter { key, _ in
-                StorageKey.allCases.contains { $0.rawValue == key }
-                    || key.hasPrefix("filter") || key == "rightClicksList"
-            } as [String: Any]
             do {
-                try (ourKeys as NSDictionary).write(to: url)
+                // The rules and the scripts have to ride along: they are the
+                // configuration, and they are not in the preferences domain
+                // (issue #69 — the old export was a few kilobytes of toggles).
+                let payload = ConfigurationBackup.payload(
+                    domainValues: UserDefaults.standard.dictionaryRepresentation(),
+                    rules: try RuleStore.shared.configurationJSON(),
+                    scripts: try AppleScriptsList.sharedAppleScriptsList.configurationJSON())
+                try (payload as NSDictionary).write(to: url)
                 postMacStrokeNotification(L("Export succeeded"))
             } catch {
                 NSAlert.showError(error)
@@ -581,23 +579,21 @@ struct GeneralTabView: View {
         panel.beginSheetModal(for: keyWindow) { response in
             guard response == .OK, let url = panel.url,
                   let imported = NSDictionary(contentsOf: url) as? [String: Any] else { return }
+            // Rules and scripts first: they are the half that can fail, and a
+            // backup that does not parse should leave the settings alone too.
+            do {
+                try ConfigurationBackup.apply(imported,
+                                              ruleStore: RuleStore.shared,
+                                              scriptList: AppleScriptsList.sharedAppleScriptsList)
+            } catch {
+                NSAlert.showError(error)
+                return
+            }
             let defaults = UserDefaults.standard
-            for (key, value) in imported {
+            for (key, value) in ConfigurationBackup.domainValues(from: imported) {
                 defaults.set(value, forKey: key)
             }
             defaults.synchronize()
-            // Pre-3.0 exports carry the rules and the AppleScript list as
-            // archived NSData, which nothing in this build reads out of the
-            // preferences domain — the script list lives in its own JSON file
-            // and so do the rules. Feed both through their importers, otherwise
-            // importing an old backup restores every page but the rules
-            // (issue #67).
-            if let archive = imported["appleScripts"] as? Data {
-                AppleScriptsList.sharedAppleScriptsList.importLegacyScripts(from: archive)
-            }
-            if imported["rules"] is Data {
-                RuleStore.shared.importLegacyRulesIfNeeded(force: true)
-            }
             postMacStrokeNotification(L("Restart MacStroke to take effect"))
         }
     }
@@ -822,50 +818,6 @@ struct RulesTabView: View {
             spareActions: oldRule.spareActions
         )
         ruleStore.save()
-    }
-}
-
-// MARK: - Rule Import/Export Helpers
-
-extension RulesTabView {
-    private func exportRules() {
-        let panel = NSSavePanel()
-        panel.title = L("Export Rules")
-        panel.allowedContentTypes = [.json]
-        panel.allowedFileTypes = ["json"]
-
-        guard let keyWindow = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: keyWindow) { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                let data = try JSONEncoder().encode(ruleStore.rules)
-                try data.write(to: url, options: .atomic)
-            } catch {
-                NSAlert.showError(NSError(domain: "MacStroke", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
-            }
-        }
-    }
-
-    private func importRules() {
-        let panel = NSOpenPanel()
-        panel.title = L("Import Rules")
-        panel.allowedContentTypes = [.json]
-        panel.allowedFileTypes = ["json"]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-
-        guard let keyWindow = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: keyWindow) { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                let data = try Data(contentsOf: url)
-                let importedRules = try JSONDecoder().decode([Rule].self, from: data)
-                ruleStore.rules = importedRules
-                ruleStore.save()
-            } catch {
-                NSAlert.showError(NSError(domain: "MacStroke", code: 2, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]))
-            }
-        }
     }
 }
 
