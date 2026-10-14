@@ -101,4 +101,36 @@ final class RuleStoreTests: XCTestCase {
 
         XCTAssertFalse(store.rules.isEmpty)
     }
+
+    // MARK: - Configuration backup (issue #69)
+
+    func testConfigurationJSONRoundTripsThroughAStoreInstance() throws {
+        let (store, url) = makeStore()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.add(rule(named: "CloseTab", note: "关闭标签页"))
+        let exported = try store.configurationJSON()
+
+        let restored = RuleStore(storageURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacStrokeTests-\(UUID().uuidString).json"))
+        try restored.restoreConfiguration(from: exported)
+        XCTAssertEqual(restored.rules.map(\.name), ["CloseTab"])
+        XCTAssertEqual(restored.rules.first?.note, "关闭标签页")
+        XCTAssertEqual(RuleStore(storageURL: url).rules.map(\.name), ["CloseTab"],
+                       "restore has to persist, not only swap the in-memory list")
+    }
+
+    /// A half-written or foreign payload must fail before touching the working
+    /// rules — restoring is the one operation that must not lose the user's file.
+    func testGarbagePayloadLeavesRulesAndFileUntouched() throws {
+        let (store, url) = makeStore()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        store.add(rule(named: "Paste"))
+        let before = try Data(contentsOf: url)
+
+        XCTAssertThrowsError(try store.restoreConfiguration(from: Data(#"{"not":"rules"}"#.utf8)))
+        XCTAssertEqual(store.rules.map(\.name), ["Paste"])
+        XCTAssertEqual(try Data(contentsOf: url), before)
+    }
 }

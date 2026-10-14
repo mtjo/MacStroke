@@ -382,6 +382,48 @@ final class AppleScriptsListTests: XCTestCase {
         XCTAssertNil(AppleScriptsList.scripts(fromLegacyArchive: data))
     }
 
+    // MARK: - Configuration backup (issue #69)
+
+    func testConfigurationJSONRoundTripsThroughAStoreInstance() throws {
+        let added = testList.addScript(name: "Close Tabs", source: "tell application \"Chrome\"")
+
+        let exported = try testList.configurationJSON()
+        let ownFile = try Data(contentsOf: testStorageURL)
+        let receiver = AppleScriptsList(storageURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacStrokeTests-\(UUID().uuidString).json"))
+        try receiver.restoreConfiguration(from: exported)
+
+        XCTAssertEqual(receiver.count, 1)
+        XCTAssertEqual(receiver.title(at: 0), "Close Tabs")
+        XCTAssertEqual(receiver.script(at: 0), "tell application \"Chrome\"")
+        XCTAssertEqual(receiver.id(at: 0), added.id, "the ids rules point at must survive a backup")
+        XCTAssertEqual(try Data(contentsOf: testStorageURL), ownFile,
+                       "restoring into another list must not write over this one's file")
+    }
+
+    /// The exported payload has to be readable by a plain load, otherwise the
+    /// backup is only restorable through the import button.
+    func testExportedPayloadIsWhatTheFileFormatExpects() throws {
+        testList.addScript(name: "Unicode 脚本 🎉", source: "return 1")
+        try testList.restoreConfiguration(from: try testList.configurationJSON())
+
+        let reloaded = AppleScriptsList(storageURL: testStorageURL)
+
+        XCTAssertEqual(reloaded.getAllScripts().map(\.name), ["Unicode 脚本 🎉"])
+    }
+
+    func testGarbagePayloadLeavesScriptsAndFileUntouched() throws {
+        let added = testList.addScript(name: "Keep", source: "keep")
+        testList.save()
+        let before = try Data(contentsOf: testStorageURL)
+
+        XCTAssertThrowsError(try testList.restoreConfiguration(from: Data("not json".utf8)))
+
+        XCTAssertEqual(testList.count, 1)
+        XCTAssertEqual(testList.id(at: 0), added.id)
+        XCTAssertEqual(try Data(contentsOf: testStorageURL), before)
+    }
+
     private func legacyArchive(_ dictionaries: [[String: String]]) -> Data {
         try! NSKeyedArchiver.archivedData(withRootObject: dictionaries as NSArray,
                                           requiringSecureCoding: false)

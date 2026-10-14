@@ -248,6 +248,43 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         return true
     }
 
+    /// The scripts in the same JSON form `appleScripts.json` holds, so a
+    /// configuration backup can carry them (issue #69).
+    public func configurationJSON() throws -> Data {
+        lock.lock()
+        let current = scripts
+        lock.unlock()
+        return try Self.configurationEncoder().encode(current)
+    }
+
+    /// Replace the scripts with a backed-up list. A payload that does not parse
+    /// throws before anything is written, so a failed import leaves the working
+    /// scripts alone.
+    public func restoreConfiguration(from data: Data) throws {
+        let restored = try Self.configurationDecoder().decode([AppleScriptItem].self, from: data)
+        lock.lock()
+        scripts = restored
+        lock.unlock()
+        objectWillChange.send()
+        save()
+    }
+
+    /// The on-disk format, defined once and shared by save, load and the
+    /// configuration backup so an exported payload always matches what a load
+    /// expects.
+    static func configurationEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
+    }
+
+    static func configurationDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
     private func mutate(at index: Int,
                         notify: Bool = true,
                         persist: Bool = true,
@@ -274,10 +311,7 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
         lock.unlock()
 
         do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(scriptsToSave)
+            let data = try Self.configurationEncoder().encode(scriptsToSave)
             try data.write(to: storageURL, options: .atomic)
         } catch {
             // Log error but don't crash - persistence failure shouldn't break the app
@@ -321,9 +355,7 @@ public final class AppleScriptsList: ObservableObject, @unchecked Sendable {
 
         do {
             let data = try Data(contentsOf: storageURL)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let loadedScripts = try decoder.decode([AppleScriptItem].self, from: data)
+            let loadedScripts = try Self.configurationDecoder().decode([AppleScriptItem].self, from: data)
             lock.lock()
             scripts = loadedScripts
             lock.unlock()

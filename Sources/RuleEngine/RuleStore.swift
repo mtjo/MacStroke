@@ -138,6 +138,20 @@ public final class RuleStore: ObservableObject {
         }
     }
 
+    /// The rules in the same JSON form `rules.json` holds, so a configuration
+    /// backup can carry them (issue #69).
+    public func configurationJSON() throws -> Data {
+        try JSONEncoder().encode(rules)
+    }
+
+    /// Replace the rules with a backed-up set. A payload that does not parse
+    /// throws before anything is written, so a failed import leaves the working
+    /// rules alone.
+    public func restoreConfiguration(from data: Data) throws {
+        rules = try JSONDecoder().decode([Rule].self, from: data)
+        save()
+    }
+
     /// Load rules from disk.
     public func load() {
         guard FileManager.default.fileExists(atPath: storageURL.path) else {
