@@ -240,6 +240,36 @@ public final class UserPreferences: ObservableObject {
         remoteControlToken = RemoteControlSettings.makeToken()
     }
 
+    // MARK: - Screenshot
+    // 移植版扩展（超出原版）：截图出图之后怎么落地。会话开始时 ScreenshotController
+    // 现读一份快照（ScreenshotSettings.current），所以这几个开关不需要发通知 ——
+    // 改完下一张图就生效，正铺着的遮罩不受影响。
+    @Published public var screenshotAutoSave: Bool {
+        didSet { storage.setBool(screenshotAutoSave, forKey: .screenshotAutoSave) }
+    }
+    /// 空串 = 用户没选过保存位置，由 ScreenshotSettings 回退到桌面。
+    @Published public var screenshotSaveDirectory: String {
+        didSet { storage.setString(screenshotSaveDirectory, forKey: .screenshotSaveDirectory) }
+    }
+    /// 关掉就是纯手动画框：吸附靠的是窗口边界，边框不是窗口的场景（网页浮层、
+    /// 分屏网格）吸上去反而是干扰。
+    @Published public var screenshotSnapToWindows: Bool {
+        didSet { storage.setBool(screenshotSnapToWindows, forKey: .screenshotSnapToWindows) }
+    }
+    /// 选区阶段跟光的放大镜。关掉就是纯靠光标尖卡边界（老手感）。
+    @Published public var screenshotMagnifier: Bool {
+        didSet { storage.setBool(screenshotMagnifier, forKey: .screenshotMagnifier) }
+    }
+    /// 放大倍率（一个屏幕像素放大成几点），存的是倍率本身而不是档位序号。
+    @Published public var screenshotMagnification: Int {
+        didSet { storage.setInt(screenshotMagnification, forKey: .screenshotMagnification) }
+    }
+    /// 截图的全局快捷键，「keyCode=X, flags=Y」，跟粘贴板那条同格式。改了就写库，
+    /// App 层监听 UserDefaults 的变化重新挂监听，不需要这里发通知。
+    @Published public var screenshotShortcut: String {
+        didSet { storage.setString(screenshotShortcut, forKey: .screenshotShortcut) }
+    }
+
     // MARK: - Legacy
     @Published public var showToast: Bool {
         didSet { storage.setBool(showToast, forKey: .showToast) }
@@ -300,6 +330,12 @@ public final class UserPreferences: ObservableObject {
         self.remoteControlPort = RemoteControlSettings.isPortAllowed(storedRemotePort)
             ? storedRemotePort : StorageDefaults.remoteControlPort
         self.remoteControlToken = storage.getStringOptional(forKey: .remoteControlToken) ?? StorageDefaults.remoteControlToken
+        self.screenshotAutoSave = storage.getBoolOptional(forKey: .screenshotAutoSave) ?? StorageDefaults.screenshotAutoSave
+        self.screenshotSaveDirectory = storage.getStringOptional(forKey: .screenshotSaveDirectory) ?? StorageDefaults.screenshotSaveDirectory
+        self.screenshotSnapToWindows = storage.getBoolOptional(forKey: .screenshotSnapToWindows) ?? StorageDefaults.screenshotSnapToWindows
+        self.screenshotMagnifier = storage.getBoolOptional(forKey: .screenshotMagnifier) ?? StorageDefaults.screenshotMagnifier
+        self.screenshotMagnification = storage.getIntOptional(forKey: .screenshotMagnification) ?? StorageDefaults.screenshotMagnification
+        self.screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut) ?? StorageDefaults.screenshotShortcut
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }

@@ -29,6 +29,9 @@ public enum RuleAction: Codable, Equatable {
     case text(String)
     /// Password action (secure text, e.g. typed into frontmost app)
     case password(String)
+    /// 弹出截图选区（移植版新增，超出原版）。动作本身在 App 层执行：
+    /// RuleEngine 够不到 Screenshot 模块，反向依赖会把下层拖回 App 层。
+    case screenshot
     /// No action (for rules that only trigger state changes)
     case none
 
@@ -63,6 +66,8 @@ public enum RuleAction: Codable, Equatable {
         case "password":
             let p = try container.decode(String.self, forKey: .password)
             self = .password(p)
+        case "screenshot":
+            self = .screenshot
         case "none":
             self = .none
         default:
@@ -100,6 +105,8 @@ public enum RuleAction: Codable, Equatable {
         case .password(let p):
             try container.encode("password", forKey: .type)
             try container.encode(p, forKey: .password)
+        case .screenshot:
+            try container.encode("screenshot", forKey: .type)
         case .none:
             try container.encode("none", forKey: .type)
         }
@@ -122,6 +129,8 @@ public enum RuleAction: Codable, Equatable {
             return "Text: \(t)"
         case .password(let p):
             return "Password: ****"
+        case .screenshot:
+            return "Screenshot"
         case .none:
             return "No action"
         }
@@ -297,6 +306,10 @@ public struct Rule: Codable {
             action = .password(password)
             spares.shortcutCode = code
             spares.shortcutFlag = flag
+        case 4:
+            action = .screenshot
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
         default:
             action = .shortcut(keyCode: UInt16(truncatingIfNeeded: code), flags: UInt(truncatingIfNeeded: flag))
         }
@@ -331,6 +344,8 @@ public struct Rule: Codable {
             actionType = 0
             code = Int(keyCode)
             flag = Int(flags)
+        case .screenshot:
+            actionType = 4
         case .keyPress, .mouseClick, .copyToClipboard, .none:
             actionType = 0
         }

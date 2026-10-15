@@ -18,11 +18,19 @@ public final class ShortcutMonitor {
     /// Whether the monitor is currently active.
     public var isMonitoring: Bool { monitoring }
 
-    /// The key code to match (0 = match any)
-    public var keyCode: UInt16 = 0
+    /// The key code to match, or nil to match any key (a modifiers-only
+    /// shortcut). 0 is a real key code — ⌘⇧A is `keyCode=0` — so it cannot
+    /// double as the «unspecified» sentinel.
+    public var keyCode: UInt16?
 
     /// The modifier flags to match (0 = match any)
     public var flags: UInt = 0
+
+    /// Drop the matched key press instead of letting it reach the frontmost app.
+    /// Off for the clipboard shortcut, which the original lets through; a
+    /// screenshot hotkey must not, or ⌘⇧A would also run whatever the focused
+    /// app binds to it.
+    public var consumesMatchedEvent = false
 
     /// Callback when the shortcut is detected
     public var onShortcutDetected: (() -> Void)?
@@ -38,7 +46,7 @@ public final class ShortcutMonitor {
     @discardableResult
     public func start() -> Bool {
         guard !monitoring else { return true }
-        guard keyCode != 0 || flags != 0 else {
+        guard keyCode != nil || flags != 0 else {
             NSLog("%@", "[ShortcutMonitor] No shortcut configured")
             return false
         }
@@ -71,7 +79,7 @@ public final class ShortcutMonitor {
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
         monitoring = true
-        NSLog("%@", "[ShortcutMonitor] Started monitoring keyCode=\(keyCode) flags=\(flags)")
+        NSLog("%@", "[ShortcutMonitor] Started monitoring keyCode=\(keyCode.map(String.init) ?? "any") flags=\(flags)")
         return true
     }
 
@@ -143,8 +151,8 @@ public final class ShortcutMonitor {
         let eventKeyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let eventFlags = UInt(event.flags.rawValue)
 
-        // Check if key code matches (if keyCode is set)
-        if keyCode != 0 && eventKeyCode != keyCode {
+        // Check if key code matches (a nil keyCode matches any key)
+        if let expectedKeyCode = keyCode, eventKeyCode != expectedKeyCode {
             return Unmanaged.passRetained(event)
         }
 
@@ -159,7 +167,6 @@ public final class ShortcutMonitor {
             self?.onShortcutDetected?()
         }
 
-        // Allow the event to propagate normally (don't consume it)
-        return Unmanaged.passRetained(event)
+        return consumesMatchedEvent ? nil : Unmanaged.passRetained(event)
     }
 }

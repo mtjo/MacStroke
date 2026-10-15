@@ -14,6 +14,10 @@ import AppleScriptRunner
 public final class ActionExecutor {
     private let appleScriptRunner: AppleScriptRunner
 
+    /// 截图动作的执行入口，由 App 层挂上（Screenshot 模块在这一层之上，
+    /// RuleEngine 自己够不到）。没挂上时保持沉默，不假装执行成功。
+    public var onScreenshotRequested: (() -> Void)?
+
     public init(appleScriptRunner: AppleScriptRunner = AppleScriptRunner()) {
         self.appleScriptRunner = appleScriptRunner
     }
@@ -46,6 +50,8 @@ public final class ActionExecutor {
             typeText(text)
         case .password(let password):
             typeText(password)
+        case .screenshot:
+            onScreenshotRequested?()
         case .none:
             break
         }

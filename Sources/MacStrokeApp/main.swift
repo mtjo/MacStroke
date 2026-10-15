@@ -26,6 +26,7 @@ import Preferences
 import RightClickMenu
 import WindowManager
 import RemoteControl
+import Screenshot
 import Sparkle
 
 /// Notifications used between the preferences UI and the running capture chain.
@@ -99,6 +100,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var historyClipboardWindow: HistoryClipboardListWindowController?
     private var clipboardHistoryManager: HistoryClipboardManager?
     private var shortcutMonitor: ShortcutMonitor?
+    /// 截图的全局快捷键。单独一只 monitor：粘贴板那只的命中事件要透传给前台 App，
+    /// 截图这条要吞掉（否则 ⌘⇧A 会同时触发前台 App 自己的绑定）。
+    private var screenshotShortcutMonitor: ShortcutMonitor?
+    private var monitoredScreenshotShortcut = ""
     private let storage = PreferencesStorage()
     private var updaterController: SPUStandardUpdaterController?
     /// 发现新版提醒用的系统通知标记：点了只认这条，其它提示（脚本出错、偏好页确认
@@ -201,6 +206,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Init clipboard history monitoring + global shortcut.
         initHistoryClipboard()
 
+        // 截图的全局快捷键 + 默认手势规则（移植版新增，超出原版）。
+        initScreenshotTriggers()
+
         // LAN remote control (偏好页「远程控制」)。默认关着，关掉时一个端口都不监听，
         // 行为和原版一致。
         RemoteControlServer.shared.apply()
@@ -208,6 +216,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(remoteControlSettingsDidChange),
             name: .macStrokeRemoteControlDidChange, object: nil)
+
+        // 截图。模块自己不开窗也不弹提示，两件事都回调到 App 层做：
+        // 遮罩摊开期间必须挂起手势捕获（否则轨迹层跟选区抢同一只鼠标），
+        // 复制完用用户已经调好的提示气泡参数回一句，不然遮罩一收用户分不清
+        // 是复制了还是取消了。
+        ScreenshotController.shared.onActiveStateChanged = { [weak self] active in
+            self?.canvasManager?.isSuspended = active
+            if active {
+                self?.canvasManager?.cancelStroke()
+            }
+        }
+        ScreenshotController.shared.onOutcome = { outcome in
+            switch outcome {
+            case .copied(let width, let height):
+                Self.showScreenshotFeedback("\(L("Screenshot copied")) \(width)×\(height)")
+            case .saved(let file):
+                Self.showScreenshotFeedback("\(L("Screenshot saved")) \(file)")
+            case .copiedAndSaved(let width, let height, let file):
+                Self.showScreenshotFeedback("\(L("Screenshot copied")) \(width)×\(height)\n"
+                                            + "\(L("Screenshot saved")) \(file)")
+            case .saveFailed(let reason):
+                Self.showScreenshotFeedback("\(L("Screenshot save failed")) \(reason)")
+            case .textCopied(let lines):
+                Self.showScreenshotFeedback("\(L("Screenshot text copied")) \(lines) \(L("Screenshot lines"))")
+            case .textNotFound:
+                Self.showScreenshotFeedback(L("Screenshot text not found"))
+            case .textFailed(let reason):
+                Self.showScreenshotFeedback("\(L("Screenshot text failed")) \(reason)")
+            }
+        }
 
         // Distributed notification from a second app instance.
         DistributedNotificationCenter.default().addObserver(
@@ -408,6 +446,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
         }
+
+        // 截图快捷键同理：录完下一个键就是新键，不用重启。
+        let screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut)
+            ?? StorageDefaults.screenshotShortcut
+        if screenshotShortcut != monitoredScreenshotShortcut {
+            monitoredScreenshotShortcut = screenshotShortcut
+            DispatchQueue.main.async { [weak self] in
+                self?.applyScreenshotShortcut(screenshotShortcut)
+            }
+        }
     }
     private var monitoredShortcutString = ""
 
@@ -424,6 +472,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         controller.window?.level = NSWindow.Level(rawValue: 21)
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Screenshot
+
+    /// 截图的两个外部入口：全局快捷键（默认 ⌘⇧A）与手势规则（默认画 S）。
+    /// 快捷键挂一只自己的 monitor；手势那条规则是老用户升级后才缺的，这里补一次。
+    private func initScreenshotTriggers() {
+        let shortcut = storage.getStringOptional(forKey: .screenshotShortcut)
+            ?? StorageDefaults.screenshotShortcut
+        monitoredScreenshotShortcut = shortcut
+        applyScreenshotShortcut(shortcut)
+        if ruleStore?.installScreenshotRuleIfNeeded() == true {
+            NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
+        }
+    }
+
+    private func applyScreenshotShortcut(_ shortcutString: String) {
+        guard let parsed = ShortcutMonitor.parseShortcut(shortcutString) else {
+            screenshotShortcutMonitor?.stop()
+            screenshotShortcutMonitor = nil
+            return
+        }
+        if screenshotShortcutMonitor == nil {
+            let monitor = ShortcutMonitor()
+            // 命中即吞：截图键不该再被前台 App 当成自己的快捷键执行一遍。
+            monitor.consumesMatchedEvent = true
+            monitor.onShortcutDetected = { ScreenshotController.shared.toggle() }
+            screenshotShortcutMonitor = monitor
+        }
+        screenshotShortcutMonitor?.keyCode = parsed.0
+        screenshotShortcutMonitor?.flags = parsed.1
+        _ = screenshotShortcutMonitor?.start()
+    }
+
+    /// 弹出截图选区遮罩（状态栏菜单「截图」、快捷键和手势都走这里）。
+    /// 遮罩已经摊开时再触发一次等于取消。
+    @objc func toggleScreenshot(_ sender: Any?) {
+        ScreenshotController.shared.toggle()
+    }
+
+    /// 截图出图后的反馈：遮罩一收屏幕就恢复原样，不响一声用户分不清是复制了、
+    /// 存盘了还是取消了。气泡参数沿用用户自己调好的提示设置。
+    static func showScreenshotFeedback(_ message: String) {
+        let preferences = UserPreferences()
+        let pos = ToastPosition(rawValue: preferences.notePosition) ?? .center
+        ToastManager.shared.show(Toast(message: message,
+                                       duration: TimeInterval(preferences.noteRetentionTime),
+                                       position: pos))
     }
 
     // MARK: - Gesture recording (Draw Gesture flow)
@@ -641,9 +737,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func statusMenu() -> NSMenu {
         // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only.
-        // 剪贴板 / 远程控制 / 检查更新 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏
+        // 剪贴板 / 截图 / 远程控制 / 检查更新 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏
         // 菜单不会把本 App 变成前台，所以面板照样能把焦点还给用户原来那个应用），
-        // 远程控制只能落到偏好页，检查更新走 Sparkle 的用户主动检查（一定带焦点）。
+        // 截图摊开遮罩自己抢焦点，远程控制只能落到偏好页，检查更新走 Sparkle 的用户主动检查（一定带焦点）。
         let menu = NSMenu(title: "MacStroke")
         // 温和提醒留下的红点：点了这一项才把已经发现的更新窗拉到前面。
         if let pending = pendingUpdate {
@@ -653,6 +749,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
         menu.addItem(withTitle: L("Clipboard"), action: #selector(showHistoryClipboard(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: L("Screenshot"), action: #selector(toggleScreenshot(_:)), keyEquivalent: "")
         statusMenuItem(to: menu, titleKey: "Remote Control", tab: .remoteControl)
         menu.addItem(withTitle: L("Check for Updates"), action: #selector(checkForUpdates(_:)), keyEquivalent: "")
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
@@ -789,6 +886,7 @@ extension AppDelegate: CanvasManagerDelegate {
 
         // Execute the action
         let executor = ActionExecutor()
+        executor.onScreenshotRequested = { ScreenshotController.shared.toggle() }
         executor.execute(rule.action, for: rule)
 
         // Show the note toast if enabled (original: showGestureNote key).

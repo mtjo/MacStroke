@@ -31,8 +31,8 @@ final class PreferencesTabNavigationTests: XCTestCase {
     // MARK: - 新建窗口停在请求的页
 
     func testFreshWindowOpensOnTheRequestedTab() throws {
-        // 侧栏里 general → clipboard → remoteControl → about 自上而下，高亮条必须逐级挪位。
-        let ordered: [PreferencesTab] = [.general, .clipboard, .remoteControl, .about]
+        // 侧栏里 general → clipboard → remoteControl → screenshot → about 自上而下，高亮条必须逐级挪位。
+        let ordered: [PreferencesTab] = [.general, .clipboard, .remoteControl, .screenshot, .about]
         var centers: [(String, CGFloat)] = []
         for tab in ordered {
             centers.append((tab.rawValue, try accentBandCenter(in: try hostPreferences(initialTab: tab))))

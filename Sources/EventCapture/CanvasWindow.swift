@@ -127,6 +127,10 @@ final class CanvasWindow: NSWindow {
         hidesOnDeactivate = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         ignoresMouseEvents = true
+        // 抓屏 API 永远看不到这扇窗。抬手那一刻 `orderOut` 要等 CoreAnimation 事务
+        // 提交才从合成里消失，而截图动作在同一轮 runloop 里就抓了帧（实测：画 S 出
+        // 图，图上有一道蓝 S）。靠顺序追不上窗口服务，只能让它压根不参与采集。
+        sharingType = .none
         contentView = CanvasView()
     }
 

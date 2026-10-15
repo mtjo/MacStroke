@@ -189,9 +189,10 @@ extension RulesTable {
         }
 
         /// Hot Key / Apple Script / Text / Password, in the original combo order
-        /// (which is also the persisted `actionType` numbering).
+        /// (which is also the persisted `actionType` numbering), plus the port's
+        /// screenshot trigger as a 5th type.
         static var typeTitles: [String] {
-            [L("Hot Key"), L("Apple Script"), L("Text"), L("Password")]
+            [L("Hot Key"), L("Apple Script"), L("Text"), L("Password"), L("Screenshot")]
         }
 
         // MARK: Reload
@@ -354,10 +355,22 @@ extension RulesTable {
             case 2:
                 container.addSubview(makeField(identifier: "Text", value: textValue(of: rule),
                                                row: row, width: 100))
+            case 4:
+                // 截图动作没有参数可填，格子里只写清它会做什么。
+                container.addSubview(Self.makeStaticActionLabel(L("Screenshot")))
             default:
                 container.addSubview(makeField(identifier: "Password", value: passwordValue(of: rule),
                                                row: row, width: 100))
             }
+        }
+
+        /// 无参数动作（截图）的 Action 格：一句话说明，不给可编辑框。
+        private static func makeStaticActionLabel(_ text: String) -> NSTextField {
+            let field = NSTextField(labelWithString: text)
+            field.frame = NSRect(x: 0, y: 30, width: 100, height: 20)
+            field.alignment = .center
+            field.textColor = .secondaryLabelColor
+            return field
         }
 
         private func makeField(identifier: String, value: String, row: Int, width: CGFloat) -> NSTextField {
@@ -472,6 +485,7 @@ extension RulesTable {
             case .applescript: return 1
             case .text, .copyToClipboard: return 2
             case .password: return 3
+            case .screenshot: return 4
             default: return 0
             }
         }
@@ -551,6 +565,7 @@ private extension Rule {
         case 1: action = .applescript(spare.appleScriptId)
         case 2: action = .text(spare.text)
         case 3: action = .password(spare.password)
+        case 4: action = .screenshot
         default:
             action = .shortcut(keyCode: UInt16(truncatingIfNeeded: spare.shortcutCode),
                                flags: UInt(truncatingIfNeeded: spare.shortcutFlag))

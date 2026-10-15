@@ -102,6 +102,25 @@ public enum StorageKey: String, CaseIterable {
     case remoteControlPort = "remoteControlPort"
     case remoteControlToken = "remoteControlToken"
 
+    // Screenshot
+    // 移植版扩展（超出原版）：截图出图后怎么落地。自动保存默认关 —— 关掉时和
+    // 现在一样只在用户点「保存为文件」时弹面板。保存位置存绝对路径，空串表示
+    // 「还没设过」，由 Screenshot 模块回退到桌面（跟 macOS 自带截图一致）。
+    case screenshotAutoSave = "screenshotAutoSave"
+    case screenshotSaveDirectory = "screenshotSaveDirectory"
+    /// 拖选时是否吸附窗口边界。关掉就是纯手动画框，适合边框不是窗口的场景
+    /// （网页里的浮层、分屏网格）。
+    case screenshotSnapToWindows = "screenshotSnapToWindows"
+    /// 截图的全局快捷键，跟粘贴板那条一样存成 "keyCode=X, flags=Y"。手势触发不在
+    /// 这里，它是一条规则（规则表才是手势的存放处）。
+    case screenshotShortcut = "screenshotShortcut"
+    /// 选区阶段跟着光标的放大镜（放大的像素 + 坐标 + 色值）。默认开：卡边界和取色
+    /// 都靠它，不想要的人在这一页关掉。
+    case screenshotMagnifier = "screenshotMagnifier"
+    /// 一个屏幕像素放大成几点。存的是倍率本身（4/8/16），不是档位序号，
+    /// 这样以后加档位不用迁移。
+    case screenshotMagnification = "screenshotMagnification"
+
     // Legacy (kept for compatibility)
     case showToast = "showToast"
     case clipboardHistoryLimit = "clipboardHistoryLimit"
@@ -253,6 +272,18 @@ public enum StorageDefaults {
     /// 空串 = 还没生成过配对码（首次打开远程控制时由 RemoteControl 模块生成并落库）。
     public static let remoteControlToken: String = ""
 
+    // Screenshot
+    public static let screenshotAutoSave: Bool = false
+    /// 空串 = 用户没选过，落盘位置由 ScreenshotSettings 现取桌面。
+    public static let screenshotSaveDirectory: String = ""
+    public static let screenshotSnapToWindows: Bool = true
+    /// ⌘⇧A：A 的 Carbon 键码就是 0，修饰键 ⌘(0x100000)|⇧(0x20000)。
+    public static let screenshotShortcut: String = "keyCode=0, flags=1179648"
+    public static let screenshotMagnifier: Bool = true
+    /// 8 倍：120pt 的取景窗里横排 15 个像素。Retina 上那是屏上约 7.5pt 见方的一小块，
+    /// 再小就看不出像素格，再大就开始挡内容。
+    public static let screenshotMagnification: Int = 8
+
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
@@ -314,6 +345,12 @@ public func registerUserDefaultsDefaults() {
         StorageKey.enableRemoteControl.rawValue: StorageDefaults.enableRemoteControl,
         StorageKey.remoteControlPort.rawValue: StorageDefaults.remoteControlPort,
         StorageKey.remoteControlToken.rawValue: StorageDefaults.remoteControlToken,
+        StorageKey.screenshotAutoSave.rawValue: StorageDefaults.screenshotAutoSave,
+        StorageKey.screenshotSaveDirectory.rawValue: StorageDefaults.screenshotSaveDirectory,
+        StorageKey.screenshotSnapToWindows.rawValue: StorageDefaults.screenshotSnapToWindows,
+        StorageKey.screenshotShortcut.rawValue: StorageDefaults.screenshotShortcut,
+        StorageKey.screenshotMagnifier.rawValue: StorageDefaults.screenshotMagnifier,
+        StorageKey.screenshotMagnification.rawValue: StorageDefaults.screenshotMagnification,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

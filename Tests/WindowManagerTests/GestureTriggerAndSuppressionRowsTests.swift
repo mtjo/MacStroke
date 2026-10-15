@@ -106,8 +106,12 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         XCTAssertEqual(committed?.1, 0x100000 | 0x800000)
     }
 
+    /// 只读修饰键的那一行（修饰键让位）显示的是纯符号，不带键名 —— 靠的是
+    /// `modifiersOnly` 这个开关，不是「keyCode 0 表示没键」：A 的键码就是 0，
+    /// 截图的默认快捷键 ⌘⇧A 就长在 0 上，普通模式下的 0 必须显示成 A。
     func testDisplayStringForModifierOnlyValues() {
         let view = ShortcutRecorderView()
+        view.modifiersOnly = true
         view.keyCode = 0
         view.flags = 0x100000 | 0x80000 | 0x20000
         XCTAssertEqual(view.displayString, "⌘⌥⇧")
@@ -116,6 +120,7 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         view.flags = 0
         XCTAssertEqual(view.displayString, "")
         // 反向对照：普通快捷键仍然带 key code 的名字。
+        view.modifiersOnly = false
         view.keyCode = 9
         view.flags = 0x100000 | 0x80000
         XCTAssertEqual(view.displayString, "⌘⌥V")

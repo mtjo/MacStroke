@@ -76,10 +76,11 @@ public final class ShortcutRecorderView: NSView {
     // MARK: - Display
 
     /// Human-readable shortcut like "⌃⇧V" (mirrors ShortcutRecorder's display).
-    /// keyCode 0 means nothing was pressed with the modifiers, which is how the
-    /// modifiers-only recorder stores its combination.
+    /// Which mode decides whether the key part exists: a modifiers-only recorder
+    /// always keeps keyCode 0, while a normal one records a real key — and 0 is a
+    /// key of its own (⌘⇧A), so it has to be named.
     public var displayString: String {
-        if keyCode == 0 { return Self.modifierSymbols(flags) }
+        if modifiersOnly { return Self.modifierSymbols(flags) }
         return Self.modifierSymbols(flags) + Self.keyName(for: keyCode)
     }
 

@@ -40,6 +40,8 @@ public enum PreferencesTab: String, CaseIterable {
     case clipboard
     // 移植版新增页（超出原版）：手机小程序远程控制，放在粘贴板与关于之间。
     case remoteControl
+    // 移植版新增页（超出原版）：截图的落地方式，跟在远程控制后面。
+    case screenshot
     case about
 
     var title: String {
@@ -52,6 +54,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
         case .remoteControl: return L("Remote Control")
+        case .screenshot: return L("Screenshot")
         case .about: return L("About")
         }
     }
@@ -66,6 +69,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .rightClickMenu: return "list.bullet.rectangle"
         case .clipboard: return "doc.on.clipboard"
         case .remoteControl: return "dot.radiowaves.left.and.right"
+        case .screenshot: return "camera.viewfinder"
         case .about: return "info.circle"
         }
     }
@@ -239,6 +243,8 @@ public struct PreferencesView: View {
                     ClipboardTabView(viewModel: viewModel)
                 case .remoteControl:
                     RemoteControlTabView(viewModel: viewModel)
+                case .screenshot:
+                    ScreenshotTabView(viewModel: viewModel)
                 case .about:
                     AboutTabView(viewModel: viewModel)
                 }
@@ -730,64 +736,7 @@ struct RulesTabView: View {
     }
 
     private func drawGesture(_ ruleName: String) {
-        NotificationCenter.default.post(
-            name: .macStrokeRecordGesture,
-            object: nil,
-            userInfo: ["ruleName": ruleName]
-        )
-
-        // A gesture drawn on the live overlay saves itself and closes the picker,
-        // like the original's synthetic Return key press.
-        var drawnOnScreen = false
-        let drawnObs = NotificationCenter.default.addObserver(
-            forName: .macStrokeGestureDidRecord, object: nil, queue: .main
-        ) { _ in
-            drawnOnScreen = true
-        }
-        defer { NotificationCenter.default.removeObserver(drawnObs) }
-
-        guard let preset = PresetGesturePickerPanel.pick() else {
-            if !drawnOnScreen {
-                NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
-            }
-            return
-        }
-        NotificationCenter.default.post(name: .macStrokeCancelRecordGesture, object: nil)
-        guard Self.applyPresetGesture(preset.name, toRuleNamed: ruleName, store: ruleStore) else { return }
-        Self.postGestureCompleteNotification()
-    }
-
-    /// Map a combo title ("M", "M Revered", "┏"…) to a preset template and
-    /// write it into the rule (original: preGestureSelectionChanged:).
-    private static func applyPresetGesture(
-        _ title: String, toRuleNamed ruleName: String, store ruleStore: RuleStore
-    ) -> Bool {
-        // Only titles the original picker actually offers may be applied.
-        guard let entry = GestureTemplateProvider.shared.presetPickerEntries
-            .first(where: { $0.name == title }) else { return false }
-        guard let idx = ruleStore.rules.firstIndex(where: { $0.name == ruleName }) else { return false }
-        let old = ruleStore.rules[idx]
-        let template = GestureTemplate(from: entry.stroke, name: entry.name)
-        let newRule = Rule(
-            name: old.name,
-            description: old.description,
-            template: template,
-            minSimilarityScore: old.minSimilarityScore,
-            action: old.action,
-            note: old.note,
-            isEnabled: old.isEnabled,
-            triggerOnEveryMatch: old.triggerOnEveryMatch,
-            filter: old.filter,
-            filterType: old.filterType,
-            spareActions: old.spareActions
-        )
-        ruleStore.update(newRule)
-        NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
-        return true
-    }
-
-    private static func postGestureCompleteNotification() {
-        postMacStrokeNotification(L("Gesture draw complete!"))
+        GestureRecordFlow.record(ruleName: ruleName, store: ruleStore)
     }
 
     /// Original bottom-bar button: multi-select running apps (AppPickerWindow-

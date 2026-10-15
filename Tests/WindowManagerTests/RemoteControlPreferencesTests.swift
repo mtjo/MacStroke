@@ -30,15 +30,15 @@ final class RemoteControlPreferencesTests: XCTestCase {
 
     // MARK: - 侧栏位置
 
-    func testRemoteControlSitsBetweenClipboardAndAbout() {
+    func testRemoteControlSitsBetweenClipboardAndScreenshot() {
         let tabs = PreferencesTab.allCases
         guard let clipboard = tabs.firstIndex(of: .clipboard),
               let remote = tabs.firstIndex(of: .remoteControl),
-              let about = tabs.firstIndex(of: .about) else {
-            return XCTFail("侧栏缺少粘贴板/远程控制/关于其中一项")
+              let screenshot = tabs.firstIndex(of: .screenshot) else {
+            return XCTFail("侧栏缺少粘贴板/远程控制/截图其中一项")
         }
         XCTAssertEqual(remote, clipboard + 1, "远程控制要紧跟在粘贴板后面")
-        XCTAssertEqual(about, remote + 1, "远程控制要在关于前面")
+        XCTAssertEqual(screenshot, remote + 1, "远程控制后面是截图页（新增页依次排在关于之前）")
     }
 
     // MARK: - 开关与配对码

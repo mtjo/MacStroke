@@ -238,7 +238,9 @@ public final class RuleStore: ObservableObject {
 
         // Original reInit inserts each rule at index 0, so the stored list is
         // the reverse of the declaration order (NextTab first … password last).
+        // 截图手势声明在最前面，反转后落在最后一行：原版的 15 条位置不动。
         let list: [Rule] = [
+            screenshotRule(),
             rule(
                 // Original stores the direction lower-case: "password".
                 name: "password",
