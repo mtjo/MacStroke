@@ -264,6 +264,11 @@ public final class UserPreferences: ObservableObject {
     @Published public var screenshotMagnification: Int {
         didSet { storage.setInt(screenshotMagnification, forKey: .screenshotMagnification) }
     }
+    /// 选区落定后预先装在注解条上的工具序号；**-1 = 关闭**（什么都不装，选区内拖动仍是
+    /// 平移整块）。开关和取值共用这一个键，所以偏好页只有一格下拉。
+    @Published public var screenshotDefaultTool: Int {
+        didSet { storage.setInt(screenshotDefaultTool, forKey: .screenshotDefaultTool) }
+    }
     /// 截图的全局快捷键，「keyCode=X, flags=Y」，跟粘贴板那条同格式。改了就写库，
     /// App 层监听 UserDefaults 的变化重新挂监听，不需要这里发通知。
     @Published public var screenshotShortcut: String {
@@ -335,6 +340,7 @@ public final class UserPreferences: ObservableObject {
         self.screenshotSnapToWindows = storage.getBoolOptional(forKey: .screenshotSnapToWindows) ?? StorageDefaults.screenshotSnapToWindows
         self.screenshotMagnifier = storage.getBoolOptional(forKey: .screenshotMagnifier) ?? StorageDefaults.screenshotMagnifier
         self.screenshotMagnification = storage.getIntOptional(forKey: .screenshotMagnification) ?? StorageDefaults.screenshotMagnification
+        self.screenshotDefaultTool = storage.getIntOptional(forKey: .screenshotDefaultTool) ?? StorageDefaults.screenshotDefaultTool
         self.screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut) ?? StorageDefaults.screenshotShortcut
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit

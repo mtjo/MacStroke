@@ -73,6 +73,9 @@
 "Screenshot location missing" = "This folder no longer exists, so shots go to the Desktop.";
 "Screenshot snap to windows" = "Snap selection to window edges";
 "Screenshot snap hint" = "Turn it off to draw the frame freely when what you want is not a window (web overlays, split grids).";
+"Screenshot default tool" = "Tool armed after selecting";
+"Screenshot default tool off" = "Off";
+"Screenshot default tool hint" = "Once the frame lands, that tool is already picked up — the first mark needs no extra click. While it is armed, dragging inside the frame draws instead of moving it; click the same icon again to get moving back, or pick Off to keep the old behaviour.";
 "Screenshot magnifier" = "Show a magnifier while selecting";
 "Screenshot magnifier hint" = "A zoomed pixel patch follows the cursor while you drag the frame, with that point's coordinates and color. Press ⌘C inside the overlay to copy the color.";
 "Screenshot magnifier zoom" = "Magnification";

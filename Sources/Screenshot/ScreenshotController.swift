@@ -73,6 +73,7 @@ public final class ScreenshotController {
             ? ScreenshotWindowProbe.candidateRects(screenFrame: screen.frame) : []
         view.magnifierEnabled = settings.magnifier
         view.magnification = ScreenshotMagnification(stored: settings.magnification)
+        view.defaultTool = settings.defaultTool
         view.onFinish = { [weak self] image, output, screenRect in
             // 复制/存盘即算完成，收遮罩把屏幕还给用户。
             self?.close()

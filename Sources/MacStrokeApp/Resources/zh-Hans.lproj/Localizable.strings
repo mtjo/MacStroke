@@ -73,6 +73,9 @@
 "Screenshot location missing" = "这个位置已经不存在，截图会存到桌面。";
 "Screenshot snap to windows" = "拖选时吸附窗口边界";
 "Screenshot snap hint" = "关掉后只能纯手动画框，适合要框的不是窗口（网页浮层、分屏网格）的场景。";
+"Screenshot default tool" = "框选后预先装上的工具";
+"Screenshot default tool off" = "关闭";
+"Screenshot default tool hint" = "选区一落定就替你把这一格拿好，第一笔不用再点一下条子。装着的这段时间，在选区里拖动是画东西而不是平移整块 —— 想平移就再点一次同一个图标把工具摘掉，或者干脆选「关闭」保持原来的手感。";
 "Screenshot magnifier" = "拖选时显示放大镜";
 "Screenshot magnifier hint" = "拖选框的时候光标旁边跟一块放大的像素，附上那一点的坐标和色值；在遮罩里按 ⌘C 就能把那一点的颜色值复制走。";
 "Screenshot magnifier zoom" = "放大倍率";

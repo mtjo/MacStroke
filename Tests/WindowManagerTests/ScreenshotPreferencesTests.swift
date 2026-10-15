@@ -8,6 +8,7 @@
 
 import XCTest
 import Storage
+import Screenshot
 @testable import Preferences
 
 final class ScreenshotPreferencesTests: XCTestCase {
@@ -53,6 +54,10 @@ final class ScreenshotPreferencesTests: XCTestCase {
         XCTAssertTrue(prefs.screenshotMagnifier, "放大镜默认开：Retina 上不数像素格根本卡不准边")
         XCTAssertEqual(prefs.screenshotMagnification, 8, "默认 8 倍：4 倍太糊、16 倍只能看到指甲盖大一块")
         XCTAssertTrue(prefs.screenshotSaveDirectory.isEmpty)
+        XCTAssertEqual(prefs.screenshotDefaultTool, -1,
+                       "「截图默认工具」默认关闭：框完选区还是拖动平移的老行为")
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotDefaultTool.rawValue),
+                     "没动过这一页就不该往库里写工具序号")
         XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotSaveDirectory.rawValue),
                      "没动过这一页就不该往库里写路径")
     }
@@ -69,6 +74,19 @@ final class ScreenshotPreferencesTests: XCTestCase {
         XCTAssertEqual(isolatedSuite().string(forKey: StorageKey.screenshotShortcut.rawValue),
                        "keyCode=5, flags=786432", "App 层听的是库，页面状态不落库等于没设")
         XCTAssertEqual(makePrefs().screenshotShortcut, "keyCode=5, flags=786432")
+    }
+
+    /// 下拉框选完即写库：截图侧每张开图现读快照，页面状态不落库等于没设。
+    func testArmedDefaultToolReachesTheStore() {
+        let prefs = makePrefs()
+        prefs.screenshotDefaultTool = ScreenshotTool.mosaic.rawValue
+        XCTAssertEqual(isolatedSuite().integer(forKey: StorageKey.screenshotDefaultTool.rawValue),
+                       ScreenshotTool.mosaic.rawValue, "条子上亮着哪一格，下一张图就预装哪一格")
+        XCTAssertEqual(makePrefs().screenshotDefaultTool, ScreenshotTool.mosaic.rawValue)
+
+        prefs.screenshotDefaultTool = StorageDefaults.screenshotDefaultTool
+        XCTAssertEqual(makePrefs().screenshotDefaultTool, -1,
+                       "选回「关闭」要真的写成 -1，不能留着已经选过的那一格")
     }
 
     // MARK: - 写库

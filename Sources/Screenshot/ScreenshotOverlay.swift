@@ -150,6 +150,8 @@ public final class ScreenshotSelectionView: NSView {
     private var toolbarDragStart: CGPoint = .zero
     /// 选中的工具；nil = 注解条上一个工具都没选，此时选区内的拖动用来平移选区。
     var tool: ScreenshotTool?
+    /// 偏好里的「截图默认工具」：选区落定时预先装进 `tool` 的那一格，关掉就是 nil。
+    var defaultTool: ScreenshotTool?
     var colorIndex = 0
     var widthIndex = 0
     /// internal 而非 private：状态机取证要看条子在不在、摆对没对。
@@ -170,6 +172,10 @@ public final class ScreenshotSelectionView: NSView {
     /// 那条线去抓的，差一两像素就该算抓到。
     static let handleSize: CGFloat = 7
     static let handleSlop: CGFloat = 8
+
+    /// 打码拖动时那一圈辅助线的颜色与粗细。
+    static let mosaicGuideColor = NSColor(srgbRed: 0.13, green: 0.55, blue: 1.0, alpha: 1)
+    static let mosaicGuideWidth: CGFloat = 1.5
     /// 缩到比这更小就没法在里头画东西了，也不值得再截。
     static let minRegionSize: CGFloat = 20
 
@@ -274,8 +280,25 @@ public final class ScreenshotSelectionView: NSView {
         for annotation in annotations where annotation.dirtyRect.intersects(focus) {
             annotation.draw(shot: shot)
         }
-        draft?.draw(shot: shot)
+        if let draft {
+            draft.draw(shot: shot)
+            drawMosaicGuide(for: draft)
+        }
         context.restoreGState()
+    }
+
+    /// 正在拖的打码块描一圈蓝边：它只是把那片变糊，同色底上根本看不出这块到哪为止。
+    ///
+    /// **只在拖动过程中画** —— 松手后这一笔进了注解列表，边框就跟着没了，成品 PNG 上
+    /// 也就不会留一圈谁都没要过的蓝框。颜色刻意写死 sRGB：这条线不进图，但离屏取证要
+    /// 读到确定的像素值，而系统那组动态蓝在浅/深外观下解析出两种蓝。
+    private func drawMosaicGuide(for draft: ScreenshotAnnotation) {
+        guard draft.tool == .mosaic, !draft.rect.isEmpty else { return }
+        Self.mosaicGuideColor.setStroke()
+        let inset = Self.mosaicGuideWidth / 2
+        let edge = NSBezierPath(rect: draft.rect.insetBy(dx: inset, dy: inset))
+        edge.lineWidth = Self.mosaicGuideWidth
+        edge.stroke()
     }
 
     /// 八个把手：白底 + 主色描边的小方块。看不见把手就没人知道这块还能改，
@@ -679,6 +702,9 @@ public final class ScreenshotSelectionView: NSView {
         hover = nil
         // 选区已经落定，放大镜就该收：编辑态要的是看清内容，不是再卡一个像素。
         magnifierView?.isHidden = true
+        // 默认装上偏好里选的那一格（「截图默认工具」，关掉就是 nil）：装了之后框完第一笔
+        // 不必先点格子，代价是「在选区内拖动=平移整块」这一步要先摘掉工具才走得到。
+        tool = defaultTool
         // 新选区（含重框）= 条子回到「跟着这块走」；用户手动拖过的位置只在这一块选区
         // 里有效，换了一块还钉在原处就成了凭空冒出来的浮条。
         toolbarPinned = nil

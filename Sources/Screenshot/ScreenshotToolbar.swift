@@ -340,6 +340,13 @@ final class ScreenshotToolbarView: NSView {
         entries.compactMap { ($0.view as? ScreenshotToolbarItem)?.id }.filter { !$0.isEmpty }
     }
 
+    /// 条子上此刻亮着的那一格工具。internal 而非 private：取证要核对「选中态」真的落到了
+    /// 格子上，而不是只活在遮罩的状态位里 —— 遮罩自己装了画笔而条子没跟着高亮，
+    /// 用户就看不出可以直接开始画。
+    var activeToolOnBar: ScreenshotTool? {
+        toolItems.first { $0.value.isActive }?.key
+    }
+
     /// 此刻按不动的那几格（灭着的）。取证用它核对「灭」真的落到了格子上，而不是只活在
     /// 遮罩的状态位里 —— 遮罩那边置了 `ocrRunning`，条子没跟着变灰就等于没拦住第二下。
     var disabledElementsOnBar: [String] {
@@ -427,17 +434,19 @@ final class ScreenshotToolbarView: NSView {
 
     private func build() {
         // 顺序照 QQ 那条：形状类 → 贴图/裁剪 → 颜色与线宽 → 撤销/重做 → 出口。
-        let tools: [(ScreenshotTool, ScreenshotToolbarItem.Glyph, String)] = [
-            (.rect, .symbol("rectangle"), L("Screenshot Rect")),
-            (.ellipse, .symbol("circle"), L("Screenshot Ellipse")),
-            (.arrow, .symbol("arrow.up.right"), L("Screenshot Arrow")),
-            (.pen, .symbol("pencil"), L("Screenshot Pen")),
-            (.text, .symbol("character"), L("Screenshot Text")),
-            (.number, .symbol("1.circle"), L("Screenshot Number")),
-            (.mosaic, .checkerboard, L("Screenshot Mosaic")),
+        let tools: [(ScreenshotTool, ScreenshotToolbarItem.Glyph)] = [
+            (.rect, .symbol("rectangle")),
+            (.ellipse, .symbol("circle")),
+            (.arrow, .symbol("arrow.up.right")),
+            (.pen, .symbol("pencil")),
+            (.text, .symbol("character")),
+            (.number, .symbol("1.circle")),
+            (.mosaic, .checkerboard),
         ]
-        for (tool, glyph, tip) in tools {
-            let item = iconCell("tool.\(tool)", glyph, tip) { [weak self] in self?.onTool?(tool) }
+        for (tool, glyph) in tools {
+            // 提示文案取自 `ScreenshotTool.title`：偏好页那一格下拉读的是同一份，
+            // 两边各写一遍就会改一处漏一处。
+            let item = iconCell("tool.\(tool)", glyph, tool.title) { [weak self] in self?.onTool?(tool) }
             toolItems[tool] = item
         }
         addSeparator()

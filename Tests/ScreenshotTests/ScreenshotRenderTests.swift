@@ -314,6 +314,72 @@ final class ScreenshotRenderTests: XCTestCase {
         XCTAssertEqual(count(in: idleBitmap, in: cell, isBlue), 0, "没选中也跟着发蓝")
     }
 
+    /// 打码的边框只是**拖动过程中的蓝色辅助线**：跟着这一笔的矩形走，松手就没了。
+    ///
+    /// 用户要的是「拖的时候看得清这块到哪为止」，但别让它进成品，所以判据分三头：拖动
+    /// 时四条边上都得读到那圈蓝；松手后同一块地方一点蓝、一点墨都不许有；这一笔的墨是
+    /// 调色板第一档的红，所以「辅助线跟着墨色走」这种改法也会当场露出来。反向对照取
+    /// `Scene.bare`（同一块底图、没遮罩的参照渲染），两处恒为 0，量到的蓝才真是辅助线。
+    /// 选区落在右上绿象限：绿底上任何非绿都只可能是画上去的。
+    func testMosaicGuideFollowsTheDragAndVanishesOnRelease() throws {
+        let selection = CGRect(x: 420, y: 40, width: 300, height: 200)
+        let scene = try overlayScene(selection: selection, editing: true)
+        let view = scene.view
+        XCTAssertEqual(view.colorIndex, 0, "这一笔用的是调色板第一档（红）")
+        view.toolbar?.onTool?(.mosaic)   // 走条子的回调：那才是真链路
+        view.pointerDown(CGPoint(x: 460, y: 80), clickCount: 1)
+        view.pointerDragged(to: CGPoint(x: 660, y: 200))
+
+        // 逐点扫，不用 `count(in:in:_:)`：那条判据的尺子往里缩 2pt，而辅助线只有 1.5pt
+        // 粗，缩一下就正好把线扫没了。
+        func pixels(_ rect: CGRect, in bitmap: NSBitmapImageRep,
+                    matching isMatch: (NSColor) -> Bool) -> Int {
+            var hit = 0
+            for x in Int(rect.minX)..<Int(rect.maxX) {
+                for y in Int(rect.minY)..<Int(rect.maxY) {
+                    if let color = color(in: bitmap, x: x, y: y), isMatch(color) { hit += 1 }
+                }
+            }
+            return hit
+        }
+        let isGuideBlue: (NSColor) -> Bool = { $0.blueComponent > 0.75
+            && $0.greenComponent > 0.35 && $0.greenComponent < 0.85 && $0.redComponent < 0.45 }
+        let isInkRed: (NSColor) -> Bool = { $0.redComponent > 0.8 && $0.greenComponent < 0.55
+            && $0.blueComponent < 0.5 }
+        // 四边各一条 3pt 宽的带，压在矩形边界那一列上（这一笔是 460,80 → 660,200）。
+        let edges = [CGRect(x: 459, y: 100, width: 3, height: 60),     // 左边
+                     CGRect(x: 520, y: 79, width: 60, height: 3),      // 上边
+                     CGRect(x: 659, y: 100, width: 3, height: 60),     // 右边
+                     CGRect(x: 520, y: 199, width: 60, height: 3)]     // 下边
+        let interior = CGRect(x: 500, y: 110, width: 120, height: 60)
+        // 选区内侧一整块：四周各让开 8pt，绕开选区主色描边和八个把手（那也是蓝的）。
+        let insideSelection = CGRect(x: 428, y: 48, width: 284, height: 184)
+
+        let dragging = try render(view, name: "mosaic-dragging.png")
+        for edge in edges {
+            // 实测每条带都满（60 行每一行都压在线上），所以 54 已经是「断一截就红」。
+            XCTAssertGreaterThanOrEqual(pixels(edge, in: dragging, matching: isGuideBlue), 54,
+                                        "拖动时这一圈辅助线得看得见：\(edge)")
+            XCTAssertEqual(pixels(edge, in: dragging, matching: isInkRed), 0,
+                           "辅助线是那圈固定的蓝，不跟着这一笔的墨色走：\(edge)")
+        }
+        XCTAssertEqual(pixels(interior, in: dragging, matching: isGuideBlue), 0,
+                       "辅助线是一圈边线，不是把整块涂蓝")
+        XCTAssertEqual(pixels(insideSelection, in: scene.bare, matching: isGuideBlue), 0,
+                       "反向对照：同一块底图里本来就没有这种蓝，上面那些判据才量得出东西")
+        XCTAssertEqual(pixels(insideSelection, in: scene.bare, matching: isInkRed), 0,
+                       "反向对照：底图里也没有这种红")
+
+        view.pointerReleased()
+        XCTAssertEqual(view.annotations.count, 1, "这一笔是要留下来的")
+        XCTAssertEqual(view.annotations.first?.tool, .mosaic)
+        let committed = try render(view, name: "mosaic-committed.png")
+        XCTAssertEqual(pixels(insideSelection, in: committed, matching: isGuideBlue), 0,
+                       "松手后辅助线必须整个收掉：它不该进成品图")
+        XCTAssertEqual(pixels(insideSelection, in: committed, matching: isInkRed), 0,
+                       "松手后的打码块也不该带一圈自己墨色的边框")
+    }
+
     /// 条子和气泡**不跟随系统外观**（用户指定的参照物是 QQ 那条：浅桌面底下也是深底）。
     ///
     /// 配色是一档写死的 sRGB，所以换外观必须逐像素一样。这条判据管的是回退：谁把某处

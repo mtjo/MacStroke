@@ -24,6 +24,10 @@ struct ScreenshotTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @ObservedObject private var ruleStore = RuleStore.shared
 
+    /// 下拉里「关闭」那一档存进库的值 —— 和 `StorageDefaults.screenshotDefaultTool`
+    /// 同一个 -1，开关与取值共用一个键，所以这一格下拉就够，不再另配一个开关。
+    static let toolOff = StorageDefaults.screenshotDefaultTool
+
     var body: some View {
         SettingsPage {
             SettingsSection(title: L("Screenshot Trigger")) {
@@ -51,6 +55,18 @@ struct ScreenshotTabView: View {
                         TrailingSwitch(isOn: $viewModel.screenshotSnapToWindows)
                     }
                     hint(L("Screenshot snap hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot default tool")) {
+                        Picker("", selection: $viewModel.screenshotDefaultTool) {
+                            Text(L("Screenshot default tool off")).tag(Self.toolOff)
+                            ForEach(ScreenshotTool.allCases, id: \.rawValue) { tool in
+                                Text(tool.title).tag(tool.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 150)
+                    }
+                    hint(L("Screenshot default tool hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot magnifier")) {
                         TrailingSwitch(isOn: $viewModel.screenshotMagnifier)

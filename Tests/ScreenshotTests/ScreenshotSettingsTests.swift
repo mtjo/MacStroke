@@ -73,6 +73,32 @@ final class ScreenshotSettingsTests: XCTestCase {
         XCTAssertEqual(ScreenshotMagnification(stored: settings().magnification), .medium)
     }
 
+    // MARK: - 默认工具
+
+    /// 全新安装不预先装工具：框完选区还是「选区内拖动=平移整块」的老行为，
+    /// 要预装哪一格得用户自己在偏好页里选。
+    func testDefaultToolIsOffOnFreshInstall() {
+        XCTAssertNil(settings().defaultTool, "默认是关闭：不能一上来就抢走平移那一路")
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotDefaultTool.rawValue),
+                     "没打开过这一页就不该往库里写值")
+    }
+
+    func testStoredDefaultToolArmsThatTool() {
+        let defaults = isolatedSuite()
+        defaults.set(ScreenshotTool.mosaic.rawValue, forKey: StorageKey.screenshotDefaultTool.rawValue)
+        XCTAssertEqual(settings().defaultTool, .mosaic)
+    }
+
+    /// 库里存的是工具序号，认不出的值（包括偏好页「关闭」写的 -1）一律当关闭处理：
+    /// 不能凭空装上一格用户压根没选过的工具。
+    func testUnknownStoredDefaultToolIsTreatedAsOff() {
+        let defaults = isolatedSuite()
+        for stored in [StorageDefaults.screenshotDefaultTool, 99, -3] {
+            defaults.set(stored, forKey: StorageKey.screenshotDefaultTool.rawValue)
+            XCTAssertNil(settings().defaultTool, "库里是 \(stored)，不该装任何工具")
+        }
+    }
+
     // MARK: - 保存位置的三级回退
 
     func testEmptySelectionMeansDesktop() {
@@ -97,7 +123,7 @@ final class ScreenshotSettingsTests: XCTestCase {
     /// 命名和 macOS 自带截图一致：「截图 <日期> at <时分秒>」，本地时区未知，所以只验形状。
     func testFileNameCarriesTimestampToTheSecond() {
         let name = ScreenshotSettings(autoSave: true, directory: tempDirectory, snapToWindows: true,
-                                      magnifier: true, magnification: 8)
+                                      magnifier: true, magnification: 8, defaultTool: nil)
             .suggestedName(date: Date(timeIntervalSince1970: 0))
         XCTAssertTrue(name.hasPrefix(L("Screenshot") + " "), "文件名要以「截图 」开头，用户按名字就能认出：\(name)")
         XCTAssertTrue(name.contains(" at "), "日期和时间之间要有 at 分隔，和 macOS 自带截图一致")
@@ -109,7 +135,7 @@ final class ScreenshotSettingsTests: XCTestCase {
     /// 撞名就是直接把上一张图盖掉，所以必须往后缀找空位。
     func testCollisionAppendsSuffixInsteadOfOverwriting() throws {
         let settings = ScreenshotSettings(autoSave: true, directory: tempDirectory, snapToWindows: true,
-                                          magnifier: true, magnification: 8)
+                                          magnifier: true, magnification: 8, defaultTool: nil)
         let date = Date()
         let first = settings.fileURL(date: date)
         try Data("x".utf8).write(to: first)
@@ -126,7 +152,7 @@ final class ScreenshotSettingsTests: XCTestCase {
 
     func testKeepGoingUntilTheSuffixIsFree() throws {
         let settings = ScreenshotSettings(autoSave: true, directory: tempDirectory, snapToWindows: true,
-                                          magnifier: true, magnification: 8)
+                                          magnifier: true, magnification: 8, defaultTool: nil)
         let date = Date()
         let base = settings.suggestedName(date: date)
         for suffix in ["", " 2", " 3"] {

@@ -673,8 +673,11 @@ final class ScreenshotFlowTests: XCTestCase {
     }
 
     /// 没选工具时，选区内按住拖动 = 整块平移，尺寸不变。
+    ///
+    /// 这是默认路径：偏好里「截图默认工具」关着，进编辑态一个工具都不装。
     func testDragInsideSelectionMovesIt() throws {
         let view = try editedView()
+        XCTAssertNil(view.tool, "默认关闭时选区落定不该装工具")
         view.pointerDown(CGPoint(x: 200, y: 150), clickCount: 1)
         view.pointerDragged(to: CGPoint(x: 260, y: 130))
         XCTAssertEqual(view.selection, CGRect(x: 160, y: 80, width: 200, height: 100))
@@ -689,6 +692,36 @@ final class ScreenshotFlowTests: XCTestCase {
         view.pointerDown(CGPoint(x: 200, y: 150), clickCount: 1)
         view.pointerDragged(to: CGPoint(x: 900, y: 900))
         XCTAssertEqual(view.selection, CGRect(x: 600, y: 400, width: 200, height: 100))
+    }
+
+    /// 偏好里选了打码，框选确认那一格就直接装上：条子上对应格子跟着亮，
+    /// 选区内的拖动变成画注解，不再走平移。
+    func testDefaultToolArmsItselfWhenSelectionLands() throws {
+        let view = try editedView(defaultTool: .mosaic)
+        XCTAssertEqual(view.tool, .mosaic, "偏好里选了打码，落定就该装上")
+        XCTAssertEqual(view.toolbar?.activeToolOnBar, .mosaic, "条子上那一格也得跟着亮")
+        let before = view.selection
+        view.pointerDown(CGPoint(x: 150, y: 130), clickCount: 1)
+        view.pointerDragged(to: CGPoint(x: 250, y: 160))
+        view.pointerReleased()
+        XCTAssertEqual(view.selection, before, "第一笔不该把选区拖走")
+        XCTAssertEqual(view.annotations.count, 1)
+        XCTAssertEqual(view.annotations.first?.tool, .mosaic)
+    }
+
+    /// 装了默认工具不等于回不到平移：条子上再点一次同一格就是摘掉，
+    /// 摘掉后选区内拖动恢复成整块平移。
+    func testArmedDefaultToolCanBeUndoneFromTheBar() throws {
+        let view = try editedView(defaultTool: .pen)
+        XCTAssertEqual(view.tool, .pen)
+        view.toolbar?.onTool?(.pen)
+        XCTAssertNil(view.tool)
+        XCTAssertNil(view.toolbar?.activeToolOnBar, "摘掉之后条子上不该还有亮着的格子")
+        view.pointerDown(CGPoint(x: 200, y: 150), clickCount: 1)
+        view.pointerDragged(to: CGPoint(x: 260, y: 130))
+        XCTAssertEqual(view.selection, CGRect(x: 160, y: 80, width: 200, height: 100),
+                       "摘掉工具后这一路要回到平移")
+        XCTAssertTrue(view.annotations.isEmpty)
     }
 
     /// 选了工具之后，选区内的拖动还是画注解（平移只在不选工具时抢这一路）。
@@ -863,10 +896,14 @@ final class ScreenshotFlowTests: XCTestCase {
     /// `size` 默认 800×500：够摆下选区本身。凡是要拿「条子跟着选区居中」当判据的用例
     /// 得传宽屏 —— 注解条现在有 756pt，800 宽的容器里它天生居不了中（只能贴边），
     /// 那不是摆放逻辑错，是容器不够。
+    /// `defaultTool` 是偏好里「截图默认工具」那一格，控制器在 `start()` 里塞给视图；
+    /// 这里必须在拖选之前摆好，落定那一刻才轮得到它装。
     private func editedView(_ rect: CGRect = CGRect(x: 100, y: 100, width: 200, height: 100),
-                            size: NSSize = NSSize(width: 800, height: 500))
+                            size: NSSize = NSSize(width: 800, height: 500),
+                            defaultTool: ScreenshotTool? = nil)
         throws -> ScreenshotSelectionView {
         let view = try overlay(size: size)
+        view.defaultTool = defaultTool
         view.pointerDown(rect.origin, clickCount: 1)
         view.pointerDragged(to: CGPoint(x: rect.maxX, y: rect.maxY))
         view.pointerReleased()

@@ -21,10 +21,30 @@
 
 import AppKit
 import CoreGraphics
+import Storage
 
 /// 用户在工具条上选的字。
 public enum ScreenshotTool: Int, CaseIterable {
     case rect, ellipse, arrow, pen, text, mosaic, number
+
+    /// 这一格的中文名：注解条上的悬停提示和偏好页的下拉共用这一份，免得两处各写一遍
+    /// 文案、改一处漏一处。
+    public var title: String {
+        switch self {
+        case .rect: return L("Screenshot Rect")
+        case .ellipse: return L("Screenshot Ellipse")
+        case .arrow: return L("Screenshot Arrow")
+        case .pen: return L("Screenshot Pen")
+        case .text: return L("Screenshot Text")
+        case .mosaic: return L("Screenshot Mosaic")
+        case .number: return L("Screenshot Number")
+        }
+    }
+
+    /// 库里存的工具序号。-1 是偏好页上的「关闭」，认不出的值也当关闭处理。
+    public init?(stored: Int) {
+        self.init(rawValue: stored)
+    }
 }
 
 /// 一条画好的注解。不可变：撤销就是 `removeLast`，没有中间态要维护。
@@ -89,6 +109,10 @@ public struct ScreenshotAnnotation {
     /// 上千个线段，绘制、撤销、导出三条路径都跟着变慢，而肉眼看不出区别。
     public static let penMinDistance: CGFloat = 2
 
+    /// 方形标记的圆角：直角框压在截图上太硬。刻意只给 4pt —— 再大就成了「圆角矩形」
+    /// 这个形状本身，用户想框的是那块内容。
+    static let rectCornerRadius: CGFloat = 4
+
     /// 轨迹又拖到一个点：离上一点不到 `penMinDistance` 的丢弃。抽稀只在这一处做，
     /// 于是进到点列里的点永远干净，绘制侧不用再判。
     public static func penPath(byAppending point: CGPoint, to points: [CGPoint]) -> [CGPoint] {
@@ -119,7 +143,7 @@ public struct ScreenshotAnnotation {
     public func draw(shot: ScreenshotFrame) {
         switch tool {
         case .rect:
-            strokeOutline { NSBezierPath(rect: $0) }
+            strokeOutline(Self.roundedOutline)
         case .ellipse:
             strokeOutline { NSBezierPath(ovalIn: $0) }
         case .arrow:
@@ -147,6 +171,13 @@ public struct ScreenshotAnnotation {
         let outline = path(rect.insetBy(dx: lineWidth / 2, dy: lineWidth / 2))
         outline.lineWidth = lineWidth
         outline.stroke()
+    }
+
+    /// 圆角不能超过短边的一半：拖出一条只有几点开外的框时，超半径的圆角路径会自己
+    /// 咬穿对边，画出来是一坨而不是一个扁框。
+    private static func roundedOutline(_ rect: CGRect) -> NSBezierPath {
+        let radius = max(0, min(rectCornerRadius, min(rect.width, rect.height) / 2))
+        return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
     }
 
     /// 沿点列描一条。圆头 + 圆角转折：默认 Butt 端点在拐角处会豁出缺口，
@@ -199,6 +230,9 @@ public struct ScreenshotAnnotation {
         context?.imageInterpolation = .none
         NSImage(cgImage: tile, size: rect.size).draw(in: rect)
         context?.imageInterpolation = previous ?? .default
+        // 这里**不**描边。打码块的边框是拖动过程中的辅助线（画在遮罩里，见
+        // `ScreenshotSelectionView.drawMosaicGuide`），松手就该没了 —— 它是「帮你看清
+        // 这块到哪为止」，不是内容的一部分，更不该被带进成品 PNG。
     }
 
     private func drawBadge() {

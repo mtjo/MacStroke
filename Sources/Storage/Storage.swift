@@ -120,6 +120,10 @@ public enum StorageKey: String, CaseIterable {
     /// 一个屏幕像素放大成几点。存的是倍率本身（4/8/16），不是档位序号，
     /// 这样以后加档位不用迁移。
     case screenshotMagnification = "screenshotMagnification"
+    /// 框选落定时预先装在注解条上的工具，存 `ScreenshotTool.rawValue`（0～6）。
+    /// **-1 = 关闭**：进编辑态什么都不选，选区内按下拖动仍然是平移整块。开关和取值共用
+    /// 这一个键，所以偏好页只有一格下拉，不铺「一个开关 + 一个下拉」。
+    case screenshotDefaultTool = "screenshotDefaultTool"
 
     // Legacy (kept for compatibility)
     case showToast = "showToast"
@@ -283,6 +287,9 @@ public enum StorageDefaults {
     /// 8 倍：120pt 的取景窗里横排 15 个像素。Retina 上那是屏上约 7.5pt 见方的一小块，
     /// 再小就看不出像素格，再大就开始挡内容。
     public static let screenshotMagnification: Int = 8
+    /// 默认**关**（-1）：进编辑态不预先装工具。装上是「少点一下格子」的偏好，
+    /// 但代价是选区内拖动不再平移整块，这个交换不该由我们替所有人做。
+    public static let screenshotDefaultTool: Int = -1
 
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
@@ -351,6 +358,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.screenshotShortcut.rawValue: StorageDefaults.screenshotShortcut,
         StorageKey.screenshotMagnifier.rawValue: StorageDefaults.screenshotMagnifier,
         StorageKey.screenshotMagnification.rawValue: StorageDefaults.screenshotMagnification,
+        StorageKey.screenshotDefaultTool.rawValue: StorageDefaults.screenshotDefaultTool,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

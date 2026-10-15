@@ -96,6 +96,63 @@ final class ScreenshotAnnotationTests: XCTestCase {
                        "同一个方块内必须是同一个颜色")
     }
 
+    /// 方形标记带一点圆角：四条直边照旧，但最外面那个角点不能有墨。
+    ///
+    /// 这条判据专防「圆角其实没生效」：只数蓝像素的话直角框和圆角框都能过，所以必须拿
+    /// 角上那一点做反向对照 —— 改回 `NSBezierPath(rect:)` 它立刻变蓝。
+    func testRectAnnotationCornersAreSlightlyRound() throws {
+        let rect = ScreenshotAnnotation(tool: .rect, color: NSColor.systemBlue, lineWidth: 4,
+                                        start: CGPoint(x: 450, y: 40), end: CGPoint(x: 650, y: 140))
+        let bitmap = try render([rect])
+        XCTAssertTrue(QuadrantPattern.isGreen(try color(bitmap, 50, 40)),
+                      "左上角那一点该被圆角让出去，还留着墨就是没圆角")
+        XCTAssertTrue(QuadrantPattern.isGreen(try color(bitmap, 51, 41)), "贴着角的第二点也一样干净")
+        XCTAssertTrue(isBlue(try color(bitmap, 150, 41)), "上边中段照旧有线：圆角不能把整条边吃掉")
+        var arc = 0
+        for y in 40..<50 {
+            var hit = false
+            for x in 50..<60 where isBlue(try color(bitmap, x, y)) { hit = true; break }
+            if hit { arc += 1 }
+        }
+        XCTAssertGreaterThanOrEqual(arc, 3, "角弧上得真有线，只剩直边等于把角磨掉了：\(arc)")
+    }
+
+    /// 成品上的打码块**没有**边框：那一圈蓝只是拖动时看边界用的辅助线，画在遮罩里，
+    /// 不属于注解内容，所以不该被复制出去或写进 PNG。
+    ///
+    /// 这一笔用红墨（调色板第一档），底图是绿的，所以「四条边线带上出现任何非绿」就等于
+    /// 模型里又给人描了一圈边 —— 不管描的是墨色还是写死的蓝。同一把尺子先在方形标记上
+    /// 自检一遍：它在同样的带上必须满是墨，否则那条零就是空转。
+    func testCommittedMosaicCarriesNoBorder() throws {
+        let ink = NSColor(srgbRed: 1.0000, green: 0.2314, blue: 0.1882, alpha: 1)
+        // 这一笔是视图坐标 460,60 → 620,180；选区原点 (400,0)，所以位图里是 60,60 → 220,180。
+        let edges = [CGRect(x: 59, y: 90, width: 3, height: 40),     // 左边
+                     CGRect(x: 219, y: 90, width: 3, height: 40),    // 右边
+                     CGRect(x: 100, y: 59, width: 40, height: 3),    // 上边
+                     CGRect(x: 100, y: 179, width: 40, height: 3)]   // 下边
+        func offBackdrop(_ bitmap: NSBitmapImageRep) throws -> Int {
+            var hit = 0
+            for edge in edges {
+                for x in Int(edge.minX)..<Int(edge.maxX) {
+                    for y in Int(edge.minY)..<Int(edge.maxY) {
+                        if !QuadrantPattern.isGreen(try color(bitmap, x, y)) { hit += 1 }
+                    }
+                }
+            }
+            return hit
+        }
+
+        let square = ScreenshotAnnotation(tool: .rect, color: ink, lineWidth: 4,
+                                          start: CGPoint(x: 460, y: 60), end: CGPoint(x: 620, y: 180))
+        XCTAssertGreaterThan(try offBackdrop(render([square])), 100,
+                             "尺子自检：方形标记在这一圈带上必须满是墨")
+
+        let mosaic = ScreenshotAnnotation(tool: .mosaic, color: ink, lineWidth: 4,
+                                          start: CGPoint(x: 460, y: 60), end: CGPoint(x: 620, y: 180))
+        XCTAssertEqual(try offBackdrop(render([mosaic])), 0,
+                       "打码块的边线上不许有任何墨：边框是拖动时的辅助线，不进成品")
+    }
+
     func testTextAnnotationLandsOnItsAnchor() throws {
         let text = ScreenshotAnnotation(tool: .text, color: NSColor.systemBlue, lineWidth: 7,
                                        start: CGPoint(x: 500, y: 100), text: "X")
