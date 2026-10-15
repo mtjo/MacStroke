@@ -18,7 +18,15 @@ swift test --filter RuleEngineTests
 
 # 列出可用测试
 swift test --list-tests
+
+# 打 .app（通用包 arm64+x86_64，版本号唯一来源是脚本里的 APP_VERSION）并装到 /Applications
+./build_app.sh
+
+# 生成 Sparkle 双签发布产物（zip + appcast 单条 <channel> 片段）
+./make_release.sh        # 关键版本：CRITICAL=1 ./make_release.sh
 ```
+
+本地构建就跑 `./build_app.sh`（在仓库根出 `MacStroke.app`，通用包 + 自签；装机是另一步 `cp -R MacStroke.app /Applications` 再重启进程与 Finder 扩展）。发版不再手工跑这两条：`.github/workflows/release.yml`（`workflow_dispatch`，`dry_run` 默认 true）一条命令跑完「构建 → 双签 → tag → GitHub release + 附件 → release 分支 appcast/更新说明 → 个人 tap 状态核对」。所以发版前的准备只有两个动作：改 `build_app.sh` 的 `APP_VERSION`、写 `Changelog/<ver>.html`（中英对照，`+` 新增 / `-` 修复 / `!` 注意，成对排列，末行 `download:` 指向 release tag 的 MacStroke.zip），然后提交推送到 **main**（workflow 硬要求说明页已在 main，且只允许从 main 发版；它不挂 push 触发器）。
 
 ## 架构概览
 
@@ -26,7 +34,7 @@ swift test --list-tests
 
 ### 包结构（Package.swift）
 
-19 个 target（11 个库/可执行 + 8 个测试），下表只列非测试 target：
+21 个 target（12 个库/可执行 + 9 个测试），下表只列非测试 target：
 
 | Target | 作用 | 关键依赖 |
 |--------|------|----------|
@@ -39,8 +47,9 @@ swift test --list-tests
 | `AppleScriptRunner` | 通过 `osascript` 执行 AppleScript | — |
 | `RightClickMenu` | Finder 右键菜单管理 | — |
 | `RemoteControl` | 局域网 TCP 远程控制（原版没有，见下） | `Storage` |
+| `Screenshot` | 冻结帧截图 + 就地注解 + 剪贴板/存盘/贴图三种出口（原版没有，见下） | `Storage`, `RemoteControl` |
 | `FinderSyncExtension` | Finder Sync 扩展（独立 bundle） | `RuleEngine` |
-| `MacStrokeApp` | 主应用可执行文件（accessory policy） | `EventCapture`, `WindowManager`, `Preferences`, `AppleScriptRunner`, `RemoteControl`, `Sparkle` |
+| `MacStrokeApp` | 主应用可执行文件（accessory policy） | `EventCapture`, `WindowManager`, `Preferences`, `AppleScriptRunner`, `RemoteControl`, `Screenshot`, `Sparkle` |
 
 外部依赖：`SQLite.swift`（剪贴板历史）、`Sparkle`（自动更新）。
 
@@ -64,6 +73,7 @@ swift test --list-tests
   - `initRightClickMenu`（RightClickMenuManager 分布式通知 + pluginkit 延迟启用）
   - `initHistoryClipboard`（剪贴板监控 + `ShortcutMonitor` 全局快捷键唤起历史列表，默认 ⌘⌥V，key `historyCilpboardListShortcut` 格式 "keyCode=X, flags=Y"）
   - 远程控制服务生命周期：启动即 `RemoteControlServer.shared.apply()`（读偏好，关着就不监听），并观察 `.macStrokeRemoteControlDidChange` 重新 apply（开关/端口/配对码任一改动都重启监听）
+  - 截图入口三条，全部走 `ScreenshotController.shared.toggle()`（遮罩已摊开时再按一次就是取消）：状态栏菜单「截图」、`ShortcutMonitor` 全局快捷键（key `screenshotShortcut`，默认 `keyCode=0, flags=1179648` = ⌘⇧A，格式与上面 `historyCilpboardListShortcut` 同一套 "keyCode=X, flags=Y"）、规则动作 `.screenshot`。遮罩显示期间 `onActiveStateChanged` 把 `canvasManager.isSuspended = true` 并 `cancelStroke()`，否则在选区里拖一条长箭头会被当成笔画去匹配规则
   - 创建状态栏项目，使用模板图片（`menu_icon_16x16.png` / disabled 版本）
   - 初始化 Sparkle 更新器（沿用原版 appcast；Info.plist 必须带 `SUPublicEDKey`，否则 Sparkle 2 启动即弹致命错误模态框）
 
@@ -76,7 +86,7 @@ swift test --list-tests
 
 - **Sources/RuleEngine/** —
   - `Rule`（`struct`）包含 `GestureTemplate`、`RuleAction`、过滤器（通配符/正则 bundle ID）、`minSimilarityScore`，以及 `spareActions`（`RuleSpareActions`）：原版每条规则同时保存 `text` / `password` / `apple_script_id` / `shortcut_code`+`shortcut_flag` 四类动作值，切换 `actionType` 只改类型不清空其他字段，`spareActions` 就是为此存在（非当前动作类型的值从同名持久化键解出）；编码时只有当前动作类型对应的键会被写出，与原版 `addRuleWithDirection:` 一致
-  - `RuleAction`: `.shortcut(keyCode:flags:)`、`.applescript`、`.text`、`.password`、`.keyPress`、`.mouseClick`、`.copyToClipboard`、`.none`
+  - `RuleAction`: `.shortcut(keyCode:flags:)`、`.applescript`、`.text`、`.password`、`.keyPress`、`.mouseClick`、`.copyToClipboard`、`.screenshot`（移植版新增：`ActionExecutor` 只回调 `onScreenshotRequested?()`，开关落在 App 层，RuleEngine 够不到 Screenshot 模块，反向依赖会把下层拖回 App 层）、`.none`
   - `WildcardMatch.swift`：原版 `utils.m` 的 `wildcardArray` / `wildcardString`，即 `NSPredicate "self LIKE %@"` 语义 —— 整串锚定、`*` 任意串、`?` 单个字符、大小写由两侧 lowercase 实现（不做 trim、不丢弃空片段，因此空 filter 永不匹配）；`BlackWhiteFilter` 与规则 filter 的通配匹配共用此实现（`regex:` 前缀等自创语法已删除）
   - `RuleEngine.match(stroke:bundleID:)` 的 `bundleID` 必传（无 bundle id 时传 `""`，对齐 `frontBundleName()`），**每条规则的 filter 都会参与判定**；遍历**所有**过滤匹配的规则取**最高分**（对齐原版 `setActionIndex`），并接入全局 `enableGestureMinScore` / `minScore`（默认 85）门槛；`appSuitedRule(bundleID:)` 判断某 app 是否有适用规则
   - `RuleStore` 将规则持久化到 `~/Library/Application Support/MacStroke/rules.json`；`defaultRules()` 提供与原版 `RulesList.reInit` 相同的 15 条默认规则（首条 direction 为小写 `password`，description 即 note，带修饰键的 shortcut 动作、Reversed 点序反转模板、text/password 动作）
@@ -94,7 +104,7 @@ swift test --list-tests
 
 - **Sources/Preferences/** —
   - `UserPreferences`（`ObservableObject`）将每个设置绑定到 `PreferencesStorage`（`StorageKey` enum 中的 UserDefaults key）
-  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、RemoteControl、About（9 个：原版的 8 个对齐 `AppPrefsWindowController.setupToolbar`，"远程控制"是移植版新增页，插在 Clipboard 与 About 之间；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
+  - `PreferencesView`（SwiftUI）— 标签页 UI：General、Rules、Filters、AppleScript、RightClick、RightClickMenu、Clipboard、RemoteControl、Screenshot、About（10 个：原版的 8 个对齐 `AppPrefsWindowController.setupToolbar`，"远程控制"与"截图"是移植版新增页，插在 Clipboard 与 About 之间；注意：早期 CLAUDE.md 记录的 7 标签布局与原版代码不符，勿再沿用）
   - 视觉风格参照 macOS 系统设置：`SettingsChrome` 常量 + `SettingsPage` / `SettingsFillingPage`（含表格的页不滚动）+ `SettingsSection` / `SettingsCard` / `SettingsRow` / `TrailingSwitch`；侧栏圆角高亮、灰底页面、白色圆角卡片、左标题右控件
   - 规则表格列（`RulesTable`，视图型 `NSTableView` + `NSViewRepresentable`）：Gesture_Image 84 / Gesture 98 / Type 96 / Action 104 / Filter 138.8515625 / Description 221，行高 84，`usesAlternatingRowBackgroundColors`，最后一列自适应宽度，每格都放一个活控件（原版 `tableViewForRules:row:` 就是 view-based）。Image 列轨迹为空时放 80x25 的 `Draw Gesture` 按钮（texturedSquare，y=28），有轨迹时是 `GestureThumbView`；两者与原版一致——双击/点击都走 `preSetRuleGestureAtIndex:` 语义，即弹出带 68 项预设下拉的"绘制手势！"模态框，选中预设或屏幕画完立刻落库 `gestureData`
   - `GestureThumbView`（RulesTable.swift，NSView）复刻原版 `DrawGesture setPoints:` 的数学：60pt 画布、`zoo = max(w/60, h/60)`、只在短轴居中、整体右下偏移 12pt、逐段渐变 `(0.5t, 0.47+0.53t, 0.9)` 且 `t = i / points.count`（不是 count-1）；非 flipped 视图所以 y 不翻转
@@ -114,6 +124,7 @@ swift test --list-tests
   - 右键菜单页（xib userLabel `RithtClickMenu`）整页只有**一个无标题 box**（`grE-O7-8pa` 上的 "Right Click Menu" 只是 userLabel），所以 Swift 侧不加 `SettingsSection` 标题。主开关没有 `enabled` 绑定；三个子开关各自绑 `enabled → enableRightClickMenu`，而终端下拉 `kKY-rl-9o4` **只有 selectedValue 绑定**——主开关关掉时它依旧可点，因此禁用要逐控件加而不是整卡 `.disabled`。中文取原版译文：`new text file` = 新建文本文档、`copy file path` = 复制路径
   - 剪贴板页：外层 box `vXG-SA-jyX` 也没有标题（"Clipboard Setting" 只是 userLabel），只有内层 `6mQ-De-QqJ` 带真标题 "Storage limit"（本地存储限制）。`keyboard shortcut:` 与 `show history clipboard` 是内层 box 的**兄弟节点**，不属于"本地存储限制"卡。三个数量框在 `awakeFromNib`（AppPrefsWindowController.m:139-158）各配 formatter：置顶 1…9999、总数 1…999999、保存天数 1…9999，越界或非数字解析失败即不改值（原版那个 `textField:shouldChangeCharactersInRange:` 并非 AppKit 代理方法，逐字符过滤实际从未生效，所以 Swift 侧不补）。"显示记录"走进程内 `NotificationCenter`（`.macStrokeShowHistoryClipboard`）：原版经响应链直接调 `showHistoryCilpboardList:`，用分布式通知会广播到同机另一个 MacStroke
   - 远程控制页（`RemoteControlTabView`，移植版新增）：一张设置卡（开关 / 端口 / 配对码 + 重新生成 / 状态）+ 一张扫码卡（190pt 二维码 + 说明 + `Address: ip:port`）。开关**默认关**，关掉时一个端口都不监听，行为回到原版；打开时若还没有配对码就现生成一个 6 位码。端口框改动即校验（黑名单端口回滚并在下方红字提示，见 `lastRejectedPort`）。二维码只在开关打开且有局域网地址时出现，否则是占位灰块，避免让人误以为"能扫就能连"
+  - 截图页（`ScreenshotTabView`，移植版新增）两张卡：「触发」= 快捷键录制框（200x28）+ 手势区块（左图右说明、按钮在最后），「截图」= 自动保存开关、保存位置、窗口吸附、放大镜开关与倍率。各项**只管写库**：快捷键由 App 层观察 UserDefaults 变化重新挂载，其余几项每次会话开始时现取一份 `ScreenshotSettings.current()` 快照，所以不发通知 —— 改完下一次生效，正铺着的遮罩不会被中途改坏。手势不一样，它就是一条动作类型为「截图」的普通规则，规则表才是存放处，这一页只替用户把规则建好/录好（`installScreenshotRule()`），最低分与应用过滤仍回规则页改
   - 关于页只有 Sparkle 两个开关 + Version/Check Now/issues + Author + README.html WebView；原版是 `LSUIElement` 常驻 accessory 应用，主菜单（`MainMenu.xib` 里那套 "About MenuBarApp" 模板残留）**永远不会显示**，因此标准关于面板与 Credits.rtf 无需移植
 
 - **Sources/Storage/** —
@@ -137,6 +148,18 @@ swift test --list-tests
   - `RemotePairing` / `RemoteQRCode` — 配对串是 `macstroke://pair?host=…&port=…&token=…`（不用小程序码：那要求已发布的 appid 加服务端换码），二维码由 `CIQRCodeGenerator` 生成、校正级别 M
   - 默认关：`StorageDefaults.enableRemoteControl = false`，且这三个键**不进** `resetToDefaults()`（原版的 `DefaultPreferences.plist` 没有它们）
   - 小程序端在同级仓库 `/Users/mtjo/work/MacStroke-Mini`（uni-app）
+
+- **Sources/Screenshot/** — 冻结帧截图（移植版新增，原版没有任何截图功能；参照微信/QQ/钉钉的手感）：
+  - `ScreenshotController` — 单例，唯一入口 `toggle()`（遮罩已摊开时再触发一次就是取消，菜单/快捷键不留成死键）。链路：权限门 → `ScreenshotGrabber` 抓一帧 + 同拍抓一份窗口表 → 铺遮罩 → 出图。反向依赖一律不写：它只暴露 `onActiveStateChanged`（App 层据此挂起 `CanvasManager`）与 `onOutcome`（Toast 在 WindowManager，不让下层反依赖它）。`deliver` 开始就把会话开头那份 `ScreenshotSettings` 快照用到底，用户在遮罩里选区的几秒钟去改偏好也不影响这一张图的去处
+  - `ScreenshotFrame` — 「先冻结一帧」而不是实时透屏：选得准（拖的过程中内容不变），自家半透明遮罩也天然不会被截进去；代价是定格之后那一瞬的变化截不到，这代价所有同类工具都在付。不用 ScreenCaptureKit（要的是整块屏的原图像素，SCStream 异步回调 + 每设备一条代理链，为一帧静图不值当）。**没授权时 `CGDisplayCreateImage` 不报错，只给一张干净壁纸**，所以权限必须单独 preflight，并给一条直接跳到该系统设置面板的路（`CGRequestScreenCaptureAccess` 只在系统还没问过时会弹框，进过列表——包括拒绝态——之后就静默返回 false）
+  - `ScreenshotOverlay` — 全屏 `.borderless` 窗，level 用 `CGShieldingWindowLevel()`；contentView 是 **flipped** 视图，所以视图坐标 == 位图坐标，注解坐标不需要再换算。选与改都在这一层（`phase = picking / editing`），选区内不再有任何遮罩。八个把手（`handleSize 7` / `handleSlop 8`，角优先命中）先于画注解判定。键盘：Esc 在裁剪态先退掉这一刀否则整场取消、Return/小键盘 Enter 出图或把悬停的窗口收成选区、Delete/Backspace 退一条注解、⌘Z/⌃Z 撤销 ⇧⌘Z 重做、⌘C 复制放大镜那一点的色值（进编辑态后放大镜收起，这条自然落回 super，不抢文字框的复制）。`.accessory` 应用不 `NSApp.activate` 就当不成 key 窗，Esc/回车会全丢
+  - `ScreenshotToolbar` — 选区下沿 8pt 的一条自绘胶囊条（23 格、`preferredWidth` 791pt），可以整条拖走，拖过之后位置只在这一块选区里有效（换选区回到跟块的默认位）。图标全部自绘。**系统 `NSView.toolTip` 在这里不可用**：它的面板是另一扇窗，层级低于遮罩那扇 shielding 窗，永远看不见 —— 悬停提示必须自绘在遮罩内部，气泡 `hitTest` 返回 `nil`（纯装饰，不能吃掉它压住的那一片点击）。调色板与线宽同理不能用语义色：`.systemRed` 那组是随外观换档的动态色，而选中的色值会被带进注解合成写进成品 PNG，于是「条子上挑的红」和「图里的红」按各自上下文解析成两种红，所以 5 档全部写死 sRGB
+  - `ScreenshotMagnifier` — 像素取景框 + 十字线 + 该点坐标与色值（1:1 铺的遮罩在 Retina 上根本看不出光标对着哪个像素，取色也只有这一个入口）。只读**已经定格的那一帧**，绝不重新抓屏（同源才不会错位，抓屏是权限操作不该跟着鼠标每动一下来一次）；面板尺寸不随倍率变，改 4/8/16× 时不会突然变大挡路
+  - `ScreenshotWindowProbe` — 悬停吸附的数据源。坐标系是这里唯一的坑：`kCGWindowBounds` 以**主屏左上角**为原点 y 向下，遮罩视图以**当前那块屏**左上角为原点 y 向下，副屏 `frame.origin` 可正可负、还可能在主屏上方，既要减屏偏移也要补主屏高度差（见 `viewRect(fromGlobalBounds:)`）。窗口表只在定格那一帧取一次，之后不刷新
+  - `ScreenshotAnnotation` — 七种工具 `.rect/.ellipse/.arrow/.pen/.text/.mosaic/.number`；一条注解不可变，撤销就是 `removeLast`。画笔轨迹按 `penMinDistance` 抽稀（一次拖动能报几百个点，全收进来绘制/撤销/导出三条路径都变慢而肉眼无差别）。马赛克是「缩小 1/block 再关插值放大回去」，方块边长按**像素**算——打码效果取决于分辨率，跟用户拖了多少点无关
+  - `ScreenshotPin` — 图钉贴图：`borderless` + `.floating`（要压在别的 App 之上，但不能高到挡住菜单栏和系统提示），可拖、滚轮缩放、双击或 Esc 收，能同时钉多张（`ScreenshotPinBoard` 强持有每一扇窗，否则 orderOut 后随时被回收）。内容自绘而不是 `NSImageView`：离屏取证只重放 `draw(_:)`，imageView 的 `imageScaling` 不在里面
+  - `ScreenshotOCR` — 「提取文字」只做薄薄一层：Vision 本地推理、不联网、不引第三方依赖，识别的是**合成之后**那张图（和复制出去的同一张），所以用户手写的文字注解也一起能认出来；不建结果面板。「这块没字」和「引擎没跑成」分两条报，否则换个选区重来也无从判断。macOS 13 水位线下 `VNRecognizeTextRequest`/`revision3`/zh-Hans 全部够用，整份代码不需要 availability 判断
+  - **许可**：可参照的同类开源实现（macshot 等）是 GPL，**不能粘代码**，只能对行为
 
 - **Sources/FinderSyncExtension/FinderSync.swift** — `FIFinderSync` 子类：
   - 工具栏项目，使用 `toolbarIcon` 图片
@@ -169,10 +192,11 @@ swift test --list-tests
 
 ### 测试
 
-- 8 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`、`RemoteControlTests`
-- `swift test` 当前 314 个用例，308 通过；剩下 6 个是本机 macOS 27 环境下的既有失败，与改动无关（已在干净的 `464cd26` worktree 上逐条复现过同样的失败）：`PreferencesTabNavigationTests` 的 `testFreshWindowOpensOnTheRequestedTab` / `testNotificationMovesTheHighlightOfAnAlreadyOpenWindow`、`ShortcutRecorderAppearanceTests.testLightSchemePageKeepsLightBackgroundWhenHostedBySwiftUI`、`HistoryClipboardPanelInteractionTests.testEscapeInResultListClosesPanel`、`RemoteControlServerE2ETests` 的 `testDroppingWhileHoldingReleasesTheButton` / `testScrollPostsAWheelEventWithTheGivenDelta`。远程控制有两条会碰真机状态的用例：`RemoteControlServerE2ETests` 真的在 48849 端口起监听并用 TCP 客户端走协议，`testMoveActuallyRelocatesTheCursor` 会**真的挪动光标** ±40/30 再挪回去，`testDroppingWhileHoldingReleasesTheButton` 会**真的按住左键再断开**（跑的时候别把手放在触摸板上、光标底下别摆着会误点的窗口）。取证判据是临时挂一个 `.listenOnly` 的 CGEvent tap 数左键 down/up —— `CGEventSource.buttonState(.combinedSessionState, button:)` 在 XCTest 宿主里恒为 false（那个进程没有 GUI 连接），拿它当判据会假绿；同样的读法在普通命令行工具里是准的。
+- 9 个测试 target（每个库一个）：`GestureEngineTests`、`EventCaptureTests`、`RuleEngineTests`、`StorageTests`、`WindowManagerTests`、`AppleScriptRunnerTests`、`RightClickMenuTests`、`RemoteControlTests`、`ScreenshotTests`
+- `swift test` 当前 458 个用例、0 失败，1 个按环境条件主动 skip（离屏渲染比例不符，或测试进程缺屏幕录制/辅助功能授权）。早期记录的 6 个「本机环境既有失败」（偏好窗口标签页 2、快捷键录制浅色 1、粘贴板 Esc 1、远程控制真机注入 2）现已全部通过，不要再照抄那份清单。远程控制有两条会碰真机状态的用例：`RemoteControlServerE2ETests` 真的在 48849 端口起监听并用 TCP 客户端走协议，`testMoveActuallyRelocatesTheCursor` 会**真的挪动光标** ±40/30 再挪回去，`testDroppingWhileHoldingReleasesTheButton` 会**真的按住左键再断开**（跑的时候别把手放在触摸板上、光标底下别摆着会误点的窗口）。取证判据是临时挂一个 `.listenOnly` 的 CGEvent tap 数左键 down/up —— `CGEventSource.buttonState(.combinedSessionState, button:)` 在 XCTest 宿主里恒为 false（那个进程没有 GUI 连接），拿它当判据会假绿；同样的读法在普通命令行工具里是准的。
+- 截图的取证一律离屏：用 `pointer*` 方法喂点坐标驱动状态机（NSEvent 造不出来），再用 `bitmapImageRepForCachingDisplay` + `cacheDisplay` 烘成位图逐像素判定，PNG 落 `/tmp/macstroke-screenshot-check` 肉眼复核。两条硬规矩：① 判据的阈值必须由测量跑出来，且写死外观或量**绝对偏差**，只写「看起来对」的断言等于没测；② 每条新断言都要**改坏实现去验它会红**（mutation），配不上红的断言要么删掉要么换成独立声明的判据 —— 两个都读同一字段的取值方法互相验不出对方（悬停提示那条就是这么被发现的：把两格文案对调，走 `tipsOnBar` 与 `tip(atOverlayPoint:)` 各自读一遍照样全绿）。`NSView.hitTest` 收的是**父视图坐标**，flipped 视图里直接拿视图坐标去问会落到上下镜像的位置上，那条判断恒真；正确写法是 `view.convert(p, to: nil)` 之后向 `window.contentView` 问。
 - 用 `UserDefaults(suiteName:)` 的测试**必须**把 suite 名存成实例变量并在 tearDown 里删掉 `~/Library/Preferences/<suite>.plist`：`removePersistentDomain(forName:)` 只清空域、不删文件，而计算属性里的 `UUID` 会让 setUp/tearDown 拿到两个不同名字，等于每跑一次留一个 plist（`LegacyRulesImportTests` 曾这样攒过 75 个）。
 
 ### 仓库中不存在的文件
 
-未发现现有的 `CLAUDE.md`、`.cursor/rules/`、`.cursorrules` 或 `.github/copilot-instructions.md`。
+没有 `.cursor/rules/`、`.cursorrules` 或 `.github/copilot-instructions.md`；`.github/` 下只有 `workflows/release.yml`。本文件（`CLAUDE.md`）就是唯一的开发指导文档。
