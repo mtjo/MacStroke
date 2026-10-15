@@ -1,0 +1,31 @@
++ Screenshots: the status bar menu gains "Screenshot", or press ⌘⇧A. What you select on is a frozen frame, so a page can't reflow under the cursor mid-drag, and the frame's edges snap to the windows in that frame
++ 新增截图：状态栏菜单多出「截图」，也可以直接按 ⌘⇧A。遮罩是冻结住的一帧，拖选框时网页不会再在你手底下重新排版；框边会自动吸附这一帧里的窗口边缘
+
++ Edit in place: a bar floats under the selection with seven tools — rectangle, ellipse, arrow, freehand pen, text, auto-numbered callouts, mosaic — plus 5 colors, 3 line widths, undo/redo, eight handles to resize the frame itself, and a crop button to re-frame a tighter area inside what you already picked. Drag the bar wherever you want; parking the cursor on an icon pops a tip saying what it does. Rectangles get a slight round corner, and while you drag a mosaic block a thin blue outline tracks its edge so you can see where it ends — it goes away the moment you let go, so it never lands in the exported image
++ 选完就地改：选区下沿浮着一条注解条，七种工具（矩形、椭圆、箭头、画笔、文字、自动排号的序号、马赛克打码）、5 档颜色、3 档线宽、撤销与重做，选区本身有八个把手可以直接改大小，另有一枚「裁剪」在已选好的块里再框一刀。条子可以拖到任何位置，光标停在图标上会弹出这一格是干什么的。方形标记带一点圆角；拖打码块时有一圈细蓝线跟着边界走，这块到哪为止看得出来，一松手就收掉，不会跟着进成品图
+
++ Three ways out: double-click, Return or the copy icon puts the image on the clipboard; the save icon writes a PNG; the pin icon leaves that crop floating on your screen as an always-on-top window — drag it anywhere, scroll to resize it, double-click to dismiss, pin several at once
++ 出图三个出口：双击、回车或「复制」把图送进剪贴板；「存文件」写成 PNG；「图钉」把这一块钉成置顶小窗 —— 可以随手拖走、滚轮缩放、双击收起，也能同时钉好几张
+
++ Extract text: the OCR icon runs Vision over the selection and puts the recognized lines on the clipboard. "Nothing readable in here" and "the engine failed" are two different messages, so re-dragging the frame actually tells you something
++ 「提取文字」用 Vision 认选区里的文字，认出来的行直接进剪贴板。「这块没字」和「识别没跑成」分两条报，换个选区再来一次才看得出差别
+
++ Magnifier while you drag: a zoomed pixel patch follows the cursor with that point's coordinates and color, and ⌘C inside the overlay copies the color value. 4×/8×/16×, or turn it off entirely
++ 拖选时带放大镜：跟随光标的像素取景框，同时报这一点的坐标与色值，遮罩里按 ⌘C 就把色值复制走。倍率 4/8/16 可换，也可以整个关掉
+
++ Gesture trigger: rules gain a "Screenshot" action. Upgrading adds one rule named Screenshot bound to the preset S gesture — once only, delete it and it stays deleted. It runs through the normal matching pipeline, so the per-app filter and the minimum score apply to it like any other rule
++ 手势触发截图：规则的动作多一种「截图」。升级时自动补一条名为 Screenshot、绑在预设手势 S 上的规则，只补一次，你删掉它就不会再复活。它走的还是原来那套匹配管线，应用过滤与最低分数照常对它生效
+
++ Preferences gains a "Screenshot" page: shortcut recorder, the gesture block, default save location, auto-save (every finished shot also lands on disk, not just in the clipboard), window snapping, magnifier switch and zoom, and which tool gets armed the moment the frame lands — off by default, so nothing is pre-armed and dragging inside the frame still moves the whole block
++ 偏好设置多出「截图」一页：快捷键录制框、手势区块、默认保存位置、自动保存（每张图除了进剪贴板还直接落盘）、窗口吸附、放大镜开关与倍率，还有框选落定后预先装上哪一格工具 —— 默认关闭：不预装，选区内拖动还是整块平移
+
+! Screenshots need Screen Recording permission. macOS only asks once — after you've clicked "Don't Allow" it silently hands back a wallpaper-only frame, so MacStroke checks for itself first and shows a button straight to that settings pane
+! 截图需要屏幕录制授权。系统只主动问一次，点过「不允许」之后它静默返回一张只有壁纸的图，所以 MacStroke 先自己查，没授权就直接给一个跳到该系统设置面板的按钮
+
+! While the overlay is up, gesture capture is suspended: dragging a long arrow must not be matched as a stroke. Pressing the shortcut (or the menu item) again cancels the shot instead of doing nothing. Delete/Backspace peels off one annotation, ⌘Z undoes, ⇧⌘Z redoes, and Esc steps out of cropping before it quits the whole shot
+! 遮罩摊开期间手势捕获挂起：拖一条长箭头不该被当成笔画去匹配规则；快捷键或菜单再按一次是取消这次截图，而不是没反应。删除/退格退掉一条注解，⌘Z 撤销、⇧⌘Z 重做，正在裁剪时 Esc 先退掉这一刀而不是把整个截图丢掉
+
+! Annotation colors are now hard-coded sRGB values instead of the system's dynamic red/yellow/green: the swatch you pick on the bar and the pixel written into the PNG can no longer drift apart between light and dark appearance
+! 注解颜色改成写死的 sRGB 值，不再用系统那组动态的红/黄/绿：条子上挑的色块和写进 PNG 的像素，不会再在浅色与深色桌面下解析成两种颜色
+
+download: https://github.com/mtjo/MacStroke/releases/download/3.1.4/MacStroke.zip
