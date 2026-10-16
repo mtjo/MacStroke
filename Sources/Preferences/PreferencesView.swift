@@ -41,6 +41,8 @@ public enum PreferencesTab: String, CaseIterable {
     // 移植版新增页（超出原版）：手机小程序远程控制，放在粘贴板与关于之间。
     case remoteControl
     // 移植版新增页（超出原版）：截图的落地方式，跟在远程控制后面。
+    // 移植版新增页（超出原版）：截图、滚动截图、录屏的落地方式，跟在远程控制后面。
+    // 页名和状态栏那一条用同一个 key（截图/录屏），两处不一致会让人以为偏好里少了一页。
     case screenshot
     case about
 
@@ -54,7 +56,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .rightClickMenu: return L("RightClickMenu")
         case .clipboard: return L("Clipboard")
         case .remoteControl: return L("Remote Control")
-        case .screenshot: return L("Screenshot")
+        case .screenshot: return L("Screenshot or record")
         case .about: return L("About")
         }
     }
@@ -152,6 +154,13 @@ struct ShortcutRecorder: NSViewRepresentable {
             text = "keyCode=\(code), flags=\(flags)"
             onShortcutChanged?(text)
         }
+        // 置空写成空串：`"keyCode=0, flags=0"` 能解析成一个真实的键（0 就是 A），
+        // 快捷键监听会照挂，那等于把用户的 A 键全局吞掉。空串解析不出任何东西，
+        // 消费端（AppDelegate / WindowManager）走的是「停掉监听」那条分支。
+        view.onClear = {
+            text = ""
+            onShortcutChanged?("")
+        }
         return view
     }
 
@@ -162,11 +171,15 @@ struct ShortcutRecorder: NSViewRepresentable {
         }
         // Sync external changes (reset to defaults etc.) into the view
         // while the user is not actively recording.
-        if !nsView.isRecording, let parsed = Self.parse(text) {
-            if nsView.keyCode != parsed.keyCode || nsView.flags != parsed.flags {
-                nsView.keyCode = parsed.keyCode
-                nsView.flags = parsed.flags
-            }
+        guard !nsView.isRecording else { return }
+        let parsed = Self.parse(text)
+        // 解析不出来就是「已清除」，视图里那份旧值也得跟着抹掉；只认有值的那条分支
+        // 会让清除后的框继续显示 ⌘⇧A，而偏好里已经存了空串。
+        let keyCode = parsed?.keyCode ?? 0
+        let flags = parsed?.flags ?? 0
+        if nsView.keyCode != keyCode || nsView.flags != flags {
+            nsView.keyCode = keyCode
+            nsView.flags = flags
         }
     }
 

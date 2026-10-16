@@ -99,6 +99,77 @@ final class ScreenshotSettingsTests: XCTestCase {
         }
     }
 
+    // MARK: - 录屏 / 长截图
+
+    /// 全新安装时这两档的默认值。帧率 30 是「够看又不把盘写爆」，10 屏是「一屏长页面的
+    /// 常见倍数」；步长 100 点是拿拼接判据实测出来的档位（小了帧数爆炸、大了容易跳过头）。
+    func testRecordAndScrollDefaultsOnFreshInstall() {
+        let current = settings()
+        XCTAssertEqual(current.recordFrameRate, 30)
+        XCTAssertEqual(current.recordMaxSeconds, 600)
+        XCTAssertTrue(current.recordCursor, "录操作演示时指针就是要进画面，默认开")
+        XCTAssertEqual(current.scrollStep, 100)
+        XCTAssertEqual(current.scrollMaxScreens, 10)
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotRecordFrameRate.rawValue),
+                     "没打开过这一页就不该往库里写值")
+    }
+
+    func testRecordAndScrollValuesAreReadBack() {
+        let defaults = isolatedSuite()
+        defaults.set(60, forKey: StorageKey.screenshotRecordFrameRate.rawValue)
+        defaults.set(30, forKey: StorageKey.screenshotRecordMaxSeconds.rawValue)
+        defaults.set(false, forKey: StorageKey.screenshotRecordCursor.rawValue)
+        defaults.set(50, forKey: StorageKey.screenshotScrollStep.rawValue)
+        defaults.set(40, forKey: StorageKey.screenshotScrollMaxScreens.rawValue)
+
+        let current = settings()
+        XCTAssertEqual(current.recordFrameRate, 60)
+        XCTAssertEqual(current.recordMaxSeconds, 30)
+        XCTAssertFalse(current.recordCursor)
+        XCTAssertEqual(current.scrollStep, 50)
+        XCTAssertEqual(current.scrollMaxScreens, 40)
+    }
+
+    /// `defaults` 是能被手改的（`defaults write`、别的版本留下的值），而这三条越界都会
+    /// 砸在实况采集那一头上：帧率 0 让 `CMTime(timescale: 0)` 当场崩，步长 0 每轮抓到
+    /// 同一帧、被认成「到底了」，几屏 0 让长截图一张都接不上。所以夹到档位边界而不是信它。
+    func testOutOfRangeRecordAndScrollValuesAreClamped() {
+        let defaults = isolatedSuite()
+        defaults.set(0, forKey: StorageKey.screenshotRecordFrameRate.rawValue)
+        defaults.set(100_000, forKey: StorageKey.screenshotRecordMaxSeconds.rawValue)
+        defaults.set(-5, forKey: StorageKey.screenshotScrollStep.rawValue)
+        defaults.set(9999, forKey: StorageKey.screenshotScrollMaxScreens.rawValue)
+
+        let current = settings()
+        XCTAssertEqual(current.recordFrameRate, ScreenshotSettings.frameRateRange.lowerBound)
+        XCTAssertEqual(current.recordMaxSeconds, ScreenshotSettings.maxSecondsRange.upperBound)
+        XCTAssertEqual(current.scrollStep, ScreenshotSettings.scrollStepRange.lowerBound)
+        XCTAssertEqual(current.scrollMaxScreens, ScreenshotSettings.scrollMaxScreensRange.upperBound)
+    }
+
+    /// 下拉框给的每一档都必须在夹取范围里：页面上能选、读出来却被夹成别的那个值，
+    /// 用户会以为设置没生效。这四组就是 `ScreenshotTabView.Options` 里那四组档位
+    /// （页面上的私有 enum 够不着，加档时记得两边对一遍）。
+    func testPreferenceChoicesAllSurviveTheClamp() {
+        for rate in [15, 24, 30, 60] {
+            XCTAssertEqual(ScreenshotSettings.clamped(rate, low: ScreenshotSettings.frameRateRange.lowerBound,
+                                                      high: ScreenshotSettings.frameRateRange.upperBound), rate)
+        }
+        for seconds in [60, 300, 600, 1800] {
+            XCTAssertEqual(ScreenshotSettings.clamped(seconds, low: ScreenshotSettings.maxSecondsRange.lowerBound,
+                                                     high: ScreenshotSettings.maxSecondsRange.upperBound), seconds)
+        }
+        for step in [50, 100, 200] {
+            XCTAssertEqual(ScreenshotSettings.clamped(step, low: ScreenshotSettings.scrollStepRange.lowerBound,
+                                                     high: ScreenshotSettings.scrollStepRange.upperBound), step)
+        }
+        for screens in [5, 10, 20, 40] {
+            XCTAssertEqual(ScreenshotSettings.clamped(screens,
+                                                     low: ScreenshotSettings.scrollMaxScreensRange.lowerBound,
+                                                     high: ScreenshotSettings.scrollMaxScreensRange.upperBound), screens)
+        }
+    }
+
     // MARK: - 保存位置的三级回退
 
     func testEmptySelectionMeansDesktop() {

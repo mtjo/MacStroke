@@ -9,6 +9,12 @@
 //  回车或条子上的图标。曾经试过「选完收遮罩、另开编辑窗改」，实测多一次窗口的代价是
 //  改一张图要来回切注意力，用户明确要求回到就地编辑。
 //
+//  屏顶那条模式条（截图 / 滚动截图 / 录屏 / 文字识别）决定选区落定之后干什么，分流点
+//  在遮罩的 `routeAfterSelection()`。后两档是**实况采集**，机制和冻结帧相反：遮罩必须
+//  收掉、屏幕还给被截的那个 App，只留一圈描边和控制胶囊（`ScreenshotLivePanel`），然后
+//  由这里驱动滚动拼接循环（`ScreenshotScrollCapture`）或录像会话（`ScreenshotRecorder`）。
+//  所以这个类同时管着两种会话的生命周期，`toggle()` 也得认出「现在是在选区里还是在实况里」。
+//
 //  入口只有一个 `toggle()`：状态栏菜单、以后的快捷键和手势都走这里。会话期间
 //  用回调通知 App 层挂起手势捕获 —— Screenshot 够不到 CanvasManager，反向依赖
 //  会把模块拖回 App 层。
@@ -38,6 +44,10 @@ public enum ScreenshotOutcome {
     /// 这块里没字 —— 和下面「引擎没跑成」分开给，否则换选区还是报障都无从判断。
     case textNotFound
     case textFailed(reason: String)
+    /// 录屏落盘成功（长截图复用上面的 `.copied` 那几支：它就是一张很高的 PNG）。
+    case videoSaved(file: String, seconds: TimeInterval)
+    /// 实况采集这一场没成：抓帧失败、编码器起不来、或者一帧都没录到。
+    case captureFailed(reason: String)
 }
 
 public final class ScreenshotController {
@@ -52,10 +62,27 @@ public final class ScreenshotController {
 
     public var isActive: Bool { window != nil }
 
+    // MARK: - 实况采集（滚动截图 / 录屏）
+
+    /// 浮层（描边 + 控制胶囊）。和下面两个会话同生同死，所以只有一份。
+    private var live: ScreenshotLivePanel?
+    private var scroll: ScreenshotScrollCapture?
+    private var recorder: ScreenshotRecorder?
+    /// 这一场录屏正在写的那个文件：取消时按它删掉半成品，所以得单独留着。
+    private var recordURL: URL?
+    /// 收带中（点过停止、文件还没闭合）：这期间再按一次停止要当没听见。
+    private var finishingLive = false
+
+    /// 正在录屏或长截图：`toggle()` 用它决定「停下来出图」还是「摊开遮罩」。
+    public var isLiveCapturing: Bool { live != nil }
+
     private init() {}
 
     /// 再按一次就是取消：菜单/快捷键在遮罩已经摊开时不该什么反应都没有。
+    /// 实况采集期间这一下是「停止并出图」而不是「丢掉」—— 录了半天的东西被一次
+    /// 肌肉记忆的快捷键清空，是最糟的一种取消。
     public func toggle() {
+        if isLiveCapturing { finishLive(); return }
         isActive ? cancel() : start()
     }
 
@@ -86,6 +113,10 @@ public final class ScreenshotController {
             if case .lines = outcome { self?.close() }
             self?.deliverText(outcome)
         }
+        view.onLiveCapture = { [weak self] mode, viewRect, screenRect in
+            self?.beginLive(mode: mode, viewRect: viewRect, screenRect: screenRect,
+                            screen: screen, settings: settings)
+        }
 
         let window = ScreenshotOverlayWindow(screenFrame: screen.frame)
         window.contentView = view
@@ -96,9 +127,13 @@ public final class ScreenshotController {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(view)
+        // 模式条要在窗挂好、`view.window.screen` 读得到之后才摆：它得量菜单栏在这一块屏
+        // 里占多高才知道自己该贴哪儿。
+        view.showModeBar()
     }
 
     public func cancel() {
+        if isLiveCapturing { cancelLive(); return }
         close()
     }
 
@@ -108,6 +143,166 @@ public final class ScreenshotController {
         window.orderOut(nil)
         window.close()
         onActiveStateChanged?(false)
+    }
+
+    // MARK: - 实况采集（滚动截图 / 录屏）
+
+    /// 遮罩收掉到起采集之间等的一拍，理由见 `beginLive`。
+    static let overlaySettle: TimeInterval = 0.3
+
+    /// 遮罩收了、屏幕还给被截的那个 App，浮层摆出来，再按档位起对应的采集会话。
+    /// 调用方（遮罩）已经把模式条收掉并把选区交过来。
+    private func beginLive(mode: ScreenshotMode, viewRect: CGRect, screenRect: NSRect,
+                           screen: NSScreen, settings: ScreenshotSettings) {
+        close()
+        // 遮罩没了不等于会话结束：长截图往底下那个 App 里注入滚轮，录屏期间用户一次
+        // 右键拖拽就能把整段录像带跑。手势捕获继续挂起到这一场收尾。
+        onActiveStateChanged?(true)
+        let panel = ScreenshotLivePanel(region: screenRect, visible: screen.visibleFrame,
+                                        kind: mode == .record ? .record : .scroll)
+        panel.onAction = { [weak self] action in
+            switch action {
+            case .finish: self?.finishLive()
+            case .cancel: self?.cancelLive()
+            }
+        }
+        panel.present()
+        live = panel
+        // 遮罩是刚刚 orderOut 的，而窗口服务是另一个进程：这一两帧里它可能还挂在屏上。
+        // 抢在这之前起采集，长截图的第一屏和录像的头几帧会把遮罩自己拍进去（那扇窗没有
+        // `sharingType = .none`，和描边/胶囊不一样，抓屏 API 照样看得见它），投出去的
+        // 第一下滚轮也可能落在它身上 —— 而第一下没落地，整场就按「画面一动没动」收场了。
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.overlaySettle) { [weak self, weak panel] in
+            // 这一拍里用户可能已经按了取消（浮层收掉、live 置空）：那就别再把采集起起来。
+            guard let self, let panel, self.live === panel else { return }
+            if mode == .record {
+                self.startRecord(viewRect: viewRect, screen: screen, settings: settings)
+            } else {
+                self.startScroll(viewRect: viewRect, screen: screen, settings: settings)
+            }
+        }
+    }
+
+    private func startScroll(viewRect: CGRect, screen: NSScreen, settings: ScreenshotSettings) {
+        let capture = ScreenshotScrollCapture(screen: screen, region: viewRect)
+        // 偏好在会话开始时已经取成快照（这一场中途改偏好不影响它），并且夹过了范围。
+        capture.pointsPerStep = CGFloat(settings.scrollStep)
+        capture.maxScreens = settings.scrollMaxScreens
+        capture.onReadout = { [weak self] text in self?.live?.update(readout: text) }
+        capture.onOutcome = { [weak self] outcome in
+            guard let self else { return }
+            switch outcome {
+            case .composed(let image, let appended):
+                self.endLive()
+                guard appended > 0 else {
+                    // 一段都没接上：出图就等于一张普通截图，报「已复制 1920×300」用户只会
+                    // 认为长截图坏了。这条路上的图不进剪贴板，直接把原因说给他。
+                    self.onOutcome?(.captureFailed(reason: L("Screenshot scroll nothing moved")))
+                    return
+                }
+                // 长截图的出口和注解条上那枚绿✓一致：进剪贴板，开了自动保存再落一张 PNG。
+                // 它没有贴图那一路（一张两万行的图钉在屏幕上没法看），所以 screenRect 用不上。
+                self.deliver(image, output: .copy, settings: settings, screenRect: .zero)
+            case .failed(let reason):
+                self.endLive()
+                self.onOutcome?(.captureFailed(reason: reason))
+            }
+        }
+        scroll = capture
+        capture.start()
+    }
+
+    private func startRecord(viewRect: CGRect, screen: NSScreen, settings: ScreenshotSettings) {
+        guard let displayID = ScreenshotGrabber.displayID(for: screen) else {
+            endLive()
+            onOutcome?(.captureFailed(reason: L("Screenshot record no display")))
+            return
+        }
+        let url = settings.videoURL()
+        let machine = ScreenshotRecorder()
+        machine.frameRate = Int32(settings.recordFrameRate)
+        machine.maxSeconds = TimeInterval(settings.recordMaxSeconds)
+        machine.capturesCursor = settings.recordCursor
+        machine.onTick = { [weak self] seconds in
+            self?.live?.update(readout: Self.duration(seconds))
+        }
+        // 录制中途编码器废掉时走这条（用户还没按停止）：不收浮层的话它会一直挂在屏幕上，
+        // 而用户看到的是「时间不走、点停止也没视频」。
+        machine.onFailure = { [weak self] reason in
+            guard let self else { return }
+            self.endLive()
+            self.onOutcome?(.captureFailed(reason: reason))
+        }
+        let crop = ScreenshotRecorder.cropRect(viewRect: viewRect, screenHeight: screen.frame.height)
+        machine.start(displayID: displayID, cropRect: crop, url: url) { [weak self] reason in
+            guard let self else { return }
+            if let reason {
+                self.endLive()
+                self.onOutcome?(.captureFailed(reason: reason))
+                return
+            }
+            self.live?.update(readout: Self.duration(0))
+        }
+        recordURL = url
+        recorder = machine
+    }
+
+    /// 停止并出图。录屏这条路要等文件写完才收浮层 —— 否则提示都报「已保存」了，
+    /// 盘上还是半个没闭合的 mp4。
+    private func finishLive() {
+        guard scroll == nil else {
+            // 长截图的收场由 capture 自己的 onOutcome 报（它得先把各段铺成长图）。
+            scroll?.stop()
+            return
+        }
+        // 收带那几百毫秒里再按一次停止：什么都不做。修复前这一按会走下面的
+        // `guard let recorder`（recorder 已经撒手了）把胶囊提前收掉，用户以为没录上。
+        guard !finishingLive else { return }
+        guard let recorder else { endLive(); return }
+        finishingLive = true
+        self.recorder = nil
+        recorder.stop { [weak self] outcome in
+            guard let self else { return }
+            self.endLive()
+            switch outcome {
+            case .saved(let url, let seconds):
+                self.onOutcome?(.videoSaved(file: url.lastPathComponent, seconds: seconds))
+            case .empty:
+                self.onOutcome?(.captureFailed(reason: L("Screenshot record empty")))
+            case .failed(let reason):
+                self.onOutcome?(.captureFailed(reason: reason))
+            }
+        }
+    }
+
+    /// 丢掉这一场。录屏要先停会话让文件闭合，再把那个 mp4 删掉：留一个用户明确不要的
+    /// 半成品在下载目录里，比浮层多挂几百毫秒糟。
+    private func cancelLive() {
+        if let recorder {
+            self.recorder = nil
+            let doomed = recordURL
+            recorder.stop { _ in if let doomed { try? FileManager.default.removeItem(at: doomed) } }
+        }
+        scroll?.cancel()
+        endLive()
+    }
+
+    private func endLive() {
+        live?.dismiss()
+        live = nil
+        scroll = nil
+        recorder = nil
+        recordURL = nil
+        finishingLive = false
+        onActiveStateChanged?(false)
+    }
+
+    /// 胶囊上的时长读数：`分:秒`，秒补零。读数宽度决定胶囊多宽，所以格式得稳
+    /// （`1:05` 和 `12:34` 都占五位，不会每秒把浮层抖一下宽度）。App 层的提示气泡
+    /// 用同一个读法报录像时长，两边不该各写一份格式化。
+    public static func duration(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded(.down))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     // MARK: - 输出

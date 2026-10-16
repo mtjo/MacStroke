@@ -56,6 +56,47 @@ public final class ShortcutRecorderView: NSView {
     /// Callback when shortcut recording completes.
     var onShortcutChanged: ((UInt16, UInt) -> Void)?
 
+    /// Callback when the user clears the field with the trailing button (issue #72).
+    /// 空值怎么写由宿主决定：偏好页必须写空串，因为 `"keyCode=0, flags=0"` 能被解析成
+    /// 一个真实的键（keyCode 0 就是 A），消费端会去挂一只「裸按 A」的全局监听。
+    var onClear: (() -> Void)?
+
+    /// 规则页的动作格复用同一个视图，但那里的「空」在模型里是「按下 A」而不是「没有」，
+    /// 所以那一格把清除按钮关掉。
+    public var showsClearButton = true {
+        didSet { needsDisplay = true }
+    }
+
+    static let clearButtonDiameter: CGFloat = 14
+    static let clearButtonTrailingInset: CGFloat = 6
+
+    /// 框内右端的清除按钮位置。视图是 flipped 的，但按钮水平居中于自身、上下对称，
+    /// 所以这套几何在两种坐标方向下读起来一样。
+    public static func clearButtonRect(for bounds: NSRect) -> NSRect {
+        let d = clearButtonDiameter
+        return NSRect(x: (bounds.maxX - clearButtonTrailingInset - d).rounded(),
+                      y: (bounds.midY - d / 2).rounded(),
+                      width: d, height: d)
+    }
+
+    public func clearButtonRect() -> NSRect { Self.clearButtonRect(for: bounds) }
+
+    /// 有没有「录入完成的值」。normal 档 keyCode 0 是键盘上的 A，所以判空必须两个字段一起看。
+    public var hasRecordedValue: Bool {
+        modifiersOnly ? flags != 0 : keyCode != 0 || flags != 0
+    }
+
+    /// 只有录好了才出现；录制中的那一格显示的是提示文字，没有东西可清。
+    private var isClearVisible: Bool { showsClearButton && !isRecording && hasRecordedValue }
+
+    /// 清掉当前值并重绘。回调给宿主去持久化。
+    public func clear() {
+        keyCode = 0
+        flags = 0
+        needsDisplay = true
+        onClear?()
+    }
+
     public override var isFlipped: Bool { true }
 
     public override func viewDidChangeEffectiveAppearance() {
@@ -123,7 +164,7 @@ public final class ShortcutRecorderView: NSView {
                 : L(modifiersOnly
                     ? "Recording… hold modifiers (Esc to cancel)"
                     : "Recording… press a key (Esc to cancel)")
-        } else if keyCode == 0 && flags == 0 {
+        } else if !hasRecordedValue {
             text = L("Click to Record")
         } else {
             text = displayString
@@ -137,21 +178,55 @@ public final class ShortcutRecorderView: NSView {
             .foregroundColor: NSColor.labelColor,
             .paragraphStyle: paragraphStyle
         ]
-        if !isRecording, keyCode != 0 || flags != 0 {
+        if !isRecording, hasRecordedValue {
             toolTip = String(format: "keyCode=%d, flags=%d", keyCode, flags)
         } else {
             toolTip = nil
         }
 
+        let clearRect = isClearVisible ? Self.clearButtonRect(for: bounds) : nil
+        // 有清除按钮时把文字的可放区域收窄到按钮左边：200 宽的框装 ⌘⌃⇧⌥fn␣ 这种长串
+        // 会跟按钮叠上，收窄之后文字仍在剩下的区域里居中。
+        let textArea: NSRect
+        if let clearRect {
+            textArea = NSRect(x: bounds.minX, y: bounds.minY,
+                              width: max(0, clearRect.minX - 2 - bounds.minX),
+                              height: bounds.height)
+        } else {
+            textArea = bounds
+        }
         let attributed = NSAttributedString(string: text, attributes: attributes)
         let textSize = attributed.size()
         let textRect = NSRect(
-            x: (bounds.width - textSize.width) / 2,
-            y: (bounds.height - textSize.height) / 2,
+            x: textArea.minX + (textArea.width - textSize.width) / 2,
+            y: textArea.minY + (textArea.height - textSize.height) / 2,
             width: textSize.width,
             height: textSize.height
         )
         attributed.draw(in: textRect)
+
+        if let clearRect {
+            Self.drawClearButton(in: clearRect)
+        }
+    }
+
+    // MARK: - Clear button glyph
+
+    /// 画清除图标：浅灰圆底衬 + 一把次级墨色的叉（系统搜索框那一款）。
+    /// 颜色全是语义色，所以明暗两档跟随系统外观，跟注解条那条子同一套做法。
+    private static func drawClearButton(in rect: NSRect) {
+        NSColor.quaternaryLabelColor.setFill()
+        NSBezierPath(ovalIn: rect).fill()
+        let cross = NSBezierPath()
+        let arms = rect.insetBy(dx: 4, dy: 4)
+        cross.move(to: NSPoint(x: arms.minX, y: arms.minY))
+        cross.line(to: NSPoint(x: arms.maxX, y: arms.maxY))
+        cross.move(to: NSPoint(x: arms.minX, y: arms.maxY))
+        cross.line(to: NSPoint(x: arms.maxX, y: arms.minY))
+        NSColor.secondaryLabelColor.setStroke()
+        cross.lineWidth = 1.2
+        cross.lineCapStyle = .round
+        cross.stroke()
     }
 
     // MARK: - First responder (original SRRecorderControl style)
@@ -161,6 +236,16 @@ public final class ShortcutRecorderView: NSView {
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     public override func mouseDown(with event: NSEvent) {
+        click(at: convert(event.locationInWindow, from: nil))
+    }
+
+    /// 按落点分流：命中右端那一叉就置空，否则照原版那样点一下切换录制。
+    /// 视图是 flipped 的，这个点和 `clearButtonRect()` 在同一个坐标空间里。
+    public func click(at point: NSPoint) {
+        if isClearVisible, clearButtonRect().contains(point) {
+            clear()
+            return
+        }
         window?.makeFirstResponder(self)
         if isRecording {
             cancelRecording()

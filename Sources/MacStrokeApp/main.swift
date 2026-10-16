@@ -244,6 +244,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 Self.showScreenshotFeedback(L("Screenshot text not found"))
             case .textFailed(let reason):
                 Self.showScreenshotFeedback("\(L("Screenshot text failed")) \(reason)")
+            case .videoSaved(let file, let seconds):
+                Self.showScreenshotFeedback("\(L("Screenshot video saved")) "
+                                            + "\(ScreenshotController.duration(seconds)) · \(file)")
+            case .captureFailed(let reason):
+                Self.showScreenshotFeedback("\(L("Screenshot capture failed")) \(reason)")
             }
         }
 
@@ -506,7 +511,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         _ = screenshotShortcutMonitor?.start()
     }
 
-    /// 弹出截图选区遮罩（状态栏菜单「截图」、快捷键和手势都走这里）。
+    /// 弹出截图选区遮罩（状态栏菜单「截图/录屏」、快捷键和手势都走这里）。
     /// 遮罩已经摊开时再触发一次等于取消。
     @objc func toggleScreenshot(_ sender: Any?) {
         ScreenshotController.shared.toggle()
@@ -737,9 +742,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func statusMenu() -> NSMenu {
         // Original MainMenu.xib status menu (Aae-oF-AsY): Preferences + Quit only.
-        // 剪贴板 / 截图 / 远程控制 / 检查更新 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏
+        // 剪贴板 / 截图/录屏 / 远程控制 / 检查更新 是移植版自加的入口：剪贴板直接弹出历史面板（状态栏
         // 菜单不会把本 App 变成前台，所以面板照样能把焦点还给用户原来那个应用），
-        // 截图摊开遮罩自己抢焦点，远程控制只能落到偏好页，检查更新走 Sparkle 的用户主动检查（一定带焦点）。
+        // 截图摊开遮罩自己抢焦点（模式条上还带滚动截图/录屏两档），远程控制只能落到偏好页，检查更新走 Sparkle 的用户主动检查（一定带焦点）。
         let menu = NSMenu(title: "MacStroke")
         // 温和提醒留下的红点：点了这一项才把已经发现的更新窗拉到前面。
         if let pending = pendingUpdate {
@@ -749,7 +754,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         menu.addItem(withTitle: L("Preferences"), action: #selector(togglePreferences), keyEquivalent: "")
         menu.addItem(withTitle: L("Clipboard"), action: #selector(showHistoryClipboard(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: L("Screenshot"), action: #selector(toggleScreenshot(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: L("Screenshot or record"), action: #selector(toggleScreenshot(_:)), keyEquivalent: "")
         statusMenuItem(to: menu, titleKey: "Remote Control", tab: .remoteControl)
         menu.addItem(withTitle: L("Check for Updates"), action: #selector(checkForUpdates(_:)), keyEquivalent: "")
         menu.addItem(withTitle: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")

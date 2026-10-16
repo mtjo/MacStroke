@@ -10,6 +10,9 @@
 //  2. 底图在 flipped 视图里必须是正的（NSImage 的 draw(in:) 方向由视图 flipped
 //     决定，写错就是整屏倒过来）。
 //  3. 编辑态里注解真的画在选区内、漏出选区的部分被钳掉、注解条浮在下沿外侧且有选中态。
+//  4. 注解条的底衬和墨色**跟随系统外观**（调色板那五个墨色除外），见
+//     `overlayScene(appearance:)`：那些亮度带是照深档标的，所以默认钉在 darkAqua，
+//     要验翻档的用例自己显式传两档。
 //
 //  每张图都顺手导出到 /tmp，肉眼再核一遍方向和对齐。
 //
@@ -159,38 +162,112 @@ final class ScreenshotRenderTests: XCTestCase {
                           "没选中的格子该是中性底：跟着发蓝就成了「一直选中」")
     }
 
-    /// 用户指定的参照物是 QQ 那条注解条：底色是深色胶囊（不跟着系统外观发亮），
-    /// 两个出口各带自己的语义色 —— 红✕、绿✓。
+    /// 参照物是 QQ 那条注解条，借的是**图标语言和格子顺序**；底衬和墨色跟系统外观走
+    /// （用户 2026-10-16：「我是要图标参考，但是还要跟随主题功能」）。
     ///
-    /// 判据取「色相占优的像素数」而不是「这一点是什么色」：图标是线性的，格子里一大半
-    /// 还是条子的底色，照单点去领会随笔画到哪一笔而飘。
-    func testBarIsADarkCapsuleWithColoredExits() throws {
+    /// 所以这条判的是「翻档」：浅外观下浅底深图标、深外观下深底浅图标，墨色相对底衬的
+    /// **方向**必须反过来。两个阈值取自实测那两档语义色：windowBackgroundColor 在 aqua
+    /// 是 0.9255、darkAqua 0.1961（压 0.94 alpha 后仍有 0.87 / 0.18），labelColor 是
+    /// 同色相 84.7% 不透明度的墨，落在底衬上离底至少 0.6。
+    func testBarBaseAndInkFlipWithSystemAppearance() throws {
         let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
-        let scene = try overlayScene(selection: selection, editing: true)
-        let bitmap = try render(scene.view, name: "bar-qq.png")
-        let bar = try XCTUnwrap(scene.view.toolbar)
+        let light = try overlayScene(selection: selection, editing: true, appearance: .aqua)
+        let dark = try overlayScene(selection: selection, editing: true, appearance: .darkAqua)
+        let lightBitmap = try render(light.view, name: "bar-aqua.png")
+        let darkBitmap = try render(dark.view, name: "bar-darkaqua.png")
+        let bar = try XCTUnwrap(light.view.toolbar)
 
         // 最后一个格子右边那点留白：那里只有条子的底，没有图标。
-        let fill = try XCTUnwrap(color(in: bitmap, x: Int(bar.frame.maxX) - 3, y: Int(bar.frame.midY)))
-        XCTAssertLessThan(sum(fill), 1.2, "条子该是深色胶囊底，不是跟着系统发亮的浅底：\(fill)")
+        let probe = (x: Int(bar.frame.maxX) - 3, y: Int(bar.frame.midY))
+        let lightFill = luminance(try XCTUnwrap(color(in: lightBitmap, x: probe.x, y: probe.y)))
+        let darkFill = luminance(try XCTUnwrap(color(in: darkBitmap, x: probe.x, y: probe.y)))
+        XCTAssertGreaterThan(lightFill, 0.75, "浅色外观下条子该是浅底：\(lightFill)")
+        XCTAssertLessThan(darkFill, 0.35, "深色外观下条子该是深底：\(darkFill)")
 
-        // 出口是最后三格（保存 / ✕ / ✓），顺序由 testBarFollowsTheQQOrder 锁住。
-        let exits = bar.actionableRects.suffix(3)
-            .map { $0.offsetBy(dx: bar.frame.minX, dy: bar.frame.minY) }
-        XCTAssertEqual(exits.count, 3)
-        // 「哪个色相占优」而不是「是不是纯红/纯绿」：图标是半透明底上的细线，边缘全在
-        // 和条子的深底混色，按绝对阈值认会把一整枚图标漏掉。
+        // 第一格（矩形）是笔画图标：墨色相对底衬的方向在两档里正好相反。
+        let cell = bar.actionableRects[0].offsetBy(dx: bar.frame.minX, dy: bar.frame.minY)
+        XCTAssertGreaterThanOrEqual(count(in: lightBitmap, in: cell) {
+            luminance($0) < lightFill - 0.3
+        }, 8, "浅底上图标要换成深墨，否则浅桌面底下这条就是白的")
+        XCTAssertGreaterThanOrEqual(count(in: darkBitmap, in: cell) {
+            luminance($0) > darkFill + 0.3
+        }, 8, "深底上图标要换成浅墨：\(darkFill)")
+        // 反向对照：同一档里墨只朝一个方向偏。墨色没跟着翻（写死成白）时浅底那格会在这里
+        // 冒出比底还亮的像素，上面两条就成了空转。
+        XCTAssertEqual(count(in: lightBitmap, in: cell) {
+            luminance($0) > lightFill + 0.3
+        }, 0, "浅底上不该有一批比底还亮的墨")
+        XCTAssertEqual(count(in: darkBitmap, in: cell) {
+            luminance($0) < darkFill - 0.3
+        }, 0, "深底上不该有一批比底还暗的墨")
+    }
+
+    /// 两个出口在**两档外观下**都得是红✕、绿✓：语义色本身也分档（aqua 的 systemRed
+    /// 1/0.2314/0.1882、darkAqua 1/0.2706/0.2275），换档只改亮度不改色相，所以判据取
+    /// 「色相占优的像素数」而不是「这一点是什么色」—— 图标是线性的，格子里一大半还是底。
+    func testExitsStayRedAndGreenInBothAppearances() throws {
+        let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
         let isRedGlyph: (NSColor) -> Bool = { $0.redComponent > $0.greenComponent + 0.25
             && $0.redComponent > $0.blueComponent + 0.25 }
         let isGreenGlyph: (NSColor) -> Bool = { $0.greenComponent > $0.redComponent + 0.25
             && $0.greenComponent > $0.blueComponent + 0.25 }
-        XCTAssertGreaterThanOrEqual(count(in: bitmap, in: exits[1], isRedGlyph), 8,
-                                    "✕ 没烫成红色就成了普通白图标")
-        XCTAssertGreaterThanOrEqual(count(in: bitmap, in: exits[2], isGreenGlyph), 8,
-                                    "✓ 没烫成绿色就成了普通白图标")
-        // 反向对照：保存那一格是白图标，里面一格红/绿都不该有。
-        XCTAssertEqual(count(in: bitmap, in: exits[0]) { isRedGlyph($0) || isGreenGlyph($0) },
-                       0, "普通出口跟着发了色，上面两条断言就成了空转")
+
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            let scene = try overlayScene(selection: selection, editing: true, appearance: name)
+            let bitmap = try render(scene.view, name: "bar-exits-\(name.rawValue).png")
+            let bar = try XCTUnwrap(scene.view.toolbar)
+            // 出口是最后三格（保存 / ✕ / ✓），顺序由 testBarFollowsTheQQOrder 锁住。
+            let exits = bar.actionableRects.suffix(3)
+                .map { $0.offsetBy(dx: bar.frame.minX, dy: bar.frame.minY) }
+            XCTAssertEqual(exits.count, 3)
+            XCTAssertGreaterThanOrEqual(count(in: bitmap, in: exits[1], isRedGlyph), 8,
+                                        "\(name.rawValue) 下 ✕ 没烫成红色就成了普通图标")
+            XCTAssertGreaterThanOrEqual(count(in: bitmap, in: exits[2], isGreenGlyph), 8,
+                                        "\(name.rawValue) 下 ✓ 没烫成绿色就成了普通图标")
+            // 反向对照：保存那一格是普通图标，里面一格红/绿都不该有。
+            XCTAssertEqual(count(in: bitmap, in: exits[0]) { isRedGlyph($0) || isGreenGlyph($0) },
+                           0, "\(name.rawValue) 下普通出口跟着发了色，上面两条就是空转")
+        }
+    }
+
+    /// 色块那一排**不跟外观**：五个墨色要原样进成品 PNG，浅外观深外观烘出来必须是同一个值。
+    /// 翻档的是底衬和描边，不是色值本身 —— 谁把调色板换成 labelColor 那类，这条当场红。
+    ///
+    /// 不拿 `palette` 常量当尺子：位图自己的色彩空间和 sRGB 不是一套，饱和色转换要偏
+    /// 13%（实测 aqua 那档红在位图里是 0.896/0.900/0.941），逐通道比常量会把色彩管理误差
+    /// 当成 bug。两档渲染走的是同一条管线，所以**互相比**才干净；再要求五档彼此分得开，
+    /// 免得取点取到底衬上、比出「五个一样」的空转结果。
+    func testPaletteSwatchesStayFixedAcrossAppearances() throws {
+        let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
+        var samples: [NSAppearance.Name: [NSColor]] = [:]
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            let scene = try overlayScene(selection: selection, editing: true, appearance: name)
+            let bitmap = try render(scene.view, name: "bar-palette-\(name.rawValue).png")
+            let bar = try XCTUnwrap(scene.view.toolbar)
+            // 条子顺序：7 个工具 + 图钉/裁剪/识别 = 前 10 格，之后才是 5 个色块。
+            samples[name] = try ScreenshotToolbarView.palette.indices.map { offset in
+                let cell = bar.actionableRects[10 + offset]
+                    .offsetBy(dx: bar.frame.minX, dy: bar.frame.minY)
+                return try XCTUnwrap(color(in: bitmap, x: Int(cell.midX), y: Int(cell.midY)))
+            }
+        }
+        let light = try XCTUnwrap(samples[.aqua])
+        let dark = try XCTUnwrap(samples[.darkAqua])
+        for (offset, pair) in zip(light, dark).enumerated() {
+            XCTAssertEqual(pair.0.redComponent, pair.1.redComponent, accuracy: 0.02,
+                           "第 \(offset) 档色块跨外观不能变：\(pair.0) / \(pair.1)")
+            XCTAssertEqual(pair.0.greenComponent, pair.1.greenComponent, accuracy: 0.02)
+            XCTAssertEqual(pair.0.blueComponent, pair.1.blueComponent, accuracy: 0.02)
+        }
+        // 反向对照：这五点确实是五个不同的墨色，不是底衬上同一片灰。
+        for (i, left) in light.enumerated() {
+            for (j, right) in light.enumerated() where j > i {
+                let spread = max(abs(left.redComponent - right.redComponent),
+                                 abs(left.greenComponent - right.greenComponent),
+                                 abs(left.blueComponent - right.blueComponent))
+                XCTAssertGreaterThan(spread, 0.2, "第 \(i) 档和第 \(j) 档分不开，取点取错了地方")
+            }
+        }
     }
 
     /// 一个矩形里有多少个点符合判据（往里缩 2pt：格子边上那圈是条子的底和描边）。
@@ -251,12 +328,12 @@ final class ScreenshotRenderTests: XCTestCase {
         }
     }
 
-    /// 悬停在某一格上：那一格正上方冒出气泡，深底 + 白字。
+    /// 悬停在某一格上：那一格正上方冒出气泡（中性底 + 反色字）。
     ///
-    /// 判据是「同一块地方悬停前后差多少」，不是「这一点是什么色」：气泡底下本来就是亮色
-    /// 底图（这里挑下面那块蓝，亮度约 0.33，既不到气泡的深底档也不到白字档）。选区特意
-    /// 压到屏底 —— 条子放不下会翻进选区内侧，气泡于是整个落在亮区里，不用跟选区外那条
-    /// 压暗带比灰度（压暗底 0.15 和气泡深底 0.14 分不开）。
+    /// 判据用**色度**不用绝对亮度：底衬现在跟系统外观走，实测深色档 0.266、浅色档 0.912，
+    /// 而气泡底下那块蓝是 0.33 —— 深档下两者只差 0.06，亮度带就分不出「气泡」和「底图」了。
+    /// 气泡是中性灰（|R−B| 很小），底图那块蓝是饱和的（|R−B| ≈ 1），这一条两档外观都成立。
+    /// 选区特意压到屏底：条子放不下会翻进选区内侧，气泡于是整个落在亮区里。
     func testHoverOverBarCellPopsATipBubble() throws {
         let selection = CGRect(x: 100, y: 300, width: 400, height: 180)
         let scene = try overlayScene(selection: selection, editing: true)
@@ -277,12 +354,18 @@ final class ScreenshotRenderTests: XCTestCase {
         view.pointerMoved(CGPoint(x: 20, y: 20))
         let hidden = try render(view, name: "tip-hidden.png")
 
-        let dark = count(in: shown, in: tip.frame) { sum($0) / 3 < 0.25 }
-        let light = count(in: shown, in: tip.frame) { sum($0) / 3 > 0.75 }
-        XCTAssertGreaterThanOrEqual(dark, 1000, "气泡得是那块深底，不是只有一圈边：\(dark)")
-        XCTAssertGreaterThanOrEqual(light, 100, "深底上得印得出白字：\(light)")
-        let control = count(in: hidden, in: tip.frame) { abs(sum($0) / 3 - 0.33) > 0.2 }
-        XCTAssertEqual(control, 0, "反向对照：没悬停时这块蓝底两档都不该有，否则上面两条是空转")
+        let neutral: (NSColor) -> Bool = { abs($0.redComponent - $0.blueComponent) < 0.12 }
+        // 左边 4pt 那点：气泡内边距是 9pt，那里只有底衬、没有字。
+        let body = luminance(try XCTUnwrap(color(in: shown, x: Int(tip.frame.minX) + 4,
+                                                 y: Int(tip.frame.midY))))
+        XCTAssertGreaterThanOrEqual(count(in: shown, in: tip.frame, neutral), 1000,
+                                    "气泡得是那块中性底，不是只有一圈边")
+        // 字只管「离底衬差多少」，不管朝哪个方向差：浅底深字、深底浅字都算印出来了。
+        XCTAssertGreaterThanOrEqual(count(in: shown, in: tip.frame) {
+            abs(luminance($0) - body) > 0.3
+        }, 100, "底衬上得印得出反色字：底衬亮度 \(body)")
+        XCTAssertEqual(count(in: hidden, in: tip.frame, neutral), 0,
+                       "反向对照：没悬停时这块是饱和的蓝，一条中性都不该有，否则上面两条是空转")
     }
 
     /// 选中打码那一格之后：整块铺系统蓝，棋盘格转白，但**两档都还在**。
@@ -380,49 +463,62 @@ final class ScreenshotRenderTests: XCTestCase {
                        "松手后的打码块也不该带一圈自己墨色的边框")
     }
 
-    /// 条子和气泡**不跟随系统外观**（用户指定的参照物是 QQ 那条：浅桌面底下也是深底）。
+    /// 气泡和条子是同一档底衬，所以它也必须**跟随系统外观**（用户 2026-10-16：
+    /// 「我是要图标参考，但是还要跟随主题功能」）。
     ///
-    /// 配色是一档写死的 sRGB，所以换外观必须逐像素一样。这条判据管的是回退：谁把某处
-    /// 改回语义色（windowBackgroundColor 那类），浅/深两套外观就会给出两种墨色，而单看
-    /// 一张渲染图发现不了 —— 曾经有一条断言正是这么空转掉的。
-    func testBarAndTipIgnoreSystemAppearance() throws {
+    /// 三条判据各管一种错：底衬亮度管「整只气泡没翻档」；文字墨色相对底衬的方向管
+    /// 「底翻了字没翻」（这种错单看一张渲染图最容易漏）；两档渲染逐像素比的最大差
+    /// 管「尺子空转」—— 曾经有一条断言正是这么废掉的，所以这条留着，只是方向反过来了。
+    func testTipBubbleFlipsWithSystemAppearance() throws {
         let selection = CGRect(x: 100, y: 300, width: 400, height: 180)
-        let scene = try overlayScene(selection: selection, editing: true)
-        let view = scene.view
-        let bar = try XCTUnwrap(view.toolbar)
-        let cell = try XCTUnwrap(bar.actionableRects[6].offsetBy(dx: bar.frame.minX, dy: bar.frame.minY))
-        view.pointerMoved(CGPoint(x: cell.midX, y: cell.midY))
-        let tip = try XCTUnwrap(view.tipView)
-        let region = tip.frame.union(bar.frame)
-
-        view.appearance = NSAppearance(named: .aqua)
-        let light = try render(view, name: "tip-aqua.png")
-        view.appearance = NSAppearance(named: .darkAqua)
-        let dark = try render(view, name: "tip-darkaqua.png")
-
-        func worstDifference(_ a: NSBitmapImageRep, _ b: NSBitmapImageRep) -> CGFloat {
-            var worst: CGFloat = 0
-            for x in stride(from: Int(region.minX) + 2, to: Int(region.maxX) - 2, by: 1) {
-                for y in stride(from: Int(region.minY) + 2, to: Int(region.maxY) - 2, by: 1) {
-                    guard let left = color(in: a, x: x, y: y), let right = color(in: b, x: x, y: y)
-                    else { continue }
-                    worst = max(worst, abs(left.redComponent - right.redComponent),
-                                abs(left.greenComponent - right.greenComponent),
-                                abs(left.blueComponent - right.blueComponent))
-                }
-            }
-            return worst
+        func hovered(_ name: NSAppearance.Name, _ file: String) throws
+            -> (bitmap: NSBitmapImageRep, tip: ScreenshotTipView, body: CGFloat) {
+            let scene = try overlayScene(selection: selection, editing: true, appearance: name)
+            let view = scene.view
+            let bar = try XCTUnwrap(view.toolbar)
+            let cell = bar.actionableRects[6].offsetBy(dx: bar.frame.minX, dy: bar.frame.minY)
+            view.pointerMoved(CGPoint(x: cell.midX, y: cell.midY))
+            let tip = try XCTUnwrap(view.tipView)
+            let bitmap = try render(view, name: file)
+            // 左边 4pt 那点：气泡内边距是 9pt，那里只有底衬、没有字。
+            let body = luminance(try XCTUnwrap(color(in: bitmap, x: Int(tip.frame.minX) + 4,
+                                                     y: Int(tip.frame.midY))))
+            return (bitmap, tip, body)
         }
 
-        let acrossAppearance = worstDifference(light, dark)
-        XCTAssertLessThanOrEqual(acrossAppearance, 0.005,
-                                 "条子/气泡的配色写死一档，换外观必须逐像素一样：最大偏差 \(acrossAppearance)")
-        // 反向对照：这把尺子量得出真差别 —— 同一外观下「有气泡」和「没气泡」必须差得远。
-        view.appearance = NSAppearance(named: .aqua)
-        view.pointerMoved(CGPoint(x: 20, y: 20))
-        let noTip = try render(view, name: "tip-aqua-none.png")
-        XCTAssertGreaterThan(worstDifference(light, noTip), 0.3,
-                             "两档都量不出差别的话，上面那条就是空转")
+        let light = try hovered(.aqua, "tip-flip-aqua.png")
+        let dark = try hovered(.darkAqua, "tip-flip-darkaqua.png")
+        XCTAssertGreaterThan(light.body, 0.75, "浅色外观下气泡该是浅底：\(light.body)")
+        XCTAssertLessThan(dark.body, 0.35, "深色外观下气泡该是深底：\(dark.body)")
+
+        // 文字朝反方向偏：浅底深字、深底浅字，两档都得有一批离底 0.3 以上的字。
+        XCTAssertGreaterThanOrEqual(count(in: light.bitmap, in: light.tip.frame) {
+            luminance($0) < light.body - 0.3
+        }, 60, "浅底上气泡文字要换成深墨：\(light.body)")
+        XCTAssertGreaterThanOrEqual(count(in: dark.bitmap, in: dark.tip.frame) {
+            luminance($0) > dark.body + 0.3
+        }, 60, "深底上气泡文字要换成浅墨：\(dark.body)")
+
+        let acrossAppearance = worstDifference(in: light.tip.frame.union(dark.tip.frame),
+                                               light.bitmap, dark.bitmap)
+        XCTAssertGreaterThan(acrossAppearance, 0.5,
+                             "换外观必须真改到像素（最大偏差 \(acrossAppearance)）：没翻档就成了空转")
+    }
+
+    /// 一块区域里两张图的最大逐通道差。
+    private func worstDifference(in region: NSRect, _ a: NSBitmapImageRep,
+                                 _ b: NSBitmapImageRep) -> CGFloat {
+        var worst: CGFloat = 0
+        for x in stride(from: Int(region.minX) + 2, to: Int(region.maxX) - 2, by: 1) {
+            for y in stride(from: Int(region.minY) + 2, to: Int(region.maxY) - 2, by: 1) {
+                guard let left = color(in: a, x: x, y: y), let right = color(in: b, x: x, y: y)
+                else { continue }
+                worst = max(worst, abs(left.redComponent - right.redComponent),
+                            abs(left.greenComponent - right.greenComponent),
+                            abs(left.blueComponent - right.blueComponent))
+            }
+        }
+        return worst
     }
 
     // MARK: - 辅助
@@ -434,11 +530,16 @@ final class ScreenshotRenderTests: XCTestCase {
         let bare: NSBitmapImageRep
     }
 
+    /// `appearance` 默认钉在深档：下面那些亮度带（`> 0.6` 算实心、`> 0.28` 算半透明那一档、
+    /// 气泡 `< 0.25` 算深底）是照着条子的深底白图标标的，不钉的话测试机切一下明暗就红一片。
+    /// 要验「跟随主题」的用例自己显式传两档。
     private func overlayScene(selection: CGRect, size: NSSize = NSSize(width: 800, height: 500),
-                              editing: Bool = false) throws -> Scene {
+                              editing: Bool = false,
+                              appearance: NSAppearance.Name = .darkAqua) throws -> Scene {
         let image = try pattern(width: Int(size.width), height: Int(size.height))
         let frame = try XCTUnwrap(ScreenshotFrame(image: image, pointSize: size))
         let view = ScreenshotSelectionView(shot: frame)
+        view.appearance = NSAppearance(named: appearance)
         view.selection = selection
         attach(view, size: size)
         // 注解条要在挂窗之后摆：它的位置是按 bounds 算的。
@@ -485,6 +586,10 @@ final class ScreenshotRenderTests: XCTestCase {
     private func sum(_ color: NSColor) -> CGFloat {
         color.redComponent + color.greenComponent + color.blueComponent
     }
+
+    /// 三通道平均。底衬/墨色那种「整块翻档」的判据用它，色相占优的判据不用（红和绿的
+    /// 平均数可以一样）。
+    private func luminance(_ color: NSColor) -> CGFloat { sum(color) / 3 }
 
     /// 同一位置「渲染值 / 无遮罩参照值」。1 = 一点没被遮；0.45 = 压暗那一档。
     ///

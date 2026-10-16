@@ -330,6 +330,9 @@ extension RulesTable {
             case 0:
                 let recorder = ShortcutRecorderView()
                 recorder.frame = NSRect(x: 0, y: 27, width: 100, height: 25)
+                // 这一格不给清除按钮：动作存的是「要按下哪个键」，(0,0) 在模型里是
+                // 「按下 A」而不是「没有」，置空等于给规则塞进一个会打字键的动作。
+                recorder.showsClearButton = false
                 let (keyCode, flags) = shortcutValue(of: rule)
                 recorder.keyCode = keyCode
                 recorder.flags = flags

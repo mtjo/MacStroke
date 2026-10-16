@@ -125,6 +125,18 @@ public enum StorageKey: String, CaseIterable {
     /// 这一个键，所以偏好页只有一格下拉，不铺「一个开关 + 一个下拉」。
     case screenshotDefaultTool = "screenshotDefaultTool"
 
+    /// 录屏帧率（每秒帧数）。存的是数值而不是档位序号，以后加档位不用迁移。
+    case screenshotRecordFrameRate = "screenshotRecordFrameRate"
+    /// 单次录屏最长多少秒：撞顶自动停止并出片，防止忘了关把盘写满。
+    case screenshotRecordMaxSeconds = "screenshotRecordMaxSeconds"
+    /// 录屏要不要把鼠标指针录进去。做操作演示要开，录内容本身开着只会挡字。
+    case screenshotRecordCursor = "screenshotRecordCursor"
+    /// 长截图每滚一次走多少**点**（不是像素）。小步重合多、拼接认得稳；大步帧数少、
+    /// 但一次跳过头就会认输收场。
+    case screenshotScrollStep = "screenshotScrollStep"
+    /// 长截图最多接多少「屏」：按框住的那块高度计。撞顶就停 —— 再长的 PNG 用户也打不开。
+    case screenshotScrollMaxScreens = "screenshotScrollMaxScreens"
+
     // Legacy (kept for compatibility)
     case showToast = "showToast"
     case clipboardHistoryLimit = "clipboardHistoryLimit"
@@ -291,6 +303,18 @@ public enum StorageDefaults {
     /// 但代价是选区内拖动不再平移整块，这个交换不该由我们替所有人做。
     public static let screenshotDefaultTool: Int = -1
 
+    /// 30 帧：再高对网页/文档滚动没意义，文件却大一截。
+    public static let screenshotRecordFrameRate: Int = 30
+    /// 10 分钟：区域录像多是操作演示，撞这个上限基本就是忘了按停止。
+    public static let screenshotRecordMaxSeconds: Int = 600
+    /// 默认带指针：录的是「怎么操作」，看不见鼠标就没意义。
+    public static let screenshotRecordCursor: Bool = true
+    /// 每次滚 100 点。步子小 → 相邻两帧重合长 → 拼接认得稳；步子大 → 帧数少，
+    /// 但一次跳过头就认输收场。
+    public static let screenshotScrollStep: Int = 100
+    /// 长到 10 屏就该收：再长的 PNG 用户自己也打不开，白占内存。
+    public static let screenshotScrollMaxScreens: Int = 10
+
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
@@ -359,6 +383,11 @@ public func registerUserDefaultsDefaults() {
         StorageKey.screenshotMagnifier.rawValue: StorageDefaults.screenshotMagnifier,
         StorageKey.screenshotMagnification.rawValue: StorageDefaults.screenshotMagnification,
         StorageKey.screenshotDefaultTool.rawValue: StorageDefaults.screenshotDefaultTool,
+        StorageKey.screenshotRecordFrameRate.rawValue: StorageDefaults.screenshotRecordFrameRate,
+        StorageKey.screenshotRecordMaxSeconds.rawValue: StorageDefaults.screenshotRecordMaxSeconds,
+        StorageKey.screenshotRecordCursor.rawValue: StorageDefaults.screenshotRecordCursor,
+        StorageKey.screenshotScrollStep.rawValue: StorageDefaults.screenshotScrollStep,
+        StorageKey.screenshotScrollMaxScreens.rawValue: StorageDefaults.screenshotScrollMaxScreens,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

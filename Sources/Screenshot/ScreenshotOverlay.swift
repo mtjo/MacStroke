@@ -23,6 +23,13 @@
 //    的那块）。选了工具之后选区内让位给画注解 —— 注解本身画在整屏坐标里，所以改框
 //    不会把已经画好的注解弄丢或挪位。
 //
+//  选区阶段屏顶还浮着一条**模式条**（截图 / 滚动截图 / 录屏 / 文字识别，见
+//  `ScreenshotModeBarView`）：它决定「选区落定之后干什么」。`routeAfterSelection()`
+//  就是那个分流口 —— 「截图」进 editing 走注解条，「文字识别」直接跑 OCR，
+//  「滚动截图」「录屏」把选区交回上层去开实况采集（那时候遮罩要整个收掉，因为
+//  这两条要的是**活画面**，冻结帧机制在这里反过来）。模式条只在选区阶段露面，
+//  一进编辑态就让位给注解条。
+//
 //  「亮区一点都不压暗」是这条链路的手感关键：QQ/微信截图时鼠标停在哪个窗上，那个
 //  窗就是原样亮度、其余整屏压暗，用户靠这个亮度差判断「截的就是这一块」。反过来
 //  如果整屏一起暗，看着就像隔了层毛玻璃，谁也不知道选中的是哪里 —— 所以暗区是拿
@@ -102,6 +109,10 @@ public final class ScreenshotSelectionView: NSView {
     public var onCancel: (() -> Void)?
     /// 提取文字的结果交回上层（写剪贴板、弹提示）。视图自己不碰 pasteboard。
     public var onText: ((ScreenshotTextOutcome) -> Void)?
+    /// 选区落定后要开**实况采集**（滚动截图 / 录屏）。这两个要的正是遮罩机制反过来：
+    /// 定格帧得收掉、屏幕还给用户，接下来一帧一帧现抓。
+    /// 三个参数：模式、视图坐标的选区、这块选区在**屏幕上的 AppKit 矩形**。
+    var onLiveCapture: ((ScreenshotMode, CGRect, NSRect) -> Void)?
 
     /// 定格的那一帧。名字避开 `frame` —— NSView 已经占了这个名字。
     private let shot: ScreenshotFrame
@@ -150,6 +161,11 @@ public final class ScreenshotSelectionView: NSView {
     private var toolbarDragStart: CGPoint = .zero
     /// 选中的工具；nil = 注解条上一个工具都没选，此时选区内的拖动用来平移选区。
     var tool: ScreenshotTool?
+    /// 屏顶模式条选了哪一档。internal 而非 private：取证要核对「点某一格真的把会话
+    /// 切到了那一档」，而不是只把格子点亮。
+    var mode: ScreenshotMode = .still
+    /// 屏顶的模式条。同上，internal 给取证看它在不在、摆对没对、点下去切没切。
+    private(set) var modeBar: ScreenshotModeBarView?
     /// 偏好里的「截图默认工具」：选区落定时预先装进 `tool` 的那一格，关掉就是 nil。
     var defaultTool: ScreenshotTool?
     var colorIndex = 0
@@ -402,8 +418,10 @@ public final class ScreenshotSelectionView: NSView {
     }
 
     /// 还没拖选区时，把按键说明打在屏幕中间，否则没人知道能按什么。
+    /// 文案跟着模式条选中的那一档换：「滚动截图」那档回车不是编辑，提示还写「回车编辑」
+    /// 就是把用户往错的方向引。
     private func drawHint() {
-        let text = NSAttributedString(string: L("Drag to select, Enter edits, Esc cancels"),
+        let text = NSAttributedString(string: L(mode.hintKey),
                                       attributes: Self.readoutAttributes)
         let size = text.size()
         let box = CGRect(x: (bounds.midX - size.width / 2) - 8,
@@ -456,10 +474,19 @@ public final class ScreenshotSelectionView: NSView {
             return
         }
 
+        // 屏顶模式条同上：按在格子上那一下归格子（真事件里它自己的 mouseDown 吃掉），
+        // 这里再挡一次让判定树和真实链路答得一样。空白处放行给遮罩 —— 从屏顶往下拖
+        // 一个选区是合法操作，条子不能把整条横向范围都吃掉。
+        if let bar = modeBar, !bar.isHidden, bar.frame.contains(point),
+           bar.hasActionable(atOverlayPoint: point) {
+            return
+        }
+
         // 双击落在选区内 = 复制并收起（QQ/微信的手感）。手指已经在这块里了，
-        // 比挪去注解条点复制快。
+        // 比挪去注解条点复制快。其余三档双击是「再来一次这一档的事」：文字识别失败后
+        // 双击该重认，而不是把这张图复制走。
         if clickCount >= 2, hasSelection, selection.contains(point) {
-            finish(.copy)
+            if mode == .still { finish(.copy) } else { routeAfterSelection() }
             return
         }
 
@@ -576,10 +603,12 @@ public final class ScreenshotSelectionView: NSView {
             // 裁剪中按下没拖动 = 这一刀不切了，回到原来那块。
             if cropBounds != nil { cancelCrop(); return }
             // 按下没拖动 = 认下吸附的那个窗；吸附不到就当用户点了一下空处。
+            // 走分流口而不是直接进编辑态：实况那两档点一下窗就是要开始采集那块，
+            // 把它送进注解条等于告诉用户「这一档没生效」。
             if phase == .picking, let hover {
                 selection = hover
                 self.hover = nil
-                enterEditing()
+                routeAfterSelection()
             }
             return
         }
@@ -592,7 +621,22 @@ public final class ScreenshotSelectionView: NSView {
         }
         if phase == .picking {
             cropBounds = nil
+            routeAfterSelection()
+        }
+    }
+
+    /// 选区落定之后干什么 —— 模式条那一档就是这里的开关。
+    private func routeAfterSelection() {
+        switch mode {
+        case .still:
             enterEditing()
+        case .text:
+            // 认完就收场，中间不停在注解条上：这一档的用户要的是文字，不是框。
+            hideModeBar()
+            extractText()
+        case .scroll, .record:
+            hideModeBar()
+            onLiveCapture?(mode, selection, screenRect(for: selection))
         }
     }
 
@@ -671,9 +715,16 @@ public final class ScreenshotSelectionView: NSView {
         case 53:  // Esc：正在裁剪时先退掉这一刀，别把整个截图会话一起丢了
             if cropBounds != nil { cancelCrop() } else { onCancel?() }
         case 36, 76:  // Return / 小键盘 Enter
-            if hasSelection { finish(.copy) } else if let hover {
-                selection = hover
-                enterEditing()
+            // 「截图」那一档维持老手感：有选区就复制收场，没有就认下吸附的那块。
+            // 其余三档回车 = 走模式条那一档自己的路（识别 / 开滚动采集 / 开录制）。
+            if mode == .still {
+                if hasSelection { finish(.copy) } else if let hover {
+                    selection = hover
+                    enterEditing()
+                }
+            } else if hasSelection || hover != nil {
+                if !hasSelection, let hover { selection = hover }
+                routeAfterSelection()
             }
         case 51, 117:  // Delete / Backspace：退一条注解，和注解条上的撤销同一路
             undo()
@@ -693,6 +744,52 @@ public final class ScreenshotSelectionView: NSView {
         }
     }
 
+    // MARK: - 模式条
+
+    /// 屏顶浮出模式条，并把当前那一档点亮。会话期间只摆一次：拖选区时它得原地留着，
+    /// 跟着鼠标走反而会把选区上沿盖住。
+    ///
+    /// internal 而非 private：取证要能在没走「上层建窗」这条链路时把它摆出来；
+    /// 真机上由 `ScreenshotController` 在建好遮罩后调一次。
+    func showModeBar() {
+        let bar = modeBar ?? ScreenshotModeBarView()
+        modeBar = bar
+        if bar.superview == nil {
+            addSubview(bar)
+            bar.onPick = { [weak self] picked in self?.pickMode(picked) }
+        }
+        bar.isHidden = false
+        bar.frame = Self.modeBarFrame(width: bar.preferredWidth, container: bounds,
+                                      topInset: Self.menuBarInset(of: window?.screen))
+        bar.sync(mode: mode)
+    }
+
+    private func hideModeBar() {
+        modeBar?.isHidden = true
+    }
+
+    /// 用户在模式条上点了一格。再点已经亮着的那一档等于没改（不给「取消当前档」这种
+    /// 谁也不会想要的中间态）。
+    private func pickMode(_ picked: ScreenshotMode) {
+        guard mode != picked else { return }
+        mode = picked
+        modeBar?.sync(mode: picked)
+        // 屏上那句按键说明跟着换档重画：文案是 `drawHint()` 现读的。
+        needsDisplay = true
+    }
+
+    /// 菜单栏在这一块屏里占多高（遮罩铺的是整块屏，含菜单栏那一条）。
+    /// 拿不到屏（还没挂窗）就答 0：这时候条子贴屏顶摆，不影响判定。
+    static func menuBarInset(of screen: NSScreen?) -> CGFloat {
+        guard let screen else { return 0 }
+        return max(0, screen.frame.maxY - screen.visibleFrame.maxY)
+    }
+
+    /// 条子摆哪儿：横向对屏居中，纵向让开菜单栏再留一格缝。纯函数，单测直接喂 inset。
+    static func modeBarFrame(width: CGFloat, container: NSRect, topInset: CGFloat) -> CGRect {
+        ScreenshotModeBarView.barFrame(width: width, container: container, topInset: topInset)
+    }
+
     // MARK: - 编辑态
 
     /// 选区落定：亮出注解条和八个把手，把焦点还回遮罩（注解条上的输入框可能刚被用过）。
@@ -700,8 +797,14 @@ public final class ScreenshotSelectionView: NSView {
         guard hasSelection else { return }
         phase = .editing
         hover = nil
+        // 选区已经落定，模式条就该让位：这一档要的是就地注解，屏顶那条不再提供信息，
+        // 留着只会让用户以为还能在这儿换档。
+        hideModeBar()
         // 选区已经落定，放大镜就该收：编辑态要的是看清内容，不是再卡一个像素。
         magnifierView?.isHidden = true
+        // 默认装上偏好里选的那一格（「截图默认工具」，关掉就是 nil）：装了之后框完第一笔
+        // 不必先点格子，代价是「在选区内拖动=平移整块」这一步要先摘掉工具才走得到。
+        tool = defaultTool
         // 默认装上偏好里选的那一格（「截图默认工具」，关掉就是 nil）：装了之后框完第一笔
         // 不必先点格子，代价是「在选区内拖动=平移整块」这一步要先摘掉工具才走得到。
         tool = defaultTool
@@ -840,15 +943,18 @@ public final class ScreenshotSelectionView: NSView {
         enterEditing()
     }
 
-    /// 选区在屏幕上的 AppKit 矩形（左下原点）。贴图要钉回选区原来的位置就靠它。
+    /// 这块视图矩形在屏幕上的 AppKit 矩形（左下原点）。
     /// 遮罩窗和视图一样大、原点 (0,0)，所以换成屏幕坐标只剩翻 y 加窗口原点。
-    var selectionScreenRect: NSRect {
+    func screenRect(for rect: CGRect) -> NSRect {
         guard let window else { return .zero }
-        let rect = selection.intersection(bounds)
-        return NSRect(x: window.frame.minX + rect.minX,
-                      y: window.frame.maxY - rect.maxY,
-                      width: rect.width, height: rect.height)
+        let cut = rect.intersection(bounds)
+        return NSRect(x: window.frame.minX + cut.minX,
+                      y: window.frame.maxY - cut.maxY,
+                      width: cut.width, height: cut.height)
     }
+
+    /// 选区在屏幕上的 AppKit 矩形（左下原点）。贴图要钉回选区原来的位置就靠它。
+    var selectionScreenRect: NSRect { screenRect(for: selection) }
 
     private func commitDraft() {
         defer { draft = nil }
@@ -939,8 +1045,11 @@ public final class ScreenshotSelectionView: NSView {
 
     /// 「提取文字」：认的是合成后的那张图 —— 和绿✓复制出去的是同一块内容，所以用户
     /// 手写的文字注解也一起能被认出来。结果交回上层，视图不碰 pasteboard。
+    ///
+    /// 「文字识别」那一档选完直接走这里（不经过注解条），所以判定只看有没有选区，
+    /// 不再要求已经在编辑态。
     func extractText() {
-        guard !ocrRunning, phase == .editing, hasSelection else { return }
+        guard !ocrRunning, hasSelection else { return }
         if textEditor != nil { finishTextEditing(commit: true) }
         guard let image = ScreenshotComposer.compose(shot: shot, selection: selection,
                                                      annotations: annotations) else { return }
@@ -952,6 +1061,11 @@ public final class ScreenshotSelectionView: NSView {
             // 剪贴板，就是往一个已经结束的会话后面补一刀 —— 丢掉。
             guard self.window != nil else { return }
             self.ocrRunning = false
+            // 认输了：模式条那一档没有注解条可退回，把屏顶那条还回去，用户才看得见
+            // 「换个框再来一次，或者换回截图那一档」。
+            var recognized = false
+            if case .lines = outcome { recognized = true }
+            if self.mode != .still, !recognized { self.showModeBar() }
             self.syncToolbar()
             self.onText?(outcome)
         }

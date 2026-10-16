@@ -2,8 +2,9 @@
 //  ScreenshotTabView.swift
 //  MacStroke
 //
-//  截图偏好页（移植版新增，原版没有）：怎么触发（全局快捷键 + 手势），以及出图之后
-//  要不要直接落盘、落到哪、拖选时吸不吸附窗口边界。
+//  截图/录屏偏好页（移植版新增，原版没有）：四段 —— 怎么触发（全局快捷键 + 手势）、
+//  静态图出图之后怎么落地（自动保存、保存位置、吸附、预装工具、放大镜）、滚动截图
+//  （步长、最多接几屏）、录屏（帧率、最长时长、带不带指针）。
 //
 //  快捷键和其余几项只管写库（UserPreferences 的 didSet 已经写穿到 UserDefaults）：
 //  快捷键由 App 层监听 UserDefaults 变化重新挂载，截图侧每次会话开始时现取一份快照
@@ -92,7 +93,70 @@ struct ScreenshotTabView: View {
                     }
                 }
             }
+
+            SettingsSection(title: L("Screenshot Scroll")) {
+                SettingsCard {
+                    SettingsRow(L("Screenshot Scroll step")) {
+                        intPicker(Options.scrollSteps, selection: $viewModel.screenshotScrollStep,
+                                  unit: L("Screenshot Scroll points unit"))
+                    }
+                    hint(L("Screenshot Scroll step hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot Scroll max screens")) {
+                        intPicker(Options.scrollMaxScreens, selection: $viewModel.screenshotScrollMaxScreens,
+                                  unit: L("Screenshot Scroll screens unit"))
+                    }
+                    hint(L("Screenshot Scroll max screens hint"))
+                }
+            }
+
+            SettingsSection(title: L("Screenshot Record")) {
+                SettingsCard {
+                    SettingsRow(L("Screenshot Record frame rate")) {
+                        intPicker(Options.frameRates, selection: $viewModel.screenshotRecordFrameRate,
+                                  unit: L("Screenshot Record fps unit"))
+                    }
+                    hint(L("Screenshot Record frame rate hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot Record max seconds")) {
+                        intPicker(Options.maxSeconds, selection: $viewModel.screenshotRecordMaxSeconds,
+                                  unit: L("Screenshot Record minutes unit"), divide: 60)
+                    }
+                    hint(L("Screenshot Record max seconds hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot Record cursor")) {
+                        TrailingSwitch(isOn: $viewModel.screenshotRecordCursor)
+                    }
+                    hint(L("Screenshot Record cursor hint"))
+                }
+            }
         }
+    }
+
+    // MARK: - 下拉档位
+    // 存的都是数值本身（帧率、秒、点、屏），不是档位序号 —— 以后加档不用迁移，
+    // 手改过 defaults 的人停在没见过的值上也能显示出来（见 `intPicker`）。
+    private enum Options {
+        static let scrollSteps = [50, 100, 200]
+        static let scrollMaxScreens = [5, 10, 20, 40]
+        static let frameRates = [15, 24, 30, 60]
+        static let maxSeconds = [60, 300, 600, 1800]
+    }
+
+    /// 一格整数下拉：库里那个值不在档位里时补一条进去，否则 Picker 显示空白，
+    /// 用户看到的和存的是两回事。`divide` 只给「存秒、显示分钟」那一格用。
+    private func intPicker(_ options: [Int], selection: Binding<Int>,
+                           unit: String, divide: Int = 1) -> some View {
+        Picker("", selection: selection) {
+            ForEach(options, id: \.self) { option in
+                Text("\(option / divide) \(unit)").tag(option)
+            }
+            if !options.contains(selection.wrappedValue) {
+                Text("\(selection.wrappedValue / divide) \(unit)").tag(selection.wrappedValue)
+            }
+        }
+        .labelsHidden()
+        .frame(width: 150)
     }
 
     // MARK: - Pieces

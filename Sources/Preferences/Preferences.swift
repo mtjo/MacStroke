@@ -275,6 +275,35 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(screenshotShortcut, forKey: .screenshotShortcut) }
     }
 
+    // MARK: - Screenshot / 录屏
+    // 这三行管「录屏那一档出来的是什么」：帧率决定流畅度和文件大小的折中，时长上限
+    // 防止忘了按停止把盘写满，带不带指针决定这段录像能不能当操作演示。
+    // 和上面几项一样：会话开始时才取快照（ScreenshotSettings.current），改完下一场生效。
+    /// 每秒帧数，存数值而不是档位序号（加档位不用迁移）。消费端会把它夹进 1…120。
+    @Published public var screenshotRecordFrameRate: Int {
+        didSet { storage.setInt(screenshotRecordFrameRate, forKey: .screenshotRecordFrameRate) }
+    }
+    /// 单次录屏最长秒数，撞顶自动停止并出片。
+    @Published public var screenshotRecordMaxSeconds: Int {
+        didSet { storage.setInt(screenshotRecordMaxSeconds, forKey: .screenshotRecordMaxSeconds) }
+    }
+    /// 鼠标指针要不要进画面。
+    @Published public var screenshotRecordCursor: Bool {
+        didSet { storage.setBool(screenshotRecordCursor, forKey: .screenshotRecordCursor) }
+    }
+
+    // MARK: - Screenshot / 长截图
+    // 长截图没有「质量」可调，能调的是它走多快和走多久：步长是每次注入的滚动量，
+    // 上限是接多少屏之后收场。两个都存数值，消费端各自夹紧。
+    /// 每滚一次走多少**点**（不是像素，像素是它乘上 scale 之后的事）。
+    @Published public var screenshotScrollStep: Int {
+        didSet { storage.setInt(screenshotScrollStep, forKey: .screenshotScrollStep) }
+    }
+    /// 最多接「几屏」：按框住那块的高度计，撞顶就停。
+    @Published public var screenshotScrollMaxScreens: Int {
+        didSet { storage.setInt(screenshotScrollMaxScreens, forKey: .screenshotScrollMaxScreens) }
+    }
+
     // MARK: - Legacy
     @Published public var showToast: Bool {
         didSet { storage.setBool(showToast, forKey: .showToast) }
@@ -342,6 +371,11 @@ public final class UserPreferences: ObservableObject {
         self.screenshotMagnification = storage.getIntOptional(forKey: .screenshotMagnification) ?? StorageDefaults.screenshotMagnification
         self.screenshotDefaultTool = storage.getIntOptional(forKey: .screenshotDefaultTool) ?? StorageDefaults.screenshotDefaultTool
         self.screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut) ?? StorageDefaults.screenshotShortcut
+        self.screenshotRecordFrameRate = storage.getIntOptional(forKey: .screenshotRecordFrameRate) ?? StorageDefaults.screenshotRecordFrameRate
+        self.screenshotRecordMaxSeconds = storage.getIntOptional(forKey: .screenshotRecordMaxSeconds) ?? StorageDefaults.screenshotRecordMaxSeconds
+        self.screenshotRecordCursor = storage.getBoolOptional(forKey: .screenshotRecordCursor) ?? StorageDefaults.screenshotRecordCursor
+        self.screenshotScrollStep = storage.getIntOptional(forKey: .screenshotScrollStep) ?? StorageDefaults.screenshotScrollStep
+        self.screenshotScrollMaxScreens = storage.getIntOptional(forKey: .screenshotScrollMaxScreens) ?? StorageDefaults.screenshotScrollMaxScreens
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }
