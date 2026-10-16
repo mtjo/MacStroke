@@ -27,6 +27,7 @@ import RightClickMenu
 import WindowManager
 import RemoteControl
 import Screenshot
+import ProximityLock
 import Sparkle
 
 /// Notifications used between the preferences UI and the running capture chain.
@@ -216,6 +217,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(remoteControlSettingsDidChange),
             name: .macStrokeRemoteControlDidChange, object: nil)
+
+        // 蓝牙靠近锁屏（偏好页「靠近锁屏」）。默认关着，而且没选设备就等于没开 ——
+        // 关着的时候一个 CBCentralManager 都不构造，所以系统蓝牙授权框不会在启动时弹。
+        ProximityLockController.shared.apply()
+        // 「这台机器正被人用着」的判定挂在 App 层：判定状态机不该知道谁在忙。
+        // 远程控制接管（手机在点这台 Mac）和截图遮罩摊开（人正在框选）时不锁屏，
+        // 否则手表搁在桌上信号一晃就把这场操作打断。
+        ProximityLockController.shared.isExternallyBusy = {
+            !RemoteControlServer.shared.peers.isEmpty || ScreenshotController.shared.isActive
+        }
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(proximityLockSettingsDidChange),
+            name: .macStrokeProximityLockDidChange, object: nil)
 
         // 截图。模块自己不开窗也不弹提示，两件事都回调到 App 层做：
         // 遮罩摊开期间必须挂起手势捕获（否则轨迹层跟选区抢同一只鼠标），
@@ -421,6 +436,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// 远程控制开关/端口/配对码变了：重启监听或关掉服务。
     @objc private func remoteControlSettingsDidChange(_ notification: Notification) {
         RemoteControlServer.shared.apply()
+    }
+
+    /// 靠近锁屏的开关/设备/阈值变了：重新武装或停下来。设置没变时 apply 不重启扫描，
+    /// 所以「人在不在旁边」的判定不会被打回未知（用户改个无关项不用重新等一轮）。
+    @objc private func proximityLockSettingsDidChange(_ notification: Notification) {
+        ProximityLockController.shared.apply()
     }
 
     @objc private func userDefaultsDidChange(_ notification: Notification) {

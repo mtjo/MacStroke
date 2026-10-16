@@ -213,6 +213,8 @@ cat > "${APP_DIR}/Contents/Info.plist" <<PLIST
     <true/>
     <key>OSAScriptingDefinition</key>
     <string>AppleScript.sdef</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>MacStroke listens for your watch or band's Bluetooth advertisements to lock the screen when you walk away. It never connects to any device.</string>
     <key>SUFeedURL</key>
     <string>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</string>
     <key>SUPublicDSAKeyFile</key>

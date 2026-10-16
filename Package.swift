@@ -71,7 +71,7 @@ let package = Package(
         // ============ Preferences management (SwiftUI + AppKit) ============
         .target(
             name: "Preferences",
-            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture", "RemoteControl", "Screenshot"]),
+            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture", "RemoteControl", "Screenshot", "ProximityLock"]),
         // ============ Window management (status bar, canvas, toast) ============
         .target(
             name: "WindowManager",
@@ -88,6 +88,10 @@ let package = Package(
         .target(
             name: "Screenshot",
             dependencies: ["Storage", "RemoteControl"]),
+        // ============ 蓝牙靠近锁屏（判定状态机 + 锁屏/解锁原语） ============
+        .target(
+            name: "ProximityLock",
+            dependencies: ["Storage"]),
         // ============ Main app executable ============
         .executableTarget(
             name: "MacStrokeApp",
@@ -100,6 +104,7 @@ let package = Package(
                 "AppleScriptRunner",
                 "RemoteControl",
                 "Screenshot",
+                "ProximityLock",
                 "Sparkle"
             ],
             resources: [
@@ -135,7 +140,7 @@ let package = Package(
             dependencies: ["Storage", "EventCapture"]),
         .testTarget(
             name: "WindowManagerTests",
-            dependencies: ["WindowManager"]),
+            dependencies: ["WindowManager", "ProximityLock"]),
         .testTarget(
             name: "AppleScriptRunnerTests",
             dependencies: ["AppleScriptRunner"]),
@@ -147,6 +152,9 @@ let package = Package(
             dependencies: ["RemoteControl", "Storage"]),
         .testTarget(
             name: "ScreenshotTests",
-            dependencies: ["Screenshot", "Storage"])
+            dependencies: ["Screenshot", "Storage"]),
+        .testTarget(
+            name: "ProximityLockTests",
+            dependencies: ["ProximityLock", "Storage"])
     ]
 )

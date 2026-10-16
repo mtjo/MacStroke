@@ -42,7 +42,7 @@ final class ScreenshotPreferencesTests: XCTestCase {
             return XCTFail("侧栏缺少远程控制/截图/关于其中一项")
         }
         XCTAssertEqual(screenshot, remote + 1, "截图页要紧跟在远程控制后面")
-        XCTAssertEqual(about, screenshot + 1, "新增页都排在关于之前：关于永远是最后一页")
+        XCTAssertEqual(about, tabs.count - 1, "新增页都排在关于之前：关于永远是最后一页")
     }
 
     // MARK: - 默认值

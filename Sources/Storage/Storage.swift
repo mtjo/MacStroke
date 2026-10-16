@@ -137,6 +137,29 @@ public enum StorageKey: String, CaseIterable {
     /// 长截图最多接多少「屏」：按框住的那块高度计。撞顶就停 —— 再长的 PNG 用户也打不开。
     case screenshotScrollMaxScreens = "screenshotScrollMaxScreens"
 
+    // Proximity lock（蓝牙靠近锁屏）
+    // 移植版扩展（超出原版）。总开关默认**关**：这一条会自动锁用户的屏幕，没点头之前
+    // 一次都不该发生 —— 尤其是把 Mac 当远程机用的人，误锁等于把自己关在门外。
+    case enableProximityLock = "enableProximityLock"
+    /// 盯哪台设备。存 `CBPeripheral.identifier` 的 UUID 串：苹果设备（手表/手机）由
+    /// macOS 把随机地址解析成公开地址，这个 UUID 跨扫描稳定；空串 = 还没选过设备，
+    /// 此时即使总开关开着也不动（没有目标的「靠近」无从判定）。
+    case proximityDeviceID = "proximityDeviceID"
+    /// 只用于界面回显的设备名。真判定只认 ID —— 名字可以重复也可以改。
+    case proximityDeviceName = "proximityDeviceName"
+    /// 两个阈值做滞回：信号强过 unlockRSSI 算「回来了」，弱过 lockRSSI 算「走开了」。
+    /// 只留一个阈值会在临界点上反复锁解（RSSI 本身就有几 dB 抖动）。
+    case proximityUnlockRSSI = "proximityUnlockRSSI"
+    case proximityLockRSSI = "proximityLockRSSI"
+    /// 弱过阈值之后还要再等几秒才真锁：路过门口、蓝牙抖一下都不该锁屏。
+    case proximityLockDelay = "proximityLockDelay"
+    /// 多久没收到这台设备的广播就认定「信号丢了」。CoreBluetooth 不会告诉你设备走了，
+    /// 只能靠最后见到它的时间超时。
+    case proximitySignalTimeout = "proximitySignalTimeout"
+    /// 回来后要不要自动解锁（把存进钥匙串的登录密码打进锁屏密码框）。**默认关**，
+    /// 而且和上面的锁屏是两件事：只锁不解是完全可用的组合，反过来不成立。
+    case proximityAutoUnlock = "proximityAutoUnlock"
+
     // Legacy (kept for compatibility)
     case showToast = "showToast"
     case clipboardHistoryLimit = "clipboardHistoryLimit"
@@ -315,6 +338,21 @@ public enum StorageDefaults {
     /// 长到 10 屏就该收：再长的 PNG 用户自己也打不开，白占内存。
     public static let screenshotScrollMaxScreens: Int = 10
 
+    // Proximity lock
+    public static let enableProximityLock: Bool = false
+    /// 空串 = 还没选设备，功能不动。
+    public static let proximityDeviceID: String = ""
+    public static let proximityDeviceName: String = ""
+    /// -60 dBm ≈ 同一张桌子上；-80 dBm ≈ 隔了一两堵墙或者已经走出房间。
+    /// 这两个值是 BLEUnlock 长期实测下来的默认，起步就用它，用户再按自家户型调。
+    public static let proximityUnlockRSSI: Int = -60
+    public static let proximityLockRSSI: Int = -80
+    /// 5 秒：够滤掉一次蓝牙抖动，又不至于让人已经走远还等着锁。
+    public static let proximityLockDelay: Int = 5
+    /// 60 秒：手表的广播间隔通常是秒级，一分钟一个包都没收到就是真不在附近了。
+    public static let proximitySignalTimeout: Int = 60
+    public static let proximityAutoUnlock: Bool = false
+
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
@@ -388,6 +426,14 @@ public func registerUserDefaultsDefaults() {
         StorageKey.screenshotRecordCursor.rawValue: StorageDefaults.screenshotRecordCursor,
         StorageKey.screenshotScrollStep.rawValue: StorageDefaults.screenshotScrollStep,
         StorageKey.screenshotScrollMaxScreens.rawValue: StorageDefaults.screenshotScrollMaxScreens,
+        StorageKey.enableProximityLock.rawValue: StorageDefaults.enableProximityLock,
+        StorageKey.proximityDeviceID.rawValue: StorageDefaults.proximityDeviceID,
+        StorageKey.proximityDeviceName.rawValue: StorageDefaults.proximityDeviceName,
+        StorageKey.proximityUnlockRSSI.rawValue: StorageDefaults.proximityUnlockRSSI,
+        StorageKey.proximityLockRSSI.rawValue: StorageDefaults.proximityLockRSSI,
+        StorageKey.proximityLockDelay.rawValue: StorageDefaults.proximityLockDelay,
+        StorageKey.proximitySignalTimeout.rawValue: StorageDefaults.proximitySignalTimeout,
+        StorageKey.proximityAutoUnlock.rawValue: StorageDefaults.proximityAutoUnlock,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

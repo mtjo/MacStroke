@@ -44,6 +44,8 @@ public enum PreferencesTab: String, CaseIterable {
     // 移植版新增页（超出原版）：截图、滚动截图、录屏的落地方式，跟在远程控制后面。
     // 页名和状态栏那一条用同一个 key（截图/录屏），两处不一致会让人以为偏好里少了一页。
     case screenshot
+    // 移植版新增页（超出原版）：蓝牙靠近锁屏，跟在截图后面。
+    case proximityLock
     case about
 
     var title: String {
@@ -57,6 +59,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .clipboard: return L("Clipboard")
         case .remoteControl: return L("Remote Control")
         case .screenshot: return L("Screenshot or record")
+        case .proximityLock: return L("Proximity Lock")
         case .about: return L("About")
         }
     }
@@ -72,6 +75,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .clipboard: return "doc.on.clipboard"
         case .remoteControl: return "dot.radiowaves.left.and.right"
         case .screenshot: return "camera.viewfinder"
+        case .proximityLock: return "antenna.radiowaves.left.and.right"
         case .about: return "info.circle"
         }
     }
@@ -258,6 +262,8 @@ public struct PreferencesView: View {
                     RemoteControlTabView(viewModel: viewModel)
                 case .screenshot:
                     ScreenshotTabView(viewModel: viewModel)
+                case .proximityLock:
+                    ProximityLockTabView(viewModel: viewModel)
                 case .about:
                     AboutTabView(viewModel: viewModel)
                 }

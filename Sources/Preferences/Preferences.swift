@@ -12,6 +12,7 @@ import SwiftUI
 import Storage
 import EventCapture
 import RemoteControl
+import ProximityLock
 
 /// User preferences model - mirrors the design doc's PreferencesModel.
 public final class UserPreferences: ObservableObject {
@@ -304,6 +305,80 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setInt(screenshotScrollMaxScreens, forKey: .screenshotScrollMaxScreens) }
     }
 
+    // MARK: - Proximity lock（蓝牙靠近锁屏）
+    // 移植版扩展（超出原版）。和截图那几项不同：这一组改完要**立刻**生效 ——
+    // 人已经走开了才想起阈值不对，等下次启动没有意义。所以每个 didSet 都发
+    // `.macStrokeProximityLockDidChange`，App 侧收到就 `ProximityLockController.shared.apply()`。
+    /// 总开关。没选设备时即使打开也不算武装（`ProximityLockSettings.isArmed`）。
+    @Published public var enableProximityLock: Bool {
+        didSet {
+            storage.setBool(enableProximityLock, forKey: .enableProximityLock)
+            postProximityChange()
+        }
+    }
+    /// 盯的那台设备的 BLE 广播标识（CBPeripheral.identifier 的 UUID 串）。
+    /// 只由 `selectProximityDevice(id:name:)` 写，界面上是只读的。
+    @Published public private(set) var proximityDeviceID: String
+    @Published public private(set) var proximityDeviceName: String
+    /// 均值 ≥ 这个值算「人在旁边」。
+    @Published public var proximityUnlockRSSI: Int {
+        didSet {
+            guard proximityUnlockRSSI != oldValue else { return }
+            guard ProximityLockSettings.isValidRSSI(unlock: proximityUnlockRSSI, lock: proximityLockRSSI) else {
+                proximityUnlockRSSI = oldValue
+                return
+            }
+            storage.setInt(proximityUnlockRSSI, forKey: .proximityUnlockRSSI)
+            postProximityChange()
+        }
+    }
+    /// 均值 ≤ 这个值（或者信号超时收不到广播）算「走开」。
+    @Published public var proximityLockRSSI: Int {
+        didSet {
+            guard proximityLockRSSI != oldValue else { return }
+            guard ProximityLockSettings.isValidRSSI(unlock: proximityUnlockRSSI, lock: proximityLockRSSI) else {
+                proximityLockRSSI = oldValue
+                return
+            }
+            storage.setInt(proximityLockRSSI, forKey: .proximityLockRSSI)
+            postProximityChange()
+        }
+    }
+    /// 判定为走开之后还要再撑这么多秒才锁屏。
+    @Published public var proximityLockDelay: Int {
+        didSet {
+            storage.setInt(proximityLockDelay, forKey: .proximityLockDelay)
+            postProximityChange()
+        }
+    }
+    /// 这么久收不到一条广播就当设备消失（CoreBluetooth 永远不会主动说「它走了」）。
+    @Published public var proximitySignalTimeout: Int {
+        didSet {
+            storage.setInt(proximitySignalTimeout, forKey: .proximitySignalTimeout)
+            postProximityChange()
+        }
+    }
+    /// 人回来时自动把存的登录密码打进锁屏密码框。默认关。
+    @Published public var proximityAutoUnlock: Bool {
+        didSet {
+            storage.setBool(proximityAutoUnlock, forKey: .proximityAutoUnlock)
+            postProximityChange()
+        }
+    }
+
+    /// 扫描列表里点「选择」：id 和名字一起落盘（名字只是回显用，判定只看 id）。
+    public func selectProximityDevice(id: String, name: String) {
+        proximityDeviceID = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        proximityDeviceName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        storage.setString(proximityDeviceID, forKey: .proximityDeviceID)
+        storage.setString(proximityDeviceName, forKey: .proximityDeviceName)
+        postProximityChange()
+    }
+
+    private func postProximityChange() {
+        NotificationCenter.default.post(name: .macStrokeProximityLockDidChange, object: nil)
+    }
+
     // MARK: - Legacy
     @Published public var showToast: Bool {
         didSet { storage.setBool(showToast, forKey: .showToast) }
@@ -376,6 +451,18 @@ public final class UserPreferences: ObservableObject {
         self.screenshotRecordCursor = storage.getBoolOptional(forKey: .screenshotRecordCursor) ?? StorageDefaults.screenshotRecordCursor
         self.screenshotScrollStep = storage.getIntOptional(forKey: .screenshotScrollStep) ?? StorageDefaults.screenshotScrollStep
         self.screenshotScrollMaxScreens = storage.getIntOptional(forKey: .screenshotScrollMaxScreens) ?? StorageDefaults.screenshotScrollMaxScreens
+        // 靠近锁屏这一组从 ProximityLockSettings.current 读，不直接读键：这样界面显示的
+        // 阈值和控制器实际用的那一对必然是同一对（存量 plist 里写坏的值在读的时候就整对
+        // 退回默认，界面上也就看得出被退回过，而不是显示一个用不上的数）。
+        let proximity = ProximityLockSettings.current(from: storage)
+        self.enableProximityLock = proximity.enabled
+        self.proximityDeviceID = proximity.deviceID
+        self.proximityDeviceName = proximity.deviceName
+        self.proximityUnlockRSSI = proximity.unlockRSSI
+        self.proximityLockRSSI = proximity.lockRSSI
+        self.proximityLockDelay = Int(proximity.lockDelay)
+        self.proximitySignalTimeout = Int(proximity.signalTimeout)
+        self.proximityAutoUnlock = proximity.autoUnlock
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }

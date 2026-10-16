@@ -1,0 +1,3 @@
+/* 蓝牙授权框那一句：CoreBluetooth 没有主动申请的 API，构造 CBCentralManager 时系统就弹，
+   所以这句话是用户第一次点「扫描设备」时唯一看到的解释。 */
+"NSBluetoothAlwaysUsageDescription" = "MacStroke listens for your watch or band's Bluetooth advertisements to lock the screen when you walk away. It never connects to any device.";
