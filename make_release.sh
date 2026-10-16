@@ -29,7 +29,10 @@ EXPECTED_ED_PUB="$(awk '/<key>SUPublicEDKey<\/key>/{getline; gsub(/.*<string>|<\
 
 # zip 的下载地址：沿用原版 2.0.5 起的做法，放 GitHub release tag 资源。
 DOWNLOAD_URL="${DOWNLOAD_URL:-https://github.com/mtjo/MacStroke/releases/download/${APP_VERSION}/MacStroke.zip}"
-NOTES_URL="${NOTES_URL:-https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/${APP_VERSION}.html}"
+# 说明页从 3.1.5 起是 .md：raw.githubusercontent.com 无论什么扩展名都给 Content-Type: text/plain，
+# 而 Sparkle 判格式时先查扩展名（SUUpdateAlert.m 里那句 "test for markdown first because
+# text/plain may be used"），所以只有 .md 才走 Markdown 视图，.html 只会当成纯文本。
+NOTES_URL="${NOTES_URL:-https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/${APP_VERSION}.md}"
 
 fail() { echo "❌ $*" >&2; exit 1; }
 
@@ -118,9 +121,7 @@ cat > "${ITEM}" <<ITEM_EOF
     <item>
       <title>Version${APP_VERSION}</title>
       ${CRITICAL_ELEMENT}
-      <sparkle:releaseNotesLink>
-        ${NOTES_URL}
-      </sparkle:releaseNotesLink>
+      <sparkle:releaseNotesLink>${NOTES_URL}</sparkle:releaseNotesLink>
       <pubDate>${PUB_DATE}</pubDate>
       <enclosure url="${DOWNLOAD_URL}" sparkle:version="${APP_VERSION}" sparkle:shortVersionString="${APP_VERSION}" length="${LENGTH}" type="application/octet-stream" sparkle:dsaSignature="${DSA_SIG}" sparkle:edSignature="${ED_SIG}" />
       <sparkle:minimumSystemVersion>${MIN_MACOS}</sparkle:minimumSystemVersion>
@@ -131,12 +132,20 @@ if [ "${CRITICAL:-0}" != "1" ]; then
     # 上面那行在非关键版本是空的，删掉空行以免条目结构跟历史不一致
     sed -i '' '/^[[:space:]]*$/d' "${ITEM}"
 fi
+# releaseNotesLink 必须单行写：SUAppcast.m 只对「其余元素」做 trim，这个元素走的是
+# 带属性的分支，元素文本原样进 NSURL，开头那个换行就让解析变成 nil —— 更新窗的日志区
+# 从此空白。历史上每条都是多行写法，所以弹窗一直没显示过更新日志（issue #71）。
+grep -q "<sparkle:releaseNotesLink>http[^[:space:]]*</sparkle:releaseNotesLink>" "${ITEM}" \
+    || fail "条目里的 releaseNotesLink 不是单行 URL，Sparkle 会解析成 nil（更新窗没有更新日志）"
+# 说明页也得真的在仓库里：feed 指过去是 404 的话，用户点开更新窗只会看到空白日志区
+[ -f "${REPO}/Changelog/${APP_VERSION}.md" ] \
+    || fail "找不到 Changelog/${APP_VERSION}.md，但条目的 releaseNotesLink 指向它"
 
 echo "✅ 产物："
 echo "   ${ZIP}  (${LENGTH} bytes, ${ARCHS})"
 echo "   ${ITEM}"
 echo
 echo "下一步（都是改动公开仓库的动作，需人工确认后再做）："
-echo "  1. 把 ${ITEM} 的内容追加到 release 分支 AppCast.xml，并同步 Changelog/${APP_VERSION}.html"
+echo "  1. 把 ${ITEM} 的内容追加到 release 分支 AppCast.xml，并同步 Changelog/${APP_VERSION}.md"
 echo "  2. 上传 ${ZIP} 为 GitHub release tag ${APP_VERSION} 的资源 MacStroke.zip"
 echo "  3. 发布后校验：curl -sL https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml | grep -A3 ${APP_VERSION}"

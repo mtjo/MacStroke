@@ -26,7 +26,9 @@ swift test --list-tests
 ./make_release.sh        # 关键版本：CRITICAL=1 ./make_release.sh
 ```
 
-本地构建就跑 `./build_app.sh`（在仓库根出 `MacStroke.app`，通用包 + 自签；装机是另一步 `cp -R MacStroke.app /Applications` 再重启进程与 Finder 扩展）。发版不再手工跑这两条：`.github/workflows/release.yml`（`workflow_dispatch`，`dry_run` 默认 true）一条命令跑完「构建 → 双签 → tag → GitHub release + 附件 → release 分支 appcast/更新说明 → 个人 tap 状态核对」。所以发版前的准备只有两个动作：改 `build_app.sh` 的 `APP_VERSION`、写 `Changelog/<ver>.html`（中英对照，`+` 新增 / `-` 修复 / `!` 注意，成对排列，末行 `download:` 指向 release tag 的 MacStroke.zip），然后提交推送到 **main**（workflow 硬要求说明页已在 main，且只允许从 main 发版；它不挂 push 触发器）。
+本地构建就跑 `./build_app.sh`（在仓库根出 `MacStroke.app`，通用包 + 自签；装机是另一步 `cp -R MacStroke.app /Applications` 再重启进程与 Finder 扩展）。发版不再手工跑这两条：`.github/workflows/release.yml`（`workflow_dispatch`，`dry_run` 默认 true）一条命令跑完「构建 → 双签 → tag → GitHub release + 附件 → release 分支 appcast/更新说明 → 个人 tap 状态核对」。所以发版前的准备只有两个动作：改 `build_app.sh` 的 `APP_VERSION`、写 `Changelog/<ver>.md`（Markdown，见下），然后提交推送到 **main**（workflow 硬要求说明页已在 main，且只允许从 main 发版；它不挂 push 触发器）。
+
+**说明页从 3.1.5 起是 Markdown，且条目的 `<sparkle:releaseNotesLink>` 必须单行写**（issue #71）。两条都是实测：raw.githubusercontent.com 对任何扩展名都回 `Content-Type: text/plain`，而 Sparkle 判日志格式时先按扩展名认 `md`/`markdown` 才走 Markdown 视图（`SUUpdateAlert.m` 里那句 "test for markdown first because text/plain may be used"），`.html` 只会落进纯文本视图；更要命的是 `SUAppcast.m` 的 trim 只覆盖「其余元素」，`releaseNotesLink` 走带属性的那条分支、元素文本原样交给 `NSURL`，开头一个换行就解析成 nil —— 2.0.5 起的每条历史条目都是跨行缩进写法，所以更新窗的日志区一直是空的。排版约定：`## MacStroke <ver>` 版本标题、`**新增 / Added**` 这类粗体分组标签（取代旧的 `+` 新增 / `-` 修复 / `!` 注意标记）、每条一个 `- ` 列表项，英文句后空一行、缩进两格写中文，中文渲染成同缩进的续行而不是第二个项目符号。GitHub release 正文由同一份 `.md` 生成，末尾不再需要 `download:` 那行。
 
 ## 架构概览
 

@@ -2,7 +2,7 @@
 # appcast + 更新说明 → 个人 tap 状态核对」，也就是以前手工做的五步。
 #
 # 版本号的唯一来源仍是 build_app.sh 里的 APP_VERSION（make_release.sh 也读它），所以流程
-# 是：先在 main 上提交「版本号 + Changelog/<ver>.html」，再来手动跑这个 workflow。
+# 是：先在 main 上提交「版本号 + Changelog/<ver>.md」，再来手动跑这个 workflow。
 # 故意不挂 push 触发器 —— 误推一个提交就把线上 feed 改了，代价太大。
 #
 # 需要的仓库 secrets（Settings → Secrets and variables → Actions → Repository secrets）：
@@ -65,9 +65,10 @@ jobs:
           [ "${GITHUB_REF_NAME}" = "main" ] \
             || { echo "❌ 当前分支是 ${GITHUB_REF_NAME}，发版必须走 main" >&2; exit 1; }
           # 说明页必须已经在 main 上：feed 里的 releaseNotesLink 指的就是它，缺页会让用户
-          # 点更新时看到 404。
-          [ -f "Changelog/${VER}.html" ] \
-            || { echo "❌ 找不到 Changelog/${VER}.html —— 先把版本号和说明页提交到 main" >&2; exit 1; }
+          # 点更新时看到 404。必须是 .md —— raw.githubusercontent 一律给 text/plain，
+          # Sparkle 只有按扩展名认出 md/markdown 才会走 Markdown 排版（issue #71）。
+          [ -f "Changelog/${VER}.md" ] \
+            || { echo "❌ 找不到 Changelog/${VER}.md —— 先把版本号和 Markdown 说明页提交到 main" >&2; exit 1; }
           # tag 已存在有两种：指向本次提交 = 上一次跑到一半断了，可以续；指向别处 = 这一版
           # 真发过了，直接停，别把线上条目改一半。
           git fetch --tags origin >/dev/null 2>&1 || true
@@ -295,8 +296,9 @@ jobs:
         if: ${{ !inputs.dry_run && steps.published.outputs.already != '1' }}
         run: |
           set -euo pipefail
-          # 正文直接用 Changelog/<ver>.html 的要点（去掉末尾那行 download:），再补一句系统要求
-          grep -v '^download:' "Changelog/${VERSION}.html" > "${RUNNER_TEMP}/body.md"
+          # 正文直接用 Changelog/<ver>.md（GitHub 的 release 正文按 Markdown 渲染，
+          # 与更新窗里那份同源同排版），再补一句系统要求
+          cat "Changelog/${VERSION}.md" > "${RUNNER_TEMP}/body.md"
           printf '\nRequires macOS %s or later. 旧版 2.0.5 与 3.0.x 都能直接自动更新（条目同时带 DSA 与 EdDSA 签名）。\n' \
             "${MIN_MACOS}" >> "${RUNNER_TEMP}/body.md"
           # 附件落名必须正好是 MacStroke.zip —— feed 里的 url 就是这个。
@@ -365,8 +367,8 @@ jobs:
           idx = text.rstrip().rfind("</rss>")
           assert idx > 0, "AppCast.xml 里找不到 </rss>"
           feed.write_text(text[:idx] + item + text[idx:])
-          pathlib.Path(f"Changelog/{ver}.html").parent.mkdir(exist_ok=True)
-          pathlib.Path(f"Changelog/{ver}.html").write_text((ws / f"Changelog/{ver}.html").read_text())
+          pathlib.Path(f"Changelog/{ver}.md").parent.mkdir(exist_ok=True)
+          pathlib.Path(f"Changelog/{ver}.md").write_text((ws / f"Changelog/{ver}.md").read_text())
           PY
           xmllint --noout AppCast.xml
           AFTER=$(grep -c "<channel>" AppCast.xml)
@@ -374,7 +376,7 @@ jobs:
             || { echo "❌ <channel> 数量从 ${BEFORE} 变成 ${AFTER}" >&2; exit 1; }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add AppCast.xml "Changelog/${VERSION}.html"
+          git add AppCast.xml "Changelog/${VERSION}.md"
           git commit -m "发布 ${VERSION}：appcast 追加第 ${AFTER} 条，补更新说明页"
           git push origin HEAD:release
 
@@ -389,8 +391,16 @@ jobs:
           grep -q "<title>Version${VERSION}</title>" "${RUNNER_TEMP}/feed.xml" \
             || { echo "❌ 线上 feed 里没有 Version${VERSION}（多半是缓存，稍后手工复核）" >&2; exit 1; }
           echo "✅ 线上 feed $(grep -c '<channel>' "${RUNNER_TEMP}/feed.xml") 个 <channel>，含 Version${VERSION}"
-          curl -sSL -o /dev/null -w "说明页 HTTP %{http_code}\n" \
-            "https://raw.githubusercontent.com/${OWNER}/${GITHUB_REPOSITORY#*/}/release/Changelog/${VERSION}.html"
+          # 更新日志这一路要真验到：条目里的链接是单行、说明页取得到且确实是 Markdown 文件。
+          # 链接多写一个换行，Sparkle 就解析成 nil，用户那边表现为更新窗没有日志（issue #71）。
+          grep -A2 "<title>Version${VERSION}</title>" "${RUNNER_TEMP}/feed.xml" \
+            | grep -q "<sparkle:releaseNotesLink>https://[^<]*Changelog/${VERSION}.md</sparkle:releaseNotesLink>" \
+            || { echo "❌ 线上条目里 Version${VERSION} 的 releaseNotesLink 不是单行的 .md 链接" >&2; exit 1; }
+          NOTES_CT="$(curl -sSIL -o /dev/null -w '%{content_type} %{http_code}' \
+            "https://raw.githubusercontent.com/${OWNER}/${GITHUB_REPOSITORY#*/}/release/Changelog/${VERSION}.md")"
+          echo "说明页 ${NOTES_CT}"
+          echo "${NOTES_CT}" | grep -q " 200$" \
+            || { echo "❌ 说明页取不到：${NOTES_CT}（多半是 raw 缓存，稍后手工复核）" >&2; exit 1; }
 
       - name: 个人 tap 跟进状态
         if: ${{ !inputs.dry_run }}
