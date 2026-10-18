@@ -91,6 +91,8 @@
 "Screenshot Trigger" = "Trigger";
 "Screenshot Shortcut" = "Keyboard shortcut";
 "Screenshot Shortcut hint" = "Click the recorder, then press a new combination to rebind it. The cross at the right clears it, which turns the shortcut off. Pressing it again while the overlay is up cancels the shot.";
+"Screenshot Text Shortcut" = "Extract-text shortcut";
+"Screenshot Text Shortcut hint" = "Opens the overlay straight on Extract text — frame some text and it lands in the clipboard when you release, with no annotation bar in between. Rebind or clear it the same way as the row above.";
 "Screenshot Gesture" = "Gesture";
 "Screenshot gesture hint" = "Draw the gesture with the trigger button held down; S by default. The rule shows up in the Rules tab, where the minimum score and app filter are tuned.";
 "Screenshot gesture unset" = "No screenshot gesture yet. Draw one, or pick a preset.";

@@ -91,6 +91,8 @@
 "Screenshot Trigger" = "触发方式";
 "Screenshot Shortcut" = "快捷键";
 "Screenshot Shortcut hint" = "点录制框再按下新的组合就能改键；点右边的叉把它置空，就是不用快捷键触发截图。遮罩已经摊开时再按一次等于取消。";
+"Screenshot Text Shortcut" = "提取文字快捷键";
+"Screenshot Text Shortcut hint" = "按下去遮罩直接开在「提取文字」这一档：框住文字松手就提取并复制，中间不进注解条。改键、置空跟上面那行一样。";
 "Screenshot Gesture" = "手势";
 "Screenshot gesture hint" = "按住手势键画出来即触发，默认 S。这条规则在「规则」页里看得到，最低相似度、应用过滤都在那里改。";
 "Screenshot gesture unset" = "当前没有截图手势。点「绘制手势」画一个，或者从预设网格挑一个。";

@@ -104,7 +104,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// 截图的全局快捷键。单独一只 monitor：粘贴板那只的命中事件要透传给前台 App，
     /// 截图这条要吞掉（否则 ⌘⇧A 会同时触发前台 App 自己的绑定）。
     private var screenshotShortcutMonitor: ShortcutMonitor?
+    /// 「提取文字」专用快捷键（issue #74）的监听。和上面那条各占一只 monitor：
+    /// 两个组合默认只差一个修饰键（⌘⇧A / ⌥⇧A），共用一只就没法各挂各的动作。
+    private var screenshotTextShortcutMonitor: ShortcutMonitor?
     private var monitoredScreenshotShortcut = ""
+    private var monitoredScreenshotTextShortcut = ""
     private let storage = PreferencesStorage()
     private var updaterController: SPUStandardUpdaterController?
     /// 发现新版提醒用的系统通知标记：点了只认这条，其它提示（脚本出错、偏好页确认
@@ -473,13 +477,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
         }
 
-        // 截图快捷键同理：录完下一个键就是新键，不用重启。
-        let screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut)
-            ?? StorageDefaults.screenshotShortcut
-        if screenshotShortcut != monitoredScreenshotShortcut {
+        // 截图的快捷键同理：录完下一个键就是新键，不用重启。两条一起比，
+        // 谁变了都只重挂那一只（rebind 内部按串判等）。
+        let screenshotShortcut = storedShortcut(forKey: .screenshotShortcut,
+                                                fallback: StorageDefaults.screenshotShortcut)
+        let screenshotTextShortcut = storedShortcut(forKey: .screenshotTextShortcut,
+                                                   fallback: StorageDefaults.screenshotTextShortcut)
+        if screenshotShortcut != monitoredScreenshotShortcut
+            || screenshotTextShortcut != monitoredScreenshotTextShortcut {
             monitoredScreenshotShortcut = screenshotShortcut
+            monitoredScreenshotTextShortcut = screenshotTextShortcut
             DispatchQueue.main.async { [weak self] in
-                self?.applyScreenshotShortcut(screenshotShortcut)
+                self?.applyScreenshotShortcuts()
             }
         }
     }
@@ -502,34 +511,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Screenshot
 
-    /// 截图的两个外部入口：全局快捷键（默认 ⌘⇧A）与手势规则（默认画 S）。
-    /// 快捷键挂一只自己的 monitor；手势那条规则是老用户升级后才缺的，这里补一次。
+    /// 截图的三个外部入口：全局快捷键（默认 ⌘⇧A）、提取文字专用快捷键（默认 ⌥⇧A，
+    /// issue #74）与手势规则（默认画 S）。两条快捷键各挂一只 monitor；手势那条规则是老
+    /// 用户升级后才缺的，这里补一次。
     private func initScreenshotTriggers() {
-        let shortcut = storage.getStringOptional(forKey: .screenshotShortcut)
-            ?? StorageDefaults.screenshotShortcut
-        monitoredScreenshotShortcut = shortcut
-        applyScreenshotShortcut(shortcut)
+        monitoredScreenshotShortcut = storedShortcut(forKey: .screenshotShortcut,
+                                                     fallback: StorageDefaults.screenshotShortcut)
+        monitoredScreenshotTextShortcut = storedShortcut(forKey: .screenshotTextShortcut,
+                                                         fallback: StorageDefaults.screenshotTextShortcut)
+        applyScreenshotShortcuts()
         if ruleStore?.installScreenshotRuleIfNeeded() == true {
             NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)
         }
     }
 
-    private func applyScreenshotShortcut(_ shortcutString: String) {
+    private func storedShortcut(forKey key: StorageKey, fallback: String) -> String {
+        storage.getStringOptional(forKey: key) ?? fallback
+    }
+
+    /// 偏好页录完下一个键就是新键，不用重启 App：两条快捷键一起过一遍。
+    private func applyScreenshotShortcuts() {
+        screenshotShortcutMonitor = Self.rebind(screenshotShortcutMonitor,
+                                                storedShortcut(forKey: .screenshotShortcut,
+                                                               fallback: StorageDefaults.screenshotShortcut)) {
+            ScreenshotController.shared.toggle()
+        }
+        screenshotTextShortcutMonitor = Self.rebind(screenshotTextShortcutMonitor,
+                                                    storedShortcut(forKey: .screenshotTextShortcut,
+                                                                   fallback: StorageDefaults.screenshotTextShortcut)) {
+            ScreenshotController.shared.toggleText()
+        }
+    }
+
+    /// 解析不出来的串（包括偏好页上点了叉、写成空串）走「停掉监听」那支：
+    /// `"keyCode=0, flags=0"` 是「裸按 A」，绝不能当成一个真键去挂全局吞键的监听。
+    private static func rebind(_ monitor: ShortcutMonitor?, _ shortcutString: String,
+                               action: @escaping () -> Void) -> ShortcutMonitor? {
         guard let parsed = ShortcutMonitor.parseShortcut(shortcutString) else {
-            screenshotShortcutMonitor?.stop()
-            screenshotShortcutMonitor = nil
-            return
+            monitor?.stop()
+            return nil
         }
-        if screenshotShortcutMonitor == nil {
-            let monitor = ShortcutMonitor()
+        guard let monitor else {
+            let fresh = ShortcutMonitor()
             // 命中即吞：截图键不该再被前台 App 当成自己的快捷键执行一遍。
-            monitor.consumesMatchedEvent = true
-            monitor.onShortcutDetected = { ScreenshotController.shared.toggle() }
-            screenshotShortcutMonitor = monitor
+            fresh.consumesMatchedEvent = true
+            fresh.onShortcutDetected = action
+            fresh.keyCode = parsed.0
+            fresh.flags = parsed.1
+            _ = fresh.start()
+            return fresh
         }
-        screenshotShortcutMonitor?.keyCode = parsed.0
-        screenshotShortcutMonitor?.flags = parsed.1
-        _ = screenshotShortcutMonitor?.start()
+        monitor.keyCode = parsed.0
+        monitor.flags = parsed.1
+        _ = monitor.start()
+        return monitor
     }
 
     /// 弹出截图选区遮罩（状态栏菜单「截图/录屏」、快捷键和手势都走这里）。

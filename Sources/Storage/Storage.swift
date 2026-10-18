@@ -114,6 +114,9 @@ public enum StorageKey: String, CaseIterable {
     /// 截图的全局快捷键，跟粘贴板那条一样存成 "keyCode=X, flags=Y"。手势触发不在
     /// 这里，它是一条规则（规则表才是手势的存放处）。
     case screenshotShortcut = "screenshotShortcut"
+    /// 「提取文字」专用的那一条（issue #74）。和上面那条分开存：一条开「截图并注解」，
+    /// 这一条开「框住文字直接出字」，两个动作各留一个键位才有意义。
+    case screenshotTextShortcut = "screenshotTextShortcut"
     /// 选区阶段跟着光标的放大镜（放大的像素 + 坐标 + 色值）。默认开：卡边界和取色
     /// 都靠它，不想要的人在这一页关掉。
     case screenshotMagnifier = "screenshotMagnifier"
@@ -318,6 +321,10 @@ public enum StorageDefaults {
     public static let screenshotSnapToWindows: Bool = true
     /// ⌘⇧A：A 的 Carbon 键码就是 0，修饰键 ⌘(0x100000)|⇧(0x20000)。
     public static let screenshotShortcut: String = "keyCode=0, flags=1179648"
+    /// ⌥⇧A：键码同样是 0，修饰键 ⌥(0x80000)|⇧(0x20000)。
+    /// 和上面那条只差一个修饰键，两下按法在手指上是相邻的，但位的组合不重叠，
+    /// 监听器各判各的（issue #74 要的是一条能把「框住就出字」单独叫出来的键）。
+    public static let screenshotTextShortcut: String = "keyCode=0, flags=655360"
     public static let screenshotMagnifier: Bool = true
     /// 8 倍：120pt 的取景窗里横排 15 个像素。Retina 上那是屏上约 7.5pt 见方的一小块，
     /// 再小就看不出像素格，再大就开始挡内容。
@@ -418,6 +425,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.screenshotSaveDirectory.rawValue: StorageDefaults.screenshotSaveDirectory,
         StorageKey.screenshotSnapToWindows.rawValue: StorageDefaults.screenshotSnapToWindows,
         StorageKey.screenshotShortcut.rawValue: StorageDefaults.screenshotShortcut,
+        StorageKey.screenshotTextShortcut.rawValue: StorageDefaults.screenshotTextShortcut,
         StorageKey.screenshotMagnifier.rawValue: StorageDefaults.screenshotMagnifier,
         StorageKey.screenshotMagnification.rawValue: StorageDefaults.screenshotMagnification,
         StorageKey.screenshotDefaultTool.rawValue: StorageDefaults.screenshotDefaultTool,

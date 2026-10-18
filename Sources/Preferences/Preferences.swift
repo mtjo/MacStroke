@@ -275,6 +275,11 @@ public final class UserPreferences: ObservableObject {
     @Published public var screenshotShortcut: String {
         didSet { storage.setString(screenshotShortcut, forKey: .screenshotShortcut) }
     }
+    /// 「提取文字」专用快捷键（issue #74）：按下去遮罩直接停在提取文字那一档，
+    /// 框住一段文字松手就出字，不进注解条。和上面那条同格式、同生效方式。
+    @Published public var screenshotTextShortcut: String {
+        didSet { storage.setString(screenshotTextShortcut, forKey: .screenshotTextShortcut) }
+    }
 
     // MARK: - Screenshot / 录屏
     // 这三行管「录屏那一档出来的是什么」：帧率决定流畅度和文件大小的折中，时长上限
@@ -458,6 +463,7 @@ public final class UserPreferences: ObservableObject {
         self.screenshotMagnification = storage.getIntOptional(forKey: .screenshotMagnification) ?? StorageDefaults.screenshotMagnification
         self.screenshotDefaultTool = storage.getIntOptional(forKey: .screenshotDefaultTool) ?? StorageDefaults.screenshotDefaultTool
         self.screenshotShortcut = storage.getStringOptional(forKey: .screenshotShortcut) ?? StorageDefaults.screenshotShortcut
+        self.screenshotTextShortcut = storage.getStringOptional(forKey: .screenshotTextShortcut) ?? StorageDefaults.screenshotTextShortcut
         self.screenshotRecordFrameRate = storage.getIntOptional(forKey: .screenshotRecordFrameRate) ?? StorageDefaults.screenshotRecordFrameRate
         self.screenshotRecordMaxSeconds = storage.getIntOptional(forKey: .screenshotRecordMaxSeconds) ?? StorageDefaults.screenshotRecordMaxSeconds
         self.screenshotRecordCursor = storage.getBoolOptional(forKey: .screenshotRecordCursor) ?? StorageDefaults.screenshotRecordCursor

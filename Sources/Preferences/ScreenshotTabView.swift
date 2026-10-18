@@ -2,9 +2,9 @@
 //  ScreenshotTabView.swift
 //  MacStroke
 //
-//  截图/录屏偏好页（移植版新增，原版没有）：四段 —— 怎么触发（全局快捷键 + 手势）、
-//  静态图出图之后怎么落地（自动保存、保存位置、吸附、预装工具、放大镜）、滚动截图
-//  （步长、最多接几屏）、录屏（帧率、最长时长、带不带指针）。
+//  截图/录屏偏好页（移植版新增，原版没有）：四段 —— 怎么触发（截图、提取文字两条快捷键
+//  + 手势）、静态图出图之后怎么落地（自动保存、保存位置、吸附、预装工具、放大镜）、
+//  滚动截图（步长、最多接几屏）、录屏（帧率、最长时长、带不带指针）。
 //
 //  快捷键和其余几项只管写库（UserPreferences 的 didSet 已经写穿到 UserDefaults）：
 //  快捷键由 App 层监听 UserDefaults 变化重新挂载，截图侧每次会话开始时现取一份快照
@@ -38,6 +38,12 @@ struct ScreenshotTabView: View {
                             .frame(width: 200, height: 28)
                     }
                     hint(L("Screenshot Shortcut hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot Text Shortcut")) {
+                        ShortcutRecorder(text: $viewModel.screenshotTextShortcut)
+                            .frame(width: 200, height: 28)
+                    }
+                    hint(L("Screenshot Text Shortcut hint"))
                     RowDivider()
                     gestureBlock
                 }

@@ -76,6 +76,25 @@ final class ScreenshotPreferencesTests: XCTestCase {
         XCTAssertEqual(makePrefs().screenshotShortcut, "keyCode=5, flags=786432")
     }
 
+    /// 提取文字那条（issue #74）和截图那条同一套规矩：读到默认值但不写库，
+    /// 改过才写 —— App 层那只监听靠的就是库里的变化。
+    func testTextShortcutReadsTheDefaultButWritesNothingUntilTouched() {
+        let prefs = makePrefs()
+        XCTAssertEqual(prefs.screenshotTextShortcut, StorageDefaults.screenshotTextShortcut)
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotTextShortcut.rawValue),
+                     "没改过就不该往库里写快捷键")
+
+        prefs.screenshotTextShortcut = "keyCode=14, flags=655360"
+        XCTAssertEqual(isolatedSuite().string(forKey: StorageKey.screenshotTextShortcut.rawValue),
+                       "keyCode=14, flags=655360", "App 层听的是库，页面状态不落库等于没设")
+        XCTAssertEqual(makePrefs().screenshotTextShortcut, "keyCode=14, flags=655360")
+
+        // 置空（录制框右端那颗叉）必须是「没有键」：空串解析不出东西，App 层走停掉监听那支。
+        prefs.screenshotTextShortcut = ""
+        XCTAssertEqual(makePrefs().screenshotTextShortcut, "",
+                       "写成默认串就等于把用户刚清掉的键又塞回去")
+    }
+
     /// 下拉框选完即写库：截图侧每张开图现读快照，页面状态不落库等于没设。
     func testArmedDefaultToolReachesTheStore() {
         let prefs = makePrefs()

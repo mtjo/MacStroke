@@ -15,7 +15,8 @@
 //  由这里驱动滚动拼接循环（`ScreenshotScrollCapture`）或录像会话（`ScreenshotRecorder`）。
 //  所以这个类同时管着两种会话的生命周期，`toggle()` 也得认出「现在是在选区里还是在实况里」。
 //
-//  入口只有一个 `toggle()`：状态栏菜单、以后的快捷键和手势都走这里。会话期间
+//  对外两个入口：`toggle()`（状态栏菜单、截图快捷键、手势规则）和 `toggleText()`
+//  （「提取文字」专用快捷键，issue #74），两者共用的只是「开一场遮罩」这半条。会话期间
 //  用回调通知 App 层挂起手势捕获 —— Screenshot 够不到 CanvasManager，反向依赖
 //  会把模块拖回 App 层。
 //
@@ -86,12 +87,31 @@ public final class ScreenshotController {
         isActive ? cancel() : start()
     }
 
+    /// 「提取文字」专用快捷键（issue #74）的入口：同一个遮罩，只是开出来就停在
+    /// 提取文字那一档上。走的是和 `toggle()` 一样的三步判定 —— 实况采集里先收尾，
+    /// 遮罩已摊开就当取消，否则带着那一档开一场。
+    ///
+    /// 不把 `ScreenshotMode` 放进签名：它是模块内的类型，公开它等于把模式条那四档
+    /// 全变成对外的调用面，而现在只有这一档需要一个外部键位。
+    public func toggleText() {
+        if isLiveCapturing { finishLive(); return }
+        if isActive { cancel(); return }
+        start(mode: .text)
+    }
+
     public func start() {
+        start(mode: .still)
+    }
+
+    private func start(mode: ScreenshotMode) {
         guard window == nil, ensureScreenRecordingPermission() else { return }
         guard let screen = ScreenshotGrabber.targetScreen(),
               let shot = ScreenshotGrabber.grab(screen: screen) else { return }
 
         let view = ScreenshotSelectionView(shot: shot)
+        // 先摆档再摆条：`showModeBar()` 里的 `sync(mode:)` 和屏上那句按键说明读的都是
+        // 这个值，晚一步就是一条「亮着截图、说的却是提取文字」的错档提示。
+        view.mode = mode
         // 窗口表和帧一起取：吸附预览圈的就是「这一帧里的这些窗」，隔几秒再查就会
         // 圈到一个已经关掉或已经挪走的窗。必须在建遮罩窗之前取完。
         // 偏好里关了吸附就不查（也不铺候选），拖选完全交给用户的手。

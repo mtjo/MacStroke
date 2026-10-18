@@ -32,6 +32,35 @@ final class ScreenshotTriggerTests: XCTestCase {
         XCTAssertEqual(monitor.flags, 0)
     }
 
+    // MARK: - 提取文字专用键（issue #74）
+
+    /// 「提取文字」的默认键：⌥⇧A。它和截图那条**故意共用同一个键码**，只错开修饰键 ——
+    /// 两只 monitor 各自按「键码相等 + 修饰位（0x1E0000）相等」判定，所以判据必须押在
+    /// 修饰位上：撞了就是一次按下开出两场会话。
+    func testDefaultTextShortcutIsOptionShiftA() throws {
+        let parsed = try XCTUnwrap(ShortcutMonitor.parseShortcut(StorageDefaults.screenshotTextShortcut))
+        XCTAssertEqual(parsed.0, 0, "提取文字也按在 A 上：键码 0 是个真键，不能当空值丢掉")
+        XCTAssertEqual(parsed.1, 0x80000 | 0x20000, "默认修饰键是 ⌥⇧")
+
+        let shot = try XCTUnwrap(ShortcutMonitor.parseShortcut(StorageDefaults.screenshotShortcut))
+        XCTAssertEqual(parsed.0, shot.0, "两条键位同键不同修饰：改了一个把另一个也顶掉是回归")
+        XCTAssertNotEqual(parsed.1, shot.1, "修饰位必须不同，否则 ⌘⇧A 会同时触发两条")
+    }
+
+    /// 框里显示的那行字要和库里的串一致：少个 ⌥ 用户就照着按错一个键。
+    func testRecorderDisplaysTheExtractTextDefault() throws {
+        let view = ShortcutRecorderView()
+        let parsed = try XCTUnwrap(ShortcutRecorder.parse(StorageDefaults.screenshotTextShortcut))
+        view.keyCode = parsed.keyCode
+        view.flags = parsed.flags
+
+        let shown = view.displayString
+        XCTAssertTrue(shown.contains("⌥"), "显示要带 option 符号：\(shown)")
+        XCTAssertTrue(shown.contains("⇧"), "显示要带 shift 符号：\(shown)")
+        XCTAssertFalse(shown.contains("⌘"), "这条不是 ⌘⇧A，那是截图那条：\(shown)")
+        XCTAssertEqual(shown.count, 3, "⌥⇧ 之后还得跟上一个键名：\(shown)")
+    }
+
     // MARK: - 录制框显示
 
     func testRecorderDisplaysTheStoredDefaultAndRoundTrips() {

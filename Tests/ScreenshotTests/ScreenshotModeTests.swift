@@ -79,6 +79,21 @@ final class ScreenshotModeTests: XCTestCase {
         XCTAssertTrue(view.modeBar?.isHidden ?? false, "选区落定后模式条要让位")
     }
 
+    /// 「提取文字」那条专用快捷键（issue #74）开出来的就是这样一场：控制器在建好遮罩、
+    /// 摆模式条**之前**把档摆上。所以条子一出现亮的就该是文字那一格，松手直接开认字，
+    /// 中间不停在注解条上。
+    func testStartingPresetOnTextModeLightsThatCellAndRoutesTheDrag() throws {
+        let view = try overlay()
+        view.mode = .text
+        view.showModeBar()
+        XCTAssertEqual(view.modeBar?.activeModeOnBar, .text, "开出来就要亮在提取文字那一格")
+
+        drag(in: view, from: (200, 120), to: (420, 260))
+        XCTAssertTrue(view.ocrRunning, "松手就该直接开认字")
+        XCTAssertNil(view.toolbar, "这一档不该亮出注解条")
+        XCTAssertTrue(view.modeBar?.isHidden ?? false, "认字期间模式条要让位")
+    }
+
     /// 滚动截图：选区交给实况采集，**不进**编辑态（注解条这时候没用，屏还要还给被滚的 App）。
     func testScrollModeHandsTheSelectionToLiveCapture() throws {
         let view = try overlay()
