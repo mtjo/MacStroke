@@ -16,6 +16,9 @@ final class FakeSession {
     var isLocked = false
     var secureInputPID: Int32?
     var processNameForPID = "loginwindow"
+    /// 屏幕是不是熄的。默认 false（亮着）：熄屏是新加的一道门，
+    /// 默认值必须让已有的解锁测试照旧走注入那条路，否则「新增校验」就变成「改写老判据」。
+    var isDisplayAsleep = false
     /// macOS 26 上 `CGSSessionScreenIsLocked` 被报告已从会话字典里移除（BLEUnlock PR #190），
     /// 打开这个开关就是模拟那种系统。
     var omitsLockKey = false
@@ -37,6 +40,7 @@ final class FakeSession {
                        self.lockCalls += 1
                        return self.lockResult
                    },
+                   displayAsleep: { [weak self] in self?.isDisplayAsleep ?? false },
                    log: { _ in },
                    observeNotifications: false)
     }

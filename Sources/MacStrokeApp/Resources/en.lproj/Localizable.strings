@@ -411,11 +411,13 @@
 "Proximity Lock" = "Proximity Lock";
 "Enable proximity lock" = "Enable Bluetooth proximity lock";
 "Proximity Lock enable hint" = "Pick a device you carry (watch, band, phone): the screen locks when it goes away and unlocks when it comes back.";
+"Proximity Devices Section" = "Device & Scanning";
 "Proximity device" = "Device:";
 "Proximity scan devices" = "Scan devices…";
 "Proximity stop scanning" = "Stop scanning";
 "Proximity no device found yet" = "No device found yet. Bring the watch or band close to this Mac; the first scan asks for Bluetooth access.";
 "Proximity select" = "Select";
+"Proximity forget device" = "Remove device";
 "Proximity unnamed device" = "Unnamed device";
 "Proximity no device selected" = "No device selected";
 "Proximity unlock threshold" = "Back threshold:";
@@ -454,6 +456,9 @@
 "Proximity event returned no auto unlock" = "You are back (auto unlock is off)";
 "Proximity event unlocked" = "Unlocked automatically";
 "Proximity event field not accepting" = "The lock screen password field is not in front; no password was typed";
+"Proximity event waiting for display wake" = "You are back, but the display is asleep; the unlock is retried once it wakes";
+"Proximity event unlock cancelled by hand" = "The screen was already unlocked another way, so the retry was dropped";
+"Proximity event unlock cancelled left" = "You walked away again while the display was still asleep, so the retry was dropped";
 "Proximity event no stored password" = "No login password in the Keychain";
 "Proximity event empty password" = "The stored password is empty";
 "Proximity event injection aborted" = "The screen state changed mid-typing; aborted";

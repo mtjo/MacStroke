@@ -23,16 +23,27 @@ final class PasswordInjectorTests: XCTestCase {
                               recorder: EventRecorder,
                               chunkSize: Int = 20,
                               maxAttempts: Int = 3,
+                              clearFieldBackspaces: Int = 0,
+                              unlockPollInterval: TimeInterval = 0.1,
+                              unlockTimeout: TimeInterval = 1.2,
+                              sleeper: ((TimeInterval) -> Void)? = nil,
+                              sleepCalls: ((TimeInterval) -> Void)? = nil,
                               onPost: ((CGEvent) -> Void)? = nil) -> PasswordInjector {
         PasswordInjector(screen: screen,
                          chunkSize: chunkSize,
                          maxAttempts: maxAttempts,
+                         clearFieldBackspaces: clearFieldBackspaces,
                          settleDelay: 0,
+                         unlockPollInterval: unlockPollInterval,
+                         unlockTimeout: unlockTimeout,
                          poster: { event in
                              recorder(event)
                              onPost?(event)
                          },
-                         sleeper: { _ in },
+                         sleeper: { interval in
+                             sleepCalls?(interval)
+                             if let sleeper { sleeper(interval) }
+                         },
                          log: { _ in })
     }
 
@@ -79,8 +90,8 @@ final class PasswordInjectorTests: XCTestCase {
         XCTAssertEqual(injector.inject("hunter2"), .submitted)
         XCTAssertEqual(recorder.typedChunks.joined(), "hunter2")
         XCTAssertEqual(recorder.controlKeyCodes, [0x24],
-                       "提交键必须是 kVK_Return(36)。BLEUnlock 那边写的是 52，"
-                       + "而 52 在 HIToolbox 里并没有定义成 Return")
+                       "提交键必须是 kVK_Return(0x24) —— 本机真机 2026-10-18 16:52 那一次"
+                       + "「第 1 轮解锁成功」用的就是它，BLEUnlock 的 52 是输的那一发")
     }
 
     /// 超过 chunkSize 的密码要分块打，且拼回来必须一字不差。
@@ -170,6 +181,38 @@ final class PasswordInjectorTests: XCTestCase {
         XCTAssertEqual(recorder.typedChunks, ["ab"])
     }
 
+    // MARK: - 提交之后要等得起：屏幕解开是有延迟的
+
+    /// 屏幕真的解开到 `screenIsUnlocked` 送达之间有一段延迟，只读一次会把成功读成失败，
+    /// 接着开第二轮 —— 而第二轮是往正在打开的桌面里再打一遍密码。
+    func testSlowUnlockIsStillCountedAsSuccessWithoutASecondRound() {
+        let session = makeSession()
+        let recorder = EventRecorder()
+        var sleeps = 0
+        let injector = makeInjector(screen: session.screenLock(), recorder: recorder,
+                                    sleeper: { _ in
+                                        sleeps += 1
+                                        if sleeps == 3 { session.isLocked = false }  // 第三次轮询才解开
+                                    })
+        XCTAssertEqual(injector.inject("hunter2"), .submitted,
+                       "屏幕在轮询窗口里解开了就该算成功，不是「这一轮没解」")
+        XCTAssertEqual(recorder.typedChunks, ["hunter2"], "只许打一轮：第二轮就是打进桌面")
+        XCTAssertEqual(recorder.controlKeyCodes, [0x24], "回车也只许发一次")
+        XCTAssertEqual(sleeps, 3, "解开之后要立刻收手，不该把窗口等满")
+    }
+
+    /// 反过来：真没解开时轮询必须自己封顶，不能把主线程挂死。
+    func testPollingWindowIsBoundedWhenNothingUnlocks() {
+        let session = makeSession()
+        let recorder = EventRecorder()
+        var sleeps = 0
+        let injector = makeInjector(screen: session.screenLock(), recorder: recorder,
+                                    maxAttempts: 1, unlockPollInterval: 0.1, unlockTimeout: 0.6,
+                                    sleepCalls: { _ in sleeps += 1 })
+        XCTAssertEqual(injector.inject("wrong"), .exhaustedAttempts)
+        XCTAssertEqual(sleeps, 6, "窗口 = 上限/步长，轮询次数得是可数的，不是无限圈")
+    }
+
     func testStopsAfterTheAttemptCap() {
         let session = makeSession()
         let recorder = EventRecorder()
@@ -178,5 +221,35 @@ final class PasswordInjectorTests: XCTestCase {
         XCTAssertEqual(injector.inject("wrong"), .exhaustedAttempts)
         XCTAssertEqual(recorder.controlKeyCodes, [0x24, 0x24, 0x24])
         XCTAssertEqual(recorder.typedChunks.joined(), "wrongwrongwrong")
+    }
+
+    // MARK: - 每轮开打前清框
+
+    /// 上一轮留在密码框里的字符会把这一轮的密码接歪 —— 不清掉的话这一轮照样解不开。
+    /// 真机 2026-10-18 16:52 成功那一发是带着清框跑的，所以这条留着而不是跟着轮换一起拆。
+    func testPasswordFieldIsClearedBeforeEachRound() {
+        let session = makeSession()
+        let recorder = EventRecorder()
+        let injector = makeInjector(screen: session.screenLock(), recorder: recorder,
+                                    maxAttempts: 2, clearFieldBackspaces: 3)
+        XCTAssertEqual(injector.inject("wrong"), .exhaustedAttempts)
+        XCTAssertEqual(recorder.controlKeyCodes,
+                       [0x33, 0x33, 0x33, 0x24, 0x33, 0x33, 0x33, 0x24],
+                       "退格必须排在当轮字符之前（字符本身走 49 号键，不在这个序列里）")
+    }
+
+    /// 清框途中屏幕解开了：剩下的退格一发都不许出去 —— 它们会喷进刚打开的桌面。
+    func testClearingStopsTheMomentTheGuardTrips() {
+        let recorder = EventRecorder()
+        // 每个键是 keyDown+keyUp 两个事件：发满 3 个事件（1 下半）之后守卫就翻脸。
+        let screen = ScreenLock(sessionReader: {
+            if recorder.events.count >= 3 { return [:] }
+            return ["CGSSessionScreenIsLocked": 1, "kCGSSessionSecureInputPID": 181]
+        }, processName: { _ in "loginwindow" }, log: { _ in }, observeNotifications: false)
+        let injector = makeInjector(screen: screen, recorder: recorder, clearFieldBackspaces: 10)
+        XCTAssertEqual(injector.inject("hunter2"), .abortedGuardTripped)
+        XCTAssertEqual(recorder.controlKeyCodes.filter { $0 == 0x33 }.count, 2,
+                       "守卫一翻脸，剩下的退格必须收住")
+        XCTAssertTrue(recorder.typedChunks.isEmpty, "框没清成就一个字都不该打进去")
     }
 }

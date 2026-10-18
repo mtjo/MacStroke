@@ -55,9 +55,9 @@ final class ProximityLockControllerTests: XCTestCase {
                                 },
                                 screen: session.screenLock(),
                                 passwords: passwords,
-                                inject: { [weak self] password in
+                                runInjection: { [weak self] password, completion in
                                     self?.injectedPasswords.append(password)
-                                    return self?.injectResult ?? .submitted
+                                    completion(self?.injectResult ?? .submitted)
                                 },
                                 settings: settings,
                                 now: { [weak self] in self?.clock.time ?? 0 },
@@ -292,6 +292,106 @@ final class ProximityLockControllerTests: XCTestCase {
         controller.tick(timestamp: 500)
         XCTAssertEqual(injectedPasswords, [])
         XCTAssertEqual(controller.presence, .present)
+    }
+
+    // MARK: - 屏幕熄着的时候一个字都不打
+
+    /// 本机 macOS 27 实测的坏情况：01:33:26 锁屏 → 01:33:31 屏熄 → 01:33:55 那三轮注入
+    /// 全打在黑屏上，一次都没解开（应用日志的时间戳落在 pmset 的 off/on 区间里）。
+    /// 熄屏时 `isAcceptingPassword` 仍然是真，拦不住 —— 只能另外问一句屏亮不亮。
+    func testReturnWhileDisplayIsAsleepInjectsNothing() {
+        let controller = makeController(settings: makeSettings(autoUnlock: true),
+                                        passwords: InMemoryPasswordStore(password: "hunter2"))
+        controller.apply(currentSettings)
+        driveToLock(controller)
+        session.isLocked = true
+        session.secureInputPID = 181
+        session.isDisplayAsleep = true
+        step(controller, rssi: -50, at: 500)
+        XCTAssertEqual(injectedPasswords, [], "屏熄着时绝不能打密码：打了也进不去，还白烧一轮")
+        XCTAssertEqual(controller.lastOutcome, .waitingForDisplayWake)
+        XCTAssertEqual(controller.presence, .present, "判定要知道人已经回来了，欠的解锁才有着落")
+    }
+
+    /// 熄屏那一次没打成不算完：屏一亮就补，而且一次唤醒只补一轮。
+    func testPendingUnlockIsRetriedOnceWhenTheDisplayWakes() {
+        let controller = makeController(settings: makeSettings(autoUnlock: true),
+                                        passwords: InMemoryPasswordStore(password: "hunter2"))
+        controller.apply(currentSettings)
+        driveToLock(controller)
+        session.isLocked = true
+        session.secureInputPID = 181
+        session.isDisplayAsleep = true
+        step(controller, rssi: -50, at: 500)
+        XCTAssertEqual(injectedPasswords, [])
+        // 亮起来之前这些 tick 一个字都不能打（真机上他可能十几分钟后才碰一下触控板）。
+        for second in 501 ... 504 {
+            step(controller, rssi: -50, at: TimeInterval(second))
+        }
+        XCTAssertEqual(injectedPasswords, [])
+
+        session.isDisplayAsleep = false
+        step(controller, rssi: -50, at: 505)
+        XCTAssertEqual(injectedPasswords, ["hunter2"], "屏亮了就把那一次补上，不能等下一次「回来」跳变")
+        XCTAssertEqual(controller.lastOutcome, .unlocked)
+        for second in 506 ... 515 {
+            step(controller, rssi: -50, at: TimeInterval(second))
+        }
+        XCTAssertEqual(injectedPasswords.count, 1, "一次唤醒只补一轮：解不该一秒重打一遍密码")
+    }
+
+    /// 他自己把锁解了：欠账要销掉，屏再亮也不能凭空打一遍。
+    func testPendingUnlockIsCancelledByAManualUnlock() {
+        let controller = makeController(settings: makeSettings(autoUnlock: true),
+                                        passwords: InMemoryPasswordStore(password: "hunter2"))
+        controller.apply(currentSettings)
+        driveToLock(controller)
+        session.isLocked = true
+        session.secureInputPID = 181
+        session.isDisplayAsleep = true
+        step(controller, rssi: -50, at: 500)
+        XCTAssertEqual(controller.lastOutcome, .waitingForDisplayWake)
+
+        session.isLocked = false          // 他自己按键盘解开的
+        session.isDisplayAsleep = false
+        step(controller, rssi: -50, at: 501)
+        XCTAssertEqual(injectedPasswords, [], "锁已经开了还补注入，等于把密码打进当时的任意输入框")
+        XCTAssertEqual(controller.lastOutcome, .unlockCancelledByHand,
+                       "界面那句话必须跟着改口，不然会一直挂着「等亮起来再解锁」而屏幕早就开了")
+
+        // 再走开一次、再回来一次：注入照常只有一轮，欠账没留成后门。
+        // 回来这段要连喂五帧 —— 判定看的是 5 帧滑窗均值，一帧强信号翻不了状态。
+        session.isLocked = true
+        for second in 502 ... 510 {
+            step(controller, rssi: -95, at: TimeInterval(second))
+        }
+        for second in 511 ... 518 {
+            step(controller, rssi: -50, at: TimeInterval(second))
+        }
+        XCTAssertEqual(injectedPasswords.count, 1)
+    }
+
+    /// 等亮起来这段时间人又走开了：欠账作废。下次屏亮时不该打密码 —— 那时候人不在。
+    func testPendingUnlockIsCancelledWhenThePersonLeavesAgain() {
+        let controller = makeController(settings: makeSettings(autoUnlock: true, lockDelay: 3),
+                                        passwords: InMemoryPasswordStore(password: "hunter2"))
+        controller.apply(currentSettings)
+        driveToLock(controller, lockDelay: 3)
+        session.isLocked = true
+        session.secureInputPID = 181
+        session.isDisplayAsleep = true
+        step(controller, rssi: -50, at: 500)
+        XCTAssertEqual(controller.lastOutcome, .waitingForDisplayWake)
+
+        for second in 501 ... 508 {
+            step(controller, rssi: -95, at: TimeInterval(second))
+        }
+        XCTAssertEqual(controller.presence, .absent)
+        session.isDisplayAsleep = false
+        step(controller, rssi: -95, at: 509)
+        XCTAssertEqual(injectedPasswords, [])
+        XCTAssertEqual(controller.lastOutcome, .unlockCancelledPersonLeft,
+                       "欠账作废这件事也要在界面上说清楚，不能留着「等亮起来再解锁」")
     }
 
     // MARK: - 挂起

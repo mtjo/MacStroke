@@ -95,6 +95,29 @@ final class ProximityLockPreferencesTests: XCTestCase {
                       "开关已开 + 选了设备才算武装")
     }
 
+    /// 选完必须有地方撤。没有「移除设备」这颗按钮时，想停掉判定只能去关总开关，
+    /// 而总开关一关，下次要用还得重新扫一遍。
+    func testForgettingTheDeviceClearsIDAndNameAndDisarms() {
+        let prefs = makePrefs()
+        prefs.enableProximityLock = true
+        prefs.selectProximityDevice(id: "ABC-123", name: "我的手表")
+
+        let notifications = countChanges { prefs.forgetProximityDevice() }
+        XCTAssertTrue(prefs.proximityDeviceID.isEmpty)
+        XCTAssertTrue(prefs.proximityDeviceName.isEmpty)
+        XCTAssertEqual(isolatedSuite().string(forKey: StorageKey.proximityDeviceID.rawValue), "")
+        XCTAssertEqual(isolatedSuite().string(forKey: StorageKey.proximityDeviceName.rawValue), "")
+        XCTAssertEqual(notifications, 1, "移除必须发通知：App 侧靠它重新 apply → stop")
+        XCTAssertFalse(ProximityLockSettings.current(from: makeStorage()).isArmed,
+                       "设备一清，即使总开关还开着也必须立刻解除武装")
+    }
+
+    /// 本来就没选设备时不该白发通知 —— 每条通知都会让控制器重新 apply 一次。
+    func testForgettingWithNoDeviceSelectedDoesNothing() {
+        let prefs = makePrefs()
+        XCTAssertEqual(countChanges({ prefs.forgetProximityDevice() }), 0)
+    }
+
     // MARK: - 两个阈值的滞回
 
     /// 「走开阈值比回来阈值还高」这种反过来的组合，人回来了永远判不出来，必须拒。
@@ -190,10 +213,13 @@ final class ProximityLockPreferencesTests: XCTestCase {
 
     // MARK: - 页面渲染
 
-    /// 新页面必须能真渲染出来（侧栏高亮、两段卡片、扫描按钮都在），
+    /// 新页面必须能真渲染出来（侧栏高亮、三段卡片、扫描按钮都在），
     /// 判据是渲染出来的位图里有像素，不是页面自己说「我画好了」。
     func testPageRendersOffscreen() throws {
-        let host = NSHostingView(rootView: ProximityLockTabView(viewModel: makePrefs()))
+        // 内存实现：页面 onAppear 会读钥匙串，而文件钥匙串的 ACL 弹窗在无头测试里没人点，
+        // 进程会直接挂在那一行（本机实测过）。
+        let host = NSHostingView(rootView: ProximityLockTabView(viewModel: makePrefs(),
+                                                               passwords: InMemoryPasswordStore()))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 900),
                               styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host

@@ -375,6 +375,18 @@ public final class UserPreferences: ObservableObject {
         postProximityChange()
     }
 
+    /// 「移除设备」：把选中的那台忘掉。id 清空后 `isArmed` 立刻为假，App 侧收到通知
+    /// `apply()` 就 `stop()` 了 —— 不用界面上再去关总开关，也不用二次确认：
+    /// 误点了重新扫一次、点「选择」就回来。
+    public func forgetProximityDevice() {
+        guard !proximityDeviceID.isEmpty || !proximityDeviceName.isEmpty else { return }
+        proximityDeviceID = ""
+        proximityDeviceName = ""
+        storage.setString("", forKey: .proximityDeviceID)
+        storage.setString("", forKey: .proximityDeviceName)
+        postProximityChange()
+    }
+
     private func postProximityChange() {
         NotificationCenter.default.post(name: .macStrokeProximityLockDidChange, object: nil)
     }

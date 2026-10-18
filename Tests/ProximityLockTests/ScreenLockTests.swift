@@ -73,6 +73,17 @@ final class ScreenLockTests: XCTestCase {
         XCTAssertFalse(session.screenLock().isAcceptingPassword)
     }
 
+    /// 熄屏这道门为什么要单独问：本机 macOS 27 实测，锁屏 5 秒后系统自己把屏关了，
+    /// 而屏熄着的时候 `CGSSessionScreenIsLocked` 仍是 1、安全输入仍是 loginwindow，
+    /// 也就是 `isAcceptingPassword` 依然为真 —— 光靠它拦不住「打给黑屏」的注入。
+    func testDisplayAsleepIsReadLiveNotCached() {
+        let session = FakeSession()
+        let lock = session.screenLock()
+        XCTAssertFalse(lock.isDisplayAsleep)
+        session.isDisplayAsleep = true
+        XCTAssertTrue(lock.isDisplayAsleep, "注入前问的是当下，熄屏得能当场读到")
+    }
+
     func testSecureInputPIDIsExposedForLogging() {
         let session = FakeSession()
         session.secureInputPID = 181

@@ -2,8 +2,10 @@
 //  ProximityLockTabView.swift
 //  MacStroke
 //
-//  蓝牙靠近锁屏偏好页（移植版新增，原版没有）：两段 —— 盯哪台设备、多远算走开、
-//  走开多久锁屏；以及回来时要不要自动解锁（存登录密码）。
+//  蓝牙靠近锁屏偏好页（移植版新增，原版没有）：三段 —— 开关与灵敏度、回来时要不要
+//  自动解锁（存登录密码）、最后才是选设备与扫描出来的候选列表。
+//  列表放最后是刻意的：它一展开就十几行，放在中间会把「自动解锁」顶出可视区，
+//  看起来像功能没做。
 //
 //  和远程控制页一样，这一页改完立刻生效：每个开关都发
 //  `.macStrokeProximityLockDidChange`，App 侧 `ProximityLockController.shared.apply()`
@@ -25,8 +27,20 @@ struct ProximityLockTabView: View {
     @State private var hasStoredPassword = false
     @State private var passwordMessage: String?
 
-    private let passwords = KeychainPasswordStore()
+    /// 走文件钥匙串，而文件钥匙串的 ACL 不认 `kSecUseAuthenticationUI: skip` 那个旗 ——
+    /// 签名一变（每次重编译都会变）就是弹一个「某某想访问钥匙串项目」的框。
+    /// 界面能弹，用户点允许就行；无头测试里没人点，进程就永远挂在那儿 ——
+    /// 所以这里必须能换成内存实现。
+    private let passwords: UnlockPasswordStoring
 
+    init(viewModel: UserPreferences, passwords: UnlockPasswordStoring = KeychainPasswordStore()) {
+        self.viewModel = viewModel
+        self.passwords = passwords
+    }
+
+    /// 顺序是「先能开的、再是调的、最后才是扫描出来的那一大坨」：
+    /// 候选列表一展开就是十几行，原先夹在中间把「自动解锁」整段顶到看不见，
+    /// 用户以为功能没做。列表连同它的选择行一起挪到最后，中间不留能撑高的东西。
     var body: some View {
         SettingsPage {
             SettingsSection(title: L("Proximity Lock")) {
@@ -35,8 +49,6 @@ struct ProximityLockTabView: View {
                         TrailingSwitch(isOn: $viewModel.enableProximityLock)
                     }
                     hint(L("Proximity Lock enable hint"))
-                    RowDivider()
-                    deviceBlock
                     RowDivider()
                     SettingsRow(L("Status:")) {
                         Text(statusLine)
@@ -81,6 +93,12 @@ struct ProximityLockTabView: View {
                     passwordBlock
                     RowDivider()
                     warningBlock
+                }
+            }
+
+            SettingsSection(title: L("Proximity Devices Section")) {
+                SettingsCard {
+                    deviceBlock
                 }
             }
         }
@@ -135,6 +153,13 @@ struct ProximityLockTabView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 8)
+                // 没有这个入口的话，想停掉判定只能去关总开关 —— 而总开关一关，
+                // 下次要用还得重扫一遍。选中设备后这一颗按钮才出现。
+                if !viewModel.proximityDeviceID.isEmpty {
+                    Button(L("Proximity forget device")) {
+                        viewModel.forgetProximityDevice()
+                    }
+                }
                 Button(controller.isDiscovering ? L("Proximity stop scanning") : L("Proximity scan devices")) {
                     if controller.isDiscovering {
                         controller.endDiscovery()
@@ -271,6 +296,9 @@ struct ProximityLockTabView: View {
         case .returnedNoAutoUnlock: return L("Proximity event returned no auto unlock")
         case .unlocked: return L("Proximity event unlocked")
         case .fieldNotAcceptingPassword: return L("Proximity event field not accepting")
+        case .waitingForDisplayWake: return L("Proximity event waiting for display wake")
+        case .unlockCancelledByHand: return L("Proximity event unlock cancelled by hand")
+        case .unlockCancelledPersonLeft: return L("Proximity event unlock cancelled left")
         case .noStoredPassword: return L("Proximity event no stored password")
         case .storedPasswordEmpty: return L("Proximity event empty password")
         case .injectionAborted: return L("Proximity event injection aborted")

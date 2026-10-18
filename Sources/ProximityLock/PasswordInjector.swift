@@ -33,14 +33,36 @@ public final class PasswordInjector {
 
     /// 一个 CGEvent 最多带多少字符。20 是 BLEUnlock 实测的上限，超了会被截断。
     public let chunkSize: Int
-    /// 试几轮。第一轮可能是屏保还没退出、或显示器刚唤醒还没把密码框画出来。
+    /// 试几轮。
     public let maxAttempts: Int
-    /// 提交用的键。`kVK_Return = 0x24`；BLEUnlock 那边写的是 52，
-    /// 而 52 在 HIToolbox 里并不是 Return（kVK_Delete=0x33、kVK_Escape=0x35，中间那格没定义），
-    /// 所以这里用 36，真机上如果「密码进去了但不提交」再拿 52 做对照实验。
+    /// 提交用的键：`kVK_Return = 0x24`。
+    /// 这个数是本机真机钉下来的，不是猜的 —— 2026-10-18 16:52:48 那一次「人已回来 → 屏已点亮 →
+    /// 补注入」的日志写着「第 1 轮解锁成功（提交键 0x24）」。在此之前一轮试过 0x24、
+    /// 一轮试过 BLEUnlock 那个 HIToolbox 里查不到名字的 52（`0x34`）、一轮试过小键盘 Enter
+    /// （`0x4C`），赢的是第一个，也就是最普通那个 Return。
     public let submitKeyCode: CGKeyCode
+    /// 每轮开打前先把密码框清干净要按几下退格。上一轮留在框里的字符会把这一轮的密码接歪，
+    /// 那样连「提交键对了」也照样解不开。真机成功那一发是带着清框跑的，所以这条留着。
+    /// 40 是拍的：比常见密码长得多，而空框里按退格什么都不做。日志只记轮数不记这个数，
+    /// 所以它不会泄露密码有几个字符。
+    public let clearFieldBackspaces: Int
+    /// 清框用的键：`kVK_Delete = 0x33`。
+    public let deleteKeyCode: CGKeyCode = 0x33
     /// 屏保把登录面板挡住时用来唤出它。
     public let escapeKeyCode: CGKeyCode = 0x35
+    /// 提交之后多久算「这一轮解开了」：轮询的步长与上限。
+    ///
+    /// 为什么要轮询而不是发完回车读一次：macOS 27 上解开锁的那一瞬间，会话字典里
+    /// `CGSSessionScreenIsLocked` 这个键**直接消失**（本机实测：没锁的时候字典里压根没这个键），
+    /// 于是 `ScreenLock.isLocked` 只能回落到达通知缓存 —— 而通知要等主线程空出来才送得进来。
+    /// 读早了会把「已经解开」误判成「这一轮没解」，接着开第二轮，
+    /// 那一轮会往正在打开的桌面里再打一遍密码。
+    ///
+    /// 前提：注入必须跑在非主线程（见 ProximityLockController.runInjection）。
+    /// 挂在主线程上轮询是白轮 —— 我们等的那条通知正是因为主线程被占住才到不了。
+    /// 「轮询窗口要多大」这台机器上还没有实测数（1.2 秒是拍的），下一轮真机要把它钉下来。
+    public let unlockPollInterval: TimeInterval
+    public let unlockTimeout: TimeInterval
 
     private let screen: ScreenLock
     private let poster: (CGEvent) -> Void
@@ -51,7 +73,10 @@ public final class PasswordInjector {
                 chunkSize: Int = 20,
                 maxAttempts: Int = 3,
                 submitKeyCode: CGKeyCode = 0x24,
+                clearFieldBackspaces: Int = 40,
                 settleDelay: TimeInterval = 0.4,
+                unlockPollInterval: TimeInterval = 0.1,
+                unlockTimeout: TimeInterval = 1.2,
                 poster: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) },
                 sleeper: @escaping (TimeInterval) -> Void = { if $0 > 0 { usleep(UInt32($0 * 1_000_000)) } },
                 log: @escaping (String) -> Void = { NSLog("%@", "[ProximityLock] " + $0) }) {
@@ -59,7 +84,10 @@ public final class PasswordInjector {
         self.chunkSize = max(1, chunkSize)
         self.maxAttempts = max(1, maxAttempts)
         self.submitKeyCode = submitKeyCode
+        self.clearFieldBackspaces = max(0, clearFieldBackspaces)
         self.settleDelay = settleDelay
+        self.unlockPollInterval = max(0.01, unlockPollInterval)
+        self.unlockTimeout = max(unlockPollInterval, unlockTimeout)
         self.poster = poster
         self.sleeper = sleeper
         self.log = log
@@ -98,19 +126,40 @@ public final class PasswordInjector {
                 log("第 \(attempt) 轮开始前守卫已翻脸，中止")
                 return attempt == 1 ? .notAcceptingPassword : .abortedGuardTripped
             }
+            clearField()
             guard typePassword(password) else {
                 log("第 \(attempt) 轮打到一半守卫翻脸，中止")
                 return .abortedGuardTripped
             }
             postKey(submitKeyCode)
-            sleeper(settleDelay)
-            if !screen.isLocked {
+            if waitUntilUnlocked() {
                 log("第 \(attempt) 轮解锁成功")
                 return .submitted
             }
             log("第 \(attempt) 轮之后屏幕仍锁着")
         }
         return .exhaustedAttempts
+    }
+
+    /// 把上一轮可能留在密码框里的字符退干净。每一下都重新确认守卫：
+    /// 中途屏幕解开的话，剩下的退格绝不能喷进刚打开的桌面。
+    private func clearField() {
+        for _ in 0 ..< clearFieldBackspaces {
+            guard screen.isAcceptingPassword else { return }
+            postKey(deleteKeyCode)
+        }
+    }
+
+    /// 提交之后等屏幕真的解开：轮询到 `unlockTimeout` 为止。
+    /// 步进按算术累加而不是真实时钟，所以 `sleeper` 换成假的那条路（单测）也能自己走完。
+    private func waitUntilUnlocked() -> Bool {
+        var waited: TimeInterval = 0
+        while waited < unlockTimeout {
+            sleeper(unlockPollInterval)
+            waited += unlockPollInterval
+            if !screen.isLocked { return true }
+        }
+        return false
     }
 
     /// 逐块打字符。任何一块之前守卫翻脸就返回 false，剩下的字符一个都不发。

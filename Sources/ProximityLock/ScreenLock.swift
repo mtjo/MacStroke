@@ -22,10 +22,12 @@ public final class ScreenLock {
 
     public typealias SessionReader = () -> [String: Any]?
     public typealias ProcessNameReader = (Int32) -> String?
+    public typealias DisplayAsleepReader = () -> Bool
 
     private let readSession: SessionReader
     private let processName: ProcessNameReader
     private let lockNow: () -> Bool
+    private let displayAsleep: DisplayAsleepReader
     private let log: (String) -> Void
 
     /// 分布式通知兜底：macOS 26 上 `CGSessionCopyCurrentDictionary` 里的
@@ -33,16 +35,20 @@ public final class ScreenLock {
     /// 那时唯一还能知道锁没锁的就是 loginwindow 广播的这两条通知。
     private var notificationLocked: Bool?
     private var observers: [NSObjectProtocol] = []
+    /// 通知在主线程写，注入那条路在后台线程读（见 ProximityLockController.runInjection）。
+    private let stateLock = NSLock()
 
     /// 三个 nil 参数各有真机默认值。不写成默认参数是因为默认值里引用不到 internal 静态方法。
     public init(sessionReader: SessionReader? = nil,
                 processName: ProcessNameReader? = nil,
                 lockNow: (() -> Bool)? = nil,
+                displayAsleep: DisplayAsleepReader? = nil,
                 log: ((String) -> Void)? = nil,
                 observeNotifications: Bool = true) {
         self.readSession = sessionReader ?? { CGSessionCopyCurrentDictionary() as? [String: Any] }
         self.processName = processName ?? { ScreenLock.processName(of: $0) }
         self.lockNow = lockNow ?? { ScreenLock.callPrivateLock() }
+        self.displayAsleep = displayAsleep ?? { CGDisplayIsAsleep(CGMainDisplayID()) != 0 }
         self.log = log ?? { NSLog("%@", "[ProximityLock] " + $0) }
         if observeNotifications { startObservingLockNotifications() }
     }
@@ -57,6 +63,8 @@ public final class ScreenLock {
 
     public var isLocked: Bool {
         if let flag = sessionValue("CGSSessionScreenIsLocked") { return flag != 0 }
+        stateLock.lock()
+        defer { stateLock.unlock() }
         return notificationLocked ?? false
     }
 
@@ -65,6 +73,11 @@ public final class ScreenLock {
         guard let raw = sessionValue("kCGSSessionSecureInputPID"), raw > 0 else { return nil }
         return Int32(raw)
     }
+
+    /// 主屏是不是处于熄屏状态。本机 macOS 27 实测：锁屏后约 5 秒系统自己把屏关了，
+    /// 而熄屏期间 `isAcceptingPassword` 依然为真，光靠它拦不住「打给黑屏」的注入 ——
+    /// 那三轮按键没有一次解开锁（pmset -g log 的 Display is turned off/on 夹着注入时刻）。
+    public var isDisplayAsleep: Bool { displayAsleep() }
 
     /// 锁屏密码框现在是不是真的在前台等输入。**只有这一条为真才允许注入密码**：
     /// 光是「锁着」还不够 —— 屏保还没退、或者别的安全输入进程占着字段时，
@@ -97,7 +110,9 @@ public final class ScreenLock {
     /// 通知回调单独抽出来，是为了能离线测「会话字典里没有那个键时靠通知兜底」这条路 ——
     /// 单测里发不了真的分布式通知。
     func noteLockState(_ locked: Bool, source: String) {
+        stateLock.lock()
         notificationLocked = locked
+        stateLock.unlock()
         log("锁屏状态 ← \(source)：\(locked)")
     }
 

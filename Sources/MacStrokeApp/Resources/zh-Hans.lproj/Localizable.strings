@@ -413,11 +413,13 @@
 "Proximity Lock" = "靠近锁屏";
 "Enable proximity lock" = "启用蓝牙靠近锁屏";
 "Proximity Lock enable hint" = "选定一台随身设备（手表、手环、手机）：它走开就锁屏，回来就解锁。";
+"Proximity Devices Section" = "设备与扫描";
 "Proximity device" = "设备：";
 "Proximity scan devices" = "扫描设备…";
 "Proximity stop scanning" = "停止扫描";
 "Proximity no device found yet" = "还没扫到设备。把手表或手环拿到这台 Mac 旁边；第一次点扫描会先要蓝牙权限。";
 "Proximity select" = "选择";
+"Proximity forget device" = "移除设备";
 "Proximity unnamed device" = "未命名设备";
 "Proximity no device selected" = "还没选择设备";
 "Proximity unlock threshold" = "回来阈值：";
@@ -456,6 +458,9 @@
 "Proximity event returned no auto unlock" = "人已回来（未开自动解锁）";
 "Proximity event unlocked" = "已自动解锁";
 "Proximity event field not accepting" = "锁屏密码框不在前台，未注入密码";
+"Proximity event waiting for display wake" = "人已回来，但屏幕是熄的，等亮起来再解锁";
+"Proximity event unlock cancelled by hand" = "屏幕已经用别的办法解开了，补注入取消";
+"Proximity event unlock cancelled left" = "等屏幕点亮这段时间人又走开了，补注入取消";
 "Proximity event no stored password" = "钥匙串里没有登录密码";
 "Proximity event empty password" = "存的密码是空的";
 "Proximity event injection aborted" = "注入中途屏幕状态变了，已中止";
