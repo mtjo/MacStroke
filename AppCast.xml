@@ -415,4 +415,17 @@
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
     </item>
   </channel>
+  <channel>
+    <title>MacStroke Changelog</title>
+    <link>https://raw.githubusercontent.com/mtjo/MacStroke/release/AppCast.xml</link>
+    <description>Most recent changes with links to updates.</description>
+    <language>en</language>
+    <item>
+      <title>Version3.1.8</title>
+      <sparkle:releaseNotesLink>https://raw.githubusercontent.com/mtjo/MacStroke/release/Changelog/3.1.8.md</sparkle:releaseNotesLink>
+      <pubDate>2026-10-18 13:26:10 +0000</pubDate>
+      <enclosure url="https://github.com/mtjo/MacStroke/releases/download/3.1.8/MacStroke.zip" sparkle:version="3.1.8" sparkle:shortVersionString="3.1.8" length="4574592" type="application/octet-stream" sparkle:dsaSignature="MC0CFHNgCrgKYVxapbSkh6OVjZCdGdq9AhUAjDY1g3KDxIS5QHUOiivVkU3h10k=" sparkle:edSignature="Mncf1tVFu/32batAOMLEpOxagLYRjZqKKADM+vDe3W2PBg3stLrumxtcr8W7Au8clO+VlYAnlb8JsIuS2MMLCQ==" />
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+    </item>
+  </channel>
 </rss>
