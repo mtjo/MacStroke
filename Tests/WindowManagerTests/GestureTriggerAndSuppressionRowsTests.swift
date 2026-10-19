@@ -36,6 +36,38 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         XCTAssertEqual(UserPreferences(storage: PreferencesStorage(defaults: suite)).gestureTriggerButton, 2)
     }
 
+    // MARK: - 不匹配时不弹右键菜单（issue #73）
+
+    func testSwallowUnmatchedGestureDefaultsToOffAndPersists() {
+        let suite = isolatedSuite()
+        let prefs = UserPreferences(storage: PreferencesStorage(defaults: suite))
+        XCTAssertFalse(prefs.swallowUnmatchedGesture, "默认关 = 原版行为：画错了还能弹出右键菜单")
+
+        prefs.swallowUnmatchedGesture = true
+        prefs.save()
+        XCTAssertTrue(UserPreferences(storage: PreferencesStorage(defaults: suite)).swallowUnmatchedGesture)
+    }
+
+    func testResetToDefaultsTurnsSwallowingBackOff() {
+        let prefs = UserPreferences(storage: PreferencesStorage(defaults: isolatedSuite()))
+        prefs.swallowUnmatchedGesture = true
+
+        prefs.resetToDefaults()
+
+        XCTAssertFalse(prefs.swallowUnmatchedGesture)
+        XCTAssertFalse(isolatedSuite().bool(forKey: StorageKey.swallowUnmatchedGesture.rawValue),
+                       "重置要把落盘的键也写回默认，不能只改内存")
+    }
+
+    func testSwallowingSwitchSurvivesAReloadWithoutTheKeyWritten() {
+        // 全新装（键从没落过盘）时读出来必须是关，而不是「没键 = 不知道」：
+        // CanvasManager 那侧每事件现读，取不到就走 StorageDefaults，两边得答一样。
+        let prefs = UserPreferences(storage: PreferencesStorage(defaults: isolatedSuite()))
+        XCTAssertFalse(prefs.swallowUnmatchedGesture)
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.swallowUnmatchedGesture.rawValue),
+                     "构造阶段不该把这个键提前写进去")
+    }
+
     func testResetToDefaultsBringsTheTriggerButtonBackToRight() {
         let prefs = UserPreferences(storage: PreferencesStorage(defaults: isolatedSuite()))
         prefs.gestureTriggerButton = 4
