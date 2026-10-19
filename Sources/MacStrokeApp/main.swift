@@ -162,6 +162,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 ?? StorageDefaults.gestureSuppressedModifiers)
         }
 
+        // 画完没匹配上时不再把这次右键交回应用（issue #73）。还是每事件现读，勾上立刻
+        // 生效。关 = 原版行为；开之后也只吞「真的画了一条」的那种，纯右键单击照旧弹菜单。
+        canvas.shouldSwallowUnmatchedGesture = { [weak self] in
+            guard let self = self else { return false }
+            return self.storage.getBoolOptional(forKey: .swallowUnmatchedGesture)
+                ?? StorageDefaults.swallowUnmatchedGesture
+        }
+
         // Initialize rule store / engine. The pre-3.0 build archived its rules
         // in UserDefaults while this one keeps rules.json, so an upgraded
         // preferences domain has to be read across before anything else touches

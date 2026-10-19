@@ -368,6 +368,7 @@
 "Forward Button" = "侧键（前进）";
 "Button %d" = "按键 %d";
 "Hold Modifiers To Skip Gesture" = "按住修饰键时不触发手势";
+"Skip Menu When Gesture Unmatched" = "手势没匹配上时不弹右键菜单";
 
 /* 远程控制页（移植版新增，原版没有） */
 "Remote Control" = "远程控制";

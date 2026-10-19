@@ -460,6 +460,12 @@ struct GeneralTabView: View {
                             .frame(width: 130, height: 24)
                         }
                     }
+                    // 画完一条却没匹配上时不再弹右键菜单（issue #73）：一个开关，默认关
+                    // = 原版行为。只认「真的画了一条」，纯右键单击照常弹菜单。
+                    RowDivider()
+                    SettingsRow(L("Skip Menu When Gesture Unmatched")) {
+                        TrailingSwitch(isOn: $viewModel.swallowUnmatchedGesture)
+                    }
                     RowDivider()
                     SettingsRow(L("Line color:")) {
                         ColorWellField(color: $viewModel.lineColor)

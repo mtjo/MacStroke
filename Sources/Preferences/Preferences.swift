@@ -82,6 +82,14 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers) }
     }
 
+    // MARK: - 不匹配时不弹右键菜单
+    // 移植版扩展（issue #73）：画完一条却没匹配上规则时，不把这次按键交回前台 App。
+    // 默认关 = 原版行为（画错了还能弹出右键菜单）。判定只在 CanvasManager 里做，
+    // 这里只负责存；App 层每事件现读，勾上立刻生效、不用重启。
+    @Published public var swallowUnmatchedGesture: Bool {
+        didSet { storage.setBool(swallowUnmatchedGesture, forKey: .swallowUnmatchedGesture) }
+    }
+
     /// 修饰键录制框讲的是「keyCode=…, flags=…」，存的还是同一份 token 串，这里做转换：
     /// key code 恒为 0，只有 ⌘⌃⇧⌥fn 五个键位会被认下来。
     public func suppressedModifiersBinding() -> Binding<String> {
@@ -422,6 +430,7 @@ public final class UserPreferences: ObservableObject {
         self.gestureTriggerButton = storage.getIntOptional(forKey: .gestureTriggerButton) ?? StorageDefaults.gestureTriggerButton
         self.enableGestureSuppression = storage.getBoolOptional(forKey: .enableGestureSuppression) ?? StorageDefaults.enableGestureSuppression
         self.gestureSuppressedModifiers = storage.getStringOptional(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
+        self.swallowUnmatchedGesture = storage.getBoolOptional(forKey: .swallowUnmatchedGesture) ?? StorageDefaults.swallowUnmatchedGesture
         self.noteRetentionTime = storage.getIntOptional(forKey: .noteRetentionTime) ?? StorageDefaults.noteRetentionTime
         self.notePosition = storage.getIntOptional(forKey: .notePosition) ?? StorageDefaults.notePosition
         self.noteBackgroundAlpha = storage.getDoubleOptional(forKey: .noteBackgroundAlpha) ?? StorageDefaults.noteBackgroundAlpha
@@ -510,6 +519,7 @@ public final class UserPreferences: ObservableObject {
         storage.setInt(StorageDefaults.gestureTriggerButton, forKey: .gestureTriggerButton)
         storage.setBool(StorageDefaults.enableGestureSuppression, forKey: .enableGestureSuppression)
         storage.setString(StorageDefaults.gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers)
+        storage.setBool(StorageDefaults.swallowUnmatchedGesture, forKey: .swallowUnmatchedGesture)
         storage.setInt(StorageDefaults.noteRetentionTime, forKey: .noteRetentionTime)
         storage.setInt(StorageDefaults.notePosition, forKey: .notePosition)
         storage.setDouble(StorageDefaults.noteBackgroundAlpha, forKey: .noteBackgroundAlpha)
@@ -553,6 +563,7 @@ public final class UserPreferences: ObservableObject {
         gestureTriggerButton = storage.getInt(forKey: .gestureTriggerButton)
         enableGestureSuppression = storage.getBool(forKey: .enableGestureSuppression)
         gestureSuppressedModifiers = storage.getString(forKey: .gestureSuppressedModifiers) ?? StorageDefaults.gestureSuppressedModifiers
+        swallowUnmatchedGesture = storage.getBool(forKey: .swallowUnmatchedGesture)
         noteRetentionTime = storage.getInt(forKey: .noteRetentionTime)
         notePosition = storage.getInt(forKey: .notePosition)
         noteBackgroundAlpha = storage.getDouble(forKey: .noteBackgroundAlpha)

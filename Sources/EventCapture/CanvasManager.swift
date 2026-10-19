@@ -72,6 +72,24 @@ public class CanvasManager: EventCaptureDelegate {
     /// behaviour, since it never looked at the flags a click arrived with.
     public var suppressedModifiers: (() -> Set<GestureModifier>)?
 
+    /// Whether an unmatched **drawn** gesture should be swallowed instead of
+    /// handed back to the front app (issue #73). Asked per event, like the two
+    /// closures above, so the preference applies without a restart.
+    ///
+    /// Unset means "hand it back" — the original's behaviour: it always replayed
+    /// the click, so a gesture that failed to match still opened the context
+    /// menu. Only strokes that look like a deliberate drawing are affected; a
+    /// plain right click is never swallowed, or the menu would vanish for
+    /// everyone who turns this on. See `handleTriggerMouseUp`.
+    public var shouldSwallowUnmatchedGesture: (() -> Bool)?
+
+    /// Where synthetic mouse/key events are delivered. Production leaves this
+    /// nil, which posts at the tap location the call site asks for (session for
+    /// replays, mixed for the JetBrains synthetic). Tests install a sink to
+    /// count what the front app would have received — without it this whole
+    /// branch can only be verified by moving the real pointer.
+    var syntheticEventSink: ((CGEvent, CGEventTapLocation) -> Void)?
+
     /// Ignore gesture starts for a moment, while preferences are waiting for
     /// the user to press the button they want to bind. Deliberately separate
     /// from `isEnabled`, which is the master switch the preferences own.
@@ -258,6 +276,12 @@ public class CanvasManager: EventCaptureDelegate {
                   delegate.canvasManager(self, didCompleteStroke: stroke, bundleID: frontBundle) {
             // A rule matched and its action was executed.
             consumed = true
+        } else if shouldSwallowUnmatchedGesture?() == true, drewADeliberateStroke {
+            // 用户随手画一条不存在的轨迹来「取消」这次手势（issue #73）。这时候把右键
+            // 交回前台应用，就是凭空弹出他刚刚明确不想要的那个菜单 —— 什么都不投，
+            // 整段吞掉。判据只看「这一下是不是真的画了一条」：纯单击仍走下面的回放。
+            NSLog("%@", "[CanvasManager] Unmatched gesture swallowed (no click replay)")
+            consumed = true
         } else {
             // No gesture matched: give the click back to the app so the button
             // still does whatever it normally does.
@@ -281,6 +305,13 @@ public class CanvasManager: EventCaptureDelegate {
 
         resetGestureState()
         return consumed
+    }
+
+    /// 这一下是不是「真的画了一条」：拖过、而且点数够 DTW 起步（不足 10 点在原版语义里
+    /// 就是单击）。只有够格的轨迹才可能被吞 —— 用户抱怨的是「画一个不存在的手势来取消」，
+    /// 不是「右键不能弹菜单」。必须在 `resetGestureState()` 之前问，之后这两样都被清了。
+    private var drewADeliberateStroke: Bool {
+        hasDragged && currentPoints.count >= minimumPointsForGesture
     }
 
     /// Build the completed stroke from the recorded points.
@@ -384,7 +415,17 @@ public class CanvasManager: EventCaptureDelegate {
         // Original: CGEventPost(kCGSessionEventTap, …) — session level is
         // downstream of our HID tap, so the replay is not re-captured
         // (posting at HID would loop: capture → replay → capture …).
-        event.post(tap: .cgSessionEventTap)
+        deliver(event, at: .cgSessionEventTap)
+    }
+
+    /// 把合成事件投出去。生产环境没有 sink，就是原来的 `post(tap:)`；单测挂上 sink
+    /// 才能数出「前台应用到底收到了几发」——否则这条判定只能靠动真鼠标取证。
+    private func deliver(_ event: CGEvent, at location: CGEventTapLocation) {
+        if let syntheticEventSink = syntheticEventSink {
+            syntheticEventSink(event, location)
+        } else {
+            event.post(tap: location)
+        }
     }
 
     /// Synthesize Ctrl+left-click at the given point on a background thread,
@@ -394,10 +435,11 @@ public class CanvasManager: EventCaptureDelegate {
         let primaryHeight = Double(NSScreen.screens.first?.frame.height ?? 0)
         let cgPoint = CGPoint(x: point.x, y: primaryHeight - point.y)
 
-        Thread.detachNewThread {
+        Thread.detachNewThread { [weak self] in
             // Original taps: control keys at session, left clicks at HID.
+            guard let self else { return }
             let controlDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: true)
-            controlDown?.post(tap: .cgSessionEventTap)
+            if let controlDown { self.deliver(controlDown, at: .cgSessionEventTap) }
             usleep(25_000) // improve reliability (matches original)
 
             let leftDown = CGEvent(
@@ -406,7 +448,7 @@ public class CanvasManager: EventCaptureDelegate {
                 mouseCursorPosition: cgPoint,
                 mouseButton: .left
             )
-            leftDown?.post(tap: .cghidEventTap)
+            if let leftDown { self.deliver(leftDown, at: .cghidEventTap) }
             usleep(15_000) // improve reliability (matches original)
 
             let leftUp = CGEvent(
@@ -415,10 +457,10 @@ public class CanvasManager: EventCaptureDelegate {
                 mouseCursorPosition: cgPoint,
                 mouseButton: .left
             )
-            leftUp?.post(tap: .cghidEventTap)
+            if let leftUp { self.deliver(leftUp, at: .cghidEventTap) }
 
             let controlUp = CGEvent(keyboardEventSource: nil, virtualKey: 0x3B, keyDown: false)
-            controlUp?.post(tap: .cgSessionEventTap)
+            if let controlUp { self.deliver(controlUp, at: .cgSessionEventTap) }
         }
     }
 

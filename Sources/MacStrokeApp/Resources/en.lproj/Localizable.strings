@@ -366,6 +366,7 @@
 "Forward Button" = "Forward Button";
 "Button %d" = "Button %d";
 "Hold Modifiers To Skip Gesture" = "Hold Modifiers To Skip Gesture";
+"Skip Menu When Gesture Unmatched" = "Skip Right-Click Menu When Gesture Unmatched";
 
 /* Remote Control tab (port extension, not in the original) */
 "Remote Control" = "Remote Control";

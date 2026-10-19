@@ -39,6 +39,10 @@ public enum StorageKey: String, CaseIterable {
     case enableGestureSuppression = "enableGestureSuppression"
     case gestureSuppressedModifiers = "gestureSuppressedModifiers"
 
+    // 移植版扩展（issue #73）：手势画完却没匹配上时，不再把这次右键交回前台应用。
+    // 原版是无论匹配没匹配都回放（画错了至少还能弹出右键菜单），所以默认关。
+    case swallowUnmatchedGesture = "swallowUnmatchedGesture"
+
     // Note/Toast
     case noteRetentionTime = "noteRetetionTime"
     case notePosition = "notePostion"
@@ -266,6 +270,9 @@ public enum StorageDefaults {
     public static let enableGestureSuppression: Bool = false
     /// 空 = 没有录制过要避让的修饰键。
     public static let gestureSuppressedModifiers: String = ""
+    // 不匹配时吞掉这次右键 —— 关，等于原版：画错了还把点击交回应用，右键菜单照常弹。
+    // 只在「真的画了一条」的前提下才可能生效，纯右键单击永远照常回放（issue #73）。
+    public static let swallowUnmatchedGesture: Bool = false
 
     // Note/Toast
     public static let noteRetentionTime: Int = 1
@@ -392,6 +399,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.gestureTriggerButton.rawValue: StorageDefaults.gestureTriggerButton,
         StorageKey.enableGestureSuppression.rawValue: StorageDefaults.enableGestureSuppression,
         StorageKey.gestureSuppressedModifiers.rawValue: StorageDefaults.gestureSuppressedModifiers,
+        StorageKey.swallowUnmatchedGesture.rawValue: StorageDefaults.swallowUnmatchedGesture,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
         StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
         StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,
