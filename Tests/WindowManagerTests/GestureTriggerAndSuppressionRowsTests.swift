@@ -89,7 +89,11 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         var committed: (UInt16, UInt)?
         view.onShortcutChanged = { committed = ($0, $1) }
 
-        view.startRecording()
+        // `currentlyHeld: 0`：录制框开始听键时会读一遍会话当前的修饰键状态（用户常常
+        // 先按住 ⌘ 再点录制框，那一位算在内）。测试喂的是下面这几条合成事件，不该
+        // 再让机器此刻按着什么来参与判据 —— 远程控制那个文件往会话里注入按键，一旦
+        // 漏发一次放开，⌘ 就挂在会话里，这一格会「通过」得毫无道理。
+        view.startRecording(currentlyHeld: 0)
         view.flagsChanged(with: modifierEvent([.command, .shift]))
         XCTAssertNil(committed, "还按着修饰键时不该结算")
         view.flagsChanged(with: modifierEvent([]))
@@ -105,12 +109,14 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         view.onShortcutChanged = { committed = ($0, $1) }
 
         // 反向对照：只按 caps-lock（没建模的位）不该结算出任何东西。
-        view.startRecording()
+        // `currentlyHeld: 0` 同上——此刻机器要真挂着 ⌘，这一格照样能「通过」，
+        // 因为它算的是「位从 0 挪到哪」，跟会话里原本有什么无关。
+        view.startRecording(currentlyHeld: 0)
         view.flagsChanged(with: modifierEvent([.capsLock]))
         view.flagsChanged(with: modifierEvent([]))
         XCTAssertNil(committed, "caps-lock 不算修饰键组合")
 
-        view.startRecording()
+        view.startRecording(currentlyHeld: 0)
         view.flagsChanged(with: modifierEvent([.option]))
         view.flagsChanged(with: modifierEvent([.option, .capsLock]))
         view.flagsChanged(with: modifierEvent([]))
@@ -123,7 +129,7 @@ final class GestureTriggerAndSuppressionRowsTests: XCTestCase {
         var committed: (UInt16, UInt)?
         view.onShortcutChanged = { committed = ($0, $1) }
 
-        view.startRecording()
+        view.startRecording(currentlyHeld: 0)
         view.keyDown(with: try XCTUnwrap(NSEvent.keyEvent(with: .keyDown,
                                                            location: .zero,
                                                            modifierFlags: [.command, .function],

@@ -325,9 +325,18 @@ public final class ShortcutRecorderView: NSView {
     // MARK: - Public API
 
     /// Starts listening for keyboard input.
-    public func startRecording() {
+    ///
+    /// - Parameter currentlyHeld: the modifier bits already held when recording
+    ///   starts. Real callers pass nothing and we read the live session flags —
+    ///   people habitually press ⌘ *before* clicking the recorder, and that ⌘ is
+    ///   part of the shortcut they mean to bind. Tests pass `0`: the session's
+    ///   modifier state can be dirtied by unrelated suites that post synthetic
+    ///   key events into it (remote control does exactly that), and a recorder
+    ///   test that inherits a stuck ⌘ settles a shortcut nobody pressed.
+    public func startRecording(currentlyHeld: UInt? = nil) {
         guard !isRecording else { return }
-        let current = UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
+        let current = currentlyHeld
+            ?? UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
         pressedFlags = modifiersOnly ? Self.modeledFlags(current) : current
         isRecording = true
     }
