@@ -47,8 +47,14 @@ public enum ScreenshotTool: Int, CaseIterable {
     }
 }
 
-/// 一条画好的注解。不可变：撤销就是 `removeLast`，没有中间态要维护。
-public struct ScreenshotAnnotation {
+/// 一条画好的注解。不可变：要改就返回新的一条，调用方换掉数组里那个元素 ——
+/// 拖动过程中没有中间态被改在半路上，撤销/重做才敢整表存快照。
+///
+/// 「画完之后还要改」那一套（平移/缩放/改样式）也不破坏这条 —— 每个编辑操作都**返回
+/// 新的一条**，调用方换掉数组里那一个元素。所以 `Equatable` 是编辑之后才需要的：
+/// 拖动一帧没真的挪动，就别占一步撤销（合成的 `==` 走 `NSObject.isEqual`，颜色比的是值
+/// 不是指针，正是这里要的口径）。
+public struct ScreenshotAnnotation: Equatable {
     public let tool: ScreenshotTool
     public let color: NSColor
     /// 点为单位；合成时随视图缩放自动变成像素宽度。
@@ -62,8 +68,21 @@ public struct ScreenshotAnnotation {
     public let text: String
     public let number: Int
 
+    /// 字号。**只有文字用得到**：序号的数字大小仍跟着粗细走（见 `badgeRadius`）。
+    /// 不传就退回 `max(13, lineWidth*4)` —— 那是「粗细当字号」这条老路，旧数据、
+    /// 以及面板上没滑过字号的场合都还走它。
+    public let fontSize: CGFloat
+    /// 文字的两个样式位。`bold` 默认 true = 这次改动之前的样子（那时文字恒用 `boldSystemFont`）。
+    public let bold: Bool
+    public let italic: Bool
+    /// 文字描一圈：nil = 不描。背景同理：nil = 不铺底。
+    public let borderColor: NSColor?
+    public let backgroundColor: NSColor?
+
     public init(tool: ScreenshotTool, color: NSColor, lineWidth: CGFloat, start: CGPoint,
-                end: CGPoint? = nil, points: [CGPoint] = [], text: String = "", number: Int = 0) {
+                end: CGPoint? = nil, points: [CGPoint] = [], text: String = "", number: Int = 0,
+                fontSize: CGFloat? = nil, bold: Bool = true, italic: Bool = false,
+                borderColor: NSColor? = nil, backgroundColor: NSColor? = nil) {
         self.tool = tool
         self.color = color
         self.lineWidth = lineWidth
@@ -72,6 +91,11 @@ public struct ScreenshotAnnotation {
         self.points = points
         self.text = text
         self.number = number
+        self.fontSize = fontSize ?? Self.derivedFontSize(lineWidth: lineWidth)
+        self.bold = bold
+        self.italic = italic
+        self.borderColor = borderColor
+        self.backgroundColor = backgroundColor
     }
 
     /// 拖出来的框。拖拽方向不限，先归一化成左上原点矩形；画笔取整条轨迹的包围盒。
@@ -79,22 +103,57 @@ public struct ScreenshotAnnotation {
         Self.boundingBox(of: points.isEmpty ? [start, end] : points)
     }
 
-    /// 文字和序号的大小跟着线宽走：工具条上只有「粗细节」一组控件，
-    /// 再给字号单独来一组就变成两层菜单了。
-    public var fontSize: CGFloat { max(13, lineWidth * 4) }
+    /// 没显式给字号时的老式子：粗细即字号。
+    static func derivedFontSize(lineWidth: CGFloat) -> CGFloat { max(13, lineWidth * 4) }
+    /// 序号徽标的半径仍由粗细决定 —— 那一格没有字号可滑，只有「圈多大」。
     public var badgeRadius: CGFloat { max(11, lineWidth * 2.5) }
+
+    // MARK: - 文字这一块
+
+    /// 字和底/框之间留的缝：按字号比例给。24 号留 4pt、72 号留 13pt，读起来才是
+    /// 「同一块东西放大了」，而不是底衬永远薄一层。
+    public var textPadding: CGFloat { max(2, (fontSize * 0.18).rounded()) }
+    /// 描边宽度也跟着字号走：字放大而边框不变粗，就成了贴着一圈的发丝线。
+    public var textBorderWidth: CGFloat { max(1, (fontSize * 0.06).rounded()) }
+    static let textCornerRadius: CGFloat = 4
+
+    /// 组合后的字体。粗体走 `NSFontManager` 而不是 `boldSystemFont`，是为了让「粗 + 斜」
+    /// 这一档有真正的粗斜体（`boldSystemFont` 再叠 italic 会退成普通斜体）。
+    public var textFont: NSFont {
+        Self.font(size: fontSize, bold: bold, italic: italic)
+    }
+
+    /// 字号 + 粗斜体 → 字体。单独拆出来是给就地输入框用的：打字时看到的那套字，
+    /// 和落笔后烘进成品图的那套必须是同一条式子，否则回车一瞬间字就跳。
+    public static func font(size: CGFloat, bold: Bool, italic: Bool) -> NSFont {
+        var font = NSFont.systemFont(ofSize: size)
+        if bold { font = NSFontManager.shared.convert(font, toHaveTrait: .boldFontMask) }
+        if italic { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
+        return font
+    }
+
+    /// 字本身量出来的大小（不含内边距）。量的是**组合后的字体**，所以勾上粗体/斜体之后
+    /// 宽度会跟着变 —— 底和框要罩住的正是这一份，按普通字宽算会短一截。
+    public var textSize: CGSize {
+        NSAttributedString(string: text, attributes: [.font: textFont]).size()
+    }
+
+    /// 落点框：以 `start` 为字的首行左上角，向外扩一圈给底和框。绘制、命中、
+    /// 「这条在不在选区里」三条路径都读它，所以以后挪一条文字只需要动 `start`。
+    public var textBoxRect: CGRect {
+        let size = textSize
+        return CGRect(x: start.x - textPadding, y: start.y - textPadding,
+                      width: size.width + textPadding * 2, height: size.height + textPadding * 2)
+    }
 
     /// 实际会占到的范围，用来判断「这条要不要画、有没有落在选区里」。
     /// `rect` 对文字和序号不够用：它们的 start 只是一个锚点。
     public var dirtyRect: CGRect {
         switch tool {
         case .text:
-            return CGRect(x: rect.minX, y: rect.minY,
-                          width: CGFloat(text.count) * fontSize * 0.72 + fontSize,
-                          height: fontSize * 1.3)
+            return textBoxRect
         case .number:
-            return CGRect(x: start.x - badgeRadius, y: start.y - badgeRadius,
-                          width: badgeRadius * 2, height: badgeRadius * 2)
+            return Self.badgeBox(start: start, radius: badgeRadius)
         case .pen:
             // 描边以路径为中心，包围盒不放心半根线宽就会贴着选区边缘磨掉一圈。
             return rect.insetBy(dx: -lineWidth / 2, dy: -lineWidth / 2)
@@ -121,9 +180,12 @@ public struct ScreenshotAnnotation {
     }
 
     /// 拖动中的画笔换一条：结构体不可变，点列只能整条换掉。
+    /// 样式那几个字段得原样带过去 —— 漏一个，画到一半字号就跳回默认。
     public func extendingPen(to point: CGPoint) -> ScreenshotAnnotation {
         ScreenshotAnnotation(tool: tool, color: color, lineWidth: lineWidth, start: start,
-                             points: Self.penPath(byAppending: point, to: points))
+                             points: Self.penPath(byAppending: point, to: points),
+                             fontSize: fontSize, bold: bold, italic: italic,
+                             borderColor: borderColor, backgroundColor: backgroundColor)
     }
 
     static func boundingBox(of points: [CGPoint]) -> CGRect {
@@ -151,11 +213,7 @@ public struct ScreenshotAnnotation {
         case .pen:
             drawPen()
         case .text:
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.boldSystemFont(ofSize: fontSize),
-                .foregroundColor: color,
-            ]
-            NSAttributedString(string: text, attributes: attributes).draw(at: start)
+            drawText()
         case .mosaic:
             drawMosaic(shot: shot)
         case .number:
@@ -222,6 +280,35 @@ public struct ScreenshotAnnotation {
         CGPoint(x: end.x + cos(angle) * length, y: end.y + sin(angle) * length)
     }
 
+    /// 文字分三层：底 → 框 → 字。底和框都罩在 `textBoxRect` 上（按量出来的字宽向外扩一圈），
+    /// 字本身仍然画在 `start` —— 输入框落在哪儿字就在哪儿，勾上「背景」不该让字跳位。
+    private func drawText() {
+        let box = textBoxRect
+        if let background = backgroundColor {
+            background.setFill()
+            Self.textOutline(box).fill()
+        }
+        if let border = borderColor {
+            border.setStroke()
+            let inset = textBorderWidth / 2
+            let outline = Self.textOutline(box.insetBy(dx: inset, dy: inset))
+            outline.lineWidth = textBorderWidth
+            outline.stroke()
+        }
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: textFont,
+            .foregroundColor: color,
+        ]
+        NSAttributedString(string: text, attributes: attributes).draw(at: start)
+    }
+
+    /// 底和框共用的一条圆角路径：短边不到两倍圆角时把圆角收到短边一半，否则
+    /// 一条两个字的短注脚会画成一粒胶囊。
+    private static func textOutline(_ box: CGRect) -> NSBezierPath {
+        let radius = min(textCornerRadius, min(box.width, box.height) / 2)
+        return NSBezierPath(roundedRect: box, xRadius: radius, yRadius: radius)
+    }
+
     private func drawMosaic(shot: ScreenshotFrame) {
         guard let tile = ScreenshotMosaic.tile(from: shot.image, viewRect: rect, scale: shot.scale) else { return }
         let context = NSGraphicsContext.current
@@ -236,8 +323,9 @@ public struct ScreenshotAnnotation {
     }
 
     private func drawBadge() {
-        let box = CGRect(x: start.x - badgeRadius, y: start.y - badgeRadius,
-                         width: badgeRadius * 2, height: badgeRadius * 2)
+        // 和命中、编辑外框同一块矩形（`badgeBox`）：绘制自己算一遍，改框子的时候就会
+        // 出现「看得见却点不着」或反过来「点着了画到别处」。
+        let box = Self.badgeBox(start: start, radius: badgeRadius)
         color.setFill()
         NSBezierPath(ovalIn: box).fill()
         let label = NSAttributedString(string: "\(number)", attributes: [
@@ -246,6 +334,308 @@ public struct ScreenshotAnnotation {
         ])
         let size = label.size()
         label.draw(at: CGPoint(x: box.midX - size.width / 2, y: box.midY - size.height / 2))
+    }
+}
+
+/// 一条注解上能被抓住改的位置。
+///
+/// 分两类是因为它们改的东西不一样：`box` 动的是包围盒（框类重映射、画笔跟着拉伸、
+/// 文字和序号等比改字号），`tail`/`head` 只挪箭头那一个端点 —— 箭头没有「缩放包围盒」
+/// 这一档，拖它的角等于把一支箭拉成另一支箭，要改方向和长短就该抓那两颗点。
+///
+/// internal 而非 public：它带着 `RegionHandle`（遮罩那边的把手枚举），一条注解的把手
+/// 语义和遮罩的命中算法必须同源，不能拆成两套公开 API 各长各的。
+enum AnnotationGrab: Hashable {
+    case box(RegionHandle)
+    case tail
+    case head
+
+    var isEndpoint: Bool {
+        switch self {
+        case .box: return false
+        case .tail, .head: return true
+        }
+    }
+
+    /// 抓它时光标该变什么：端点跟「挪这一条」同一档，盒把手沿用选区那八个的方向。
+    var cursor: NSCursor {
+        switch self {
+        case .tail, .head: return .openHand
+        case .box(let handle): return handle.cursor
+        }
+    }
+}
+
+// MARK: - 画完之后还要改（用户 2026-10-19：「添加的注释方向方框等要支持编辑」）
+//
+// 这一整段全是**纯函数**：吃一条注解、返回新的一条，不碰视图、不读全局。遮罩那边只
+// 负责「哪一条、按住了哪儿、拖到哪儿」，几何与样式怎么变都在这里算完 —— 这样单测能
+// 直接把一条矩形拉大、把一支箭掉头、把一行字放大，不用先搭一屏遮罩。
+//
+// 坐标口径和绘制侧同一条：一律是遮罩视图的点坐标（整屏 flipped）。
+extension ScreenshotAnnotation {
+    /// 缩到比这更小，把手就挤在一起没法再抓了。比选区那档（`minRegionSize` = 20）小得多：
+    /// 一枚序号本来就只有二十几点宽，按选区的下限它压根缩不动。
+    static let minEditSize: CGFloat = 6
+
+    /// 选中之后画框、摆把手的那一块。
+    ///
+    /// 不能直接用 `rect`：文字和序号的 `start` 只是锚点，`rect` 对它们是零面积 ——
+    /// 那两个要读真正占到的地方（字的外框 / 徽标圆的外切方）。
+    var editBox: CGRect {
+        switch tool {
+        case .text: return textBoxRect
+        case .number: return Self.badgeBox(start: start, radius: badgeRadius)
+        default: return rect
+        }
+    }
+
+    /// 这条注解露出哪些把手。数组顺序就是命中顺序（先查的赢），角排在边前面 ——
+    /// 和选区那八个同一口径，否则拖角会退化成只动一条边。
+    var editableGrabs: [AnnotationGrab] {
+        switch tool {
+        case .arrow:
+            // 端点优先：一支水平/垂直的箭，它的端点正好落在自己包围盒的角上 ——
+            // 那一下该挪的是箭尾/箭头，不是那块隐形的盒子。
+            return [.head, .tail]
+        case .text, .number:
+            // 只给四个角。边把手只能改一个方向，而字和徽标是等比放大的 —— 拖右边那条
+            // 会把「24 号字」变成「横向拉长的 24 号字」，模型里没有这一档。
+            return RegionHandle.cornerOrder.map { .box($0) }
+        default:
+            return RegionHandle.grabOrder.map { .box($0) }
+        }
+    }
+
+    /// 某个把手的命中区（遮罩坐标）：围着**看得见的那颗手柄**的一小块 16×16。
+    ///
+    /// 端点沿用选区角把手同一档边距（`handleSlop`）。盒把手**不**抄选区那条
+    /// `zone(_:of:)`：那条是「沿整条边铺开的长条」，给选区合适（整条边框都是改框的把手），
+    /// 给注解就是把整条墨迹都划成了缩放 —— 空心框的线本来就贴着边，选中之后再照着框线
+    /// 一按想挪，结果缩了框，第二次拖动全废。收成中点一小块之后：角上两种算法给的是
+    /// 同一块（角本来就是 2×slop 的方块），边只认中点那一小片，边上其余地方交还给
+    /// 「整条平移」。
+    func grabZone(_ grab: AnnotationGrab) -> CGRect {
+        let center = grabCenter(grab)
+        let slop = ScreenshotSelectionView.handleSlop
+        return CGRect(x: center.x - slop, y: center.y - slop, width: slop * 2, height: slop * 2)
+    }
+
+    /// 把手画在哪儿：盒把手在包围盒的角/边中点，端点就在线段那头。
+    func grabCenter(_ grab: AnnotationGrab) -> CGPoint {
+        switch grab {
+        case .box(let handle): return ScreenshotSelectionView.center(of: handle, in: editBox)
+        case .tail: return start
+        case .head: return end
+        }
+    }
+
+    /// 这一点按住了这条注解的哪个把手（没按到任何把手就返回 nil）。
+    func grab(at point: CGPoint) -> AnnotationGrab? {
+        editableGrabs.first { grabZone($0).contains(point) }
+    }
+
+    /// 这一点是否按在注解**本体**上（把手不算）。
+    ///
+    /// 空心框只认「看得见的那条线」±(半个线宽 + slop)：整块都认的话，画一个大框就等于
+    /// 把框住的那片选区平移全吃掉了 —— 用户照着框里面一按想拖的是选区，结果框自己跑了。
+    /// 打码、文字、序号是实心的一块，整块都能抓。
+    func contains(_ point: CGPoint, slop: CGFloat) -> Bool {
+        let band = lineWidth / 2 + slop
+        switch tool {
+        case .rect:
+            let outer = rect.insetBy(dx: -band, dy: -band)
+            guard outer.contains(point) else { return false }
+            // `rect` 内缩到线内侧以外才算「中间」；框窄到两条边重合时内缩矩形翻面，
+            // `contains` 恒假 —— 那时候整块都当线上，反而点得着。
+            return !rect.insetBy(dx: band, dy: band).contains(point)
+        case .ellipse:
+            let halfW = rect.width / 2, halfH = rect.height / 2
+            guard halfW > 0.001, halfH > 0.001 else { return false }
+            let r = hypot((point.x - rect.midX) / halfW, (point.y - rect.midY) / halfH)
+            // 归一化半径差 × 短半轴 ≈ 到曲线的点距（长轴那头会略宽松几像素，命中够用）。
+            return abs(r - 1) <= band / min(halfW, halfH)
+        case .arrow:
+            return Self.distance(point, toSegment: start, and: end) <= band
+        case .pen:
+            guard points.count > 1 else { return false }
+            for index in 1 ..< points.count where Self.distance(point, toSegment: points[index - 1],
+                                                                and: points[index]) <= band {
+                return true
+            }
+            return false
+        case .mosaic:
+            return rect.contains(point)
+        case .text:
+            return textBoxRect.insetBy(dx: -slop, dy: -slop).contains(point)
+        case .number:
+            return hypot(point.x - start.x, point.y - start.y) <= badgeRadius + slop
+        }
+    }
+
+    /// 点到线段的最短距离（画笔和箭头判命中都靠它）。
+    static func distance(_ point: CGPoint, toSegment a: CGPoint, and b: CGPoint) -> CGFloat {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let length = dx * dx + dy * dy
+        guard length > 0 else { return hypot(point.x - a.x, point.y - a.y) }
+        let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length))
+        return hypot(point.x - (a.x + dx * t), point.y - (a.y + dy * t))
+    }
+
+    // MARK: 改一条
+
+    /// 整条平移。样式一个字段都不碰。
+    func movedBy(_ offset: CGSize) -> ScreenshotAnnotation {
+        mappingPoints { CGPoint(x: $0.x + offset.width, y: $0.y + offset.height) }
+    }
+
+    /// 按住某个把手拖到 `point`，另一头钉住；不许缩出 `limit`（遮罩那边传的是整块屏）。
+    ///
+    /// **每次都从按下那一刻的原样算**，不从上一帧的结果接着算：拖动期间鼠标一帧几像素，
+    /// 逐帧累加会把圆角、字号这些取整过的量越拖越偏（选区平移也是同一口径，见 `moveStart`）。
+    func applyingResize(_ grab: AnnotationGrab, to point: CGPoint, limit: CGRect) -> ScreenshotAnnotation {
+        switch grab {
+        case .tail, .head:
+            let next = CGPoint(x: min(max(point.x, limit.minX), limit.maxX),
+                               y: min(max(point.y, limit.minY), limit.maxY))
+            return withArrowEndpoint(head: grab == .head, to: next)
+        case .box(let handle):
+            let box = editBox
+            let target = ScreenshotSelectionView.resize(box, edges: handle.edges, to: point,
+                                                        limit: limit, minSize: Self.minEditSize)
+            switch tool {
+            case .text: return scaledText(to: target, handle: handle)
+            case .number: return scaledBadge(to: target, handle: handle)
+            default: return mappingPoints(Self.boxMap(from: box, to: target))
+            }
+        }
+    }
+
+    /// 挪箭头的一个端点，另一端钉住。箭头的「缩放」就是这两颗点：长短和方向都在里面，
+    /// 粗细交给面板的滑杆。
+    func withArrowEndpoint(head: Bool, to point: CGPoint) -> ScreenshotAnnotation {
+        copying(start: head ? start : point, end: head ? point : end)
+    }
+
+    /// 换成面板上那一套值，几何（位置、轨迹、文字内容、序号）原样留着。
+    ///
+    /// 只给「被选中的那一条」用（用户 2026-10-19 定的口径：改样式不许回头把同工具
+    /// 画过的其他条一起刷掉）。整套样式都从 `style` 来，所以这里直接走 `init`，
+    /// 描边/背景能传成 nil（= 关掉）。
+    func styled(with style: ScreenshotToolStyle) -> ScreenshotAnnotation {
+        ScreenshotAnnotation(tool: tool, color: style.color, lineWidth: style.lineWidth,
+                             start: start, end: points.isEmpty ? end : nil, points: points,
+                             text: text, number: number, fontSize: style.fontSize,
+                             bold: style.bold, italic: style.italic,
+                             borderColor: style.borderColor, backgroundColor: style.backgroundColor)
+    }
+
+    /// 只换文字内容：位置、字号、颜色、描边、背景一个都不动。双击一条已写的字改内容
+    /// 走这条路（用户 2026-10-19 定的口径：改旧字 = 双击它）。
+    ///
+    /// 不复用 `styled(with:)`：那条整套样式都从面板来，改一个字不该把描边色、背景色按
+    /// 面板当前那套重铺一遍。也不开 `copying(text:)` 那条口子：`copying` 是这一文件的
+    /// 内部手脚（`nil` 一律读作「照抄」），暴露出去就成了谁都能拼一条的万能构造器。
+    func replacingText(_ text: String) -> ScreenshotAnnotation {
+        ScreenshotAnnotation(tool: tool, color: color, lineWidth: lineWidth, start: start,
+                             end: points.isEmpty ? end : nil, points: points,
+                             text: text, number: number, fontSize: fontSize,
+                             bold: bold, italic: italic,
+                             borderColor: borderColor, backgroundColor: backgroundColor)
+    }
+
+    /// 这条现在那一套值 —— 选中它之后面板上显示的就是它（反过来读，不各存一份）。
+    var styleValue: ScreenshotToolStyle {
+        ScreenshotToolStyle(color: color, lineWidth: lineWidth, fontSize: fontSize,
+                            bold: bold, italic: italic,
+                            borderColor: borderColor, backgroundColor: backgroundColor)
+    }
+
+    // MARK: 几何换算（内部）
+
+    /// 逐字段照抄自己，只换掉传进来的那几样。
+    ///
+    /// 为什么要手写一遍 `init`：`init` 不传 `fontSize` 会按粗细重算派生档（「粗细即字号」
+    /// 那条老式子），靠默认参数复制一条「48 号字」回来就变回 24 —— `extendingPen` 当年
+    /// 漏带字段跳的是同一个坑。所以这里的 `nil` 一律读作「照抄」；真要把某个字段清空
+    /// （比如去掉描边色）走 `styled(with:)`，那儿整套值都来自面板，本来就不必留旧值。
+    private func copying(start: CGPoint? = nil, end: CGPoint? = nil, points: [CGPoint]? = nil,
+                         color: NSColor? = nil, lineWidth: CGFloat? = nil,
+                         fontSize: CGFloat? = nil, bold: Bool? = nil,
+                         italic: Bool? = nil) -> ScreenshotAnnotation {
+        ScreenshotAnnotation(tool: tool, color: color ?? self.color,
+                             lineWidth: lineWidth ?? self.lineWidth,
+                             start: start ?? self.start,
+                             // 有轨迹时 `init` 按点列首尾推 start/end，这里再传一遍会打架。
+                             end: points == nil ? (end ?? self.end) : nil,
+                             points: points ?? self.points, text: text, number: number,
+                             fontSize: fontSize ?? self.fontSize,
+                             bold: bold ?? self.bold, italic: italic ?? self.italic,
+                             borderColor: borderColor, backgroundColor: backgroundColor)
+    }
+
+    /// 每个坐标都过一遍 `map`（非轨迹工具就 start/end 两个点）。
+    private func mappingPoints(_ map: (CGPoint) -> CGPoint) -> ScreenshotAnnotation {
+        copying(start: map(start), end: map(end), points: points.isEmpty ? nil : points.map(map))
+    }
+
+    /// 把 `old` 这块映射到 `new`：两轴各自缩放再平移。
+    ///
+    /// 退化那一轴（拖成一条竖线/横线的画笔，宽或高为 0）不缩放、只跟着平移 —— 除零之外，
+    /// 「零宽放大成 80 宽」会把一条竖线糊成一块谁都没要的板。
+    static func boxMap(from old: CGRect, to new: CGRect) -> (CGPoint) -> CGPoint {
+        let sx = old.width >= 1 ? new.width / old.width : 1
+        let sy = old.height >= 1 ? new.height / old.height : 1
+        return { CGPoint(x: new.minX + ($0.x - old.minX) * sx,
+                         y: new.minY + ($0.y - old.minY) * sy) }
+    }
+
+    /// 等比缩放用的系数：面积比开方。角把手拖出「两倍长 × 两倍宽」= 放大两倍。
+    static func uniformScale(from old: CGRect, to new: CGRect) -> CGFloat {
+        let ratio = max(0, new.width * new.height) / max(1, old.width * old.height)
+        return max(0.05, sqrt(ratio))
+    }
+
+    /// 拖某个角时**不动**的那一头：拖右下角 = 左上角钉住。
+    static func fixedCorner(of handle: RegionHandle, in box: CGRect) -> CGPoint {
+        CGPoint(x: handle.edges.contains(.left) ? box.maxX : box.minX,
+                y: handle.edges.contains(.top) ? box.maxY : box.minY)
+    }
+
+    /// 文字：改的是字号，不是把字拉扁。所以先由目标框推出字号，让盒子跟着字号自己长，
+    /// 再把新盒子钉回被拖那个角的对角上 —— 拖到哪只是「要多大」的输入。
+    private func scaledText(to target: CGRect, handle: RegionHandle) -> ScreenshotAnnotation {
+        let range = ScreenshotToolStyle.fontRange
+        let raw = fontSize * Self.uniformScale(from: editBox, to: target)
+        // 取整：13.7 号字既显示不出、也没法第二次精确复现，缩放两下就会漂。
+        let size = min(max(raw.rounded(), range.lowerBound), range.upperBound)
+        let scaled = copying(fontSize: size)
+        let box = scaled.textBoxRect
+        let anchor = Self.fixedCorner(of: handle, in: target)
+        let origin = CGPoint(x: handle.edges.contains(.left) ? anchor.x - box.width : anchor.x,
+                             y: handle.edges.contains(.top) ? anchor.y - box.height : anchor.y)
+        return scaled.copying(start: CGPoint(x: origin.x + scaled.textPadding,
+                                             y: origin.y + scaled.textPadding))
+    }
+
+    /// 序号：那一格没有字号可滑，圈的大小就是粗细（见 `badgeRadius`），所以缩放改的是
+    /// `lineWidth`。`badgeRadius` 有 11 的下限，缩到那以下会停住 —— 数字总比圈大就没法看了。
+    private func scaledBadge(to target: CGRect, handle: RegionHandle) -> ScreenshotAnnotation {
+        let range = ScreenshotToolStyle.widthRange
+        let raw = lineWidth * Self.uniformScale(from: editBox, to: target)
+        let width = min(max(raw, range.lowerBound), range.upperBound)
+        let scaled = copying(lineWidth: width)
+        let radius = scaled.badgeRadius
+        let anchor = Self.fixedCorner(of: handle, in: target)
+        let center = CGPoint(x: handle.edges.contains(.left) ? anchor.x - radius : anchor.x + radius,
+                             y: handle.edges.contains(.top) ? anchor.y - radius : anchor.y + radius)
+        return scaled.copying(start: center)
+    }
+
+    /// 序号徽标的外切方（绘制侧 `drawBadge` 用的是同一块，别各算各的）。
+    static func badgeBox(start: CGPoint, radius: CGFloat) -> CGRect {
+        CGRect(x: start.x - radius, y: start.y - radius,
+               width: radius * 2, height: radius * 2)
     }
 }
 

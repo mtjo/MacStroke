@@ -160,6 +160,9 @@ public final class ScreenshotController {
     private func close() {
         guard let window else { return }
         self.window = nil
+        // 取色面板（点调色板最后一格那枚彩色块弹的）挂在比遮罩还高的层上：遮罩收了
+        // 它还开着，就是桌面上的一块无主窗。属性面板自己管收起那条，这里管会话结束这条。
+        (window.contentView as? ScreenshotSelectionView)?.closeToolColorPicker()
         window.orderOut(nil)
         window.close()
         onActiveStateChanged?(false)

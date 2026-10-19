@@ -83,6 +83,16 @@
 "Screenshot OCR" = "提取文字";
 "Screenshot Color" = "颜色";
 "Screenshot Line Width" = "线宽";
+"Screenshot Thickness" = "粗细";
+"Screenshot Font Size" = "字号";
+"Screenshot Style" = "样式";
+"Screenshot Bold" = "粗体";
+"Screenshot Italic" = "斜体";
+"Screenshot Text Border" = "文字边框";
+"Screenshot Text Background" = "文字背景";
+"Screenshot More Colors" = "更多颜色";
+"Screenshot No Color" = "无";
+"Screenshot Custom Color" = "自定义颜色";
 "Screenshot Undo" = "撤销";
 "Screenshot Save" = "保存为文件";
 "Screenshot Copy" = "复制到剪贴板";

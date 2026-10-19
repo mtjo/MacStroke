@@ -83,6 +83,16 @@
 "Screenshot OCR" = "Extract text";
 "Screenshot Color" = "Color";
 "Screenshot Line Width" = "Line width";
+"Screenshot Thickness" = "Thickness";
+"Screenshot Font Size" = "Font size";
+"Screenshot Style" = "Style";
+"Screenshot Bold" = "Bold";
+"Screenshot Italic" = "Italic";
+"Screenshot Text Border" = "Text border";
+"Screenshot Text Background" = "Text background";
+"Screenshot More Colors" = "More colors";
+"Screenshot No Color" = "None";
+"Screenshot Custom Color" = "Custom color";
 "Screenshot Undo" = "Undo";
 "Screenshot Save" = "Save as file";
 "Screenshot Copy" = "Copy to clipboard";

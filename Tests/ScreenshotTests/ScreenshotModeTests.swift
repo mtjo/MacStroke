@@ -369,7 +369,7 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopStitchesEveryScrolledScreenAndStopsAtTheBottom() throws {
         let session = try paperSession(step: 100, limit: 300)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: 10),
+        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: loopBudget(steps: 4)),
                       "循环没自己收场：滚了 \(session.injections) 次、\(session.readouts)")
 
         XCTAssertEqual(session.injections, 4, "最后一次注入是探到底的那一下，不能少")
@@ -396,7 +396,8 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopSaysZeroSegmentsWhenThePageNeverMoves() throws {
         let session = try paperSession(step: 100, limit: 0)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: 10), "循环没自己收场")
+        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: loopBudget(steps: 2)),
+                      "循环没自己收场")
 
         XCTAssertEqual(session.injections, 2, "向下滚不动该翻成向上再试一下，两边都不动才收场")
         let result = try XCTUnwrap(session.outcome)
@@ -418,7 +419,7 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopFlipsUpwardWhenTheSelectionStartsAtTheBottom() throws {
         let session = try paperSession(step: 100, limit: 300, startTop: 300)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: 15),
+        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: loopBudget(steps: 5)),
                       "循环没自己收场：滚了 \(session.injections) 次、\(session.readouts)")
 
         let result = try XCTUnwrap(session.outcome)
@@ -446,7 +447,8 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopNeverFlipsUpAfterItHasStitchedSomething() throws {
         let session = try paperSession(step: 100, limit: 300)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: 15), "循环没自己收场")
+        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: loopBudget(steps: 4)),
+                      "循环没自己收场")
 
         XCTAssertEqual(session.injections, 4, "到底之后就该收场，不该再往回滚一下")
         let result = try XCTUnwrap(session.outcome)
@@ -466,7 +468,7 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopStopsAtTheMaxScreensCap() throws {
         let session = try paperSession(step: 100, limit: 100_000, maxScreens: 2)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: 10),
+        XCTAssertTrue(pump(until: { session.outcome != nil }, timeout: loopBudget(steps: 3)),
                       "撞了上限也不收场：滚了 \(session.injections) 次")
 
         let result = try XCTUnwrap(session.outcome)
@@ -504,7 +506,7 @@ final class ScreenshotModeTests: XCTestCase {
     func testScrollLoopKeepsWhatIsAlreadyStitchedWhenStoppedByHand() throws {
         let session = try paperSession(step: 100, limit: 100_000, maxScreens: 20)
         session.capture.start()
-        XCTAssertTrue(pump(until: { session.readouts.count >= 3 }, timeout: 10),
+        XCTAssertTrue(pump(until: { session.readouts.count >= 3 }, timeout: loopBudget(steps: 3)),
                       "还没接出两段就被叫停了：\(session.readouts)")
         session.capture.stop()
 
@@ -916,6 +918,14 @@ final class ScreenshotModeTests: XCTestCase {
         }
         return true
     }
+
+    /// 长截图那几圈该等多久：按「要转几步」算，不写死秒数。
+    ///
+    /// 实测这台机器上一步（注入 → 等稳住 → 抓帧 → 比对 → 裁段）要 2.4 秒（load≈45）到
+    /// 4 秒（load≈58）—— 定时器全程在等画面，跟判据没关系，机器忙就是单纯地慢。原来写死
+    /// 的 10 秒预算是压线过（四步 9.4 秒），负载一上来就报「循环没自己收场」，而那根本不是
+    /// 代码错。判据一条没动，只是把等圈的时间按步数留够；真转不完照样红，只是红得晚一点。
+    private func loopBudget(steps: Int) -> TimeInterval { 10 + 5 * Double(steps) }
 
     private func failWith(_ outcome: ScreenshotScrollOutcome, _ expect: String) {
         switch outcome {

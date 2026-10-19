@@ -19,7 +19,7 @@
 //
 //  语义色必须在 `draw` **之前**解析成具体值（见 `ToolbarStyle.resolved(for:)`）：它们要按当前
 //  图形上下文的外观取值，而离屏那条上下文的外观和视图的不是同一个 —— 直接把 `windowBackgroundColor`
-//  拿进 draw 里 `setFill()`，浅色外观下烘出来的仍是深底。写死一档的只有调色板那五个墨色（要进
+//  拿进 draw 里 `setFill()`，浅色外观下烘出来的仍是深底。写死一档的只有调色板那七档色（要进
 //  成品 PNG，见 `ScreenshotToolbarView.palette`）和选中蓝。
 //
 //  条子是遮罩视图的子视图，但**只有可点元素吃掉事件**：空白处 hitTest 直接放行回遮罩
@@ -41,8 +41,6 @@ struct ToolbarStyle {
     /// 色块/线宽格的选中底：中性一档，压得住又不抢内容。
     let chipIdle: NSColor
     let separator: NSColor
-    /// 色块自带一圈描边：白色块压在浅底上、黑色块压在深底上都要留得住边。
-    let swatchRing: NSColor
     /// QQ 的两个出口各自带色：红色✕ discard、绿色✓ 出图，靠颜色而不是位置表意。
     let cancel: NSColor
     let confirm: NSColor
@@ -71,7 +69,6 @@ struct ToolbarStyle {
             glyph: concrete(.labelColor, in: appearance),
             chipIdle: concrete(.tertiaryLabelColor, in: appearance),
             separator: concrete(.quaternaryLabelColor, in: appearance),
-            swatchRing: concrete(.tertiaryLabelColor, in: appearance),
             cancel: concrete(.systemRed, in: appearance),
             confirm: concrete(.systemGreen, in: appearance)
         )
@@ -98,8 +95,6 @@ private final class ScreenshotToolbarItem: NSView {
         /// 打码标记：4x4 像素格。系统那个 `mosaic` 是「几块不等大的板子拼成的方框」，
         /// 读起来像分栏布局而不像打码（用户原话「不够形象」），QQ 那枚是像素格。
         case checkerboard
-        case swatch(NSColor)
-        case stroke(CGFloat)
         case separator
     }
 
@@ -153,7 +148,7 @@ private final class ScreenshotToolbarItem: NSView {
         }
         let inset = bounds.insetBy(dx: 2, dy: 2)
         if isActive {
-            (glyphIsOnAccent ? ToolbarStyle.accent : style.chipIdle).setFill()
+            ToolbarStyle.accent.setFill()
             NSBezierPath(roundedRect: inset, xRadius: 6, yRadius: 6).fill()
         }
         let alpha: CGFloat = isEnabled ? 1 : 0.3
@@ -173,14 +168,6 @@ private final class ScreenshotToolbarItem: NSView {
                              width: side, height: image.size.height * ratio)
             image.draw(in: box, from: .zero, operation: .sourceOver, fraction: alpha,
                        respectFlipped: true, hints: nil)
-        case let .swatch(color):
-            drawSwatch(color, active: isActive,
-                       ring: isActive ? ToolbarStyle.accent : style.swatchRing, alpha: alpha)
-        case let .stroke(width):
-            ink.setFill()
-            let line = CGRect(x: bounds.minX + 5, y: bounds.midY - width / 2,
-                              width: bounds.width - 10, height: width)
-            NSBezierPath(roundedRect: line, xRadius: width / 2, yRadius: width / 2).fill()
         case .separator:
             break
         }
@@ -194,21 +181,6 @@ private final class ScreenshotToolbarItem: NSView {
         case .confirm: return style.confirm
         case nil: return style.glyph
         }
-    }
-
-    /// 色块不能铺蓝底（盖上就认不出这是什么色），它走「中性格子 + 一圈描边」；选中那一档
-    /// 描边换成系统蓝。色块本身永远是调色板里写死的那一档 —— 那个值要进成品 PNG。
-    private func drawSwatch(_ color: NSColor, active: Bool, ring: NSColor, alpha: CGFloat) {
-        let side = min(bounds.width - 8, bounds.height - 16)
-        let box = CGRect(x: bounds.midX - side / 2, y: bounds.midY - side / 2,
-                         width: side, height: side)
-        let circle = NSBezierPath(ovalIn: box)
-        color.withAlphaComponent(alpha).setFill()
-        circle.fill()
-        ring.setStroke()
-        let outline = NSBezierPath(ovalIn: box.insetBy(dx: 0.5, dy: 0.5))
-        outline.lineWidth = active ? 2 : 1
-        outline.stroke()
     }
 
     /// 4x4 像素格，深浅两档交替 —— 一眼是「这块被打花了」。整块 18pt 见方，和旁边的
@@ -226,14 +198,6 @@ private final class ScreenshotToolbarItem: NSView {
                        y: box.minY + CGFloat(row) * cell,
                        width: cell - 0.6, height: cell - 0.6).fill()
             }
-        }
-    }
-
-    /// 除色块外的格子，选中态整块铺系统蓝、图形转白 —— 和系统分段控件的选中档一个读法。
-    private var glyphIsOnAccent: Bool {
-        switch glyph {
-        case .symbol, .stroke, .checkerboard: return true
-        default: return false
         }
     }
 
@@ -341,11 +305,13 @@ final class ScreenshotToolbarView: NSView {
     static let separatorWidth: CGFloat = 10
     static let iconPointSize: CGFloat = 17
 
-    /// 图标格和留白格的两档宽度：工具/出口要按得住，色块与线宽只是挑一个值。
+    /// 图标格宽度：工具/出口要按得住。
     static let iconItemWidth: CGFloat = 32
-    static let optionItemWidth: CGFloat = 22
 
-    /// 调色板：QQ 的默认色是红，白/黑留给深色图和浅底图各一路。
+    /// 调色板的预设档：**红 黄 绿 蓝 白 灰 黑**（用户 2026-10-19 点的名），第一档是红 ——
+    /// 每格工具的默认色都取 `palette[0]`，所以「默认色都是红色」靠的就是这一档排在最前。
+    /// 白/黑/灰留给深色图和浅底图各一路；预设后面还跟着「自定义」那一格，不在这个数组里
+    /// （见 `ScreenshotToolPanelView.paletteCellIDs`）。
     ///
     /// 前三档**不写 `.systemRed` 那类语义色**：它们是随外观换档的动态色（实测浅/深两套
     /// 差到 0.04，红 1.0/0.231/0.188 → 1.0/0.271/0.228），而这一档色值不只画在色块上 ——
@@ -353,16 +319,16 @@ final class ScreenshotToolbarView: NSView {
     /// 按各自上下文解析成两种红，深浅桌面下还会飘。数值取浅色外观那一档（QQ 的调色板本来
     /// 就是一套固定色，不跟系统）。
     static let palette: [NSColor] = [
-        NSColor(srgbRed: 1.0000, green: 0.2314, blue: 0.1882, alpha: 1),
-        NSColor(srgbRed: 1.0000, green: 0.8000, blue: 0.0000, alpha: 1),
-        NSColor(srgbRed: 0.1569, green: 0.8039, blue: 0.2549, alpha: 1),
-        .white, .black,
+        NSColor(srgbRed: 1.0000, green: 0.2314, blue: 0.1882, alpha: 1),   // 红
+        NSColor(srgbRed: 1.0000, green: 0.8000, blue: 0.0000, alpha: 1),   // 黄
+        NSColor(srgbRed: 0.1569, green: 0.8039, blue: 0.2549, alpha: 1),   // 绿
+        NSColor(srgbRed: 0.1569, green: 0.5216, blue: 1.0000, alpha: 1),   // 蓝
+        .white,                                                            // 白
+        NSColor(srgbRed: 0.5569, green: 0.5569, blue: 0.5765, alpha: 1),   // 灰
+        .black,                                                            // 黑
     ]
-    static let lineWidths: [CGFloat] = [2, 4, 7]
 
     var onTool: ((ScreenshotTool) -> Void)?
-    var onColor: ((Int) -> Void)?
-    var onWidth: ((Int) -> Void)?
     /// 图钉贴图：把成品钉在屏幕上（QQ 的那枚图钉）。
     var onPin: (() -> Void)?
     /// 裁剪：拿当前选区再框一块。
@@ -378,8 +344,6 @@ final class ScreenshotToolbarView: NSView {
 
     private var entries: [(view: NSView, width: CGFloat)] = []
     private var toolItems: [ScreenshotTool: ScreenshotToolbarItem] = [:]
-    private var colorItems: [Int: ScreenshotToolbarItem] = [:]
-    private var widthItems: [Int: ScreenshotToolbarItem] = [:]
     private var undoItem: ScreenshotToolbarItem?
     private var redoItem: ScreenshotToolbarItem?
     private var ocrItem: ScreenshotToolbarItem?
@@ -524,24 +488,10 @@ final class ScreenshotToolbarView: NSView {
         ocrItem = iconCell("ocr", .symbol("text.viewfinder"), L("Screenshot OCR")) { [weak self] in
             self?.onOCR?()
         }
-        addSeparator()
-
-        for (index, color) in Self.palette.enumerated() {
-            let item = ScreenshotToolbarItem(glyph: .swatch(color), width: Self.optionItemWidth,
-                                             id: "color", toolTip: L("Screenshot Color")) { [weak self] in
-                self?.onColor?(index)
-            }
-            colorItems[index] = item
-            append(item, width: Self.optionItemWidth)
-        }
-        for (index, width) in Self.lineWidths.enumerated() {
-            let item = ScreenshotToolbarItem(glyph: .stroke(width), width: Self.optionItemWidth,
-                                             id: "width", toolTip: L("Screenshot Line Width")) { [weak self] in
-                self?.onWidth?(index)
-            }
-            widthItems[index] = item
-            append(item, width: Self.optionItemWidth)
-        }
+        // 颜色与粗细不再占条子上的格子（issue #73）：一套全局值不够每格工具各用一套，
+        // 而文字要调的东西更多。它们搬进「选中哪一格就浮在那一格上方」的面板，见
+        // `ScreenshotToolPanelView`。调色板本身仍留在这里（`palette`）—— 面板和注解
+        // 共用这一份固定墨色，成品 PNG 里的红必须和色块上的红是同一个值。
         addSeparator()
 
         undoItem = iconCell("undo", .symbol("arrow.uturn.backward"), L("Screenshot Undo")) { [weak self] in
@@ -610,15 +560,20 @@ final class ScreenshotToolbarView: NSView {
     }
 
     /// 只反映「现在选中了什么」，状态真相都在遮罩视图那边。
-    func sync(activeTool: ScreenshotTool?, colorIndex: Int, widthIndex: Int,
-              canUndo: Bool, canRedo: Bool, canOCR: Bool) {
+    func sync(activeTool: ScreenshotTool?, canUndo: Bool, canRedo: Bool, canOCR: Bool) {
         for (tool, item) in toolItems { item.isActive = tool == activeTool }
-        for (index, item) in colorItems { item.isActive = index == colorIndex }
-        for (index, item) in widthItems { item.isActive = index == widthIndex }
         undoItem?.isEnabled = canUndo
         redoItem?.isEnabled = canRedo
         // 识别在后台跑，跑完之前再点一次就是让 Vision 同时算两遍、结果谁后到还不一定。
         ocrItem?.isEnabled = canOCR
         needsLayout = true
+    }
+
+    /// 某一格工具在**遮罩坐标**里的矩形 —— 属性面板要钉在它上方，就得先知道它在哪。
+    /// 条子可能被用户拖走、也可能被钳回屏内，所以每次现问，不能记着上一次的。
+    /// 条子收着（裁剪中）答 nil：面板不能凭空钉在一块看不见的条子上。
+    func cellRect(for tool: ScreenshotTool) -> NSRect? {
+        guard !isHidden, let item = toolItems[tool] else { return nil }
+        return item.frame.offsetBy(dx: frame.minX, dy: frame.minY)
     }
 }

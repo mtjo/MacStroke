@@ -23,6 +23,12 @@
 //    的那块）。选了工具之后选区内让位给画注解 —— 注解本身画在整屏坐标里，所以改框
 //    不会把已经画好的注解弄丢或挪位。
 //
+//  已画的注解也能回头改（用户 2026-10-19：「添加的注释方向方框等要支持编辑」）：没选工具
+//  时，选区内那一按先问注解再问选区 —— 露着的把手 = 缩放那一条，注解本体 = 挪那一条，
+//  都没按到才是整块平移。选中那条同时浮出属性面板，改的只有被选中的这一条（口径全是
+//  用户 2026-10-19 点的：入口「没选工具时直接点它」、范围「平移 + 缩放 + 改样式 + 删这一条」、
+//  落点「只改被选中的那一条」）。删 = Delete/Backspace，撤销从此按整表快照走。
+//
 //  选区阶段屏顶还浮着一条**模式条**（截图 / 滚动截图 / 录屏 / 文字识别，见
 //  `ScreenshotModeBarView`）：它决定「选区落定之后干什么」。`routeAfterSelection()`
 //  就是那个分流口 —— 「截图」进 editing 走注解条，「文字识别」直接跑 OCR，
@@ -68,6 +74,10 @@ enum RegionHandle: Int, CaseIterable {
     /// 命中判定要按这个顺序查（角优先）。
     static let grabOrder: [RegionHandle] = [.topLeft, .topRight, .bottomLeft, .bottomRight,
                                             .top, .bottom, .left, .right]
+
+    /// 只有四个角的那一档：给文字和序号当把手集（它们只能等比缩放，边把手改不出「只宽一点」
+    /// 的字，见 `ScreenshotAnnotation.editableGrabs`）。顺序仍沿用上面那一条，命中口径一致。
+    static let cornerOrder: [RegionHandle] = [.topLeft, .topRight, .bottomLeft, .bottomRight]
 
     var edges: RegionEdges {
         switch self {
@@ -128,6 +138,8 @@ public final class ScreenshotSelectionView: NSView {
     // MARK: 会话状态（internal：单测要能把视图摆到指定状态再离屏渲染取证）
 
     enum Phase { case picking, editing }
+    /// 正在拖选中那条注解的哪一部分：本体 = 整条平移，`grab` = 抓着了某个把手/端点。
+    enum AnnotationDrag { case body, grab(AnnotationGrab) }
     var phase = Phase.picking
     var selection: CGRect = .zero
     /// 鼠标此刻吸附到的那个窗。
@@ -140,8 +152,38 @@ public final class ScreenshotSelectionView: NSView {
     var annotations: [ScreenshotAnnotation] = []
     /// 正在拖、还没定下来的一条。
     var draft: ScreenshotAnnotation?
-    /// 撤销掉、还能再放回来的那些（栈顶 = 最后撤掉的一条）。
-    var undone: [ScreenshotAnnotation] = []
+    /// 撤销/重做栈：存**整表快照**，不再是「弹掉尾部那条」。
+    ///
+    /// 已画注解能编辑之后，一步动作可以是「中间某条挪了位/换了样式」，只记对象增删就回不
+    /// 去改前那一态了。`history` 栈顶 = 当前这一态之前那张表，`future` 栈顶 = 最近撤掉的那态。
+    /// internal 而非 private：取证要能看见「这一步真的记了一态」，只查屏上那条改没改不够。
+    var history: [[ScreenshotAnnotation]] = []
+    var future: [[ScreenshotAnnotation]] = []
+    /// 选中的那条已画注解（`annotations` 里的下标）。nil = 没选中。
+    ///
+    /// internal 而非 private：状态机取证要核对「点这一条选中的确实是它」，
+    /// 只断言「有选中」等于没核对下标 —— 串到别那条上照样全绿。
+    var selectedIndex: Int?
+    /// 正在拖选中那条的哪一部分：本体 = 整条平移，把手/端点 = 缩放。nil = 没在拖。
+    private var annotationDrag: AnnotationDrag?
+    /// 装了工具那一按**还没定下来是点还是拖**时，记下这一按压着的是哪条已画注解：
+    /// 松手时位移不到一条注解的最小尺寸（`commitDraft` 里那 3pt），就按「点它=选中它」
+    /// 结算，落回这条上；真的拖出一块，这一笔记作废、照常画出新的一条。
+    ///
+    /// 为什么不在按下那一刻就选中：装了工具之后「拖=画新笔」是这条路上最主要动作，而
+    /// 起点压着旧注解是常事（框完一个再框里面那个）。按下就选中会把画新笔改成挪旧的那条，
+    /// 所以要等手停下来才知道用户要的是哪一件。文字、序号那两格按下就出结果，等不到松手，
+    /// 所以在按下那一刻直接问 `annotationIndex(at:)`（见 `pointerDown`）。
+    var tapSelectCandidate: Int?
+    /// 按下那一刻那条注解的原样。拖动每帧都从它算，不拿上一帧的结果累加 —— 逐帧累加
+    /// 会把取整过的字号、圆角越拖越偏（选区平移也是同一口径，见 `moveStart`）。
+    private var annotationOriginal: ScreenshotAnnotation?
+    private var annotationDragFrom: CGPoint?
+    /// 一次连续手势（拖注解、滑滑杆）合成一步撤销用的账：手势开始前的整表 + 手势标记。
+    private var editBase: [ScreenshotAnnotation]?
+    private var editTag: String?
+    /// 每按下一次自增，给手势标记凑出「这一次」的编号（同一条注解拖两下 = 两步撤销）。
+    private var editToken = 0
     /// 「裁剪」进行中：这块是当前的整块选区，也就是新的框只能在它里面画；
     /// nil = 正常选区态（可以框全屏）。internal：状态机取证要看它进没进、退没退。
     var cropBounds: CGRect?
@@ -168,8 +210,13 @@ public final class ScreenshotSelectionView: NSView {
     private(set) var modeBar: ScreenshotModeBarView?
     /// 偏好里的「截图默认工具」：选区落定时预先装进 `tool` 的那一格，关掉就是 nil。
     var defaultTool: ScreenshotTool?
-    var colorIndex = 0
-    var widthIndex = 0
+    /// 每格工具自己的一套粗细/颜色（issue #73）。**只活在这次截图会话里**：切走再切回
+    /// 那一格还是它自己那套，关掉这次截图就全部回到「红 + 默认粗细」，不写偏好（用户
+    /// 2026-10-18 定的口径）。没记过的工具走 `ScreenshotToolStyle.default(for:)`。
+    var styles: [ScreenshotTool: ScreenshotToolStyle] = [:]
+    /// 选中工具后浮在它上方的属性面板。internal 而非 private：取证要看它在不在、
+    /// 钉对没钉对那一格。
+    private(set) var toolPanel: ScreenshotToolPanelView?
     /// internal 而非 private：状态机取证要看条子在不在、摆对没对。
     var toolbar: ScreenshotToolbarView?
     /// 选区阶段跟着光标的放大镜。偏好里关掉就压根不建这层视图。
@@ -179,7 +226,10 @@ public final class ScreenshotSelectionView: NSView {
     private(set) var tipView: ScreenshotTipView?
     var magnifierEnabled = true
     var magnification: ScreenshotMagnification = .medium
-    private var textEditor: NSTextField?
+    private(set) var textEditor: NSTextField?
+    /// 输入框现在在给**哪一条已画的文字**改内容（双击那条文字 = 改它的字）。nil = 正在
+    /// 写一条新的。internal 给取证看「这一按起的是新字还是改旧字」—— 两条路的收场完全不同。
+    var editingAnnotationIndex: Int?
 
     private let dimColor = NSColor(calibratedWhite: 0, alpha: 0.55)
     private let minDragDistance: CGFloat = 4
@@ -188,6 +238,14 @@ public final class ScreenshotSelectionView: NSView {
     /// 那条线去抓的，差一两像素就该算抓到。
     static let handleSize: CGFloat = 7
     static let handleSlop: CGFloat = 8
+
+    /// 按到注解**本体**上算命中的余量：比把手松一点。用户是照着那条线去抓的，
+    /// 差两三像素就该算抓到；再给宽就会把细线之间的空隙也吞掉，选区平移反而做不了。
+    static let annotationHitSlop: CGFloat = 6
+
+    /// 选中那条注解的把手方块边长。刻意比选区那八个（`handleSize` = 7）小一号：
+    /// 同屏两套把手时得一眼分出哪个是改框、哪个是改这一条注解。
+    static let annotationHandleSize: CGFloat = 5
 
     /// 打码拖动时那一圈辅助线的颜色与粗细。
     static let mosaicGuideColor = NSColor(srgbRed: 0.13, green: 0.55, blue: 1.0, alpha: 1)
@@ -209,6 +267,13 @@ public final class ScreenshotSelectionView: NSView {
     public override func resetCursorRects() {
         addCursorRect(bounds, cursor: .crosshair)
         guard phase == .editing, hasSelection else { return }
+        // 选中那条注解的把手先加：后加的矩形盖住先加的，所以和选区边框重合的那一点上
+        // 显示的是「改框」的箭头 —— 按下判定也是同一个顺序（见 `pointerDown`）。
+        if let index = selectedIndex, annotations.indices.contains(index) {
+            for grab in annotations[index].editableGrabs.reversed() {
+                addCursorRect(annotations[index].grabZone(grab), cursor: grab.cursor)
+            }
+        }
         // 后加的矩形盖住先加的，所以底衬在最前、四个角最后（角上要给角）。
         for handle in RegionHandle.grabOrder.reversed() {
             addCursorRect(Self.zone(handle, of: selection), cursor: handle.cursor)
@@ -229,8 +294,16 @@ public final class ScreenshotSelectionView: NSView {
                                        owner: self, userInfo: nil))
     }
 
-    var currentColor: NSColor { ScreenshotToolbarView.palette[colorIndex] }
-    var currentLineWidth: CGFloat { ScreenshotToolbarView.lineWidths[widthIndex] }
+    /// 这一格工具现在该用什么值。没记过 = 默认（红 + 一档适中的粗细）。
+    func style(for tool: ScreenshotTool) -> ScreenshotToolStyle {
+        styles[tool] ?? ScreenshotToolStyle.default(for: tool)
+    }
+
+    /// 当前选中那一格的值。`tool` 为 nil（没选工具）时按矩形那一格算 —— 这个值只在真要
+    /// 落笔时被读到，而落笔的前提就是选着某一格。
+    var currentStyle: ScreenshotToolStyle { style(for: tool ?? .rect) }
+    var currentColor: NSColor { currentStyle.color }
+    var currentLineWidth: CGFloat { currentStyle.lineWidth }
     private var hasSelection: Bool { selection.width > 0 && selection.height > 0 }
 
     /// 该保持原样亮度的那块：已定下的选区优先，其次是吸附预览。
@@ -260,7 +333,10 @@ public final class ScreenshotSelectionView: NSView {
         border.lineWidth = 1
         border.stroke()
 
-        if phase == .editing { drawHandles(of: focus) }
+        if phase == .editing {
+            drawHandles(of: focus)
+            drawAnnotationSelection()
+        }
         if phase == .picking {
             drawSizeReadout(of: focus)
             // 整块屏亮着 = 还没选中任何具体的窗，这时候说明文字得继续留在屏上
@@ -293,7 +369,8 @@ public final class ScreenshotSelectionView: NSView {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.saveGState()
         context.clip(to: focus)
-        for annotation in annotations where annotation.dirtyRect.intersects(focus) {
+        for (index, annotation) in annotations.enumerated()
+        where annotation.dirtyRect.intersects(focus) && index != editingAnnotationIndex {
             annotation.draw(shot: shot)
         }
         if let draft {
@@ -333,6 +410,76 @@ public final class ScreenshotSelectionView: NSView {
         }
     }
 
+    // MARK: - 选中那条注解的外框（编辑态辅助线）
+
+    /// 选中那条注解画一圈虚线框 + 摆出它能用的把手。
+    ///
+    /// 只画在遮罩上、且只画在亮区里，**不进导出**（导出走 `ScreenshotExportView`，那里只
+    /// 画注解本身）—— 和打码辅助线同一条规矩：帮你看清「这条抓到哪儿」的线不该被带进
+    /// 成品图，也不该糊到选区外的暗区上。
+    private func drawAnnotationSelection() {
+        guard let index = selectedIndex, annotations.indices.contains(index),
+              let context = NSGraphicsContext.current?.cgContext else { return }
+        let annotation = annotations[index]
+        guard !annotation.editBox.isEmpty else { return }
+        context.saveGState()
+        context.clip(to: selection.intersection(bounds))
+        NSColor.controlAccentColor.setStroke()
+        let outline = Self.dashedPath(annotation.editBox, dash: 4, gap: 3)
+        outline.lineWidth = 1
+        outline.stroke()
+        drawAnnotationGrabs(annotation)
+        context.restoreGState()
+    }
+
+    /// 把手：白底 + 主色描边，和选区那八个同一套画法，但小一号（同屏两套把手要分得出
+    /// 谁是谁的）。箭头的两个端点画成**圆点** —— 圆点是「一条线的尽头」，方块是「一块框的
+    /// 边界」，抓错一类改的是完全不同的东西。
+    private func drawAnnotationGrabs(_ annotation: ScreenshotAnnotation) {
+        let side = Self.annotationHandleSize
+        NSColor.white.setFill()
+        NSColor.controlAccentColor.setStroke()
+        for grab in annotation.editableGrabs {
+            let center = annotation.grabCenter(grab)
+            let box = CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side)
+            box.fill(using: .sourceOver)
+            let edge = grab.isEndpoint ? NSBezierPath(ovalIn: box)
+                : NSBezierPath(rect: box.insetBy(dx: 0.25, dy: 0.25))
+            edge.lineWidth = 1
+            edge.stroke()
+        }
+    }
+
+    /// 沿矩形四边排一段段短横（虚线）。
+    ///
+    /// 自己排而不用 `NSBezierPath` 的 setDash：那条 API 的相位跟着路径起点走，四条边接在
+    /// 角上会留半截，看着像断线。手排每条边都是整段、角上干净，而且段数是确定的 ——
+    /// 离屏取证能数着它判「虚线确实画上了」。
+    static func dashedPath(_ rect: CGRect, dash: CGFloat, gap: CGFloat) -> NSBezierPath {
+        let path = NSBezierPath()
+        let corners = [CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
+                       CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]
+        for index in 0 ..< 4 {
+            let from = corners[index]
+            let to = corners[(index + 1) % 4]
+            let length = hypot(to.x - from.x, to.y - from.y)
+            guard length > 0 else { continue }
+            var walked: CGFloat = 0
+            while walked < length {
+                let end = min(walked + dash, length)
+                // 沿边参数化：`from + (to-from) × 比例`，四边共用一条式子才不会哪一条反着排。
+                let at: (CGFloat) -> CGPoint = { fraction in
+                    CGPoint(x: from.x + (to.x - from.x) * fraction,
+                            y: from.y + (to.y - from.y) * fraction)
+                }
+                path.move(to: at(walked / length))
+                path.line(to: at(end / length))
+                walked = end + gap
+            }
+        }
+        return path
+    }
+
     // MARK: - 把手几何（internal：状态机和单测共用同一份判定，不各算各的）
 
     /// 把手的中心。边把手落在边的中点，角把手落在角上。
@@ -368,12 +515,17 @@ public final class ScreenshotSelectionView: NSView {
 
     /// 按住把手拖动：只有被点中的那几条边跟着走，另外几条钉在原处；不翻面、不缩没、
     /// 不出屏。
-    static func resize(_ rect: CGRect, edges: RegionEdges, to point: CGPoint, limit: CGRect) -> CGRect {
+    ///
+    /// `minSize` 单独给参数而不写死：选区那条底板要 20pt 才还能在里面画东西，而一条已画
+    /// 注解（比如一枚序号）本来就只有二十几点，按底板那档它压根缩不动。默认值保持原样，
+    /// 现有调用点一个字都不用改。
+    static func resize(_ rect: CGRect, edges: RegionEdges, to point: CGPoint, limit: CGRect,
+                       minSize: CGFloat = minRegionSize) -> CGRect {
         var minX = rect.minX, maxX = rect.maxX, minY = rect.minY, maxY = rect.maxY
-        if edges.contains(.left) { minX = min(point.x, maxX - minRegionSize) }
-        if edges.contains(.right) { maxX = max(point.x, minX + minRegionSize) }
-        if edges.contains(.top) { minY = min(point.y, maxY - minRegionSize) }
-        if edges.contains(.bottom) { maxY = max(point.y, minY + minRegionSize) }
+        if edges.contains(.left) { minX = min(point.x, maxX - minSize) }
+        if edges.contains(.right) { maxX = max(point.x, minX + minSize) }
+        if edges.contains(.top) { minY = min(point.y, maxY - minSize) }
+        if edges.contains(.bottom) { maxY = max(point.y, minY + minSize) }
         return CGRect(x: max(minX, limit.minX), y: max(minY, limit.minY),
                       width: min(maxX, limit.maxX) - max(minX, limit.minX),
                       height: min(maxY, limit.maxY) - max(minY, limit.minY))
@@ -474,6 +626,10 @@ public final class ScreenshotSelectionView: NSView {
             return
         }
 
+        // 属性面板同理：落在面板里的这一按归面板（真事件里它的 hitTest 整块吃掉），
+        // 判定树这儿再挡一次，免得被断点驱动的那棵树在面板底下画出一条注解。
+        if let panel = toolPanel, !panel.isHidden, panel.frame.contains(point) { return }
+
         // 屏顶模式条同上：按在格子上那一下归格子（真事件里它自己的 mouseDown 吃掉），
         // 这里再挡一次让判定树和真实链路答得一样。空白处放行给遮罩 —— 从屏顶往下拖
         // 一个选区是合法操作，条子不能把整条横向范围都吃掉。
@@ -486,40 +642,86 @@ public final class ScreenshotSelectionView: NSView {
         // 比挪去注解条点复制快。其余三档双击是「再来一次这一档的事」：文字识别失败后
         // 双击该重认，而不是把这张图复制走。
         if clickCount >= 2, hasSelection, selection.contains(point) {
+            // 双击按在一条**已经写好的字**上 = 改它的内容（用户 2026-10-19 定的口径）。
+            // 「点它=选中它」之后，旧文字再没有第二条路能把字换掉，双击是专门为它留的
+            // 那一条；其余落点维持老手感「复制并收起」，其余三档双击还是「再来一次这一档
+            // 的事」：文字识别失败后双击该重认，而不是把这张图复制走。
+            if mode == .still, let index = textAnnotationIndex(at: point) {
+                beginTextEdit(for: index)
+                return
+            }
             if mode == .still { finish(.copy) } else { routeAfterSelection() }
             return
         }
 
         if phase == .editing, hasSelection {
             // 把手优先于画注解：照着边框那一条按下去，想要的是「改这块」而不是在边上画一线。
+            //
+            // 这一层**不能**套进 `selection.contains(point)`：右/下那两个把手的中心正好压在
+            // max 边上，而 `CGRect.contains` 对 max 是开区间 —— 一套就点不着那两条边（改版时
+            // 就这么踩过一次，红的是 ScreenshotFlowTests 的 testEdgeHandleResizesSelection、
+            // testResizeNeverFlipsOrCollapses、testToolbarDragNeedsSlop 三条，注解套件全绿，
+            // 因为它俩量的是把手不是选区）。
             if let handle = Self.handle(at: point, of: selection) {
                 resizeHandle = handle
                 return
             }
-            // 没选工具时，选区内按住 = 整块平移；选了工具就还让位给画注解。
-            if tool == nil, selection.contains(point) {
-                moveFrom = point
-                moveStart = selection
-                return
+            if selection.contains(point) {
+                // 选中态 > 工具态（用户 2026-10-19 定的口径：「要取消掉工具选择才能点选对应的
+                // 框」这一层得去掉）。按在自己选中的那一条上 = 改它：把手/端点 = 缩放，线上
+                // = 整条平移，装了工具也让路。只有「刚选中/刚画完的那一条」有这待遇，其余条
+                // 一律走下面那一路（拖 = 画新的，点一下不拖 = 选中它），否则框完一个想接着
+                // 在它里面框第二个，第二笔会被改成挪第一个。
+                if let index = selectedIndex, annotations.indices.contains(index) {
+                    if let grab = selectedGrab(at: point) {
+                        beginAnnotationDrag(.grab(grab), index: index, at: point)
+                        return
+                    }
+                    if annotations[index].contains(point, slop: Self.annotationHitSlop) {
+                        beginAnnotationDrag(.body, index: index, at: point)
+                        return
+                    }
+                }
+                // 没选工具时，选区内按住 = 先给已画注解让路，都没有了才是整块平移。
+                // 三层顺序按「用户照着哪儿按」排：露着的把手 > 注解本体 > 底下的选区。
+                // 点着一条线想挪它却把整块选区拖走，是这一层最容易做反的手感（用户
+                // 2026-10-19：「添加的注释方向方框等要支持编辑」）。
+                if tool == nil {
+                    if let index = annotationIndex(at: point) {
+                        // 一下按下去既选中、又开始挪：照着一条线拖，想要的就是挪它。
+                        // 只选中不动手的话，用户得点两下才能改，比 QQ 慢半拍。
+                        beginAnnotationDrag(.body, index: index, at: point)
+                        return
+                    }
+                    // 点着空处 = 先把选中交还掉，这一次拖动仍是平移整块选区。
+                    selectAnnotation(nil)
+                    moveFrom = point
+                    moveStart = selection
+                    return
+                }
             }
         }
 
         if phase == .editing, hasSelection, selection.contains(point), let tool {
-            switch tool {
-            case .text:
-                beginTextEditing(at: point)
-                return
-            case .number:
-                appendNumber(at: point)
-                return
-            default:
-                draft = ScreenshotAnnotation(tool: tool, color: currentColor,
-                                             lineWidth: currentLineWidth,
-                                             start: point,
-                                             points: tool == .pen ? [point] : [])
-                needsDisplay = true
+            // 文字、序号是「按下就出结果」的两格：等不到松手看位移，所以「点它=选中它、
+            // 点空处=写字/盖章」必须在按下那一刻分家（用户定的口径）。
+            if tool == .text || tool == .number {
+                if let index = annotationIndex(at: point) {
+                    beginAnnotationDrag(.body, index: index, at: point)
+                    return
+                }
+                if tool == .text { beginTextEditing(at: point) } else { appendNumber(at: point) }
                 return
             }
+            // 其余格子：先按「要画新的」起笔，压着的那条记下来当候选，松手时才知道
+            // 这一按是拖还是点（见 `tapSelectCandidate`）。
+            tapSelectCandidate = annotationIndex(at: point)
+            draft = ScreenshotAnnotation(tool: tool, color: currentColor,
+                                         lineWidth: currentLineWidth,
+                                         start: point,
+                                         points: tool == .pen ? [point] : [])
+            needsDisplay = true
+            return
         }
 
         anchor = point
@@ -537,6 +739,24 @@ public final class ScreenshotSelectionView: NSView {
             needsDisplay = true
             return
         }
+        if let drag = annotationDrag, let original = annotationOriginal,
+           let from = annotationDragFrom, let index = selectedIndex,
+           annotations.indices.contains(index) {
+            // 每一帧都拿 `original` 当基准（不是拿上一帧的结果）：逐帧累加会把取整过的
+            // 字号、圆角越拖越偏。`limit` 给整块屏而不是选区 —— 注解本来就能画在选区外
+            // （只是不出图），按选区钳死会让一条压出框的注解一按就跳回框里。
+            switch drag {
+            case .body:
+                let box = original.editBox
+                let moved = Self.move(box, from: from, to: point, limit: bounds)
+                annotations[index] = original.movedBy(CGSize(width: moved.minX - box.minX,
+                                                             height: moved.minY - box.minY))
+            case .grab(let grab):
+                annotations[index] = original.applyingResize(grab, to: point, limit: bounds)
+            }
+            needsDisplay = true
+            return
+        }
         if let from = toolbarDragFrom, let bar = toolbar {
             // 手抖一下（不到 slop）不该把条子从「跟着选区走」改成钉死在原地。
             let next = CGPoint(x: toolbarDragStart.x + point.x - from.x,
@@ -546,6 +766,8 @@ public final class ScreenshotSelectionView: NSView {
             let pinned = Self.clampedToolbarOrigin(next, size: bar.frame.size, container: bounds)
             toolbarPinned = pinned
             bar.frame.origin = pinned
+            // 面板钉在条子某一格上方，条子动了它必须跟着走，不然尖就指错了格子。
+            syncPanel()
             return
         }
         // 改框（缩放/平移）不走 anchor：这两种拖动期间一直是 editing，
@@ -566,7 +788,7 @@ public final class ScreenshotSelectionView: NSView {
         if phase == .editing {
             // 在选区外重新框选：注解条先收起来，新选区松手后再浮出来。
             phase = .picking
-            toolbar?.isHidden = true
+            hideBarChrome()
             hideTip()
         }
         selection = Self.rect(from: anchor, to: point, in: cropBounds ?? bounds)
@@ -580,6 +802,17 @@ public final class ScreenshotSelectionView: NSView {
     func pointerReleased() {
         if draft != nil {
             commitDraft()
+            return
+        }
+        if annotationDrag != nil {
+            annotationDrag = nil
+            annotationOriginal = nil
+            annotationDragFrom = nil
+            // 一次拖动 = 一步撤销：起点是按下那一刻那张表（`beginEdit` 记的），
+            // 真改动过才记账，手抖一下不算一步。
+            endEdit()
+            syncPanel()
+            refreshCursorZones()
             return
         }
         if toolbarDragFrom != nil {
@@ -656,6 +889,113 @@ public final class ScreenshotSelectionView: NSView {
         followMagnifier(at: point)
     }
 
+    // MARK: - 编辑已画的注解（用户 2026-10-19：「添加的注释方向方框等要支持编辑」）
+    //
+    // 入口是「没选工具时直接点它」（用户定的口径）：选区内那一按先问已画注解，再问选区
+    // 本身。几何与样式怎么变全在 `ScreenshotAnnotation` 那一段纯函数里，这里只管
+    // 「选中了哪一条、按住的是哪儿、拖到了哪儿」—— 所以那半边能直接单测，这半边是状态机。
+
+    /// 这一点按到了哪条注解的本体。从数组尾部往前找：后画的压在先画的上面，视觉上最靠前
+    /// 的那条该先被抓到（`annotations` 的顺序就是绘制顺序，见 `drawAnnotations(inside:)`）。
+    func annotationIndex(at point: CGPoint) -> Int? {
+        for index in annotations.indices.reversed()
+        where annotations[index].contains(point, slop: Self.annotationHitSlop) { return index }
+        return nil
+    }
+
+    /// 同上，但只认**文字**那一种：双击改内容只对该写字的地方开，双击压在矩形框线上
+    /// 仍然是「复制并收起」（老手感，别把它一起改了）。
+    func textAnnotationIndex(at point: CGPoint) -> Int? {
+        for index in annotations.indices.reversed()
+        where annotations[index].tool == .text
+            && annotations[index].contains(point, slop: Self.annotationHitSlop) { return index }
+        return nil
+    }
+
+    /// 按住的是选中那条注解的某个把手吗。
+    ///
+    /// **只有选中了才露把手**：没选中的条子那一按该是「选中 + 挪它」，不是改尺寸 ——
+    /// 照着一条线的角按下去就把框拉大，误改比改不动糟得多。
+    func selectedGrab(at point: CGPoint) -> AnnotationGrab? {
+        guard let index = selectedIndex, annotations.indices.contains(index) else { return nil }
+        return annotations[index].grab(at: point)
+    }
+
+    /// 选中/取消选中某条已画注解（下标越界一律当「取消」）。
+    ///
+    /// 越界不当「保留」：撤销、删除之后列表可能变短，让下标继续指着别的那条，面板就会
+    /// 把 A 的样式显示成 B 的、用户一改改到 B 上 —— 指错比没指更糟。
+    ///
+    /// Esc 收过面板那笔账（`panelDismissed`）不在这儿清：生产里「带上标的选中」只有按下
+    /// 那条路（`beginAnnotationDrag`）走得到，那儿已经清了；在这儿再写一遍是永远不会被
+    /// 执行到的第二套账（反向变异 M20 实测：摘掉它 41 条全绿）。
+    func selectAnnotation(_ index: Int?) {
+        let next = index.flatMap { annotations.indices.contains($0) ? $0 : nil }
+        guard next != selectedIndex else { return }
+        // 不再改这一条了，把它的样式改动结算成一步撤销。
+        endEdit()
+        selectedIndex = next
+        syncPanel()
+        needsDisplay = true
+        refreshCursorZones()
+    }
+
+    /// Esc 的一层：取消选中那条注解（面板已经在这一层之前收过了）。
+    /// 返回有没有真的取消 —— 没有才该往下走「丢掉整个会话」。internal 给取证走键盘链路。
+    @discardableResult
+    func clearAnnotationSelection() -> Bool {
+        guard selectedIndex != nil else { return false }
+        selectAnnotation(nil)
+        return true
+    }
+
+    /// 开始拖选中那条注解。`index` 必须有效（调用方刚从 `annotations` 里查到它）。
+    private func beginAnnotationDrag(_ drag: AnnotationDrag, index: Int, at point: CGPoint) {
+        guard annotations.indices.contains(index) else { return }
+        selectForEditing(index)
+        annotationDrag = drag
+        annotationOriginal = annotations[index]
+        annotationDragFrom = point
+        // 一次拖动 = 一步撤销。token 让每次按下都是新的一次：常量 tag 会把整场会话里
+        // 对同一条的多次挪动合成一步，撤一次就回到今天最早的位置，那不是用户要的。
+        editToken += 1
+        beginEdit(tag: "drag\(editToken)")
+    }
+
+    /// 用户明确「按这条就是要改它」：选中它、结掉手里那一半手势、把属性面板要回来。
+    ///
+    /// 和 `selectAnnotation(_:)` 的分工要分清，别把它们当同一个函数：那条是给「换选中」
+    /// 用的，下标没变就整段跳过（不做多余的活）；这条是给**按下**用的 —— 重新按同一条
+    /// 也得清账、重弹面板，否则刚用 Esc 收过它的面板，再点它永远弹不出来。
+    /// 反向变异 M20 咬的就是这一口。
+    private func selectForEditing(_ index: Int) {
+        guard annotations.indices.contains(index) else { return }
+        // 不再改这一条了，把它的样式改动结算成一步撤销。
+        endEdit()
+        selectedIndex = index
+        panelDismissed = nil
+        syncPanel()
+        needsDisplay = true
+        refreshCursorZones()
+    }
+
+    /// Delete / Backspace：选中了就只删那一条。
+    ///
+    /// 没选中才退回「撤掉最后画的一条」（老行为）。画了十条想撤中间那条，不该逼用户
+    /// 从头撤销九次 —— 这一条是「支持编辑」里最硬的需求。
+    /// internal 给取证走键盘链路；返回有没有真的删掉。
+    @discardableResult
+    func deleteSelectedAnnotation() -> Bool {
+        guard let index = selectedIndex, annotations.indices.contains(index) else { return false }
+        willChange()
+        annotations.remove(at: index)
+        selectedIndex = nil
+        syncToolbar()
+        needsDisplay = true
+        refreshCursorZones()
+        return true
+    }
+
     // MARK: - 放大镜
 
     /// 把放大镜跟到这一点上。它只在自己这十几平方点里重绘，不牵动整屏遮罩 —— 遮罩
@@ -674,21 +1014,42 @@ public final class ScreenshotSelectionView: NSView {
 
     // MARK: - 悬停提示
 
-    /// 把功能提示跟到条子上被指到的那一格。移出格子就收 —— 提示是「这一格是什么」，
-    /// 没有格子可指的时候留着只会挡内容。
+    /// 把功能提示跟到被指到的那一格：先问注解条，再问属性面板。移出格子就收 ——
+    /// 提示是「这一格是什么」，没有格子可指的时候留着只会挡内容。
     private func followTip(at point: NSPoint) {
-        guard let bar = toolbar, !bar.isHidden, let tip = bar.tip(atOverlayPoint: point) else {
+        func tip(on view: NSView?) -> (text: String, cell: NSRect)? {
+            guard let view, !view.isHidden else { return nil }
+            if let bar = view as? ScreenshotToolbarView { return bar.tip(atOverlayPoint: point) }
+            if let panel = view as? ScreenshotToolPanelView { return panel.tip(atOverlayPoint: point) }
+            return nil
+        }
+        guard let hit = tip(on: toolbar) ?? tip(on: toolPanel) else {
             hideTip()
             return
         }
         let view = tipView ?? ScreenshotTipView()
         tipView = view
-        if view.superview == nil { addSubview(view) }
-        view.show(tip.text, cell: tip.cell, in: bounds)
+        // 提示永远端到兄弟视图最前面（用户 2026-10-19：「鼠标悬浮提示汽泡应该放在最上层，
+        // 现在被粗细颜色的汽泡挡住了」）。`addSubview` 是后来者压上来：先悬停到条子
+        // （提示先建）、再点工具格（面板后建），面板就盖在提示上 —— 悬停「矩形」那一格
+        // 气泡确实弹了，弹在自己刚点开的面板底下，等于没弹。这里不赌谁先建，直接把
+        // 提示挪回栈顶；它 `hitTest` 恒 nil，端上来也不吃点击。
+        if view.superview == nil {
+            addSubview(view)
+        } else if subviews.last !== view {
+            addSubview(view, positioned: .above, relativeTo: nil)
+        }
+        view.show(hit.text, cell: hit.cell, in: bounds)
     }
 
     private func hideTip() {
         tipView?.isHidden = true
+    }
+
+    /// 条子收起来的时候面板必须一起收：它是钉在条子某一格上方的，条子不见了它就没了锚。
+    private func hideBarChrome() {
+        toolbar?.isHidden = true
+        toolPanel?.isHidden = true
     }
 
     /// 复制当前那一点的色值（⌘C）。返回有没有东西可复制 —— 放大镜还没现身时没有。
@@ -712,8 +1073,12 @@ public final class ScreenshotSelectionView: NSView {
 
     public override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case 53:  // Esc：正在裁剪时先退掉这一刀，别把整个截图会话一起丢了
-            if cropBounds != nil { cancelCrop() } else { onCancel?() }
+        case 53:  // Esc 一层一层退：正在裁剪先退这一刀，属性面板开着先收面板，
+                  // 还选中着某条注解先取消选中，都没有才把整个会话丢掉。
+            if cropBounds != nil { cancelCrop() }
+            else if hideToolPanel() { }
+            else if clearAnnotationSelection() { }
+            else { onCancel?() }
         case 36, 76:  // Return / 小键盘 Enter
             // 「截图」那一档维持老手感：有选区就复制收场，没有就认下吸附的那块。
             // 其余三档回车 = 走模式条那一档自己的路（识别 / 开滚动采集 / 开录制）。
@@ -726,8 +1091,9 @@ public final class ScreenshotSelectionView: NSView {
                 if !hasSelection, let hover { selection = hover }
                 routeAfterSelection()
             }
-        case 51, 117:  // Delete / Backspace：退一条注解，和注解条上的撤销同一路
-            undo()
+        case 51, 117:  // Delete / Backspace：选中了某条就只删那一条，没选中才退一条注解
+                      // （和注解条上的撤销同一路）。
+            if !deleteSelectedAnnotation() { undo() }
         case 8:  // c：⌘C 复制放大镜上那一点的色值。选区阶段没有别的复制可做，
                 // 进编辑态后放大镜收了，这条也就落回 super（不抢注解文字框的复制）。
             if event.modifierFlags.contains(.command), !copyMagnifierColor() {
@@ -805,9 +1171,9 @@ public final class ScreenshotSelectionView: NSView {
         // 默认装上偏好里选的那一格（「截图默认工具」，关掉就是 nil）：装了之后框完第一笔
         // 不必先点格子，代价是「在选区内拖动=平移整块」这一步要先摘掉工具才走得到。
         tool = defaultTool
-        // 默认装上偏好里选的那一格（「截图默认工具」，关掉就是 nil）：装了之后框完第一笔
-        // 不必先点格子，代价是「在选区内拖动=平移整块」这一步要先摘掉工具才走得到。
-        tool = defaultTool
+        // 换了一块选区（含重框）= 上一块的选中作废：下标指的是数组位置，留着会让面板
+        // 站在「第 3 条」上，而第 3 条现在可能是用户刚在新框里画的东西。
+        selectAnnotation(nil)
         // 新选区（含重框）= 条子回到「跟着这块走」；用户手动拖过的位置只在这一块选区
         // 里有效，换了一块还钉在原处就成了凭空冒出来的浮条。
         toolbarPinned = nil
@@ -845,17 +1211,12 @@ public final class ScreenshotSelectionView: NSView {
             guard let self else { return }
             // 再点一次同一个工具 = 取消选择，回到「拖选区就是重框」。
             self.tool = self.tool == picked ? nil : picked
+            // 点格子就是「要调属性」的意思，把上一次 Esc 收面板的账清掉。
+            self.panelDismissed = nil
+            // 拿起工具 = 不再编辑那一条：把手收回去，否则「选着工具还在改旧的一条」两套
+            // 意图叠在一块，下一笔落哪儿都说不清。
+            self.selectAnnotation(nil)
             if self.textEditor != nil { self.finishTextEditing(commit: true) }
-            self.syncToolbar()
-        }
-        bar.onColor = { [weak self] index in
-            guard let self else { return }
-            self.colorIndex = index
-            self.syncToolbar()
-        }
-        bar.onWidth = { [weak self] index in
-            guard let self else { return }
-            self.widthIndex = index
             self.syncToolbar()
         }
         bar.onUndo = { [weak self] in self?.undo() }
@@ -869,10 +1230,133 @@ public final class ScreenshotSelectionView: NSView {
     }
 
     private func syncToolbar() {
-        toolbar?.sync(activeTool: tool, colorIndex: colorIndex, widthIndex: widthIndex,
-                      canUndo: !annotations.isEmpty, canRedo: !undone.isEmpty,
-                      canOCR: !ocrRunning)
+        // 撤销/重做的可点性看的是**快照栈**，不是「列表里还有没有东西」：新选区里一条
+        // 都没画但撤过一条，撤销键仍该能按（还能重做回来）。
+        toolbar?.sync(activeTool: tool, canUndo: !history.isEmpty,
+                      canRedo: !future.isEmpty, canOCR: !ocrRunning)
+        syncPanel()
     }
+
+    /// 属性面板现在在给**谁**调值：选中了某条已画注解 → 那一条；否则 → 选中的那一格工具。
+    ///
+    /// 给注解时改的是那一条（用户 2026-10-19 定的口径：只改被选中的那条，不回头刷同工具
+    /// 的其他条），给工具时改的是下一笔的默认值。这两件事共用一块面板、一套控件，所以
+    /// 「现在在给谁」必须是查出来的一个确定答案，不能靠调用点各自记。
+    enum PanelOwner: Equatable {
+        case tool(ScreenshotTool)
+        case annotation(Int)
+    }
+
+    /// 面板现在该给谁（没得给 = nil：摘了工具、打码那一格、或选中的是打码块）。
+    /// internal 而非 private：取证要核对「选中一条矩形注解之后，面板报的确实是这条注解」，
+    /// 得先能问出它现在站在谁那边。
+    func panelOwner() -> PanelOwner? {
+        if let index = selectedIndex, annotations.indices.contains(index) {
+            // 打码既不吃色也不吃粗细，弹一块只有灰控件的面板等于骗用户点。
+            return annotations[index].tool.hasStylePanel ? .annotation(index) : nil
+        }
+        if let tool, tool.hasStylePanel { return .tool(tool) }
+        return nil
+    }
+
+    /// 用户刚用 Esc 把面板收掉过：记的是**哪一格工具的面板**被收过，不记的话下一次
+    /// `syncToolbar()`（撤销、重做、提取文字都会走）就又给它弹出来，那一下 Esc 像是按在
+    /// 棉花上。重新点格子、重新点一条注解会清掉它 —— 那是「要调属性」的意思。
+    ///
+    /// 记的是工具而不是 `PanelOwner`：画完即选中之后，同一格的面板会在「给这一格工具的下
+    /// 一笔」和「给刚画完的那条」之间来回切（`.tool(.rect)` ⇄ `.annotation(3)`），账记在
+    /// owner 上就压不住 —— 用户收完面板撤一笔，owner 从注解变回工具，面板又呼地弹出来
+    /// （`testCollapsedPanelStaysCollapsedUntilTheCellIsClickedAgain` 钉的就是这一口）。
+    private var panelDismissed: ScreenshotTool?
+
+    /// 这一份「在给谁」属于哪一格工具。`index` 的有效性由 `panelOwner()` 保证 —— 它自己
+    /// 查过 `annotations.indices` 才敢把 `.annotation(index)` 交出来，这儿再加一遍判断就是
+    /// 永远走不到的分支（反向变异那一轮刚清掉一条这种账）。
+    private func panelTool(_ owner: PanelOwner) -> ScreenshotTool {
+        switch owner {
+        case .tool(let picked): return picked
+        case .annotation(let index): return annotations[index].tool
+        }
+    }
+
+    private func syncPanel() {
+        guard let owner = panelOwner(), panelTool(owner) != panelDismissed,
+              let cell = panelCell(for: owner) else {
+            // 面板没地方钉了（摘掉工具、换成打码、Esc 收过）—— 取色器也得跟着收，
+            // 它是给这块面板的某一档挑色的，面板都不在了它还开着就是块无主窗。
+            toolPanel?.closeColorPicker()
+            toolPanel?.isHidden = true
+            return
+        }
+        let panel = toolPanel ?? ScreenshotToolPanelView(frame: .zero)
+        toolPanel = panel
+        if panel.superview == nil {
+            panel.onChange = { [weak self] style in self?.applyPanelStyle(style) }
+            addSubview(panel)
+        }
+        panel.isHidden = false
+        let editing: ScreenshotTool
+        let value: ScreenshotToolStyle
+        switch owner {
+        case .tool(let picked):
+            editing = picked
+            value = style(for: picked)
+        case .annotation(let index):
+            editing = annotations[index].tool
+            value = annotations[index].styleValue
+        }
+        // `within: bar.frame`：面板横向不许超出注解条的左右沿（用户 2026-10-19 提的）。
+        // 锚点那一格用遮罩坐标，条子的 frame 也是遮罩坐标，同一把尺子。
+        panel.show(tool: editing, style: value, cell: cell, in: bounds, within: toolbar?.frame)
+    }
+
+    /// 面板钉在哪一格上方。选中一条注解时钉在**它自己那一格工具**上：面板还是那条
+    /// 「矩形 / 文字」的属性条，用户不用重新学一套东西；换一条不同工具的注解，它就跳过去。
+    private func panelCell(for owner: PanelOwner) -> NSRect? {
+        let tool: ScreenshotTool
+        switch owner {
+        case .tool(let picked): tool = picked
+        case .annotation(let index):
+            guard annotations.indices.contains(index) else { return nil }
+            tool = annotations[index].tool
+        }
+        return toolbar?.cellRect(for: tool)
+    }
+
+    /// 面板回吐一次值。给谁改看 `panelOwner()`：选中了某条注解就只改那一条，其余情况
+    /// 记的是那一格工具下一次落笔用的值。
+    private func applyPanelStyle(_ style: ScreenshotToolStyle) {
+        switch panelOwner() {
+        case .annotation(let index):
+            guard annotations.indices.contains(index) else { return }
+            // tag 里带下标 = 「对这一条的样式改动」合成一步撤销：滑杆拖一下会回吐上百次，
+            // 按次记账的话撤销一次只挪回一格。
+            beginEdit(tag: "panel\(index)")
+            annotations[index] = annotations[index].styled(with: style)
+            needsDisplay = true
+        case .tool(let picked):
+            styles[picked] = style
+        case nil:
+            break
+        }
+    }
+
+    /// Esc 的第一层：面板（含它展开的调色板）开着就只收面板，条子和选区原地留着。
+    /// 返回有没有真的收掉 —— 没有才该往下走「取消选中 / 丢掉整个会话」。
+    /// internal 是给取证的：这一层只能从键盘事件进，测试不走一遍就没人知道它在不在。
+    @discardableResult
+    func hideToolPanel() -> Bool {
+        guard let panel = toolPanel, !panel.isHidden else { return false }
+        panel.hidePalette()
+        panel.isHidden = true
+        // 账记在「哪一格工具」上，不记 owner：见 `panelDismissed` 那段。
+        if let owner = panelOwner() { panelDismissed = panelTool(owner) }
+        return true
+    }
+
+    /// 整次截图结束时收掉系统取色面板（控制器那条路走这里）。它挂在比遮罩还高的层上，
+    /// 遮罩都没了它还飘在桌面上，就是用户嘴里的「关不掉的窗口」。
+    func closeToolColorPicker() { toolPanel?.closeColorPicker() }
 
     /// 注解条离屏边留多少：整条贴着屏边就点不到最外侧那个出口了。
     static let toolbarMargin: CGFloat = 6
@@ -906,19 +1390,65 @@ public final class ScreenshotSelectionView: NSView {
                               max(container.maxY - size.height - margin, container.minY + margin)))
     }
 
-    func undo() {
-        guard let last = annotations.popLast() else { return }
-        undone.append(last)
-        syncToolbar()
-        needsDisplay = true
+    // MARK: - 撤销 / 重做（整表快照）
+
+    /// 开始一次连续手势：把改前那张表记下，同一个 `tag` 期间反复调用只算一次。
+    ///
+    /// 为什么要有 tag：滑杆一拖每帧回吐一次值、拖注解每移动一像素算一次 —— 按帧记账的话
+    /// 「滑一下粗细」要撤一百次。一次手势 = 一步撤销，这才是用户按 ⌘Z 时想要的粒度。
+    /// internal 给取证直接走手势边界。
+    func beginEdit(tag: String) {
+        guard editTag != tag else { return }
+        endEdit()
+        editBase = annotations
+        editTag = tag
     }
 
-    /// 把最后撤掉的那条放回列表尾部：位置、颜色、轨迹都在对象里，不需要再算一遍。
-    func redo() {
-        guard let last = undone.popLast() else { return }
-        annotations.append(last)
+    /// 结束当前手势：真改动过才记账，手抖一下不算一步。
+    func endEdit() {
+        let base = editBase
+        editBase = nil
+        editTag = nil
+        guard let base, base != annotations else { return }
+        history.append(base)
+        future.removeAll()
+    }
+
+    /// 一次离散改动（画完一条、删一条、点一次预设色）之前喊一声：把改前那一态压进栈。
+    ///
+    /// 先把可能还开着的手势结算掉：面板改完样式没重新选别的东西、紧接着画了一条新的，
+    /// 那时候栈里还压着「改样式之前」那张表 —— 让它排在离散改动**前面**，撤销才是先撤
+    /// 新画的那条，而不是把两笔一起回退到今天最早那一态。
+    private func willChange() {
+        endEdit()
+        history.append(annotations)
+        future.removeAll()
+    }
+
+    func undo() {
+        // 撤销本身不算一次编辑，但它可能打断在一半的手势上（拖动中途按 ⌘Z）：先结算。
+        endEdit()
+        guard let base = history.popLast() else { return }
+        future.append(annotations)
+        annotations = base
+        // 下标跟着作废：撤销掉的可能正是选中那条（或让它变成了别的一条）。留着下标
+        // 会让面板把 A 的样式显示在 B 上，比没选中更误导。
+        selectedIndex = nil
         syncToolbar()
         needsDisplay = true
+        refreshCursorZones()
+    }
+
+    /// 重做：把最近撤掉的那一态整个换回去。样式、位置、删掉的那条都在快照里，不用重算。
+    func redo() {
+        endEdit()
+        guard let next = future.popLast() else { return }
+        history.append(annotations)
+        annotations = next
+        selectedIndex = nil
+        syncToolbar()
+        needsDisplay = true
+        refreshCursorZones()
     }
 
     // MARK: - 裁剪
@@ -930,9 +1460,9 @@ public final class ScreenshotSelectionView: NSView {
         cropBounds = selection
         phase = .picking
         hover = nil
-        toolbar?.isHidden = true
-        hideTip()
         magnifierView?.isHidden = true
+        hideBarChrome()
+        hideTip()
         needsDisplay = true
     }
 
@@ -957,13 +1487,18 @@ public final class ScreenshotSelectionView: NSView {
     var selectionScreenRect: NSRect { screenRect(for: selection) }
 
     private func commitDraft() {
-        defer { draft = nil }
+        defer { draft = nil; tapSelectCandidate = nil }
         guard let draft else { return }
         // 手抖出来的两三个像素不算一条注解，只当用户放弃了这次绘制。
-        if draft.rect.width < 3 && draft.rect.height < 3 { return }
-        push(draft)
-        syncToolbar()
-        needsDisplay = true
+        guard draft.rect.width < 3 && draft.rect.height < 3 else {
+            push(draft)
+            syncToolbar()
+            needsDisplay = true
+            return
+        }
+        // 这一按没拖出东西 —— 但它压着一条已画的注解，那一按就不是手抖，是「点它」：
+        // 选中它、面板要回来（用户 2026-10-19 定的口径：点选即编辑，不必先摘工具）。
+        if let candidate = tapSelectCandidate { selectForEditing(candidate) }
     }
 
     private func appendNumber(at point: CGPoint) {
@@ -976,9 +1511,16 @@ public final class ScreenshotSelectionView: NSView {
     }
 
     /// 新画的一条总是终结掉重做栈：撤掉 A 之后画了 B，就不该还能把 A 塞回 B 后面。
+    ///
+    /// **画完即选中**（用户 2026-10-19 定的口径）：落笔的那一条马上就是「现在要改的那条」
+    /// —— 把手露出来、面板改的是它，不用摘工具、也不用再点一次。工具仍装着，下一笔照画，
+    /// 所以画完这一条想挪它 / 改它的颜色粗细，都在这一条上直接办。
+    /// 不另走 `selectForEditing`：那会清掉 Esc 那笔账，而刚画完的这条不是「用户点它要改它」，
+    /// 只是绘制落定；面板该不该浮由 `panelOwner()` 自己判（收过这一档就继续收着）。
     private func push(_ annotation: ScreenshotAnnotation) {
-        undone.removeAll()
+        willChange()
         annotations.append(annotation)
+        selectedIndex = annotations.count - 1
     }
 
     // MARK: - 文字输入
@@ -986,16 +1528,40 @@ public final class ScreenshotSelectionView: NSView {
     /// 就地起一个无边框输入框：让用户在「要写字的那个位置」上打字，比先弹个小面板
     /// 输入完再点回屏幕顺手得多。
     private func beginTextEditing(at point: CGPoint) {
-        let fontSize = max(13, currentLineWidth * 4)
-        let field = NSTextField(frame: CGRect(x: point.x, y: point.y - 2,
-                                              width: min(220, max(80, bounds.maxX - point.x)),
-                                              height: fontSize + 8))
+        editingAnnotationIndex = nil
+        // 老行为：输入框的原点比按下点偏 2（flipped 视图里是往上），提交时存的就是**偏过
+        // 之后**那个原点。所以改旧字时按注解自己的原点摆回去，位置和第一次落笔完全一致。
+        installTextEditor(at: CGPoint(x: point.x, y: point.y - 2), style: currentStyle, text: "")
+    }
+
+    /// 双击一条已写的字 = 改它的内容（用户 2026-10-19 定的口径：「点它=选中它」之后，
+    /// 旧文字再没有第二条路能把字换掉，所以给这一条留双击）。
+    ///
+    /// 框**盖在原字上**、样式读那一条自己的（不是面板上当前那套），提交只换文字：位置、
+    /// 字号、颜色一个都不动 —— 用户要改的是「写错了个字」，不是重做一遍样式。
+    private func beginTextEdit(for index: Int) {
+        // `tool == .text` 这一半由调用点保证（`textAnnotationIndex` 只查文字条），反向变异
+        // M32 实测摘掉它 85 条全绿 —— 留着不是行为分支，是合同检查：这条链路末尾那句
+        // 「字删空＝删条」要是收到一个矩形下标，删掉的就是用户刚画好的框。
+        guard annotations.indices.contains(index), annotations[index].tool == .text else { return }
+        editingAnnotationIndex = index
+        // 原点照那条自己的 `start` 摆：那正是第一次落笔时输入框的原点（见 `beginTextEditing`
+        // 那条注释），所以这里不再另加偏移，框盖上去字不会跳。
+        installTextEditor(at: annotations[index].start,
+                          style: annotations[index].styleValue,
+                          text: annotations[index].text)
+    }
+
+    private func installTextEditor(at origin: CGPoint, style: ScreenshotToolStyle, text: String) {
+        let field = NSTextField(frame: CGRect(x: origin.x, y: origin.y,
+                                              width: min(220, max(80, bounds.maxX - origin.x)),
+                                              height: style.fontSize + 8))
         field.isBordered = false
         field.focusRingType = .none
         field.drawsBackground = true
         field.backgroundColor = NSColor(calibratedWhite: 1, alpha: 0.22)
-        field.textColor = currentColor
-        field.font = NSFont.boldSystemFont(ofSize: fontSize)
+        field.textColor = style.color
+        field.font = style.textFont
         field.usesSingleLineMode = true
         field.cell?.wraps = false
         field.cell?.isScrollable = true
@@ -1003,9 +1569,11 @@ public final class ScreenshotSelectionView: NSView {
         field.target = self
         field.action = #selector(textEditorCommitted(_:))
         field.placeholderString = L("Screenshot Type Text")
+        field.stringValue = text
         addSubview(field)
         textEditor = field
         window?.makeFirstResponder(field)
+        needsDisplay = true
     }
 
     /// 回车（走 action）或点到别处（走 mouseDown）都算提交；Esc 走 delegate 丢弃。
@@ -1016,20 +1584,43 @@ public final class ScreenshotSelectionView: NSView {
     private func finishTextEditing(commit: Bool) {
         guard let field = textEditor else { return }
         textEditor = nil
+        let editing = editingAnnotationIndex
+        editingAnnotationIndex = nil
         let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let origin = field.frame.origin
-        let color = currentColor
-        let lineWidth = currentLineWidth
+        let style = currentStyle
         field.removeFromSuperview()
-        if commit, !text.isEmpty {
-            // 输入框的字就是按 `max(13, lineWidth*4)` 画的，和注解自己算的 fontSize
-            // 同一条式子，所以落笔后大小不会跳。
-            push(ScreenshotAnnotation(tool: .text, color: color, lineWidth: lineWidth,
-                                      start: origin, text: text))
-            syncToolbar()
+        if let editing, annotations.indices.contains(editing) {
+            // 双击进来的这一趟改的是**那一条**，不是新增一条。Esc（commit=false）交还原样。
+            if commit { applyEditedText(text, to: editing) }
+        } else if commit, !text.isEmpty {
+            // 输入框的字就是按面板上那套（字号 + 粗斜体）画的，落笔后大小不会跳。
+            push(ScreenshotAnnotation(tool: .text, color: style.color, lineWidth: style.lineWidth,
+                                      start: origin, text: text,
+                                      fontSize: style.fontSize, bold: style.bold, italic: style.italic,
+                                      borderColor: style.borderColor, backgroundColor: style.backgroundColor))
         }
+        syncToolbar()
         needsDisplay = true
         window?.makeFirstResponder(self)
+    }
+
+    /// 双击之后交回来的新内容：只换文字，位置、字号、颜色一个都不动 —— 用户改的是
+    /// 「这一个字写错了」，不是重做一遍样式。
+    ///
+    /// 把字全删空再提交 = 这一条不要了：留一块空底衬在屏上，谁都不认那是自己想要的。
+    private func applyEditedText(_ text: String, to index: Int) {
+        if text.isEmpty {
+            willChange()
+            annotations.remove(at: index)
+            // 下标一律作废：删掉的可能正是选中那条，也可能让它后面那条往前挪一位 ——
+            // 留着就成了「面板把 A 的样式显示在 B 上」（和 `undo()` 同一口径）。
+            selectedIndex = nil
+            return
+        }
+        guard annotations[index].text != text else { return }
+        willChange()
+        annotations[index] = annotations[index].replacingText(text)
     }
 
     /// 拖选方向不限，先归一化成左上原点矩形。鼠标拖出屏幕外时 AppKit 照样给越界

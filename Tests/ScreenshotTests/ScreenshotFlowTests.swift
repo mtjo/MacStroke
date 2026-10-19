@@ -118,8 +118,11 @@ final class ScreenshotFlowTests: XCTestCase {
     }
 
     /// 序号自动往后排，撤销后下一个编号回到被撤的那个。
+    ///
+    /// 选区给到 400 高、三个点都落在上半部：条子贴在选区下沿，工具面板又从条子那一格往上
+    /// 浮，正好压住选区底部那一条 —— 点在那里会被面板吃掉（那是它该吃的），测的就不是排号了。
     func testNumberingFollowsUndo() throws {
-        let view = try editedView()
+        let view = try editedView(CGRect(x: 100, y: 100, width: 200, height: 400))
         view.tool = .number
         view.pointerDown(CGPoint(x: 120, y: 120), clickCount: 1)
         view.pointerDown(CGPoint(x: 140, y: 150), clickCount: 1)
@@ -193,14 +196,17 @@ final class ScreenshotFlowTests: XCTestCase {
                        "条子上的工具格和枚举对不上：\(Set(ScreenshotTool.allCases).subtracting(bar.toolsOnBar)) 没地方点")
     }
 
-    /// 条子的摆法就是需求本身（照 QQ 那条）：形状类 → 贴图/裁剪 → 颜色与线宽 →
-    /// 撤销重做 → 出口。漏一格、多一格、摆错顺序都算没照着做。
+    /// 条子的摆法就是需求本身（照 QQ 那条）：形状类 → 贴图/裁剪 → 撤销重做 → 出口。
+    /// 漏一格、多一格、摆错顺序都算没照着做。
+    ///
+    /// 颜色与线宽不在这张表里：它们从条子搬进了工具面板（issue #73 的 2.3 —— 一套全局值
+    /// 不够「箭头要粗、框要细、字要大」用），摆法由 `testPanelShowsOnlyWhatThisToolTunes`
+    /// 那条锁。
     func testBarFollowsTheQQOrder() throws {
         XCTAssertEqual(ScreenshotToolbarView(frame: .zero).elementsOnBar, [
             "tool.rect", "tool.ellipse", "tool.arrow", "tool.pen", "tool.text", "tool.number",
             "tool.mosaic",
             "pin", "crop", "ocr",
-            "color", "color", "color", "color", "color", "width", "width", "width",
             "undo", "redo",
             "save", "cancel", "copy",
         ])
@@ -329,7 +335,6 @@ final class ScreenshotFlowTests: XCTestCase {
             ("tool.text", "Screenshot Text"), ("tool.number", "Screenshot Number"),
             ("tool.mosaic", "Screenshot Mosaic"),
             ("pin", "Screenshot Pin"), ("crop", "Screenshot Crop"), ("ocr", "Screenshot OCR"),
-            ("color", "Screenshot Color"), ("width", "Screenshot Line Width"),
             ("undo", "Screenshot Undo"), ("redo", "Screenshot Redo"),
             ("save", "Screenshot Save"), ("cancel", "Screenshot Cancel"),
             ("copy", "Screenshot Copy"),
@@ -476,6 +481,40 @@ final class ScreenshotFlowTests: XCTestCase {
         XCTAssertTrue(view.bounds.contains(flipped.frame), "翻到下面后越界：\(flipped.frame)")
     }
 
+    /// 悬停提示必须端在属性面板之上（用户 2026-10-19 的第 2 条：「鼠标悬浮提示汽泡应该在
+    /// 最上层，现在被粗细颜色的汽泡挡住了」）。
+    ///
+    /// 复现顺序是**先悬停、再选工具**：`addSubview` 是后来者压上来，提示先建、面板后建，
+    /// 面板就盖住提示 —— 而选中工具后面板正好浮在条子上方，那正是提示要出现的地方。
+    /// 判据取两块 frame **真的重叠**时的压栈顺序：不重叠的话顺序对错在屏幕上看不出来。
+    ///
+    /// 顺带钉住「端上来不吃点击」：气泡的 `hitTest` 恒 nil，落在重叠区那一下仍该归面板 ——
+    /// 否则修好了遮挡，却把面板的滑杆盖成点不动。
+    func testTipStaysAboveTheStylePanel() throws {
+        let view = try editedView(CGRect(x: 100, y: 100, width: 1200, height: 600),
+                                  size: NSSize(width: 1440, height: 900))
+        let bar = try XCTUnwrap(view.toolbar)
+        let cell = try XCTUnwrap(bar.cellRect(for: .rect))
+        view.pointerMoved(CGPoint(x: cell.midX, y: cell.midY))
+        let tip = try XCTUnwrap(view.tipView, "悬停在工具格上就该有提示")
+        XCTAssertFalse(tip.isHidden)
+
+        bar.onTool?(.rect)                                  // 面板在这一步才被建、被 addSubview
+        view.pointerMoved(CGPoint(x: cell.midX + 0.5, y: cell.midY))   // 再悬停一次
+        let panel = try XCTUnwrap(view.toolPanel, "选了矩形后面板没浮出")
+
+        let overlap = tip.frame.intersection(panel.frame)
+        XCTAssertGreaterThan(overlap.width, 20, "前提：两块不重叠就测不出谁在上：\(tip.frame) / \(panel.frame)")
+        XCTAssertGreaterThan(overlap.height, 8, "前提：竖向也没重叠")
+        XCTAssertIdentical(view.subviews.last as AnyObject, tip as AnyObject, "提示没在兄弟视图最前")
+        XCTAssertFalse(tip.text.isEmpty, "栈顶这块是空话，等于弹了个空气泡")
+
+        let spot = CGPoint(x: overlap.midX, y: overlap.midY)
+        XCTAssertIdentical(view.window?.contentView?.hitTest(
+            NSPoint(x: spot.x, y: view.bounds.height - spot.y)), panel,
+            "提示端上来把点击端走了：重叠区那一下该归面板")
+    }
+
     // MARK: - 撤销 / 重做
 
     /// 撤掉的还能放回来；放回来的是同一条（位置、颜色、轨迹都在对象里）。
@@ -503,13 +542,13 @@ final class ScreenshotFlowTests: XCTestCase {
         view.pointerDragged(to: CGPoint(x: 220, y: 180))
         view.pointerReleased()
         view.undo()
-        XCTAssertEqual(view.undone.count, 1)
+        XCTAssertEqual(view.future.count, 1, "撤掉的那一态该留在重做栈里等回来")
 
         view.tool = .arrow
         view.pointerDown(CGPoint(x: 130, y: 130), clickCount: 1)
         view.pointerDragged(to: CGPoint(x: 200, y: 160))
         view.pointerReleased()
-        XCTAssertTrue(view.undone.isEmpty, "画了新的就该终结重做栈")
+        XCTAssertTrue(view.future.isEmpty, "画了新的就该终结重做栈")
         view.redo()
         XCTAssertEqual(view.annotations.count, 1, "重做栈空了就不该凭空多出第二条")
     }

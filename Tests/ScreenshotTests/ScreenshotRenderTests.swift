@@ -10,7 +10,7 @@
 //  2. 底图在 flipped 视图里必须是正的（NSImage 的 draw(in:) 方向由视图 flipped
 //     决定，写错就是整屏倒过来）。
 //  3. 编辑态里注解真的画在选区内、漏出选区的部分被钳掉、注解条浮在下沿外侧且有选中态。
-//  4. 注解条的底衬和墨色**跟随系统外观**（调色板那五个墨色除外），见
+//  4. 注解条的底衬和墨色**跟随系统外观**（调色板那七档固定色除外），见
 //     `overlayScene(appearance:)`：那些亮度带是照深档标的，所以默认钉在 darkAqua，
 //     要验翻档的用例自己显式传两档。
 //
@@ -230,24 +230,27 @@ final class ScreenshotRenderTests: XCTestCase {
         }
     }
 
-    /// 色块那一排**不跟外观**：五个墨色要原样进成品 PNG，浅外观深外观烘出来必须是同一个值。
+    /// 色块那一排**不跟外观**：七档固定色要原样进成品 PNG，浅外观深外观烘出来必须是同一个值。
     /// 翻档的是底衬和描边，不是色值本身 —— 谁把调色板换成 labelColor 那类，这条当场红。
     ///
     /// 不拿 `palette` 常量当尺子：位图自己的色彩空间和 sRGB 不是一套，饱和色转换要偏
     /// 13%（实测 aqua 那档红在位图里是 0.896/0.900/0.941），逐通道比常量会把色彩管理误差
-    /// 当成 bug。两档渲染走的是同一条管线，所以**互相比**才干净；再要求五档彼此分得开，
-    /// 免得取点取到底衬上、比出「五个一样」的空转结果。
+    /// 当成 bug。两档渲染走的是同一条管线，所以**互相比**才干净；再要求每档彼此分得开，
+    /// 免得取点取到底衬上、比出「全部一样」的空转结果。
     func testPaletteSwatchesStayFixedAcrossAppearances() throws {
         let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
         var samples: [NSAppearance.Name: [NSColor]] = [:]
         for name in [NSAppearance.Name.aqua, .darkAqua] {
             let scene = try overlayScene(selection: selection, editing: true, appearance: name)
-            let bitmap = try render(scene.view, name: "bar-palette-\(name.rawValue).png")
-            let bar = try XCTUnwrap(scene.view.toolbar)
-            // 条子顺序：7 个工具 + 图钉/裁剪/识别 = 前 10 格，之后才是 5 个色块。
+            // 色块现在长在工具面板上（条子里那 5 格收进去了）：先按条子的回调选中矩形，
+            // 面板才浮出，再按「更多颜色」那一格把调色板那一行展开。
+            scene.view.toolbar?.onTool?(.rect)
+            let panel = try XCTUnwrap(scene.view.toolPanel, "选中工具后面板没浮出来")
+            panel.press(cell: "more")
+            let bitmap = try render(scene.view, name: "panel-palette-\(name.rawValue).png")
             samples[name] = try ScreenshotToolbarView.palette.indices.map { offset in
-                let cell = bar.actionableRects[10 + offset]
-                    .offsetBy(dx: bar.frame.minX, dy: bar.frame.minY)
+                let cell = try XCTUnwrap(panel.actionableRect(forCell: "palette.\(offset)"),
+                                         "调色板那一行少了第 \(offset) 档")
                 return try XCTUnwrap(color(in: bitmap, x: Int(cell.midX), y: Int(cell.midY)))
             }
         }
@@ -259,13 +262,130 @@ final class ScreenshotRenderTests: XCTestCase {
             XCTAssertEqual(pair.0.greenComponent, pair.1.greenComponent, accuracy: 0.02)
             XCTAssertEqual(pair.0.blueComponent, pair.1.blueComponent, accuracy: 0.02)
         }
-        // 反向对照：这五点确实是五个不同的墨色，不是底衬上同一片灰。
+        // 反向对照：这几点确实是各不相同的墨色，不是底衬上同一片灰。
         for (i, left) in light.enumerated() {
             for (j, right) in light.enumerated() where j > i {
                 let spread = max(abs(left.redComponent - right.redComponent),
                                  abs(left.greenComponent - right.greenComponent),
                                  abs(left.blueComponent - right.blueComponent))
                 XCTAssertGreaterThan(spread, 0.2, "第 \(i) 档和第 \(j) 档分不开，取点取错了地方")
+            }
+        }
+    }
+
+    /// 自定义那一格得是**一条色相带**，不是纯色块也不是加号：它排在七档预设后面，用户靠
+    /// 「这块颜色不属于任何一档」认出它是自定义入口（用户 2026-10-19：「最后一个是个
+    /// 彩色的自定义颜色按钮」）。
+    ///
+    /// 判据取同一格里的三个横向取点：左偏红、中偏绿、右偏蓝紫。取点要是落在底衬上三点
+    /// 会一模一样，所以最后那条「两两分得开」就是这事的反向对照。
+    func testCustomColorCellPaintsAHueSweep() throws {
+        let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
+        let scene = try overlayScene(selection: selection, editing: true, appearance: .darkAqua)
+        scene.view.toolbar?.onTool?(.rect)
+        let panel = try XCTUnwrap(scene.view.toolPanel, "选中矩形后面板没浮出来")
+        panel.press(cell: "color")
+        let cell = try XCTUnwrap(panel.actionableRect(forCell: "custom"), "调色板里少了自定义那一格")
+        let bitmap = try render(scene.view, name: "panel-custom-color.png")
+
+        func sampled(_ fraction: CGFloat) throws -> NSColor {
+            try XCTUnwrap(color(in: bitmap, x: Int(cell.minX + cell.width * fraction),
+                                y: Int(cell.midY)), "自定义那一格取不到点")
+        }
+        let left = try sampled(0.12), middle = try sampled(0.5), right = try sampled(0.88)
+        XCTAssertGreaterThan(left.redComponent, left.greenComponent, "左端不偏红：\(left)")
+        XCTAssertGreaterThan(middle.greenComponent, middle.redComponent, "中段不偏绿：\(middle)")
+        XCTAssertGreaterThan(right.blueComponent, right.greenComponent, "右端不偏蓝紫：\(right)")
+        for (a, b) in [(left, middle), (middle, right), (left, right)] {
+            let spread = max(abs(a.redComponent - b.redComponent),
+                             abs(a.greenComponent - b.greenComponent),
+                             abs(a.blueComponent - b.blueComponent))
+            XCTAssertGreaterThan(spread, 0.15, "两处取点一样，色相带没画出来：\(a) / \(b)")
+        }
+    }
+
+    /// 面板的底衬和墨色跟条子同一条规矩：翻档整块反过来（用户 2026-10-16 定的是「图标参考
+    /// QQ，底衬墨色跟主题」，面板是条子长出来的第二块，不能自己另定一套）。
+    ///
+    /// 顺带钉住文字那一格多出的样式行**真画出来了**：第二行有墨，且墨只朝一个方向偏。
+    /// 少画一行在代码里只是 `placeCells()` 少 append 几条，位图上却是一块看得见的空洞。
+    ///
+    /// 最后钉那颗尖：它画在面板自己的 bounds 里（尖那 6pt 算进 frame）。早先画在外面，
+    /// `cacheDisplay` 只重放 bounds 内的绘制，取证里一根都不剩；这层挂在 borderless 窗里，
+    /// 一旦转成 layer-backed，屏幕上也会被同样裁掉。与其赌，不如把尖算进 frame。
+    func testToolPanelFlipsWithAppearanceAndDrawsTheStyleRow() throws {
+        let selection = CGRect(x: 100, y: 60, width: 400, height: 300)
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            let scene = try overlayScene(selection: selection, editing: true, appearance: name)
+            scene.view.toolbar?.onTool?(.text)
+            let panel = try XCTUnwrap(scene.view.toolPanel, "\(name.rawValue) 下文字面板没浮出")
+            let bitmap = try render(scene.view, name: "panel-text-\(name.rawValue).png")
+
+            // 面板左侧那 10pt 留白：只有底，没有字。
+            let fill = luminance(try XCTUnwrap(color(in: bitmap, x: Int(panel.frame.minX) + 3,
+                                                     y: Int(panel.frame.midY))))
+            if name == .aqua {
+                XCTAssertGreaterThan(fill, 0.75, "浅色外观下面板该是浅底：\(fill)")
+            } else {
+                XCTAssertLessThan(fill, 0.35, "深色外观下面板该是深底：\(fill)")
+            }
+
+            // 第一行的标签 + 第二行的 B/I 两格都得有墨，且方向相对底衬翻得过来。
+            // `actionableRect(forCell:)` 给的就是遮罩坐标，不再平移。
+            let ink: (NSRect) -> Int = { rect in
+                self.count(in: bitmap, in: rect) {
+                    name == .aqua ? self.luminance($0) < fill - 0.3
+                                  : self.luminance($0) > fill + 0.3
+                }
+            }
+            let label = try XCTUnwrap(panel.actionableRect(forCell: "label"))
+            XCTAssertGreaterThanOrEqual(ink(label), 8, "\(name.rawValue) 下第一行标签没着墨")
+            for id in ["bold", "italic"] {
+                let chip = try XCTUnwrap(panel.actionableRect(forCell: id), "\(id) 那一格没摆")
+                XCTAssertGreaterThanOrEqual(ink(chip), 3, "\(name.rawValue) 下 \(id) 格是空的")
+            }
+            // 反向对照：面板左沿那 9pt 留白（格子从 padding=10 才开始）一格墨都不该有。
+            // 按本体量，不按 `bounds`：尖那 6pt 带在两侧没画东西，量的是背景，会被当成墨。
+            let blank = CGRect(x: 0, y: panel.bodyRect.minY, width: 9, height: panel.bodyRect.height)
+                .offsetBy(dx: panel.frame.minX, dy: panel.frame.minY)
+            XCTAssertEqual(ink(blank), 0, "留白里也量到了墨，上面的判据就成了空转")
+
+            // 尖得真画出来，还得指着选中那一格。
+            //
+            // 判据用**同一场景两次渲染相比**（面板在 / 面板藏起来），不跟底衬色比：
+            // 深色外观下面板底衬 0.20 和那块压暗背景 0.15 只差 0.05，任何「朝哪边偏」
+            // 的阈值都会在某一档外观上翻车。两次渲染唯一的差别就是面板画的那些像素，
+            // 于是「尖那一条带有变化、左右 25pt 处没变化」是一条不依赖外观的硬判据。
+            panel.isHidden = true
+            let without = try render(scene.view, name: "panel-off-\(name.rawValue).png")
+            panel.isHidden = false
+            let cell = try XCTUnwrap(scene.view.toolbar?.cellRect(for: .text))
+            let tipX = panel.frame.minX + panel.pointerX
+            XCTAssertLessThanOrEqual(abs(tipX - cell.midX), 1.5,
+                                     "\(name.rawValue) 下尖指偏了：\(tipX) vs \(cell.midX)")
+            // 尖占本体下沿到 frame 下沿那 6pt（这一档选区没顶到屏边，尖朝下）。
+            let bandTop = panel.frame.minY + panel.bodyRect.maxY
+            func changed(in rect: NSRect) -> Int {
+                var hit = 0
+                for y in Int(rect.minY + 1)..<Int(rect.maxY - 1) {
+                    for x in Int(rect.minX + 1)..<Int(rect.maxX - 1) {
+                        guard let a = bitmap.colorAt(x: x, y: y),
+                              let b = without.colorAt(x: x, y: y) else { continue }
+                        if abs(a.redComponent - b.redComponent) > 0.02
+                            || abs(a.greenComponent - b.greenComponent) > 0.02
+                            || abs(a.blueComponent - b.blueComponent) > 0.02 { hit += 1 }
+                    }
+                }
+                return hit
+            }
+            let band = CGRect(x: tipX - 4, y: bandTop, width: 8,
+                              height: panel.frame.maxY - bandTop)
+            XCTAssertGreaterThanOrEqual(changed(in: band), 12,
+                                        "\(name.rawValue) 下尖没画出来：\(band)")
+            for dx in [-25.0, 25.0] {
+                XCTAssertEqual(changed(in: CGRect(x: tipX + dx - 4, y: bandTop, width: 8,
+                                                  height: panel.frame.maxY - bandTop)), 0,
+                               "\(name.rawValue) 下尖两侧 \(abs(dx).rounded())pt 处也有变化：那不是尖")
             }
         }
     }
@@ -368,6 +488,87 @@ final class ScreenshotRenderTests: XCTestCase {
                        "反向对照：没悬停时这块是饱和的蓝，一条中性都不该有，否则上面两条是空转")
     }
 
+    /// 悬停提示在**像素上**真的压住属性面板（用户 2026-10-19 的第 2 条：「鼠标悬浮提示
+    /// 汽泡应该放在最上层，现在被粗细颜色的汽泡挡住了」）。
+    ///
+    /// 判据方向跟直觉相反：**把面板收起再渲染一次，气泡盖过的那一带该纹丝不动**。气泡在
+    /// 顶上时，面板画不画都在它下面，那块一个像素都不该变；面板压在气泡上时（`barFill` 是
+    /// 0.94 alpha 的墨底，几乎不透，正是用户看到的「被挡住」），收起面板那块立刻换成气泡
+    /// 内容，差成一片。
+    ///
+    /// 为什么不是「把气泡藏掉、比重叠区差多少」—— 比不出来：气泡和面板用的是同一档
+    /// `barFill`，气泡没了那块还是同一档墨，实测被挡住那一态照样差 373 点（阈值 40 抓不住）。
+    /// 只有「被压住的那块该不该跟着面板变」才有方向。
+    ///
+    /// 反向对照自带在同一对渲染里：面板上**气泡没盖到**的那一段收起面板前后必须大片变色
+    /// —— 否则上面那条「没变」只是因为面板根本没在画。
+    /// 顺序要紧：先悬停（气泡先建）、再选工具（面板后建）、最后再悬停一次端上来。
+    func testTipIsStillPaintedOverTheStylePanel() throws {
+        let size = NSSize(width: 1440, height: 900)
+        let selection = CGRect(x: 100, y: 100, width: 1200, height: 600)
+        let scene = try overlayScene(selection: selection, size: size, editing: true)
+        let view = scene.view
+        let bar = try XCTUnwrap(view.toolbar)
+        let cell = try XCTUnwrap(bar.cellRect(for: .rect))
+
+        view.pointerMoved(CGPoint(x: cell.midX, y: cell.midY))
+        let tip = try XCTUnwrap(view.tipView, "悬停在工具格上就该有提示")
+        bar.onTool?(.rect)
+        view.pointerMoved(CGPoint(x: cell.midX + 0.5, y: cell.midY))
+        let panel = try XCTUnwrap(view.toolPanel, "选了矩形后面板没浮出")
+        let overlap = tip.frame.intersection(panel.frame)
+        XCTAssertGreaterThan(overlap.width, 20, "前提：两块没重叠：\(tip.frame) / \(panel.frame)")
+        XCTAssertGreaterThan(overlap.height, 8, "前提：竖向没重叠")
+
+        let shown = try render(view, name: "tip-over-panel-shown.png")
+        if shown.pixelsWide != Int(size.width) {
+            throw XCTSkip("离屏渲染比例 \(shown.pixelsWide)/\(Int(size.width)) ≠ 帧比例")
+        }
+        // 反向对照的量尺：面板上气泡**没**盖到的那一段，取同一行高。
+        // 往气泡右边取，不能往左边取 —— 气泡横向只钳屏、不钳条子，比面板更靠左是常态
+        // （实测 tip x 377…491、panel x 411…647），往左那段压根不在面板上，比出来恒为 0。
+        let beside = CGRect(x: tip.frame.maxX + 4, y: overlap.minY + 1,
+                            width: panel.frame.maxX - tip.frame.maxX - 8,
+                            height: overlap.height - 2)
+        XCTAssertGreaterThan(beside.width, 40,
+                             "前提：面板右边那段太窄，反向对照比不出来：\(beside) / \(panel.frame)")
+
+        panel.isHidden = true
+        let withoutPanel = try render(view, name: "tip-over-panel-no-panel.png")
+        panel.isHidden = false
+
+        let underTip = differences(shown, withoutPanel, overlap)
+        let unshaded = differences(shown, withoutPanel, beside)
+        let tipPixels = Int(overlap.width - 2) * Int(overlap.height - 2)
+        let sidePixels = Int(beside.width - 2) * Int(beside.height - 2)
+        XCTAssertLessThanOrEqual(underTip, tipPixels / 20,
+                                 "收起面板后气泡盖着那块跟着变了 \(underTip)/\(tipPixels)：气泡其实在面板底下（tip \(tip.frame) panel \(panel.frame)）")
+        XCTAssertGreaterThanOrEqual(unshaded, sidePixels / 4,
+                                    "反向对照失效：收起面板连气泡没盖到的那段都没变色（\(unshaded)/\(sidePixels)），说明面板根本没画")
+    }
+
+    /// 两张同一场景的渲染在 `rect` 内差多少**个像素**（三通道任一差过 0.08 算变）。
+    /// 逐点比亮度会被同档墨底糊弄，比「变没变」才分得出谁压谁。
+    private func differences(_ a: NSBitmapImageRep, _ b: NSBitmapImageRep, _ rect: NSRect) -> Int {
+        var hit = 0
+        for y in stride(from: Int(rect.minY) + 1, to: Int(rect.maxY) - 1, by: 1) {
+            for x in stride(from: Int(rect.minX) + 1, to: Int(rect.maxX) - 1, by: 1) {
+                guard let left = color(in: a, x: x, y: y), let right = color(in: b, x: x, y: y) else {
+                    continue
+                }
+                let spread = max(abs(left.redComponent - right.redComponent),
+                                 abs(left.greenComponent - right.greenComponent),
+                                 abs(left.blueComponent - right.blueComponent))
+                if spread > 0.08 { hit += 1 }
+            }
+        }
+        return hit
+    }
+
+    ///
+    /// 两条判据各管一种错：白像素没了 = 图标跟着蓝底糊成一片（深底上「浅色一块」和
+    /// 「没选中」差得太少，所以选中态必须翻白）；蓝像素没了 = 整格被涂成实心白块，
+    /// 用户就认不出这还是刚才那枚像素格。
     /// 选中打码那一格之后：整块铺系统蓝，棋盘格转白，但**两档都还在**。
     ///
     /// 两条判据各管一种错：白像素没了 = 图标跟着蓝底糊成一片（深底上「浅色一块」和
@@ -408,7 +609,8 @@ final class ScreenshotRenderTests: XCTestCase {
         let selection = CGRect(x: 420, y: 40, width: 300, height: 200)
         let scene = try overlayScene(selection: selection, editing: true)
         let view = scene.view
-        XCTAssertEqual(view.colorIndex, 0, "这一笔用的是调色板第一档（红）")
+        XCTAssertEqual(view.currentStyle.color, ScreenshotToolbarView.palette[0],
+                       "这一笔用的是调色板第一档（红）")
         view.toolbar?.onTool?(.mosaic)   // 走条子的回调：那才是真链路
         view.pointerDown(CGPoint(x: 460, y: 80), clickCount: 1)
         view.pointerDragged(to: CGPoint(x: 660, y: 200))
@@ -456,6 +658,12 @@ final class ScreenshotRenderTests: XCTestCase {
         view.pointerReleased()
         XCTAssertEqual(view.annotations.count, 1, "这一笔是要留下来的")
         XCTAssertEqual(view.annotations.first?.tool, .mosaic)
+        // 「画完即选中」（用户 2026-10-19 定的口径）之后，松手那一瞬这一条还带着选中辅助线 ——
+        // 它是系统强调色（约 0, 0.48, 1.0），和上面那圈 `isGuideBlue` 落在同一个色窗里，
+        // 光按颜色分不开「辅助线没收」和「选中框在」这两种红。所以先把选中交还掉，剩下的
+        // 蓝才只可能是打码辅助线。选中框本身由 ScreenshotAnnotationEditTests 那套判据管。
+        XCTAssertEqual(view.selectedIndex, 0, "前提：松手时这一条是选中态")
+        view.selectAnnotation(nil)
         let committed = try render(view, name: "mosaic-committed.png")
         XCTAssertEqual(pixels(insideSelection, in: committed, matching: isGuideBlue), 0,
                        "松手后辅助线必须整个收掉：它不该进成品图")
