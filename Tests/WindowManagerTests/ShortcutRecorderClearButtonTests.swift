@@ -65,6 +65,58 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
         XCTAssertGreaterThan(rect.minX, 100, "按钮要在右半边")
     }
 
+    // MARK: - 这一格用不上的时候（issue #75：下拉没选「自定义快捷键」）
+
+    /// `.disabled` 走到 `NSViewRepresentable` 上不会画灰、也不会挡 `mouseDown`，
+    /// 所以可用状态由 `controlEnabled` 自己管：点不动、不接焦点、也不许被程序拉进录制态。
+    /// 反过来的坏法是「灰着的框仍把你的下一个键吞掉」—— 那比不灰更难查。
+    func testADisabledRecorderIgnoresClicksAndRefusesFirstResponder() {
+        let view = recordedView()
+        view.controlEnabled = false
+        var cleared = 0
+        view.onClear = { cleared += 1 }
+
+        view.click(at: NSPoint(x: view.bounds.midX, y: view.bounds.midY))
+        XCTAssertFalse(view.isRecording, "灰着的框点一下就开始录键了")
+        view.click(at: NSPoint(x: view.clearButtonRect().midX, y: view.clearButtonRect().midY))
+        XCTAssertEqual(cleared, 0, "灰着的框还能置空：用户会以为这一格真的连着偏好")
+        XCTAssertFalse(view.acceptsFirstResponder, "接了焦点就能吃 keyDown")
+        view.startRecording(currentlyHeld: 0)
+        XCTAssertFalse(view.isRecording, "程序侧也不该能把不可用的框拉进录制态")
+        XCTAssertTrue(view.hasRecordedValue, "拒录不等于删值：那一档动作还是原样")
+    }
+
+    /// 从「能录」切到「不能录」时正在录制的那一格要自己退出去：界面上灰了、
+    /// 后台还在按 first responder 收键，就是看不见的生效。
+    func testDisablingWhileRecordingCancelsIt() {
+        let view = ShortcutRecorderView()
+        view.startRecording(currentlyHeld: 0)
+        XCTAssertTrue(view.isRecording)
+
+        view.controlEnabled = false
+        XCTAssertFalse(view.isRecording, "改成不可用时没退出录制态")
+    }
+
+    /// 撤掉清除抓手（而不是画一把点不动的叉）不能把已录的值一起弄丢，**画面上那一叉也得真的没了**。
+    /// 光看 `clearButtonRect()` 是空的：那块几何一直在，跟可见性判据无关 —— 只断言它就等于
+    /// 没断言（`isClearVisible` 里删掉 `controlEnabled` 照样绿）。这里量的是那一格的实际墨。
+    @MainActor
+    func testDisablingHidesTheClearAffordanceButKeepsTheValue() {
+        let view = recordedView()
+        view.controlEnabled = true
+        let rect = view.clearButtonRect()
+        XCTAssertGreaterThan(rect.minX, 0, "启用时那一叉在框里")
+
+        let enabledInk = inkCount(recorded: true, appearance: .aqua, controlEnabled: true)
+        let disabledInk = inkCount(recorded: true, appearance: .aqua, controlEnabled: false)
+        XCTAssertGreaterThan(enabledInk, 60, "可用时那一叉没画出来：\(enabledInk)")
+        XCTAssertEqual(disabledInk, 0, "灰掉的框还挂着那一叉：点下去什么也不会发生，比不画更坏")
+
+        view.controlEnabled = false
+        XCTAssertEqual(view.keyCode, 0)
+        XCTAssertEqual(view.flags, 0x100000 | 0x20000, "撤抓手不该把已录的值一起弄丢")
+    }
+
     func testModifiersOnlyFieldCountsAsValueFromFlagsAlone() {
         let view = ShortcutRecorderView()
         view.modifiersOnly = true
@@ -130,6 +182,25 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
         XCTAssertTrue(view.hasRecordedValue)
     }
 
+    /// 外层 `.disabled` **在挂好之后**翻动的那一手（issue #75：页面开着就把滚轮总开关关掉）。
+    /// `makeNSView` 里那一行只管第一次，之后全靠 `updateNSView` 把 `isEnabled` 递进去 ——
+    /// 少了那一行，框看着灰（SwiftUI 自己那层灰不到 NSView）、点下去照样进录制态吞掉下一个键。
+    /// 上面那几条位图用例都是「先设好状态再渲染」，走不到这条路，所以这里单独钉一发。
+    @MainActor
+    func testDisablingAfterMountReachesTheNSView() throws {
+        let box = ShortcutTextBox(text: "keyCode=9, flags=1048576")
+        let view = try hostedRecorder(box)
+        XCTAssertTrue(view.controlEnabled, "前置条件：挂上时外层没关")
+
+        box.disabled = true
+        flushSwiftUI()
+        XCTAssertFalse(view.controlEnabled, "外层关了，NSView 没收到：灰是假的，点击还照吞")
+
+        box.disabled = false
+        flushSwiftUI()
+        XCTAssertTrue(view.controlEnabled, "反向也要回到可用：不然关掉再打开那一档就永久点不动了")
+    }
+
     // MARK: - 消费端：空串 = 不挂监听
 
     /// issue #72 的落点：置空之后全局快捷键监听解析不出东西，走「停掉」那条分支。
@@ -159,6 +230,19 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
         XCTAssertGreaterThan(dark, 60, "深色档清除区里几乎没有墨色：\(dark)")
         XCTAssertEqual(cleared, 0, "置空之后按钮还留着，可见性判据是反的：\(cleared)")
         XCTAssertEqual(hidden, 0, "showsClearButton=false 那一格不该画出叉：\(hidden)")
+    }
+
+    /// 灰掉的框里那行字必须**真的比可用时淡**：SwiftUI 的 `.disabled` 到不了自绘 NSView 的
+    /// 文字（描边、底、墨色全是我们自己画的），`disabledControlTextColor` 那一档就是
+    /// 「这一格用不上」在页面上的唯一视觉来源。上面几条位图判据数的是清除那一格的墨，
+    /// 分不出文字浓度 —— 少了这一条，把 `labelColor` 写死也能全绿。
+    @MainActor
+    func testDisabledTextIsReallyLighterThanEnabledText() throws {
+        let strong = try maxTextInk(controlEnabled: true)
+        let weak = try maxTextInk(controlEnabled: false)
+        XCTAssertGreaterThan(strong, 0.9, "可用档里那行字几乎没有墨：\(strong)")
+        XCTAssertLessThan(weak, strong * 3 / 4,
+                          "灰掉那档的字还跟可用档一样浓（实测 \(weak) 对 \(strong)）：页面看不出这一格关了")
     }
 
     /// 清除图标必须跟着外观换墨色：两档下底色一个偏亮一个偏暗。
@@ -204,10 +288,12 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
     }
 
     private func cached(recorded: Bool, appearance: NSAppearance.Name,
-                        showsClearButton: Bool = true) -> (NSBitmapImageRep, ShortcutRecorderView) {
+                        showsClearButton: Bool = true,
+                        controlEnabled: Bool = true) -> (NSBitmapImageRep, ShortcutRecorderView) {
         let view = recorded ? recordedView() : ShortcutRecorderView()
         view.frame = NSRect(x: 0, y: 0, width: 200, height: 28)
         view.showsClearButton = showsClearButton
+        view.controlEnabled = controlEnabled
         view.drawAppearance = NSAppearance(named: appearance)
         let window = mount(view, appearance)
         defer { window.orderOut(nil) }
@@ -218,9 +304,10 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
 
     /// 数清除按钮那一格里跟底色对不上的像素。框的描边在 maxX-0.5，所以格子右界收到 maxX-6。
     private func inkCount(recorded: Bool, appearance: NSAppearance.Name,
-                          showsClearButton: Bool = true) -> Int {
+                          showsClearButton: Bool = true,
+                          controlEnabled: Bool = true) -> Int {
         let (rep, view) = cached(recorded: recorded, appearance: appearance,
-                                 showsClearButton: showsClearButton)
+                                 showsClearButton: showsClearButton, controlEnabled: controlEnabled)
         let scale = CGFloat(rep.pixelsWide) / view.bounds.width
         let background = rep.colorAt(x: 30, y: Int(view.bounds.midY * scale))!
             .usingColorSpace(.deviceRGB)!
@@ -254,6 +341,28 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
             + abs(a.blueComponent - b.blueComponent)
     }
 
+    /// 文字那一带（左边内缩 8pt、右到清除格之前）里离底色最远的一个点，三通道差相加。
+    /// 取样范围两种状态都用同一个矩形（`clearButtonRect()` 只是几何，跟可见性无关），
+    /// 否则比的就不是同一块地方。
+    private func maxTextInk(controlEnabled: Bool) throws -> CGFloat {
+        let (rep, view) = cached(recorded: true, appearance: .aqua, controlEnabled: controlEnabled)
+        let scale = CGFloat(rep.pixelsWide) / view.bounds.width
+        let background = rep.colorAt(x: 30, y: Int(view.bounds.midY * scale))!
+            .usingColorSpace(.deviceRGB)!
+        let lo = Int((view.bounds.minX + 8) * scale)
+        let hi = Int((view.clearButtonRect().minX - 2) * scale)
+        let yLo = Int((view.bounds.minY + 4) * scale)
+        let yHi = Int((view.bounds.maxY - 4) * scale)
+        var worst: CGFloat = 0
+        for x in stride(from: lo, to: hi, by: 1) {
+            for y in stride(from: yLo, to: yHi, by: 1) {
+                guard let color = rep.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
+                worst = max(worst, channelDistance(color, background))
+            }
+        }
+        return worst
+    }
+
     @MainActor
     private func hostedRecorder(_ box: ShortcutTextBox) throws -> ShortcutRecorderView {
         let host = NSHostingView(rootView: RecorderHarness(box: box))
@@ -281,8 +390,11 @@ final class ShortcutRecorderClearButtonTests: XCTestCase {
 }
 
 /// 能读回写的 binding 源：`@State` 在测试里读不到，只能挂 ObservableObject。
+/// `disabled` 是为了能在**挂好之后**翻外层可用性 —— 真用户就是那个时机改的（先在别处选了档，
+/// 再回来关总开关），而那正是只有 `updateNSView` 才走得到的路。
 final class ShortcutTextBox: ObservableObject {
     @Published var text: String
+    @Published var disabled = false
     init(text: String) { self.text = text }
 }
 
@@ -291,6 +403,7 @@ struct RecorderHarness: View {
     var body: some View {
         ShortcutRecorder(text: $box.text)
             .frame(width: 200, height: 28)
+            .disabled(box.disabled)
             .environment(\.colorScheme, .light)
     }
 }

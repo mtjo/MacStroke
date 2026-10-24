@@ -67,6 +67,25 @@ public final class ShortcutRecorderView: NSView {
         didSet { needsDisplay = true }
     }
 
+    /// 这一格此刻用不不用得上（宿主按 `.disabled` 的环境值喂进来）。
+    ///
+    /// 为什么要在 AppKit 这侧自己做：SwiftUI 的 `.disabled(true)` 只作用于它自己的控件，
+    /// 包在 `NSViewRepresentable` 外面的那层修饰符既不会把这块墨字画灰，也不会让 `NSView`
+    /// 收不到点击 —— 于是「上滚选了切标签页、快捷键录入框还照样能点」，用户录完一个键，
+    /// 那一格其实根本不读它（划词气泡页、issue #75 的滚轮页都是这个形状）。
+    /// 本项目的口径是「只灰不藏」，所以这里既改画（次级墨色）也改行为（点不动）。
+    /// 叫 `controlEnabled` 而不是 `isEnabled`：`NSView` 没有这个属性，`NSAccessibility`
+    /// 那套协议里倒是有同名读写，占掉它会把无障碍状态一起改掉。
+    public var controlEnabled = true {
+        didSet {
+            guard oldValue != controlEnabled else { return }
+            // 从「能录」变成「不能录」时如果正在录制，得先退出去：录制态靠的是
+            // first responder + keyDown，界面上灰了还在吃键就是「看不见却在生效」。
+            if !controlEnabled, isRecording { cancelRecording() }
+            needsDisplay = true
+        }
+    }
+
     static let clearButtonDiameter: CGFloat = 14
     static let clearButtonTrailingInset: CGFloat = 6
 
@@ -87,7 +106,9 @@ public final class ShortcutRecorderView: NSView {
     }
 
     /// 只有录好了才出现；录制中的那一格显示的是提示文字，没有东西可清。
-    private var isClearVisible: Bool { showsClearButton && !isRecording && hasRecordedValue }
+    /// 这一格不可用时连这把叉一起撤掉：叉是「点我就能清空」的抓手，留着点不动就是在骗人
+    /// （撤掉不引起重排 —— 它定在框的右端，不占文字流）。
+    private var isClearVisible: Bool { showsClearButton && !isRecording && hasRecordedValue && controlEnabled }
 
     /// 清掉当前值并重绘。回调给宿主去持久化。
     public func clear() {
@@ -175,7 +196,9 @@ public final class ShortcutRecorderView: NSView {
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 12),
-            .foregroundColor: NSColor.labelColor,
+            // 灰的时候用系统那一份「禁用控件墨色」，不自己调 alpha：明暗两档各是多少
+            // 由系统定，用户看到的「这格不能点」才和别的页一致。
+            .foregroundColor: controlEnabled ? NSColor.labelColor : NSColor.disabledControlTextColor,
             .paragraphStyle: paragraphStyle
         ]
         if !isRecording, hasRecordedValue {
@@ -231,7 +254,9 @@ public final class ShortcutRecorderView: NSView {
 
     // MARK: - First responder (original SRRecorderControl style)
 
-    public override var acceptsFirstResponder: Bool { true }
+    /// 不可用时连 first responder 都不接：录制靠的是「成为焦点 + 吃 keyDown」，
+    /// 光挡鼠标点击的话 Tab 键还能把焦点挪进来，那一格灰着却把你的下一个键吞掉。
+    public override var acceptsFirstResponder: Bool { controlEnabled }
 
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -242,6 +267,7 @@ public final class ShortcutRecorderView: NSView {
     /// 按落点分流：命中右端那一叉就置空，否则照原版那样点一下切换录制。
     /// 视图是 flipped 的，这个点和 `clearButtonRect()` 在同一个坐标空间里。
     public func click(at point: NSPoint) {
+        guard controlEnabled else { return }
         if isClearVisible, clearButtonRect().contains(point) {
             clear()
             return
@@ -334,7 +360,7 @@ public final class ShortcutRecorderView: NSView {
     ///   key events into it (remote control does exactly that), and a recorder
     ///   test that inherits a stuck ⌘ settles a shortcut nobody pressed.
     public func startRecording(currentlyHeld: UInt? = nil) {
-        guard !isRecording else { return }
+        guard !isRecording, controlEnabled else { return }
         let current = currentlyHeld
             ?? UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
         pressedFlags = modifiersOnly ? Self.modeledFlags(current) : current

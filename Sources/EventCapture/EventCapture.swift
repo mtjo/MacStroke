@@ -126,6 +126,15 @@ public protocol EventCaptureDelegate: AnyObject {
     func eventCapture(_ capture: EventCapture, didReceive event: MouseEvent) -> Bool
 }
 
+/// 按住起始键期间来了一发滚轮（issue #75）。
+///
+/// 返回 true = 这一格已经被当作一次触发用掉了，必须吞掉 —— 不然「右键+滚轮切标签页」
+/// 会连页面一起滚走。返回 false = 没接住（那方向没配动作、门槛没到、这一场不归它管），
+/// 事件原样交回前台应用，页面照常滚。
+public protocol WheelGestureDelegate: AnyObject {
+    func eventCapture(_ capture: EventCapture, didScrollWith reading: WheelGestureReading) -> Bool
+}
+
 /// Global mouse event capture using CGEventTap.
 ///
 /// Usage:
@@ -142,6 +151,16 @@ public class EventCapture: NSObject {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isRunning = false
+
+    /// 滚轮监听（issue #75）：第二条 tap，只收 `.scrollWheel`，跟着 `start()` 一起建、
+    /// 建完就关着。
+    ///
+    /// 它**常驻但不常开** —— 只在按住起始键的那一小段里启用。常驻是因为建 tap 是个
+    /// WindowServer 往返，不该发生在用户刚按下右键、正等着画轨迹的那条回调里；不常开是因为
+    /// 主 tap 走的是 HID 层，把系统每一发滚轮都拉进回调，触控板一秒能到上百发，而那条路径
+    /// 正是 issue #43/#68 咬过的延迟热路径。`tapEnable(false)` 的 tap 不进回调，代价为零。
+    private var wheelTap: CFMachPort?
+    private var wheelRunLoopSource: CFRunLoopSource?
 
     /// Master enable switch (mirrors the original's static `isEnabled`).
     /// When false, all events pass through untouched.
@@ -201,6 +220,7 @@ public class EventCapture: NSObject {
         }
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
+        createWheelTap()
         isRunning = true
         NSLog("%@", "[EventCapture] Started")
         return true
@@ -220,12 +240,111 @@ public class EventCapture: NSObject {
 
         eventTap = nil
         runLoopSource = nil
+        teardownWheelTap()
         isRunning = false
         NSLog("%@", "[EventCapture] Stopped")
     }
 
     /// Whether the event capture is currently running.
     public var running: Bool { isRunning }
+
+    // MARK: - Wheel gesture capture (issue #75)
+
+    /// 滚轮手势的接收方（生产环境是 CanvasManager）。
+    public weak var wheelDelegate: WheelGestureDelegate?
+
+    /// 滚轮 tap 此刻是否开着。只有「按住起始键到松开」这一小段是 true。
+    public private(set) var isWheelCaptureArmed = false
+
+    /// 开 / 关滚轮监听 —— 「按住起始键 + 滚轮」这段窗口的边界。
+    ///
+    /// 只在窗口内开是这套功能的语义：没按住起始键的滚轮跟它无关，一律原样交回前台应用，
+    /// 页面照常滚。开关本身只是一次 `tapEnable` 往返；tap 本体在 `start()` 里就建好了，
+    /// 因为建 tap 也是往返，不该安排在用户刚按下右键、正等着画轨迹的那条 HID 回调里。
+    /// 关着的 tap 不进回调，所以常驻不费（issue #43/#68 那条热路径）。
+    public func setWheelCaptureArmed(_ armed: Bool) {
+        guard armed != isWheelCaptureArmed else { return }
+        if wheelTap == nil, !createWheelTap() {
+            NSLog("%@", "[EventCapture] Wheel capture unavailable (tap creation failed)")
+            return
+        }
+        guard let tap = wheelTap else {
+            isWheelCaptureArmed = false
+            return
+        }
+        CGEvent.tapEnable(tap: tap, enable: armed)
+        isWheelCaptureArmed = armed
+        NSLog("%@", "[EventCapture] Wheel capture \(armed ? "armed" : "disarmed")")
+    }
+
+    /// 建第二条 tap：只收 `.scrollWheel`，建完立刻关着。
+    /// - Returns: 手上是否有一个可用的 tap
+    @discardableResult
+    private func createWheelTap() -> Bool {
+        if wheelTap != nil { return true }
+
+        let callback: CGEventTapCallBack = { _, type, event, refcon in
+            guard let refcon = refcon else { return Unmanaged.passRetained(event) }
+            let capture = Unmanaged<EventCapture>.fromOpaque(refcon).takeUnretainedValue()
+            return capture.handleWheelEvent(type: type, event: event)
+        }
+
+        guard let tap = CGEvent.tapCreate(
+            tap: .cghidEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: CGEventMask(1 << CGEventType.scrollWheel.rawValue),
+            callback: callback,
+            userInfo: Unmanaged.passUnretained(self).toOpaque()
+        ) else {
+            NSLog("%@", "[EventCapture] Failed to create wheel tap")
+            return false
+        }
+
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        if let source = source {
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+        }
+        wheelTap = tap
+        wheelRunLoopSource = source
+        CGEvent.tapEnable(tap: tap, enable: false)
+        NSLog("%@", "[EventCapture] Wheel tap created (disarmed)")
+        return true
+    }
+
+    private func teardownWheelTap() {
+        if let tap = wheelTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        if let source = wheelRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+        }
+        wheelTap = nil
+        wheelRunLoopSource = nil
+        isWheelCaptureArmed = false
+    }
+
+    private func handleWheelEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // 主 tap 上咬过的坑在第二条 tap 一模一样：超时/被系统停用通知里带来的 `event`
+        // 是合成的伪事件，返回它（retained）会在 runloop callout 结束时被多释放一次 →
+        // objc_release 崩溃。只重新上膛，返回 NULL。
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if isWheelCaptureArmed, let tap = wheelTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+                NSLog("%@", "[EventCapture] Wheel tap disabled by system, re-armed")
+            }
+            return nil
+        }
+
+        // 窗口外（没按住起始键）/ 总开关关掉 / 读不出方向 —— 都不拦，事件原样交回前台应用。
+        guard isWheelCaptureArmed, isEnabled,
+              let reading = WheelGestureParser.reading(from: event) else {
+            return Unmanaged.passRetained(event)
+        }
+
+        let consumed = wheelDelegate?.eventCapture(self, didScrollWith: reading) ?? false
+        return consumed ? nil : Unmanaged.passRetained(event)
+    }
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // Re-enable the tap if the system disabled it due to a timeout or

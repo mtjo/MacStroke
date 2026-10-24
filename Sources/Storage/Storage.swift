@@ -43,6 +43,17 @@ public enum StorageKey: String, CaseIterable {
     // 原版是无论匹配没匹配都回放（画错了至少还能弹出右键菜单），所以默认关。
     case swallowUnmatchedGesture = "swallowUnmatchedGesture"
 
+    // 移植版扩展（issue #75）：按住起始键（默认右键）+ 滚轮上/下 = 两个独立触发手势。
+    // 原版没有这一手，所以键名全是新造的。总开关默认关 = 原版行为（滚轮永远只管滚页面）；
+    // 两个方向的动作存的是 `WheelGestureActionKind` 的原始值（1 上一个标签页、2 下一个标签页，
+    // 即「开了开关就先把 issue 里那件最想要的事做掉」）；只有选「自定义快捷键」时
+    // 才读那两条快捷键串（格式同截图那几条：「keyCode=X, flags=Y」）。
+    case wheelGestureEnabled = "wheelGestureEnabled"
+    case wheelGestureUpAction = "wheelGestureUpAction"
+    case wheelGestureDownAction = "wheelGestureDownAction"
+    case wheelGestureUpShortcut = "wheelGestureUpShortcut"
+    case wheelGestureDownShortcut = "wheelGestureDownShortcut"
+
     // Note/Toast
     case noteRetentionTime = "noteRetetionTime"
     case notePosition = "notePostion"
@@ -317,6 +328,16 @@ public enum StorageDefaults {
     // 只在「真的画了一条」的前提下才可能生效，纯右键单击永远照常回放（issue #73）。
     public static let swallowUnmatchedGesture: Bool = false
 
+    // 右键 + 滚轮（issue #75）—— 总开关关，等于原版：滚轮只管滚页面，跟手势无关。
+    // 那两个 1 / 2 是 `WheelGestureActionKind.tabPrevious` / `.tabNext`（RuleEngine 里的枚举，
+    // 这一层够不到，所以写死数字并由 `StorageTests` 钉住对应关系）。
+    public static let wheelGestureEnabled: Bool = false
+    public static let wheelGestureUpAction: Int = 1
+    public static let wheelGestureDownAction: Int = 2
+    /// 只有动作档位是「自定义快捷键」时才读；空串 = 没录过键，等于不执行（见 `WheelGesturePlan`）。
+    public static let wheelGestureUpShortcut: String = ""
+    public static let wheelGestureDownShortcut: String = ""
+
     // Note/Toast
     public static let noteRetentionTime: Int = 1
     public static let notePosition: Int = 1              // 0鼠标 1屏幕中心 2右上...
@@ -476,6 +497,11 @@ public func registerUserDefaultsDefaults() {
         StorageKey.enableGestureSuppression.rawValue: StorageDefaults.enableGestureSuppression,
         StorageKey.gestureSuppressedModifiers.rawValue: StorageDefaults.gestureSuppressedModifiers,
         StorageKey.swallowUnmatchedGesture.rawValue: StorageDefaults.swallowUnmatchedGesture,
+        StorageKey.wheelGestureEnabled.rawValue: StorageDefaults.wheelGestureEnabled,
+        StorageKey.wheelGestureUpAction.rawValue: StorageDefaults.wheelGestureUpAction,
+        StorageKey.wheelGestureDownAction.rawValue: StorageDefaults.wheelGestureDownAction,
+        StorageKey.wheelGestureUpShortcut.rawValue: StorageDefaults.wheelGestureUpShortcut,
+        StorageKey.wheelGestureDownShortcut.rawValue: StorageDefaults.wheelGestureDownShortcut,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
         StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
         StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,

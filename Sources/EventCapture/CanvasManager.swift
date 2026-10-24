@@ -90,6 +90,32 @@ public class CanvasManager: EventCaptureDelegate {
     /// branch can only be verified by moving the real pointer.
     var syntheticEventSink: ((CGEvent, CGEventTapLocation) -> Void)?
 
+    // MARK: - Wheel triggers (issue #75)
+
+    /// 「右键 + 滚轮」这功能的总开关。Asked per gesture start, like the two
+    /// closures above, so the preference applies without a restart.
+    ///
+    /// 关掉时压根不上膛滚轮 tap —— 默认等于原版行为（原版没这功能），而且不发一次
+    /// 无谓的 `tapEnable` 往返。
+    public var isWheelGestureEnabled: (() -> Bool)?
+
+    /// 上膛 / 收膛的出口，由 App 层接到 `EventCapture.setWheelCaptureArmed`。
+    ///
+    /// 走闭包而不是让 CanvasManager 攥着 EventCapture：捕获状态机只决定「这段窗口归不归
+    /// 滚轮管」，真正的 tap 生命周期归 EventCapture。没挂上时什么都没发生（单测就靠这点
+    /// 只验状态，不去碰真 tap）。
+    public var wheelCaptureArmer: ((Bool) -> Void)?
+
+    /// 一次滚轮触发要干什么：返回 true = 这个方向确实配了动作并做成了，事件该吞掉。
+    /// 返回 false（那方向配的是「无」/ 音量动不了）→ 事件原样交回前台应用，页面照常滚。
+    public var onWheelGesture: ((WheelGestureDirection) -> Bool)?
+
+    /// 一次拨动只触发一次的闸门（高分辨率滚轮 / 触控板惯性会把一格拆成几十发）。
+    private var wheelGate = WheelGestureGate()
+
+    /// 这一段窗口里滚轮已经触发过动作了 —— 抬手时既不再拿轨迹去匹配，也不回放点击。
+    private var wheelFired = false
+
     /// Ignore gesture starts for a moment, while preferences are waiting for
     /// the user to press the button they want to bind. Deliberately separate
     /// from `isEnabled`, which is the master switch the preferences own.
@@ -251,6 +277,12 @@ public class CanvasManager: EventCaptureDelegate {
         hasDragged = false
         isCapturing = true
         activeTrigger = event.button
+        wheelFired = false
+        wheelGate.reset()
+
+        // 这段窗口开给滚轮（issue #75）：按下起始键到松开之间的那几发滚轮才是「右键+滚轮」
+        // 这条触发，窗口外的一律当普通滚轮交回前台应用。
+        armWheelCapture()
 
         showCanvasWindow(for: event.point)
         addPointToCanvas(event.point)
@@ -258,7 +290,27 @@ public class CanvasManager: EventCaptureDelegate {
         return true
     }
 
+    /// 要不要给这段窗口上膛滚轮监听。
+    ///
+    /// 三条件：总开关开、偏好里那功能开、且不在「绘制手势」录制态 —— 录制态里用户要的是一条
+    /// 轨迹，滚轮掺进来会同时切标签页，那画面没法解释。
+    private func armWheelCapture() {
+        guard !isRecordingGesture, isWheelGestureEnabled?() == true else { return }
+        wheelCaptureArmed = true
+        wheelCaptureArmer?(true)
+    }
+
     private func handleTriggerMouseUp(_ event: MouseEvent) -> Bool {
+        // 这段窗口里滚轮已经触发过动作（issue #75）：抬手时什么都不做。
+        // 不拿轨迹去匹配 —— 按住滚轮时指针难免抖出半条弧线，那条不该再叠一个手势动作；
+        // 也不回放点击 —— 否则「切完标签页凭空弹出右键菜单」，正是 issue #73 里用户抱怨的
+        // 那种「我没要菜单」。整段吞掉。
+        if wheelFired {
+            NSLog("%@", "[CanvasManager] Wheel gesture fired; release consumed without match or replay")
+            resetGestureState()
+            return true
+        }
+
         currentPoints.append(event.point)
         addPointToCanvas(event.point)
 
@@ -339,8 +391,21 @@ public class CanvasManager: EventCaptureDelegate {
         downLocation = nil
         shouldShow = false
 
+        // 窗口结束 = 滚轮监听收膛（issue #75）。闸门账也要清：留着上一段的
+        // `lastFired` 会让下一次按下起始键的第一格被节流吃掉，症状是「第一次不灵」。
+        if wheelCaptureArmed {
+            wheelCaptureArmed = false
+            wheelCaptureArmer?(false)
+        }
+        wheelGate.reset()
+        wheelFired = false
+
         hideAllCanvasWindows()
     }
+
+    /// CanvasManager 自己记一份膛态，避免靠读 `EventCapture` 的实时状态来决定要不要收膛
+    /// （闭包没挂上时读不到，重复收膛又会多发一次无谓的 `tapEnable` 往返）。
+    private var wheelCaptureArmed = false
 
     /// Original AppDelegate.m:332-357 — previous drag point near a primary
     /// screen edge and the new point near the screen center means Synergy
@@ -537,5 +602,36 @@ public class CanvasManager: EventCaptureDelegate {
             x: point.x - screenFrame.origin.x,
             y: point.y - screenFrame.origin.y
         )
+    }
+}
+
+// MARK: - WheelGestureDelegate (issue #75)
+
+extension CanvasManager: WheelGestureDelegate {
+
+    /// 按住起始键期间来了一发滚轮。
+    ///
+    /// 四道闸全过才算一次触发：
+    /// 1. 这段窗口是本功能自己开出来的（`shouldShow` + `isCapturing` —— 起始键是配置的那颗、
+    ///    前台应用过了过滤、没被修饰键让位，都已经在 `handleTriggerMouseDown` 里判过）；
+    /// 2. 这发滚轮自己没被该让位的修饰键按住（issue #59 同一条规矩：按住修饰键时不归本功能）；
+    /// 3. 累计够一格、且离上一次触发过了最小间隔（`WheelGestureGate`）；
+    /// 4. App 层答得出这个方向配了什么动作、并且真的做成了。
+    ///
+    /// 任何一道没过都返回 false —— 事件原样交回前台应用，页面照常滚。「没接住就不拦」是
+    /// 这套判据的底线：用户感知不到功能存在，远好过莫名被吞掉一次滚动。
+    ///
+    /// 这里不再读一次 `isWheelGestureEnabled`：只有它开了才会膛（`armWheelCapture`），
+    /// 再读是把一次偏好查询挂在滚轮热路径上。
+    public func eventCapture(_ capture: EventCapture, didScrollWith reading: WheelGestureReading) -> Bool {
+        guard shouldShow, isCapturing, isEnabled, !isSuspended else { return false }
+        if isSuppressedByModifiers(reading.modifiers) { return false }
+        guard wheelGate.accept(reading) else { return false }
+        guard onWheelGesture?(reading.direction) == true else { return false }
+
+        wheelFired = true
+        NSLog("%@", "[CanvasManager] Wheel gesture \(reading.direction == .up ? "up" : "down") fired "
+            + "(累计 \(reading.lines) 格)")
+        return true
     }
 }

@@ -189,6 +189,29 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(userTerminal, forKey: .userTerminal) }
     }
 
+    // MARK: - 按住右键 + 滚轮（issue #75）
+    // 配置项就三个：一颗总开关、上下各一个动作档，外加「自定义快捷键」那档用的两条键值。
+    // 与本页其余开关一样只负责存；判定与执行在 EventCapture / RuleEngine，App 层每事件现读，
+    // 所以勾上、换档都不用重启，也不必重建事件 tap。
+    @Published public var wheelGestureEnabled: Bool {
+        didSet { storage.setBool(wheelGestureEnabled, forKey: .wheelGestureEnabled) }
+    }
+    /// 存的是 `WheelGestureActionKind` 的原始值（0…5）。这一层够不到 RuleEngine，
+    /// 所以类型不在这里出现；档位含义与取值范围由 StorageTests 钉住。
+    @Published public var wheelGestureUpAction: Int {
+        didSet { storage.setInt(wheelGestureUpAction, forKey: .wheelGestureUpAction) }
+    }
+    @Published public var wheelGestureDownAction: Int {
+        didSet { storage.setInt(wheelGestureDownAction, forKey: .wheelGestureDownAction) }
+    }
+    /// "keyCode=X, flags=Y" 串，与其它快捷键录制框同一种存法；空串 = 没配。
+    @Published public var wheelGestureUpShortcut: String {
+        didSet { storage.setString(wheelGestureUpShortcut, forKey: .wheelGestureUpShortcut) }
+    }
+    @Published public var wheelGestureDownShortcut: String {
+        didSet { storage.setString(wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut) }
+    }
+
     // MARK: - Updates
     @Published public var autoCheckUpdates: Bool {
         didSet { storage.setBool(autoCheckUpdates, forKey: .autoCheckUpdates) }
@@ -508,6 +531,11 @@ public final class UserPreferences: ObservableObject {
         self.enableNewFile = storage.getBoolOptional(forKey: .enableNewFile) ?? StorageDefaults.enableNewFile
         self.enableOpenInTerminal = storage.getBoolOptional(forKey: .enableOpenInTerminal) ?? StorageDefaults.enableOpenInTerminal
         self.enableCopyFilePath = storage.getBoolOptional(forKey: .enableCopyFilePath) ?? StorageDefaults.enableCopyFilePath
+        self.wheelGestureEnabled = storage.getBoolOptional(forKey: .wheelGestureEnabled) ?? StorageDefaults.wheelGestureEnabled
+        self.wheelGestureUpAction = storage.getIntOptional(forKey: .wheelGestureUpAction) ?? StorageDefaults.wheelGestureUpAction
+        self.wheelGestureDownAction = storage.getIntOptional(forKey: .wheelGestureDownAction) ?? StorageDefaults.wheelGestureDownAction
+        self.wheelGestureUpShortcut = storage.getStringOptional(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
+        self.wheelGestureDownShortcut = storage.getStringOptional(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
         self.clipoardStroageLocal = storage.getBoolOptional(forKey: .clipoardStroageLocal) ?? StorageDefaults.clipoardStroageLocal
         self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? StorageDefaults.historyCilpboardListShortcut
@@ -617,6 +645,13 @@ public final class UserPreferences: ObservableObject {
         storage.setBool(StorageDefaults.enableOpenInTerminal, forKey: .enableOpenInTerminal)
         storage.setBool(StorageDefaults.enableCopyFilePath, forKey: .enableCopyFilePath)
         storage.setString(StorageDefaults.userTerminal, forKey: .userTerminal)
+        // 「恢复默认」把这功能整个关回原版行为（原版没这功能），两条方向档回到
+        // 上滚=上一个标签页 / 下滚=下一个标签页，自定义键值清空。
+        storage.setBool(StorageDefaults.wheelGestureEnabled, forKey: .wheelGestureEnabled)
+        storage.setInt(StorageDefaults.wheelGestureUpAction, forKey: .wheelGestureUpAction)
+        storage.setInt(StorageDefaults.wheelGestureDownAction, forKey: .wheelGestureDownAction)
+        storage.setString(StorageDefaults.wheelGestureUpShortcut, forKey: .wheelGestureUpShortcut)
+        storage.setString(StorageDefaults.wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut)
         storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
         storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
@@ -658,6 +693,11 @@ public final class UserPreferences: ObservableObject {
         enableNewFile = storage.getBool(forKey: .enableNewFile)
         enableOpenInTerminal = storage.getBool(forKey: .enableOpenInTerminal)
         enableCopyFilePath = storage.getBool(forKey: .enableCopyFilePath)
+        wheelGestureEnabled = storage.getBool(forKey: .wheelGestureEnabled)
+        wheelGestureUpAction = storage.getInt(forKey: .wheelGestureUpAction)
+        wheelGestureDownAction = storage.getInt(forKey: .wheelGestureDownAction)
+        wheelGestureUpShortcut = storage.getString(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
+        wheelGestureDownShortcut = storage.getString(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
         userTerminal = storage.getString(forKey: .userTerminal) ?? StorageDefaults.userTerminal
         enableHistoryClipboard = storage.getBool(forKey: .enableHistoryClipboard)
         clipoardStroageLocal = storage.getBool(forKey: .clipoardStroageLocal)
