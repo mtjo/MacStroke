@@ -10,11 +10,13 @@ APP_DIR="./${APP_NAME}.app"
 # 用户点更新就会把本机移植构建覆盖回 ObjC 版。发新版只改这一行，主程序与扩展共用。
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
 #
-# **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view` 的 tagName）是 3.1.9，
-# 这一轮要发的就是 3.2.0。之前本机装过 3.2.1/3.2.2/3.2.3，那是「每改一轮就加一个」加出来的，
+# **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view` 的 tagName）是 3.2.0，
+# 这一轮要发的就是 3.2.1。之前本机装过 3.2.1/3.2.2/3.2.3，那是「每改一轮就加一个」加出来的，
 # 不是三个版本 —— 一轮里改坏了重打一次包也加一号，用户手上就成了「版本号涨了但功能没变」。
 # 规矩：一轮功能 = 一号，装机调试期间反复覆盖同一个号，验收通过才由 release.yml 真发。
-APP_VERSION="3.2.0"
+# 3.2.1 这个号上一轮装机时白占过（那几台机器后来都换成了线上的 3.2.0，本机也是），
+# 线上从没发过 3.2.1，所以这一轮正当用；别因为「见过这串数字」就一路加到 3.2.4。
+APP_VERSION="3.2.1"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
@@ -118,6 +120,20 @@ fi
 # 而 3.2.0 已经上线过一轮，只有这一串能把「带自动贴的 3.2.0」和「不带的那一版」分开。
 if ! grep -aq "selectionPopupAutoPaste" "${BUILD_DIR}/MacStrokeApp"; then
     echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 selectionPopupAutoPaste 这颗键，说明这个二进制不含「自动补 ⌘V」那一手"
+    exit 1
+fi
+# 3.2.1 这一轮新增的是「按住起手键 + 滚轮」（issue #75）。拿这颗偏好键名当哨兵：
+# 它是 Storage 的 rawValue（落盘、注册表、main.swift 读默认值都要用），纯字面量必然在二进制里，
+# 而不像「Wheel gesture up fired」那种 NSLog 格式串 —— 改文案就会假红。
+if ! grep -aq "wheelGestureUpAction" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 wheelGestureUpAction 这颗键，说明这个二进制不含 3.2.1 的滚轮触发"
+    exit 1
+fi
+# 3.2.1 这一轮的另一手是关于页那行「已跳过的版本」（读三格 + 就地回执）。这串是
+# SparkleSkippedVersions 里的键名字面量，只有新版那份代码会带它 —— 旧版只在 main.swift
+# 的数组里写过同样的串，但那处已删；拿它当哨兵比拿「恢复提醒」那句文案可靠（改文案就假红）。
+if ! grep -aq "SUSkippedMajorSubreleaseVersion" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 SUSkippedMajorSubreleaseVersion 这颗键，说明这个二进制不含「已跳过的版本」那一行的修复"
     exit 1
 fi
 # .build/release 可能是个符号链接；后面的 find 默认不跟进符号链接（-P），
