@@ -71,7 +71,7 @@ let package = Package(
         // ============ Preferences management (SwiftUI + AppKit) ============
         .target(
             name: "Preferences",
-            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture", "RemoteControl", "Screenshot", "ProximityLock"]),
+            dependencies: ["Storage", "RuleEngine", "AppleScriptRunner", "RightClickMenu", "EventCapture", "RemoteControl", "Screenshot", "ProximityLock", "SelectionPopup"]),
         // ============ Window management (status bar, canvas, toast) ============
         .target(
             name: "WindowManager",
@@ -92,6 +92,10 @@ let package = Package(
         .target(
             name: "ProximityLock",
             dependencies: ["Storage"]),
+        // ============ 划词气泡（只读监听 + 无障碍取选中文字 + 浮窗） ============
+        .target(
+            name: "SelectionPopup",
+            dependencies: ["Storage"]),
         // ============ Main app executable ============
         .executableTarget(
             name: "MacStrokeApp",
@@ -105,6 +109,7 @@ let package = Package(
                 "RemoteControl",
                 "Screenshot",
                 "ProximityLock",
+                "SelectionPopup",
                 "Sparkle"
             ],
             resources: [
@@ -155,6 +160,9 @@ let package = Package(
             dependencies: ["Screenshot", "Storage"]),
         .testTarget(
             name: "ProximityLockTests",
-            dependencies: ["ProximityLock", "Storage"])
+            dependencies: ["ProximityLock", "Storage"]),
+        .testTarget(
+            name: "SelectionPopupTests",
+            dependencies: ["SelectionPopup", "Storage"])
     ]
 )
