@@ -167,6 +167,49 @@ public enum StorageKey: String, CaseIterable {
     /// 而且和上面的锁屏是两件事：只锁不解是完全可用的组合，反过来不成立。
     case proximityAutoUnlock = "proximityAutoUnlock"
 
+    // Selection bubble（划词气泡）
+    // 移植版扩展（超出原版）。总开关默认**关**：这一条是「每次划词后往屏幕上放一个
+    // 浮窗」，属于没点头之前一次都不该发生的那类干扰，跟靠近锁屏同等待遇。
+    // 键名跟 enableHistoryClipboard、enableProximityLock、enableRemoteControl 同前缀。
+    case enableSelectionPopup = "enableSelectionPopup"
+    /// 手动唤出气泡的那条键（默认 ⌃⌘B）。和「松手自动弹」是两条路：键盘选字
+    /// （⌥⇧→ 那一类）压根不产生左键事件，只有这一条能把它叫出来。
+    /// 格式同其它快捷键："keyCode=X, flags=Y"。
+    case selectionPopupShortcut = "selectionPopupShortcut"
+    /// 松手之后隔多少**毫秒**去读选区。读早了拿到的是旧值甚至 nil —— 目标 App 把选中
+    /// 文字交给无障碍接口也要一个来回。浏览器、Electron 这类要调大一点。
+    case selectionPopupReadDelay = "selectionPopupReadDelay"
+    /// 「划完字自动弹出」这一条**触发方式**。它和总开关是两件事：总开关关掉是整个功能不挂
+    /// 监听，这条关掉是只留快捷键那一路 —— 有人就是不想每次划词都被放一枚气泡出来。
+    case selectionPopupAutoPop = "selectionPopupAutoPop"
+    /// 手动唤出那一路要不要挂快捷键监听。和上面那条对称：只想留自动弹的人，不该被 ⌃B
+    /// 占着键位（占着不做事是最难查的坏，见 SelectionBubbleSettings.monitorShortcut）。
+    case selectionPopupShortcutEnabled = "selectionPopupShortcutEnabled"
+    // 下面四个是「气泡上每一格」自己的开关。做成一格一键，是因为这四件事的出口完全不同：
+    // 复制进剪贴板、搜索和翻译要开浏览器、朗读要出声。只要其中一两个是很正常的诉求，
+    // 而四格固定摆出来时，不想被朗读打扰的人只能把整个功能关掉。
+    case selectionPopupActionCopy = "selectionPopupActionCopy"
+    case selectionPopupActionSearch = "selectionPopupActionSearch"
+    case selectionPopupActionTranslate = "selectionPopupActionTranslate"
+    case selectionPopupActionSpeak = "selectionPopupActionSpeak"
+    /// 「无障碍读不到选区」时要不要**替用户按一次 ⌘C**，从粘贴板把字取回来（取完原样放回）。
+    /// 邮件正文那一类（WebKit 自己绘制的视图）五样选区属性全不答，只有这一条路能拿到字；
+    /// 代价是那不到一秒里我们动两次用户的粘贴板，所以给它自己一颗开关，不埋在总开关底下。
+    case selectionPopupCopyFallback = "selectionPopupCopyFallback"
+    /// 搜索那一格走哪一家（`SelectionBubbleSearchEngine` 的 rawValue）。写字符串而不是写整数：
+    /// 偏好里存的是**能读懂的 id**，装机出问题时 `defaults read` 一眼能看出选了谁，
+    /// 也避免「往枚举里插一家就把后面的序号全顶歪」这种坏。
+    case selectionPopupSearchEngine = "selectionPopupSearchEngine"
+    /// 自选那一条的 URL 模板，`{query}` 是占位符。**带占位符就走 URL 预填，不带就退成
+    /// 「先把字复制进粘贴板再打开这一页」**（判定在 `SelectionBubbleLinks.prefillsQuery`）。
+    /// 默认空串：空的时候按上面那一家走，不拿一个空模板去拼链接。
+    case selectionPopupSearchCustomURL = "selectionPopupSearchCustomURL"
+    /// 点开那种「不吃 URL 预填」的网页 AI 之后，要不要**再替用户按一次 ⌘V**，把那一段字送进
+    /// 输入框。默认**关**：这一手会往「此刻前台那个窗口」投按键，页面没把光标落进输入框时
+    /// 可能贴到地址栏，属于有代价的贴心，所以由用户自己开。判定与闸在
+    /// `SelectionBubbleSettings.searchAutoPaste`（含「快捷键录成单纯 ⌘V 时压根不上场」那一条）。
+    case selectionPopupAutoPaste = "selectionPopupAutoPaste"
+
     // Legacy (kept for compatibility)
     case showToast = "showToast"
     case clipboardHistoryLimit = "clipboardHistoryLimit"
@@ -367,6 +410,39 @@ public enum StorageDefaults {
     public static let proximitySignalTimeout: Int = 60
     public static let proximityAutoUnlock: Bool = false
 
+    // Selection bubble（划词气泡）
+    /// 默认关：没在偏好页点头之前，一次气泡都不该弹出来。
+    public static let enableSelectionPopup: Bool = false
+    /// ⌃⌘B：B 的 Carbon 键码 11，修饰键 ⌃(0x40000)|⌘(0x100000) = 1310720。
+    /// 避开 ⌘⇧A / ⌥⇧A（截图）、⌘⌥V（粘贴板），也避开系统占用的 ⌃⌘F/⌃⌘Space。
+    public static let selectionPopupShortcut: String = "keyCode=11, flags=1310720"
+    /// 250ms：按「无障碍接口要把选区算出来才交得出字」估的一档，装机取证后再定。
+    /// 读到 nil 就静默不弹，所以这个数偏大只多等一下，偏小会漏弹。
+    public static let selectionPopupReadDelay: Int = 250
+    /// 两条触发方式默认都开：**开不开整个功能由总开关说**，这里只管「开着之后怎么叫出来」。
+    /// 默认两条都给，用户第一次装好打开总开关时看到的是完整行为。
+    public static let selectionPopupAutoPop: Bool = true
+    public static let selectionPopupShortcutEnabled: Bool = true
+    /// 四格默认全开（同上：过滤哪些格子是另一件事，不是「功能开不开」）。
+    public static let selectionPopupActionCopy: Bool = true
+    public static let selectionPopupActionSearch: Bool = true
+    public static let selectionPopupActionTranslate: Bool = true
+    public static let selectionPopupActionSpeak: Bool = true
+    /// 「无障碍读不到时替用户按一次 ⌘C」—— 默认**开**。
+    /// 开在这里的理由：邮件正文那一类压根没有第二条路能拿到字，默认关掉等于那一档直接没功能。
+    /// 代价写在 `SelectionCopyReader` 文件头那四道闸里：只在读不到时动手、动手前后各还原一次、
+    /// 粘贴板当前是文件时压根不动手。用户不认这条可以在偏好页那一颗开关上关掉。
+    public static let selectionPopupCopyFallback: Bool = true
+    /// 搜索那一格默认走 Google —— 与 3.2.3 之前写死那一家一致，升级完行为不许变。
+    public static let selectionPopupSearchEngine: String = "google"
+    /// 自选 URL 默认空：空就等于「没配」，实际用哪家由上面那一条决定（见 `searchTemplate` 的退回）。
+    public static let selectionPopupSearchCustomURL: String = ""
+    /// 「打开网页 AI 后再替用户按一次 ⌘V」—— 默认**关**。
+    /// 关在这里的理由和上面那颗 ⌘C 相反：⌘C 那一手不做就是没功能，这一手不做只是多按一次键；
+    /// 而它做的是「往此刻前台那个窗口投一次粘贴」，页面没把光标落进输入框时贴到的是地址栏。
+    /// 想省事的人可以在偏好页那一颗开关上打开。
+    public static let selectionPopupAutoPaste: Bool = false
+
     // Legacy (keep for compatibility)
     public static let showToast: Bool = true
     public static let clipboardHistoryLimit: Int = 50
@@ -450,6 +526,19 @@ public func registerUserDefaultsDefaults() {
         StorageKey.proximityLockDelay.rawValue: StorageDefaults.proximityLockDelay,
         StorageKey.proximitySignalTimeout.rawValue: StorageDefaults.proximitySignalTimeout,
         StorageKey.proximityAutoUnlock.rawValue: StorageDefaults.proximityAutoUnlock,
+        StorageKey.enableSelectionPopup.rawValue: StorageDefaults.enableSelectionPopup,
+        StorageKey.selectionPopupShortcut.rawValue: StorageDefaults.selectionPopupShortcut,
+        StorageKey.selectionPopupReadDelay.rawValue: StorageDefaults.selectionPopupReadDelay,
+        StorageKey.selectionPopupAutoPop.rawValue: StorageDefaults.selectionPopupAutoPop,
+        StorageKey.selectionPopupShortcutEnabled.rawValue: StorageDefaults.selectionPopupShortcutEnabled,
+        StorageKey.selectionPopupActionCopy.rawValue: StorageDefaults.selectionPopupActionCopy,
+        StorageKey.selectionPopupActionSearch.rawValue: StorageDefaults.selectionPopupActionSearch,
+        StorageKey.selectionPopupActionTranslate.rawValue: StorageDefaults.selectionPopupActionTranslate,
+        StorageKey.selectionPopupActionSpeak.rawValue: StorageDefaults.selectionPopupActionSpeak,
+        StorageKey.selectionPopupCopyFallback.rawValue: StorageDefaults.selectionPopupCopyFallback,
+        StorageKey.selectionPopupSearchEngine.rawValue: StorageDefaults.selectionPopupSearchEngine,
+        StorageKey.selectionPopupSearchCustomURL.rawValue: StorageDefaults.selectionPopupSearchCustomURL,
+        StorageKey.selectionPopupAutoPaste.rawValue: StorageDefaults.selectionPopupAutoPaste,
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]

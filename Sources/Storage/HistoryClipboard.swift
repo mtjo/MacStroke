@@ -89,6 +89,78 @@ public final class HistoryClipboardManager {
     private var changeCount: Int = 0
     private var currentPage: Int = 0
 
+    // MARK: - Recording Pause（划词气泡代按 ⌘C 用）
+
+    /// 暂停的**截止时刻**；nil = 没在暂停。static 是必要的而不是图省事：粘贴板是全机一份，
+    /// 而生产里有**好几个**监听实例各挂各的定时器（`main.swift` 一个、`WindowManager` 一个），
+    /// 做成实例属性就得让 App 层把每个实例都攥在手里挨个调用 —— 漏一个就漏进一条脏数据。
+    private static var recordingPausedUntil: Date?
+    /// 有几路「正在动粘贴板」。快速划两下时同一秒可能排着两次读取，
+    /// 计数归零才收窗口：否则先结束那一手会把后一手还留着的那次还原写进历史。
+    private static var recordingPauseDepth = 0
+    private static let recordingPauseLock = NSLock()
+
+    /// 忘了还回去时的自愈上限：这一档之内必须恢复记录。
+    /// 代按那一手全程用 `defer` 收尾，正常走不到这里，这条是给**异常**兜底的 ——
+    /// 「粘贴板历史从此不再记录」比多记一条脏数据难查得多。
+    static let recordingPauseCeiling: TimeInterval = 5
+
+    /// `endRecordingPause()` 之后再宽限这么久才恢复记录。
+    /// 为什么不能立即恢复：监听是 0.5 秒一跳，而**还原那一写本身**就让 `changeCount`
+    /// 相对上一跳变了（我们把它换成哨兵又换回来）。要是某一跳正好落在还原之后、
+    /// 下一次真复制之前，用户原来那份内容就会被当成「刚复制了一条新东西」记进历史。
+    /// 宽限一跳（比 0.5 大一点）就是为了盖住这一档。
+    ///
+    /// 代价照实说：宽限窗口里**真的**发生了一次用户复制，那一条不会被记录。
+    /// 这一档只在「无障碍读不到选区」时才走到，前后约一秒，而且只在失败那一条路上；
+    /// 漏记一条历史远好过把我们自己的两次写当成用户的复制记进去。
+    static let recordingPauseGrace: TimeInterval = 0.6
+
+    /// 请粘贴板监听从现在起**不要**把粘贴板的变化记成用户的一次复制（仍然认账，见 `handleTimer`）。
+    public static func beginRecordingPause() {
+        recordingPauseLock.lock()
+        defer { recordingPauseLock.unlock() }
+        recordingPauseDepth += 1
+        recordingPausedUntil = Date().addingTimeInterval(recordingPauseCeiling)
+    }
+
+    /// 结束这一手：引用计数归零时才改成「宽限一跳」，没归零就继续按原来的上限挡着。
+    /// **计数本来就是 0 时整件事不做**：一次没有配对的 `end`（异常路径、或者将来有人误调）
+    /// 要是也开一个宽限窗口，代价是用户那 0.6 秒里的真复制被白白漏记一条 ——
+    /// 我们的闸门只该在「确实动过粘贴板」之后存在。
+    public static func endRecordingPause() {
+        recordingPauseLock.lock()
+        defer { recordingPauseLock.unlock() }
+        guard recordingPauseDepth > 0 else { return }
+        recordingPauseDepth -= 1
+        if recordingPauseDepth == 0 {
+            recordingPausedUntil = Date().addingTimeInterval(recordingPauseGrace)
+        }
+    }
+
+    /// 此刻在不在暂停窗口里。**读**的时候顺手把过期的值清掉，省得那个截止时刻一直挂着 ——
+    /// 下一次划词或下一个用例读到它，会以为还在暂停。
+    public static var isRecordingPaused: Bool {
+        recordingPauseLock.lock()
+        defer { recordingPauseLock.unlock() }
+        guard let until = recordingPausedUntil else { return false }
+        guard until > Date() else {
+            recordingPausedUntil = nil
+            recordingPauseDepth = 0
+            return false
+        }
+        return true
+    }
+
+    /// 硬复位：把计数和截止时刻一起清干净。给测试用（用例之间不该共享上一个用例留下的暂停），
+    /// 也是 App 层异常恢复的口子。
+    public static func resetRecordingPause() {
+        recordingPauseLock.lock()
+        defer { recordingPauseLock.unlock() }
+        recordingPauseDepth = 0
+        recordingPausedUntil = nil
+    }
+
     // MARK: - SQLite Expressions
 
     private let table = Table(tableName)
@@ -708,6 +780,15 @@ public final class HistoryClipboardManager {
         let currentChangeCount = pasteboard.changeCount
 
         guard currentChangeCount > changeCount else { return }
+
+        // 划词气泡代按 ⌘C 那一段时间：粘贴板确实变了，但那不是用户复制的。
+        // **仍然推进 changeCount**，只是不入库 —— 不认账的话暂停一结束，下一跳会把
+        // 这一笔陈旧的变化当成刚发生的复制记进来，那就等于这道闸门白装。
+        if HistoryClipboardManager.isRecordingPaused {
+            NSLog("%@", "[HistoryClipboard] 暂停窗口内的一次粘贴板变化，不记入历史")
+            changeCount = currentChangeCount
+            return
+        }
 
         // Original asks the pasteboard type list for an exact string membership.
         let copiedFiles = Self.pasteboardFileURLs(from: pasteboard)
