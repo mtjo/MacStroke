@@ -9,7 +9,12 @@ APP_DIR="./${APP_NAME}.app"
 # 若低于 appcast（例如写死 1.0.0），Sparkle 会把另一条代码线的 2.0.5 当成「有新版本」，
 # 用户点更新就会把本机移植构建覆盖回 ObjC 版。发新版只改这一行，主程序与扩展共用。
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
-APP_VERSION="3.1.9"
+#
+# **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view` 的 tagName）是 3.1.9，
+# 这一轮要发的就是 3.2.0。之前本机装过 3.2.1/3.2.2/3.2.3，那是「每改一轮就加一个」加出来的，
+# 不是三个版本 —— 一轮里改坏了重打一次包也加一号，用户手上就成了「版本号涨了但功能没变」。
+# 规矩：一轮功能 = 一号，装机调试期间反复覆盖同一个号，验收通过才由 release.yml 真发。
+APP_VERSION="3.2.0"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
@@ -35,24 +40,90 @@ if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "${SIGN_IDEN
     SIGN_IDENTITY="-"
 fi
 
-echo "🔨 Building release (universal: arm64 + x86_64)..."
+# 开始时间要取在编译之前，才能在下面分辨「这趟没增量可编」和「这趟没编出新东西」。
+BUILD_STARTED=$(date +%s)
+echo "🔨 Building release（先试通用包 arm64 + x86_64）..."
 # 跟 Xcode 的 ARCHS_STANDARD 一样出双架构包：Apple Silicon 原生运行，不需要 Rosetta。
-swift build --configuration release --arch arm64 --arch x86_64
+# 通用包（arm64 + x86_64）要靠工具链里的 xcbuild —— 只有 Xcode 带，纯 CommandLineTools 没有。
+# 本机 2026-10-22 升级 CLT 之后就是后者，报错是「xcbuild executable ... does not exist」。
+# 这时候回退成 host 单架构：**本机装机照样能用**（Apple Silicon 原生跑，不需要 Rosetta），
+# 正式发版不受影响 —— release.yml 的 runner 带 Xcode 走通用那一条，而且它在出包之后
+# 自己再 lipo 校验一次 arm64+x86_64，真回退到 CI 上会直接红，不会悄悄发一个单架构正式版。
+UNIVERSAL_LOG=$(mktemp)
+if swift build --configuration release --arch arm64 --arch x86_64 >"${UNIVERSAL_LOG}" 2>&1; then
+    :
+else
+    if grep -qi "xcbuild" "${UNIVERSAL_LOG}"; then
+        echo "⚠️  工具链里没有 xcbuild，通用包做不了，回退为 $(uname -m) 单架构 release 构建"
+        echo "    （正式发版请走 GitHub 流水线，那边带 Xcode 出 arm64+x86_64）"
+        tail -2 "${UNIVERSAL_LOG}"
+        SINGLE_ARCH_BUILD=1
+        swift build --configuration release
+    else
+        cat "${UNIVERSAL_LOG}"
+        rm -f "${UNIVERSAL_LOG}"
+        exit 1
+    fi
+fi
+rm -f "${UNIVERSAL_LOG}"
 
-# 多架构产物落在 .build/apple/Products/Release；单架构（如手工改回 host 架构编译）
-# 仍落在 .build/<triple>/release；更新的 Swift build 系统把它放在 .build/out/Products/
-# Release（.build/release 是指向那里的符号链接）。这里都认。
+# 产物落在哪儿，取决于这次是通用包还是单架构：
+#   通用包（有 xcbuild）→ .build/apple/Products/Release
+#   单架构              → .build/<host>-apple-macosx/release
+#   更新的 Swift build 系统 → .build/out/Products/Release（.build/release 是指向那里的符号链接）
+# 2.2 之前这里是「按固定顺序取第一个存在的」，本机因此踩过一次：通用包那一档的产物是
+# 上一次装 Xcode 时留下的（10 月 21 日），这次只做了单架构构建（10 月 23 日），脚本照样
+# 先命中旧目录，于是把一个 3.2.2 的二进制装进写着 3.2.3 的 Info.plist 里 —— 而版本号正是
+# 用户区分新旧的唯一依据（见上面的 APP_VERSION 注释）。所以改成**按新旧取**：谁的最新用谁，
+# 再拿源文件的时间当场校验：只要还有比产物更新的 .swift，直接红，绝不打包。
 BUILD_DIR=""
-for candidate in .build/apple/Products/Release \
-                 .build/out/Products/Release \
+NEWEST=0
+for candidate in .build/release .build/out/Products/Release \
+                 .build/apple/Products/Release \
                  .build/$(uname -m)-apple-macosx/release; do
-    if [ -x "${candidate}/MacStrokeApp" ]; then BUILD_DIR="${candidate}"; break; fi
+    [ -x "${candidate}/MacStrokeApp" ] || continue
+    stamp=$(stat -f %m "${candidate}/MacStrokeApp")
+    echo "   候选 ${candidate}/MacStrokeApp  构建于 $(date -r ${stamp} '+%Y-%m-%d %H:%M')"
+    if [ "${stamp}" -gt "${NEWEST}" ]; then NEWEST=${stamp}; BUILD_DIR="${candidate}"; fi
 done
 if [ -z "${BUILD_DIR}" ]; then
-    echo "❌ 找不到 release 产物（.build/apple/Products/Release、.build/out/Products/Release 或 .build/*-apple-macosx/release）"
+    echo "❌ 找不到 release 产物（.build/release、.build/out/Products/Release、.build/apple/Products/Release 或 .build/*-apple-macosx/release）"
     exit 1
 fi
-echo "📂 产物目录: ${BUILD_DIR}"
+if [ "${NEWEST}" -lt "${BUILD_STARTED}" ]; then
+    # 没有增量可编（源文件自上次构建没动）时，产物时间必然早于这次构建开始，这本身不是错。
+    # 真正的「拿旧包当新版」是另一回事：有比产物更新的源文件。所以拿源文件比，不拿开始时间比。
+    stale=$(find Sources -name '*.swift' -newer "${BUILD_DIR}/MacStrokeApp" 2>/dev/null | head -5)
+    if [ -n "${stale}" ]; then
+        echo "❌ 选中的产物（${BUILD_DIR}，$(date -r ${NEWEST} '+%Y-%m-%d %H:%M')）比下面这些源文件还旧，"
+        echo "   说明这趟编译没把改动编进去，装上去就是「新号旧货」："
+        echo "${stale}" | sed 's/^/      /'
+        exit 1
+    fi
+    echo "ℹ️  产物时间早于本次构建开始 —— 这趟是「没有增量可编」，源文件都比它旧，用的就是当前代码"
+fi
+# 最后一道：这一轮新加的代码要在二进制里能摸到，摸不到就是打包打错了目录。
+if ! grep -aq "MacStrokeSelectionProbe" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 SelectionCopyReader 的哨兵串，说明这个二进制不含划词气泡「代按 ⌘C」那一手"
+    exit 1
+fi
+# 3.2.0 那一轮加的是「搜索走哪一家」那张表：模板串是纯字面量，一定在二进制里。
+# 拿它当哨兵而不是拿「搜索走」—— 那句是 NSLog 的格式串，改文案就会假红。
+if ! grep -aq "sogou.com/web?query=" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有搜索引擎那张表的模板串，说明这个二进制不含 3.2.0 的「搜索走哪一家」"
+    exit 1
+fi
+# 同一号里的第二手：「打开之后自动补一次 ⌘V」。这颗偏好键名是纯字面量（落盘与注册表都要用），
+# 一定在二进制里；拿键名当哨兵而不是拿那句日志 —— 「自动贴」是格式串，改文案就假红，
+# 而 3.2.0 已经上线过一轮，只有这一串能把「带自动贴的 3.2.0」和「不带的那一版」分开。
+if ! grep -aq "selectionPopupAutoPaste" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 selectionPopupAutoPaste 这颗键，说明这个二进制不含「自动补 ⌘V」那一手"
+    exit 1
+fi
+# .build/release 可能是个符号链接；后面的 find 默认不跟进符号链接（-P），
+# 不折成真实路径就会在找 Sparkle.framework 时空手而归。
+BUILD_DIR=$(cd "${BUILD_DIR}" && pwd -P)
+echo "📂 产物目录: ${BUILD_DIR}（最新，构建于 $(date -r ${NEWEST} '+%Y-%m-%d %H:%M')）"
 
 echo "📦 Creating .app bundle at ${APP_DIR}..."
 rm -rf "${APP_DIR}"
@@ -244,11 +315,28 @@ otool -L "${APP_DIR}/Contents/MacOS/${APP_NAME}" | grep -E "Sparkle|rpath"
 
 # 10. 双架构校验：少任一架构就说明上面的 --arch 编译没生效，
 #     那样的包在 Apple Silicon 上要装 Rosetta，直接失败比静默出包好。
+#     唯一允许单架构的情形是上面真的因为工具链没有 xcbuild 而回退（SINGLE_ARCH_BUILD=1），
+#     那时候仍然逐个二进制核对「至少要有本机这一档」，别拿一个只有 x86_64 的包去装 Apple Silicon。
 echo "🔍 Verifying architectures..."
+HOST_ARCH=$(uname -m)
 for exe in "${APP_DIR}/Contents/MacOS/${APP_NAME}" \
            "${APPEX_DIR}/Contents/MacOS/FinderSyncExtension" \
            "${APP_DIR}/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"; do
     archs=$(lipo -archs "${exe}")
+    if [ "${SINGLE_ARCH_BUILD:-0}" = "1" ]; then
+        if ! echo "${archs}" | grep -q "${HOST_ARCH}"; then
+            echo "❌ 回退的单架构构建里 ${exe} 不含本机架构 ${HOST_ARCH}：${archs}"
+            exit 1
+        fi
+        # 回退那一条只保证「有本机这一档」；产物实际是几个架构照实说，别硬套「单架构」这个词。
+        arch_count=$(echo "${archs}" | wc -w | tr -d ' ')
+        if [ "${arch_count}" = "1" ]; then
+            echo "   ${archs}  <- ${exe}（单架构回退：本机 ${HOST_ARCH}；通用包那条路要工具链里的 xcbuild）"
+        else
+            echo "   ${archs}  <- ${exe}（本机这一档 ${HOST_ARCH} 已在）"
+        fi
+        continue
+    fi
     if ! (echo "${archs}" | grep -q x86_64 && echo "${archs}" | grep -q arm64); then
         echo "❌ ${exe} 不是 universal 包：${archs}"
         exit 1
