@@ -38,6 +38,16 @@ final class HistoryClipboardPanelInteractionTests: XCTestCase {
         RunLoop.main.run(until: Date().addingTimeInterval(seconds))
     }
 
+    /// 见 `HistoryClipboardPanelFocusTests.hideFromSight(_:)`：面板 init 把 level 设成 21，
+    /// 测试一真开窗就会在用户桌面上堆好几枚，所以**开之前**先压回普通层级 + 透明 + 点击穿透。
+    /// 窗口必须仍然有序在屏上，否则字段编辑器与 first responder 那套链路测不到。
+    private func hideFromSight(_ controller: HistoryClipboardListWindowController) {
+        guard let window = controller.window else { return }
+        window.level = .normal
+        window.alphaValue = 0
+        window.ignoresMouseEvents = true
+    }
+
     /// 合成的按键事件必须带上 unicode 字符，否则 interpretKeyEvents 映射不出
     /// cancelOperation: 等命令选择器。
     private func keyEvent(_ text: String, virtualKey: CGKeyCode) throws -> NSEvent {
@@ -70,6 +80,7 @@ final class HistoryClipboardPanelInteractionTests: XCTestCase {
             _ = manager.insertLocalHistoryClipboard(content: content, isTop: false)
         }
         let controller = HistoryClipboardListWindowController(manager: manager)
+        hideFromSight(controller)
         controller.reload()
         controller.showWindow(nil)
         pump(0.5)
@@ -121,6 +132,7 @@ final class HistoryClipboardPanelInteractionTests: XCTestCase {
         _ = manager.insertLocalHistoryClipboard(content: "unrelated", isTop: false)
         _ = manager.insertLocalHistoryClipboard(content: "history target", isTop: false)
         let controller = HistoryClipboardListWindowController(manager: manager)
+        hideFromSight(controller)
         controller.reload()
         controller.showWindow(nil)
         pump(0.5)

@@ -30,6 +30,18 @@ final class HistoryClipboardPanelFocusTests: XCTestCase {
         RunLoop.main.run(until: Date().addingTimeInterval(seconds))
     }
 
+    /// 把测试面板藏出用户视线，只留它的窗口机制。
+    /// 面板 init 里把 level 设成 21（浮在一切 App 之上）并且 `window.center()`，所以一跑回归
+    /// 就是好几枚真窗口堆在桌面正中，看着像 App 自己弹的粘贴板弹窗（装机取证时用户就是这么问的）。
+    /// 所以**开窗之前**先压回普通层级 + 整窗透明 + 点击穿透，但**不挪位置也不关窗**：字段编辑器、
+    /// first responder、`isVisible` 这套判据全靠窗口真的有序在屏上。
+    private func hideFromSight(_ controller: HistoryClipboardListWindowController) {
+        guard let window = controller.window else { return }
+        window.level = .normal
+        window.alphaValue = 0
+        window.ignoresMouseEvents = true
+    }
+
     /// 一个确定在跑、又绝不是自己的 App：Finder。测试只比较它的身份，
     /// 真实的 activate 被替身换掉了，不会动用户的前台窗口。
     private func otherApplication() throws -> NSRunningApplication {
@@ -43,6 +55,7 @@ final class HistoryClipboardPanelFocusTests: XCTestCase {
                                              userDefaults: UserDefaults(suiteName: Self.suiteName)!)
         _ = manager.insertLocalHistoryClipboard(content: "alpha one", isTop: false)
         let controller = HistoryClipboardListWindowController(manager: manager)
+        hideFromSight(controller)
         controller.reload()
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
