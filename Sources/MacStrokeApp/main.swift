@@ -27,6 +27,7 @@ import RightClickMenu
 import WindowManager
 import RemoteControl
 import Screenshot
+import SelectionPopup
 import ProximityLock
 import Sparkle
 
@@ -109,6 +110,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var screenshotTextShortcutMonitor: ShortcutMonitor?
     private var monitoredScreenshotShortcut = ""
     private var monitoredScreenshotTextShortcut = ""
+    /// 划词气泡的手动唤出快捷键（移植版新增，超出原版）。单独一只 monitor：和截图那两条
+    /// 同一种挂法（命中即吞），所以总开关关掉时把它整个停掉 —— 按下去什么都不做、
+    /// 还把这组键从前台 App 手里吞掉，是最难查的那种坏。
+    private var selectionBubbleShortcutMonitor: ShortcutMonitor?
+    /// 上一次递给划词气泡的偏好快照（总开关 + 两条触发 + 四格 + 延迟）。`UserDefaults` 的变化通知很密，
+    /// 先比一遍再决定要不要重喂，免得用户改个无关偏好都把左键监听拆一次、挂一次。
+    /// 整个结构体拿来比（它本来就 Equatable），不拼串：延迟和快捷键拼出一个同号不代表没变。
+    private var selectionBubbleSnapshot: SelectionBubbleSettings?
     private let storage = PreferencesStorage()
     private var updaterController: SPUStandardUpdaterController?
     /// 发现新版提醒用的系统通知标记：点了只认这条，其它提示（脚本出错、偏好页确认
@@ -244,6 +253,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self, selector: #selector(proximityLockSettingsDidChange),
             name: .macStrokeProximityLockDidChange, object: nil)
 
+        // 划词气泡（偏好页「划词气泡」，移植版新增）。默认关着 —— 关掉时连左键的只读监听
+        // 都不挂，行为和原版一致。哪些应用不弹复用「过滤」页那套黑白名单：判定从这儿注进去，
+        // SelectionPopup 因此不依赖 RuleEngine，也不用再配一份名单。
+        SelectionBubbleController.shared.isAppAllowed = { bundleID in
+            // 截图遮罩摊开时不弹：那会儿左键是在框选区，不是在划字，气泡浮上去正好挡住选区。
+            !ScreenshotController.shared.isActive
+                && BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID)
+        }
+        applySelectionBubblePreferences()
+
         // 截图。模块自己不开窗也不弹提示，两件事都回调到 App 层做：
         // 遮罩摊开期间必须挂起手势捕获（否则轨迹层跟选区抢同一只鼠标），
         // 复制完用用户已经调好的提示气泡参数回一句，不然遮罩一收用户分不清
@@ -252,6 +271,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.canvasManager?.isSuspended = active
             if active {
                 self?.canvasManager?.cancelStroke()
+                // 遮罩摊开前先把可能正浮着的气泡收掉：它浮在遮罩上面挡选区，而遮罩自己
+                // 收不掉它（气泡那扇窗不吃键盘，只能点别处）。
+                SelectionBubbleController.shared.dismiss()
             }
         }
         ScreenshotController.shared.onOutcome = { outcome in
@@ -499,6 +521,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self?.applyScreenshotShortcuts()
             }
         }
+
+        // 划词气泡的偏好合成一份快照比一次（开关、两条触发、四格、延迟）：比的是整个结构体，
+        // 新增字段自动进比较，不用每加一栏就回来补一句。开关与触发变了要拆/挂监听，
+        // 手动键变了要重挂 monitor，其余只需重喂快照 —— 都走同一个入口。
+        if SelectionBubbleSettings.current() != selectionBubbleSnapshot {
+            DispatchQueue.main.async { [weak self] in
+                self?.applySelectionBubblePreferences()
+            }
+        }
     }
     private var monitoredShortcutString = ""
 
@@ -589,6 +620,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         ToastManager.shared.show(Toast(message: message,
                                        duration: TimeInterval(preferences.noteRetentionTime),
                                        position: pos))
+    }
+
+    // MARK: - Selection bubble（划词气泡）
+
+    /// 划词气泡的外部入口都在这里落地：整份快照喂给控制器（左键监听挂不挂、四格有哪些、
+    /// 延迟多少，都由模块自己从快照里判），手动唤出那只快捷键单独一只 monitor。
+    /// App 层只认「快照换没换」，不逐键判断 —— 页面上多一栏就得回来加一条比较。
+    ///
+    /// 快捷键那只 monitor 跟着总开关走，判定在 `SelectionBubbleSettings.monitorShortcut` 里
+    /// （关着时它给空串 → rebind 停掉监听）：功能关着却把 ⌃⌘B 从前台 App 手里吞掉、按下还
+    /// 什么都不做，是最难查的那种坏。
+    private func applySelectionBubblePreferences() {
+        let current = SelectionBubbleSettings.current()
+        selectionBubbleSnapshot = current
+        // apply() 内部自己再读一遍偏好（模块不认 App 层那个 storage 实例），值与上面一致。
+        SelectionBubbleController.shared.apply()
+        selectionBubbleShortcutMonitor = Self.rebind(
+            selectionBubbleShortcutMonitor, current.monitorShortcut
+        ) {
+            SelectionBubbleController.shared.showForCurrentSelection()
+        }
     }
 
     // MARK: - Gesture recording (Draw Gesture flow)

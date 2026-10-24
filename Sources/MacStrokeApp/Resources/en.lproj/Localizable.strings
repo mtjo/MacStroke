@@ -476,3 +476,65 @@
 "Proximity event empty password" = "The stored password is empty";
 "Proximity event injection aborted" = "The screen state changed mid-typing; aborted";
 "Proximity event injection failed" = "Unlock failed (wrong password, or the field did not take the input)";
+
+/* Selection bubble (port extension, not in the original). Its own sidebar page:
+   master switch -> two trigger paths -> the four cells -> read delay. */
+"Selection Bubble" = "Selection Bubble";
+"Selection Bubble master" = "Enable selection bubble";
+"Selection Bubble master hint" = "The master switch. With this off the whole thing stops existing on this machine — the three read-only left-button global monitors are never attached, and every row below greys out. Off by default.";
+"Selection Bubble triggers" = "Triggers";
+"Selection Bubble auto pop" = "Pop up after selecting text";
+"Selection Bubble auto pop hint" = "Drag over text with the left button in another app and a capsule appears above the pointer once you release. This listener is read-only: left clicks still go where they belong, and gesture recognition and timing are untouched.";
+"Selection Bubble manual" = "Summon with a shortcut";
+"Selection Bubble manual hint" = "Press the combination instead of dragging: it reads whatever is selected in the current focus. Selecting with the keyboard (⌥⇧→ and friends) produces no mouse events, so this is the only way to summon the bubble there.";
+"Selection Bubble shortcut" = "Shortcut";
+"Selection Bubble shortcut hint" = "⌃⌘B by default. The combination is swallowed once matched and never reaches the front app; when “Summon with a shortcut” above is off, whatever you record here is not monitored at all, so it cannot silently eat someone else's shortcut.";
+"Selection Bubble actions" = "What the bubble offers";
+"Selection Bubble action copy hint" = "Puts the text on the pasteboard so a normal ⌘V elsewhere picks it up.";
+"Selection Bubble action search hint" = "Searches the text in your default browser; which site that is — including the web-AI entries and a custom URL — is the “Where search goes” section below.";
+"Selection Bubble action translate hint" = "Opens the web translator; the language pair follows your system language.";
+"Selection Bubble action speak hint" = "Reads it aloud with the synthesiser that ships with macOS: nothing to install, no network, no key. Mixed Chinese/English comes out imperfect — that is where this stands for now.";
+"Selection Bubble no action warning" = "With all four cells off neither trigger shows anything: the text you select has nowhere to go. Use the master switch above to stop the feature entirely.";
+"Selection Bubble fallback" = "When the selection cannot be read";
+"Selection Bubble copy fallback" = "Press ⌘C for me to fetch the text";
+"Selection Bubble copy fallback hint" = "Only ever runs after every read above has come back empty — some apps (Mail's message body is the example) simply do not hand the selection to Accessibility, and this is the only way to get it. Before it acts your pasteboard is stored as-is, one ⌘C is posted, and the original goes straight back once the text is in — under a second all told. During that window our own clipboard history deliberately records nothing. Three cases make it stay completely out of the pasteboard: your clipboard currently holds **files** (replaying them is not guaranteed to paste the same file), the front app has changed or is MacStroke itself, or the Accessibility read timed out. Turn this off and apps like Mail will never pop.";
+"Selection Bubble copy fallback shortcut warning" = "The shortcut above is a bare ⌘C, so this cannot run: the ⌘C we post would be heard by our own monitor as another summon, and it would keep churning your pasteboard. Pick a different combination (the default ⌃⌘B, or add a modifier to ⌘C) and it becomes available again.";
+"Selection Bubble timing" = "Read timing";
+"Selection Bubble read delay" = "Read delay";
+"Selection Bubble read delay hint" = "Only the “pop up after selecting text” path waits for this: how long after releasing the button to read the selection. Too short and some apps have not handed over the selection yet, so the read comes back empty; too long and it feels sluggish. 250 ms by default. Browsers and Electron apps may need more. The shortcut path reads immediately and ignores this.";
+"Selection Bubble milliseconds unit" = "ms";
+"Selection Bubble footnotes" = "Reading the selection needs Accessibility permission, which MacStroke already asks for at launch; this feature asks for nothing extra. Which apps stay quiet follows the Filter page's black/white list, so there is no second list here.";
+"Selection bubble copy" = "Copy";
+"Selection bubble search" = "Search";
+"Selection bubble translate" = "Translate";
+"Selection bubble speak" = "Speak";
+/* Which site the search cell opens. One popup menu plus one custom template —
+   not fourteen switches, because that cell only ever uses one engine at a time. */
+"Selection Bubble engine" = "Where search goes";
+"Selection Bubble engine row" = "Search engine";
+"Selection Bubble engine hint" = "Applies to the “Search” cell only: the magnifier opens whichever entry you pick. Most of the web-AI sites below ignore a query prefilled in the URL, so choosing one of those also puts the text on the pasteboard — paste with ⌘V once the page opens. The six search engines never touch the pasteboard. The translate cell is unaffected; it always opens the web translator.";
+"Selection Bubble engine group search" = "Search engines";
+"Selection Bubble engine group ai" = "Web AI";
+"Selection Bubble engine group custom" = "Custom";
+"Selection Bubble custom URL" = "Custom URL template";
+"Selection Bubble custom URL hint" = "Only used when the menu above says “Custom”. {query} is the placeholder replaced with the selected text; leave it out and the cell just opens that page and puts the text on the pasteboard for a ⌘V (internal search pages, self-hosted instances and the like work this way). While the field is empty — or has no :// at all — the cell falls back to the default engine.";
+"Selection Bubble custom URL empty warning" = "The custom field is not a URL yet, so the search cell still opens the default engine.";
+"Selection Bubble auto paste" = "Paste once after the page opens";
+"Selection Bubble auto paste hint" = "Only for pages that cannot take the query in the URL (the web AI ones, and a custom template without {query}): after the page opens we wait 1.2 s and press ⌘V once for you. The six engines that do take the query never need it, so nothing is pressed for them. Off by default, because the keystroke goes to **whatever window is frontmost at that moment** — if the page has not put the cursor in its input box yet, it can land in the address bar. The text is on the pasteboard either way, so pressing ⌘V yourself always works. Before we press, two more checks run: if the pasteboard no longer holds that text, or the frontmost app is MacStroke itself, nothing happens.";
+"Selection Bubble auto paste shortcut warning" = "The bubble shortcut above is a plain ⌘V, so this cannot run: the key we post would be heard back as another summon, and it would keep opening pages in a loop. Pick a different shortcut (the default ⌃⌘B, or add another modifier to ⌘V).";
+/* Proper nouns in the menu, written the way each service writes its own name. */
+"Selection bubble engine google" = "Google";
+"Selection bubble engine bing" = "Bing";
+"Selection bubble engine duckduckgo" = "DuckDuckGo";
+"Selection bubble engine baidu" = "Baidu";
+"Selection bubble engine sogou" = "Sogou";
+"Selection bubble engine so360" = "360 Search";
+"Selection bubble engine chatgpt" = "ChatGPT";
+"Selection bubble engine copilot" = "Copilot";
+"Selection bubble engine perplexity" = "Perplexity";
+"Selection bubble engine gemini" = "Gemini";
+"Selection bubble engine deepseek" = "DeepSeek";
+"Selection bubble engine doubao" = "Doubao";
+"Selection bubble engine kimi" = "Kimi";
+"Selection bubble engine tongyi" = "Tongyi";
+"Selection bubble engine custom" = "Custom";

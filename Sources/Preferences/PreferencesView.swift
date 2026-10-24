@@ -46,6 +46,9 @@ public enum PreferencesTab: String, CaseIterable {
     case screenshot
     // 移植版新增页（超出原版）：蓝牙靠近锁屏，跟在截图后面。
     case proximityLock
+    // 移植版新增页（超出原版）：划词气泡。排在所有新增页之后、关于之前 ——
+    // 前三条侧栏位置用例（远程控制/截图/靠近锁屏）都按相邻序号断言，插进它们中间会连带改测试。
+    case selectionBubble
     case about
 
     var title: String {
@@ -60,6 +63,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .remoteControl: return L("Remote Control")
         case .screenshot: return L("Screenshot or record")
         case .proximityLock: return L("Proximity Lock")
+        case .selectionBubble: return L("Selection Bubble")
         case .about: return L("About")
         }
     }
@@ -76,6 +80,7 @@ public enum PreferencesTab: String, CaseIterable {
         case .remoteControl: return "dot.radiowaves.left.and.right"
         case .screenshot: return "camera.viewfinder"
         case .proximityLock: return "antenna.radiowaves.left.and.right"
+        case .selectionBubble: return "bubble.left"
         case .about: return "info.circle"
         }
     }
@@ -264,6 +269,8 @@ public struct PreferencesView: View {
                     ScreenshotTabView(viewModel: viewModel)
                 case .proximityLock:
                     ProximityLockTabView(viewModel: viewModel)
+                case .selectionBubble:
+                    SelectionBubbleTabView(viewModel: viewModel)
                 case .about:
                     AboutTabView(viewModel: viewModel)
                 }
@@ -355,6 +362,8 @@ func sidebarIconImage(_ image: NSImage) -> NSImage {
 // MARK: - General Tab
 // Mirrors the original AppPrefsWindowController General tab layout exactly:
 // Box groups (top to bottom): General -> Gesture -> Note -> Import/Export/Reset buttons
+// 划词气泡原来是常规页最后一段，这一版挪成侧栏独立一页（`SelectionBubbleTabView`）：
+// 它要配的东西有九项，留在常规页底部会把导入/导出/重置顶出可视区，也更难被找到。
 
 struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
@@ -530,6 +539,11 @@ struct GeneralTabView: View {
                     }
                 }
             }
+
+            // MARK: Selection bubble（划词气泡）
+            // 这一页整块挪到侧栏独立一页了（见 `SelectionBubbleTabView`）：一条功能要配的是
+            // 「总开关 + 两条触发方式 + 四格各自开关」，塞在常规页底部会把导入/导出/重置顶下去，
+            // 而常规页本来就是原版最满的一页。
 
             // MARK: Import / Export / Reset (original: buttons under the Note box)
             HStack(spacing: 12) {

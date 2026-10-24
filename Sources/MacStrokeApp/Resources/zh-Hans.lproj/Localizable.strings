@@ -478,3 +478,66 @@
 "Proximity event empty password" = "存的密码是空的";
 "Proximity event injection aborted" = "注入中途屏幕状态变了，已中止";
 "Proximity event injection failed" = "解锁失败（密码不对或密码框没接受输入）";
+
+/* 划词气泡（移植版新增，超出原版）。这一组是侧栏独立一页：总开关 → 两条触发方式 →
+   四格各自开关 → 读取延迟。页面上的说明写「只读不吞」和「要辅助功能授权」两句：
+   这两条是用户开这个功能前最该知道的事，藏在别处等于没说。 */
+"Selection Bubble" = "划词气泡";
+"Selection Bubble master" = "启用划词气泡";
+"Selection Bubble master hint" = "总开关。这一条关掉时整件事在这台机器上不存在——那三样左键的全局只读监听压根不挂，下面每一格都会灰掉。默认关闭。";
+"Selection Bubble triggers" = "触发方式";
+"Selection Bubble auto pop" = "划完字自动弹出";
+"Selection Bubble auto pop hint" = "在别的软件里用左键划一段字，松手后在指针上方弹一枚胶囊。这一条只读不吞：左键该给谁还是给谁，手势的识别和耗时都不受影响。";
+"Selection Bubble manual" = "手动快捷键唤出";
+"Selection Bubble manual hint" = "不用划词，按一下键就把当前焦点上选中的字弹出来。键盘选字（⌥⇧→ 那一类）不产生鼠标事件，只有这条路能叫出气泡。";
+"Selection Bubble shortcut" = "快捷键";
+"Selection Bubble shortcut hint" = "默认 ⌃⌘B。这组键命中即吞，不再交给前台软件；上面「手动快捷键唤出」关掉时，这里录的键压根不挂监听，不会白白吞掉别人的快捷键。";
+"Selection Bubble actions" = "气泡上的四个功能";
+"Selection Bubble action copy hint" = "把这段字写进粘贴板，之后在别处照常 ⌘V。";
+"Selection Bubble action search hint" = "用默认浏览器搜这一段字。走哪一家（含网页 AI 与自定义网址）在下面「搜索走哪一家」里选。";
+"Selection Bubble action translate hint" = "打开网页翻译，语言方向跟着系统语言走。";
+"Selection Bubble action speak hint" = "用系统自带的合成器念出来：不装东西、不要网络、不要密钥。中英混排念不准，一期就这样。";
+"Selection Bubble no action warning" = "四格全关掉时两条触发都不会弹：读上来的字没地方摆。要整个停用请用上面那个总开关。";
+"Selection Bubble fallback" = "读不到选区时";
+"Selection Bubble copy fallback" = "替我按一次 ⌘C 取字";
+"Selection Bubble copy fallback hint" = "只在上面那几种读法全都拿不到字时才动手（邮件正文那一类软件只能靠这一条）。动手前先把粘贴板原样存下，代按一次 ⌘C，读到字之后立刻放回去，前后不到一秒；这期间我们自己那份粘贴板历史不会记这几笔。三种情况压根不动手：你粘贴板上当前是**文件**（回放不保证还能贴出同一个文件）、前台已经换成了别的软件或就是我们自己、无障碍那一读超时了。这一条不要就不开，代价是邮件那类软件里永远不会弹。";
+"Selection Bubble copy fallback shortcut warning" = "上面的快捷键被录成了单纯的 ⌘C，这一手不能上场：我们代按的那一下会又被自己监听成一次唤出，转圈动你的粘贴板。换一组键（比如默认的 ⌃⌘B，或者给 ⌘C 再加一个修饰键）就能用。";
+"Selection Bubble timing" = "读取时机";
+"Selection Bubble read delay" = "读取延迟";
+"Selection Bubble read delay hint" = "只作用在「划完字自动弹出」那一路：松手之后等多久再去读选区。太短了有些软件还没把选区交出来，读到的是空；太长了你会觉得慢半拍。默认 250 毫秒。浏览器和 Electron 那类软件可能要调大一点。快捷键那一路按下就读，不等这个数。";
+"Selection Bubble milliseconds unit" = "毫秒";
+"Selection Bubble footnotes" = "读选中文字要「辅助功能」授权，MacStroke 启动时已经要求过这一项，不多要权限。哪些软件不弹沿用「过滤」页那套黑白名单，这里不再配一份名单。";
+"Selection bubble copy" = "复制";
+"Selection bubble search" = "搜索";
+"Selection bubble translate" = "翻译";
+"Selection bubble speak" = "朗读";
+/* 搜索走哪一家（气泡上那颗放大镜的靶子）。一组下拉 + 一条自定义模板，
+   而不是十四行「每家一颗开关」：那一格永远只用一家。 */
+"Selection Bubble engine" = "搜索走哪一家";
+"Selection Bubble engine row" = "搜索引擎";
+"Selection Bubble engine hint" = "只管「搜索」那一格：点了放大镜就开这一家。网页 AI 那几家多数不认网址里预填的查询，选它们时会先把这段字放进粘贴板，页面打开后 ⌘V 就能问；搜索引擎那六家不碰粘贴板。翻译那一格不走这里，它始终是网页翻译页。";
+"Selection Bubble engine group search" = "搜索引擎";
+"Selection Bubble engine group ai" = "网页 AI";
+"Selection Bubble engine group custom" = "自定义";
+"Selection Bubble custom URL" = "自定义 URL 模板";
+"Selection Bubble custom URL hint" = "只有上面选了「自定义」才吃这一栏。{query} 是占位符，点搜索时换成选中的字；不写 {query} 就只打开这一页，同时把那段字放进粘贴板等你 ⌘V（内网的搜索页、自建实例那一类都够用这一条）。这一栏空着、或者写得连 :// 都没有时，点的仍是默认那一家。";
+"Selection Bubble custom URL empty warning" = "自定义那一栏还没填成一个网址，现在点搜索走的仍是默认那一家。";
+"Selection Bubble auto paste" = "页面打开后替我贴一次";
+"Selection Bubble auto paste hint" = "只对那些**网址带不进关键词**的页面有效：网页 AI 那几家，以及你自定义里没写 {query} 的那一条。页面打开后等 1.2 秒，我们替你把刚复制的那句按一次 ⌘V 送进输入框。真能把字拼进网址的那六家（Google、必应、百度那一类）用不上这一条，开着也不会多按一次键。默认关着 —— 它投的是「此刻前台那个窗口」，网页还没把光标落进输入框时那一下可能打到地址栏；不放心就自己按，那句话一直在粘贴板里。真投之前还要再核两句：粘贴板里已经不是刚才那句、或前台已经换成我们自己的窗口，任一命中就什么都不做。";
+"Selection Bubble auto paste shortcut warning" = "上面的快捷键被录成了单纯的 ⌘V，这一手不能上场：我们投出去的那一下会又被自己监听成一次唤出，转圈开浏览器。换一组键（比如默认的 ⌃⌘B，或者给 ⌘V 再加一个修饰键）就能用。";
+/* 下拉里的专有名词：中文该译的只有三家，其余按各家自己的中文名写。 */
+"Selection bubble engine google" = "Google";
+"Selection bubble engine bing" = "必应";
+"Selection bubble engine duckduckgo" = "DuckDuckGo";
+"Selection bubble engine baidu" = "百度";
+"Selection bubble engine sogou" = "搜狗";
+"Selection bubble engine so360" = "360 搜索";
+"Selection bubble engine chatgpt" = "ChatGPT";
+"Selection bubble engine copilot" = "Copilot";
+"Selection bubble engine perplexity" = "Perplexity";
+"Selection bubble engine gemini" = "Gemini";
+"Selection bubble engine deepseek" = "DeepSeek";
+"Selection bubble engine doubao" = "豆包";
+"Selection bubble engine kimi" = "Kimi";
+"Selection bubble engine tongyi" = "通义";
+"Selection bubble engine custom" = "自定义";

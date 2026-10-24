@@ -51,7 +51,9 @@ final class ProximityLockPreferencesTests: XCTestCase {
             return XCTFail("侧栏缺少截图/靠近锁屏/关于其中一项")
         }
         XCTAssertEqual(proximity, screenshot + 1, "靠近锁屏要紧跟在截图页后面")
-        XCTAssertEqual(about, proximity + 1, "关于页始终排在最后")
+        // 「关于排在最后」只认下标，不写成 `proximity + 1`：往后每移植一个功能就往中间插一页，
+        // 那条相邻断言每插一次都要来改这里，而它想守的其实只是「关于不能跑到中间去」。
+        XCTAssertEqual(about, tabs.count - 1, "关于页始终排在最后")
         XCTAssertEqual(PreferencesTab.proximityLock.rawValue, "proximityLock",
                        "状态栏菜单只传 rawValue，键名一改入口就断")
     }

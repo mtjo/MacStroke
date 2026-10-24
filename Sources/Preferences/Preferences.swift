@@ -13,6 +13,7 @@ import Storage
 import EventCapture
 import RemoteControl
 import ProximityLock
+import SelectionPopup
 
 /// User preferences model - mirrors the design doc's PreferencesModel.
 public final class UserPreferences: ObservableObject {
@@ -404,6 +405,68 @@ public final class UserPreferences: ObservableObject {
         NotificationCenter.default.post(name: .macStrokeProximityLockDidChange, object: nil)
     }
 
+    // MARK: - Selection bubble（划词气泡）
+    // 移植版扩展（超出原版）。这一组不发通知：App 侧走 `UserDefaults.didChangeNotification`
+    // 比对快照（和截图那两条快捷键同一个路子），改完立刻起停监听，不需要偏好层主动喊。
+    // 哪些 App 不弹不在这里再配一份名单，直接复用「过滤」页那套黑白名单语义。
+    /// 总开关。关掉时监听整个卸掉 —— 不只是不弹，连左键的全局监听都不挂。
+    @Published public var enableSelectionPopup: Bool {
+        didSet { storage.setBool(enableSelectionPopup, forKey: .enableSelectionPopup) }
+    }
+    /// 手动唤出的全局快捷键，"keyCode=X, flags=Y"，同截图那两条的格式与生效方式。
+    @Published public var selectionPopupShortcut: String {
+        didSet { storage.setString(selectionPopupShortcut, forKey: .selectionPopupShortcut) }
+    }
+    /// 松手后隔多少毫秒去读选区。存数值，消费端夹进 50…1500。
+    @Published public var selectionPopupReadDelay: Int {
+        didSet { storage.setInt(selectionPopupReadDelay, forKey: .selectionPopupReadDelay) }
+    }
+    /// 触发方式一：划完字自动弹出。和总开关是两件事 —— 这条只关自动弹那一路，快捷键还在。
+    @Published public var selectionPopupAutoPop: Bool {
+        didSet { storage.setBool(selectionPopupAutoPop, forKey: .selectionPopupAutoPop) }
+    }
+    /// 触发方式二：手动快捷键那一路开不开。关掉它就不挂 ⌃⌘B，键位还给前台 App。
+    @Published public var selectionPopupShortcutEnabled: Bool {
+        didSet { storage.setBool(selectionPopupShortcutEnabled, forKey: .selectionPopupShortcutEnabled) }
+    }
+    // 气泡上四格各自的开关。四个独立属性而不是一个 Set：这一层的写法就是一个键一个属性，
+    // 换成集合要自己管编解码，而偏好页那四行本来就是四个 TrailingSwitch。
+    @Published public var selectionPopupActionCopy: Bool {
+        didSet { storage.setBool(selectionPopupActionCopy, forKey: .selectionPopupActionCopy) }
+    }
+    @Published public var selectionPopupActionSearch: Bool {
+        didSet { storage.setBool(selectionPopupActionSearch, forKey: .selectionPopupActionSearch) }
+    }
+    @Published public var selectionPopupActionTranslate: Bool {
+        didSet { storage.setBool(selectionPopupActionTranslate, forKey: .selectionPopupActionTranslate) }
+    }
+    @Published public var selectionPopupActionSpeak: Bool {
+        didSet { storage.setBool(selectionPopupActionSpeak, forKey: .selectionPopupActionSpeak) }
+    }
+    /// 「无障碍读不到时替用户按一次 ⌘C」那一手开不开。
+    /// 单独一颗而不是并进上面那一组：它动的是用户的粘贴板（虽然用完原样放回），
+    /// 有人就是不想让任何程序碰他复制的东西 —— 这一条得能在界面上单独否决。
+    @Published public var selectionPopupCopyFallback: Bool {
+        didSet { storage.setBool(selectionPopupCopyFallback, forKey: .selectionPopupCopyFallback) }
+    }
+    /// 搜索那一格走哪一家 —— 存 `SelectionBubbleSearchEngine` 的 rawValue（"google"、"chatgpt"…）。
+    /// 这一层只存**字符串**，不存枚举：和其它偏好键一样 `defaults read` 一眼读得懂，
+    /// 而且枚举将来往中间加一家也不会把已存的值顶歪。认不出来的串由消费端那一份退回默认。
+    @Published public var selectionPopupSearchEngine: String {
+        didSet { storage.setString(selectionPopupSearchEngine, forKey: .selectionPopupSearchEngine) }
+    }
+    /// 自定义那一档的 URL 模板（可含 `{query}` 占位符）。空串 = 没配，
+    /// 消费端会退回默认那一家（见 `SelectionBubbleSearchEngine.resolvedTemplate`）。
+    @Published public var selectionPopupSearchCustomURL: String {
+        didSet { storage.setString(selectionPopupSearchCustomURL, forKey: .selectionPopupSearchCustomURL) }
+    }
+    /// 打开那种「不吃 URL 预填」的网页 AI 之后，要不要再替用户按一次 ⌘V。默认关。
+    /// 单独一颗、且不并进上面那一家：这一手投的是**按键**，落点是「此刻前台那个窗口」，
+    /// 有人就是要自己按那一下。真值与闸都在 `SelectionBubbleSettings.searchAutoPaste` / `pasteGate`。
+    @Published public var selectionPopupAutoPaste: Bool {
+        didSet { storage.setBool(selectionPopupAutoPaste, forKey: .selectionPopupAutoPaste) }
+    }
+
     // MARK: - Legacy
     @Published public var showToast: Bool {
         didSet { storage.setBool(showToast, forKey: .showToast) }
@@ -490,6 +553,26 @@ public final class UserPreferences: ObservableObject {
         self.proximityLockDelay = Int(proximity.lockDelay)
         self.proximitySignalTimeout = Int(proximity.signalTimeout)
         self.proximityAutoUnlock = proximity.autoUnlock
+        // 划词气泡这一组跟靠近锁屏同一个路子：从 SelectionBubbleSettings.current 读，不逐键读。
+        // 延迟要过一遍模块的阈值校验，四格开关要看过滤后的结果 —— 界面显示的必须就是消费端
+        // 实际用的那一份，否则存着 999999 或全关的 plist 时，页面上是一组用不上的数。
+        let bubble = SelectionBubbleSettings.current(from: storage)
+        self.enableSelectionPopup = bubble.enabled
+        self.selectionPopupShortcut = bubble.shortcut
+        self.selectionPopupReadDelay = bubble.readDelayMilliseconds
+        self.selectionPopupAutoPop = bubble.autoPop
+        self.selectionPopupShortcutEnabled = bubble.shortcutEnabled
+        self.selectionPopupActionCopy = bubble.actions.contains(.copy)
+        self.selectionPopupActionSearch = bubble.actions.contains(.search)
+        self.selectionPopupActionTranslate = bubble.actions.contains(.translate)
+        self.selectionPopupActionSpeak = bubble.actions.contains(.speak)
+        self.selectionPopupCopyFallback = bubble.copyFallbackEnabled
+        // 下拉显示的是**消费端实际认下来**的那一家：存了个认不出的 id（手改过 plist、
+        // 从旧版本带过来）时，页面显示退回的默认家，而不是显示一条下拉里根本没有的串 ——
+        // 后者会画成空白，看上去像「页面坏了」，而实际是偏好坏了。
+        self.selectionPopupSearchEngine = bubble.searchEngine.rawValue
+        self.selectionPopupSearchCustomURL = bubble.searchCustomURL
+        self.selectionPopupAutoPaste = bubble.autoPasteAfterOpen
         self.showToast = storage.getBoolOptional(forKey: .showToast) ?? StorageDefaults.showToast
         self.clipboardHistoryLimit = storage.getIntOptional(forKey: .clipboardHistoryLimit) ?? StorageDefaults.clipboardHistoryLimit
     }
