@@ -29,7 +29,7 @@
 "AppleScript" = "AppleScript";
 "Filters" = "Filters";
 "Right Click" = "Right Click";
-"RightClickMenu" = "RightClickMenu";
+"RightClickMenu" = "Right-click extras";
 "Clipboard" = "Clipboard";
 "Screenshot" = "Screenshot";
 "Screenshot copied" = "Copied to clipboard";
@@ -419,6 +419,8 @@
 "Skipped Versions" = "Skipped Versions:";
 "Restore Skipped Versions" = "Restore Skipped Versions";
 "Skipped update records have been cleared." = "Skipped update records have been cleared.";
+"Skipped versions cleared" = "Cleared the skipped record for %@. The next automatic check will remind you again, or press Check Now above.";
+"Skipped versions cleared, rechecking" = "Cleared the skipped record for %@. Checking for updates again now.";
 
 /* Proximity Lock tab (port extension, not in the original) */
 "Proximity Lock" = "Proximity Lock";
@@ -538,3 +540,21 @@
 "Selection bubble engine kimi" = "Kimi";
 "Selection bubble engine tongyi" = "Tongyi";
 "Selection bubble engine custom" = "Custom";
+
+/* Hold the trigger button + scroll (issue #75, port extension; configured on the right-click page) */
+"Wheel Gesture" = "Hold the trigger button + scroll";
+"Wheel Gesture master" = "Enable scroll triggers";
+"Wheel Gesture master hint" = "The master switch. With it off the scroll listener is never armed, so every wheel tick goes back to the front app untouched — that is the original behaviour. The trigger button is the one recorded on the General page (right button by default).";
+"Wheel Gesture up row" = "Scroll up";
+"Wheel Gesture up hint" = "One notch is one trigger: a high-resolution wheel or a trackpad's inertia is folded into a single action, and that notch is swallowed so the page does not move. A direction set to “None” never swallows anything.";
+"Wheel Gesture down row" = "Scroll down";
+"Wheel Gesture up shortcut" = "Scroll-up shortcut";
+"Wheel Gesture down shortcut" = "Scroll-down shortcut";
+"Wheel Gesture shortcut hint" = "Only used when that direction is set to “Custom shortcut”. An empty recorder means that direction does nothing at all.";
+"Wheel Gesture action none" = "None";
+"Wheel Gesture action tab previous" = "Previous tab";
+"Wheel Gesture action tab next" = "Next tab";
+"Wheel Gesture action volume up" = "Volume up";
+"Wheel Gesture action volume down" = "Volume down";
+"Wheel Gesture action custom shortcut" = "Custom shortcut";
+"Wheel Gesture no action warning" = "Neither direction has an action — the feature is on, but nothing will happen.";

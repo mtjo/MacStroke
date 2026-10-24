@@ -97,6 +97,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var eventCapture: EventCapture?
     private var canvasManager: CanvasManager?
     private var ruleEngine: RuleEngine?
+    /// 「右键 + 滚轮」触发后的那一下（切标签页 / 音量 / 自定义快捷键，issue #75）。
+    /// 与规则动作用同一套投键出口（`ActionExecutor` 的 `.shortcut`），音量走 CoreAudio。
+    private let wheelGestureExecutor = WheelGestureExecutor()
     private var ruleStore: RuleStore?
     private var preferencesWindow: PreferencesWindowController?
     private var historyClipboardWindow: HistoryClipboardListWindowController?
@@ -178,6 +181,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return self.storage.getBoolOptional(forKey: .swallowUnmatchedGesture)
                 ?? StorageDefaults.swallowUnmatchedGesture
         }
+
+        // 按住起始键 + 滚轮上/下 = 两条独立触发（issue #75）。
+        //
+        // 三件套各读各的偏好，都是「下一次事件就生效」的口径：
+        // - 总开关决定要不要给这段窗口上膛第二条 tap（关 = 压根不建、不发一次 tapEnable）；
+        // - 方向 → 动作的查表在 RuleEngine 的 `WheelGesturePlan`，这里只做「读偏好 + 递进去」；
+        // - 键值串只认 `ShortcutMonitor.parseShortcut` 那一份口径，解析完再递给纯函数
+        //   （再抄一条正则就是第三处会漂移的解析，划词气泡那边已经吃过一次）。
+        canvas.isWheelGestureEnabled = { [weak self] in
+            guard let self = self else { return false }
+            return self.storage.getBoolOptional(forKey: .wheelGestureEnabled)
+                ?? StorageDefaults.wheelGestureEnabled
+        }
+        canvas.wheelCaptureArmer = { [weak self] armed in
+            self?.eventCapture?.setWheelCaptureArmed(armed)
+        }
+        canvas.onWheelGesture = { [weak self] direction in
+            guard let self = self else { return false }
+            let up = direction == .up
+            let kind = WheelGestureActionKind(preferenceValue: self.storage.getIntOptional(
+                forKey: up ? .wheelGestureUpAction : .wheelGestureDownAction
+            ) ?? (up ? StorageDefaults.wheelGestureUpAction : StorageDefaults.wheelGestureDownAction))
+            let rawShortcut = self.storage.getStringOptional(
+                forKey: up ? .wheelGestureUpShortcut : .wheelGestureDownShortcut
+            ) ?? (up ? StorageDefaults.wheelGestureUpShortcut : StorageDefaults.wheelGestureDownShortcut)
+            let custom = rawShortcut.isEmpty ? nil : ShortcutMonitor.parseShortcut(rawShortcut)
+            return self.wheelGestureExecutor.fire(kind: kind, customShortcut: custom)
+        }
+        capture.wheelDelegate = canvas
 
         // Initialize rule store / engine. The pre-3.0 build archived its rules
         // in UserDefaults while this one keeps rules.json, so an upgraded
@@ -809,16 +841,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    /// About tab「恢复已跳过的版本」：用户在更新窗点过「跳过这个版本」后，Sparkle 把
-    /// 版本号写进这三个键（普通/大版本/大版本的小更新各一个），之后自动检查就永远
-    /// 跳过那一版。清掉记录并重置检查节奏，下一轮检查就会重新提醒。
+    /// About tab「恢复提醒」：用户在更新窗点过「跳过这个版本」后，Sparkle 把版本号写进
+    /// 那三个键（普通/大版本/大版本的小更新各一个），之后**只有自动检查**会永远跳过那一版
+    /// （`SUAppcastDriver` 里 `background ? skippedUpdateForHost : nil`，手动「立即检查更新」
+    /// 从来不受影响）。清记录本身是一瞬间的事，问题全在「清完没有任何东西会变」：
+    /// `resetUpdateCycle` 只重排定时器、不补检查，唯一的反馈是一条可能被勿扰压掉的系统通知，
+    /// 于是用户只能判断成「点了没反应」。所以这里三件事一起做：
+    /// 1. 清完把清掉了哪几版回传给偏好页，页面上那行当场从版本号变回「无」（按钮同时转灰）；
+    /// 2. 重置检查节奏，顺带清掉温和提醒的计时（`resetTimeSinceOpportuneUpdateNotice`）；
+    /// 3. 开着自动检查时当场补一次后台检查 —— 这正是「恢复提醒」四个字要发生的事，
+    ///    红点和通知当场回来，不用等下一个 12 小时。自动检查关着就不补（那是用户明确
+    ///    不要后台检查），页面提示改用上面那行「立即检查更新」。
     @objc func restoreSkippedUpdate(_ notification: Notification) {
-        let keys = ["SUSkippedVersion", "SUSkippedMajorVersion", "SUSkippedMajorSubreleaseVersion"]
-        for key in keys {
-            UserDefaults.standard.removeObject(forKey: key)
+        let cleared = SparkleSkippedVersions.clear()
+        let rechecking = !cleared.isEmpty && updaterController?.updater.automaticallyChecksForUpdates == true
+        NotificationCenter.default.post(
+            name: .macStrokeSkippedUpdateDidChange,
+            object: nil,
+            userInfo: ["cleared": cleared, "rechecking": rechecking])
+        guard !cleared.isEmpty else {
+            // 本来就没有跳过记录：不能报「已清除」，那等于把没发生过的事说成发生过。
+            NSLog("%@", "[AppDelegate] Restore skipped updates: nothing was skipped")
+            return
         }
-        updaterController?.updater.resetUpdateCycle()
-        NSLog("%@", "[AppDelegate] Cleared skipped update records: \(keys)")
+        guard let updater = updaterController?.updater else {
+            NSLog("%@", "[AppDelegate] Restore skipped updates: cleared \(cleared) but no updater to re-arm")
+            return
+        }
+        updater.resetUpdateCycle()
+        NSLog("%@", "[AppDelegate] Cleared skipped update records: \(cleared)")
+        if rechecking {
+            updater.checkForUpdatesInBackground()
+        }
         postMacStrokeToast(L("Skipped update records have been cleared."))
     }
 

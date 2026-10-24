@@ -119,6 +119,10 @@ public extension Notification.Name {
     /// Ask the AppDelegate to forget the versions the user chose "Skip this
     /// version" for, and to re-arm the scheduled check (About tab).
     static let macStrokeRestoreSkippedUpdate = Notification.Name("MacStrokeRestoreSkippedUpdate")
+    /// The AppDelegate finished handling that request. `userInfo["cleared"]` carries
+    /// the version numbers it actually removed (empty = nothing had been skipped), so
+    /// the About tab can say so in place instead of relying on a notification banner.
+    static let macStrokeSkippedUpdateDidChange = Notification.Name("MacStrokeSkippedUpdateDidChange")
 }
 
 /// Original feedback channel for confirmations and guards: a banner-style
@@ -141,6 +145,9 @@ struct ShortcutRecorder: NSViewRepresentable {
     /// released (the gesture-suppression row, issue #59).
     var modifiersOnly = false
     @Environment(\.colorScheme) private var colorScheme
+    /// 外面那层 `.disabled(...)` 的真值。SwiftUI 不会把它转达给 `NSView`（既不画灰也不挡
+    /// 点击），必须自己取出来交给视图 —— 见 `ShortcutRecorderView.controlEnabled`。
+    @Environment(\.isEnabled) private var isEnabled
 
     /// The scheme this page is actually drawing in, translated for the AppKit view.
     /// SwiftUI hands a representable its own appearance and on macOS 26/27 that one
@@ -154,6 +161,7 @@ struct ShortcutRecorder: NSViewRepresentable {
         let view = ShortcutRecorderView()
         view.drawAppearance = hostAppearance
         view.modifiersOnly = modifiersOnly
+        view.controlEnabled = isEnabled
         // Show the persisted shortcut (e.g. the ⌘V default) right away.
         if let parsed = Self.parse(text) {
             view.keyCode = parsed.keyCode
@@ -175,6 +183,7 @@ struct ShortcutRecorder: NSViewRepresentable {
 
     func updateNSView(_ nsView: ShortcutRecorderView, context: Context) {
         nsView.modifiersOnly = modifiersOnly
+        nsView.controlEnabled = isEnabled
         if nsView.drawAppearance?.name != hostAppearance?.name {
             nsView.drawAppearance = hostAppearance
         }
@@ -1510,7 +1519,16 @@ private struct RightClicksTable: NSViewRepresentable {
 
 // MARK: - RightClickMenu Tab
 // Original: enable right click menu + item toggles + terminal picker.
-
+//
+// 页名从原版的「右键菜单」改成「右键增强」（issue #75）：这一页原本只有 Finder 那几项
+// 开关，现在又多了一段「按住右键 + 滚轮」的两条触发 —— 那已经不是 Finder 右键菜单的事了，
+// 继续叫「右键菜单」会让人以为滚轮触发要去 Finder 里找。
+// 另一页 `.rightClick`「模拟右键」（哪些应用转发原生菜单的 bundle ID 名单）保持原名，
+// 两页因此也不会看着像同一件事。
+//
+// 滚轮那段为什么放这一页而不是常规页：常规页已经是最满的一页（issue #53 的起手键、
+// issue #59 的修饰键让位都塞在底部），再压五项下去会把导入/导出顶出可视区，
+// 而用户要找「右键+滚轮」本来就会先翻到右键这一页（同一口径见划词气泡独立页）。
 struct RightClickMenuTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
@@ -1581,7 +1599,121 @@ struct RightClickMenuTabView: View {
                 }
             }
             .padding(.leading, 22)
+
+            wheelGestureSection
         }
+    }
+
+    // MARK: - 按住起始键 + 滚轮（issue #75，移植版新增，原版没有）
+
+    /// 一颗总开关 + 上下各一条独立触发（各一个动作下拉），自定义那档再给一个录入框。
+    ///
+    /// 两条方向各配一档、不做成「一行里塞两个下拉」：issue #75 要的就是「分别添加」，
+    /// 一行一个方向读起来才是「上滚干什么、下滚干什么」；两档也共用一份候选集，
+    /// 不会出现某一方向少配一个选项（同一口径见 issue #53/#59 的「一个能力一组控件」）。
+    ///
+    /// 所有控件都画出来、只灰不藏：藏掉会让人以为功能少做了两行（划词气泡那页同一条）。
+    private var wheelGestureSection: some View {
+        SettingsSection(title: L("Wheel Gesture")) {
+            SettingsCard {
+                SettingsRow(L("Wheel Gesture master")) {
+                    TrailingSwitch(isOn: $viewModel.wheelGestureEnabled)
+                }
+                hint(L("Wheel Gesture master hint"))
+                RowDivider()
+                SettingsRow(L("Wheel Gesture up row")) {
+                    actionPicker(selection: $viewModel.wheelGestureUpAction)
+                        .disabled(!viewModel.wheelGestureEnabled)
+                }
+                hint(L("Wheel Gesture up hint"))
+                RowDivider()
+                SettingsRow(L("Wheel Gesture down row")) {
+                    actionPicker(selection: $viewModel.wheelGestureDownAction)
+                        .disabled(!viewModel.wheelGestureEnabled)
+                }
+                RowDivider()
+                SettingsRow(L("Wheel Gesture up shortcut")) {
+                    ShortcutRecorder(text: $viewModel.wheelGestureUpShortcut)
+                        .frame(width: 200, height: 28)
+                }
+                .disabled(!canUseUpShortcut)
+                hint(L("Wheel Gesture shortcut hint"))
+                RowDivider()
+                SettingsRow(L("Wheel Gesture down shortcut")) {
+                    ShortcutRecorder(text: $viewModel.wheelGestureDownShortcut)
+                        .frame(width: 200, height: 28)
+                }
+                .disabled(!canUseDownShortcut)
+            }
+
+            // 两档都选了「无」是「功能开着但整件事不会发生」的唯一一种配法，界面上必须说破，
+            // 否则用户只会以为这功能坏了（划词气泡四格全关那条同一个处理）。
+            if viewModel.wheelGestureEnabled && bothDirectionsDoNothing {
+                Text(L("Wheel Gesture no action warning"))
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private func actionPicker(selection: Binding<Int>) -> some View {
+        Picker("", selection: selection) {
+            ForEach(WheelGestureActionKind.allCases, id: \.self) { kind in
+                Text(L(actionTitleKey(kind))).tag(kind.rawValue)
+            }
+        }
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    /// 下拉里那一行的本地化 key。档位定义在 RuleEngine（那边要拿去执行），显示文案留在这里：
+    /// 让执行层反过来依赖文案层，单元测试就得连字符串一起验。
+    private func actionTitleKey(_ kind: WheelGestureActionKind) -> String {
+        switch kind {
+        case .none: return "Wheel Gesture action none"
+        case .tabPrevious: return "Wheel Gesture action tab previous"
+        case .tabNext: return "Wheel Gesture action tab next"
+        case .volumeUp: return "Wheel Gesture action volume up"
+        case .volumeDown: return "Wheel Gesture action volume down"
+        case .customShortcut: return "Wheel Gesture action custom shortcut"
+        }
+    }
+
+    /// 快捷键录入框只在自己那一档是「自定义快捷键」时才能点。
+    private var canUseUpShortcut: Bool {
+        viewModel.wheelGestureEnabled
+            && viewModel.wheelGestureUpAction == WheelGestureActionKind.customShortcut.rawValue
+    }
+    private var canUseDownShortcut: Bool {
+        viewModel.wheelGestureEnabled
+            && viewModel.wheelGestureDownAction == WheelGestureActionKind.customShortcut.rawValue
+    }
+
+    /// 选了「自定义快捷键」但录入框还是空的 —— 那跟选了「无」一样不会动，一并算进提醒里，
+    /// 免得用户录了个「无」还以为自己配好了。
+    private var bothDirectionsDoNothing: Bool {
+        doesNothing(viewModel.wheelGestureUpAction, viewModel.wheelGestureUpShortcut)
+            && doesNothing(viewModel.wheelGestureDownAction, viewModel.wheelGestureDownShortcut)
+    }
+
+    private func doesNothing(_ action: Int, _ shortcut: String) -> Bool {
+        if action == WheelGestureActionKind.none.rawValue { return true }
+        if action == WheelGestureActionKind.customShortcut.rawValue { return shortcut.isEmpty }
+        return false
+    }
+
+    /// 卡片里那行小字（和截图页、划词气泡页同一个排法）。
+    private func hint(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
     }
 
     /// Original: every toggle on this page re-runs `initRightClickMenu`, which
@@ -1823,11 +1955,7 @@ struct AboutTabView: View {
                 RowDivider()
                 SettingsRow(L("Author: mtjo.net@gmail.com"))
                 RowDivider()
-                SettingsRow(L("Skipped Versions")) {
-                    Button(L("Restore Skipped Versions")) {
-                        NotificationCenter.default.post(name: .macStrokeRestoreSkippedUpdate, object: nil)
-                    }
-                }
+                SkippedUpdateRowView()
             }
 
             READMEWebView()
@@ -1878,6 +2006,80 @@ enum SettingsChrome {
 
 /// Page container for form tabs: scrolls, centers the content column and
 /// paints the System Settings background.
+/// 关于页「已跳过的版本」那一行：值 + 恢复按钮 + 点完就地留一句结果。
+///
+/// 这一行原来只是 `SettingsRow(L("Skipped Versions")) { Button … }` —— 标题带个冒号，
+/// 冒号后面永远空着，按钮点完页面上也没有任何东西会变（唯一的反馈是一条系统通知，
+/// 而勿扰能整个压掉它）。用户据此报「已跳过版本后面是空的，点恢复没反应」，两条都成立。
+///
+/// 单独抽成一个视图有两个理由：一是它自带状态（读 Sparkle 那三个键、订阅 defaults 变化），
+/// 混在 `AboutTabView` 里就没法离屏渲染取证 —— 那一页还挂着 README 的 WKWebView；
+/// 二是 `defaults` 可注入，测试用独立 suite，不必往真的 `UserDefaults.standard` 写。
+struct SkippedUpdateRowView: View {
+    var defaults: UserDefaults = .standard
+
+    /// 当前跳过的版本号。不每次在 body 里现读：SwiftUI 只在状态变了才重画，
+    /// 现读会让这一行停在第一次渲染的值上。
+    @State private var skippedVersions: [String] = []
+    /// 点过「恢复提醒」之后就地留的一句话。反馈必须落在页面上 —— 通知那条通道不可靠。
+    @State private var note: String?
+
+    var body: some View {
+        Group {
+            SettingsRow(L("Skipped Versions")) {
+                HStack(spacing: 8) {
+                    Text(skippedVersions.isEmpty ? L("None") : skippedVersions.joined(separator: ", "))
+                        .foregroundColor(.secondary)
+                    Button(L("Restore Skipped Versions")) {
+                        NotificationCenter.default.post(name: .macStrokeRestoreSkippedUpdate, object: nil)
+                    }
+                    // 一格都没跳过时没有可恢复的东西：灰着说破，比点下去毫无动静强。
+                    .disabled(skippedVersions.isEmpty)
+                }
+            }
+            if let note {
+                Text(note)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 6)
+            }
+        }
+        .onAppear { reload() }
+        // 用户在 Sparkle 的更新窗里点「跳过这个版本」改的是同三个键，这边跟着刷新，
+        // 不然刚跳完回到这一页还是一片空白。
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            reload()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macStrokeSkippedUpdateDidChange)) { change in
+            reload()
+            guard let cleared = change.userInfo?["cleared"] as? [String], !cleared.isEmpty else { return }
+            note = Self.resultText(cleared: cleared,
+                                   rechecking: change.userInfo?["rechecking"] as? Bool ?? false)
+        }
+    }
+
+    /// 结果句的成文。单独抽成一个静态函数，是因为位图像素量不出**字形内容**：
+    /// `String(format:)` 漏掉参数时页面照样「多出一行字」，可那行里躺着的是 `%@`
+    /// 而不是版本号 —— 用户看到的还是「点了没告诉我清了哪个版」。用例直接钉这句话。
+    static func resultText(cleared: [String], rechecking: Bool) -> String {
+        String(format: rechecking ? L("Skipped versions cleared, rechecking") : L("Skipped versions cleared"),
+               cleared.joined(separator: ", "))
+    }
+
+    /// 只在值真的变了时才写 @State：`UserDefaults.didChangeNotification` 很密
+    /// （本页任何一次偏好写入都会来一趟），无脑赋值等于让这一行跟着每次写入重画。
+    private func reload() {
+        let next = SparkleSkippedVersions.versions(in: defaults)
+        guard next != skippedVersions else { return }
+        skippedVersions = next
+        // 又出现了跳过记录（多半是刚在更新窗点了「跳过这个版本」），上一句「已清除」就作废。
+        if !next.isEmpty { note = nil }
+    }
+}
+
 struct SettingsPage<Content: View>: View {
     @ViewBuilder var content: () -> Content
 

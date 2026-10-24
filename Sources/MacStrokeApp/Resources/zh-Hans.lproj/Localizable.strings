@@ -29,7 +29,9 @@
 "AppleScript" = "AppleScript";
 "Filters" = "过滤";
 "Right Click" = "右键";
-"RightClickMenu" = "右键菜单";
+/* 页名从原版的「右键菜单」改为「右键增强」：这一页除了 Finder 那几项开关，现在还管着
+   「按住起手键 + 滚轮」两条触发（issue #75），叫「右键菜单」会让人以为滚轮触发要去 Finder 里找。 */
+"RightClickMenu" = "右键增强";
 "Clipboard" = "剪贴板";
 "Screenshot" = "截图";
 "Screenshot copied" = "已复制到剪贴板";
@@ -421,6 +423,8 @@
 "Skipped Versions" = "已跳过的版本：";
 "Restore Skipped Versions" = "恢复提醒";
 "Skipped update records have been cleared." = "已清除跳过记录，下次检查会重新提醒。";
+"Skipped versions cleared" = "已清除 %@ 的跳过记录。下一次自动检查会重新提醒；不想等就按上面的「立即检查更新」。";
+"Skipped versions cleared, rechecking" = "已清除 %@ 的跳过记录，正在重新检查更新。";
 
 /* 靠近锁屏页（移植版新增，原版没有） */
 "Proximity Lock" = "靠近锁屏";
@@ -541,3 +545,21 @@
 "Selection bubble engine kimi" = "Kimi";
 "Selection bubble engine tongyi" = "通义";
 "Selection bubble engine custom" = "自定义";
+
+/* 按住起手键 + 滚轮（issue #75，移植版新增，配置项在「右键增强」页） */
+"Wheel Gesture" = "按住起手键 + 滚轮";
+"Wheel Gesture master" = "启用滚轮触发";
+"Wheel Gesture master hint" = "总开关。关掉时那条滚轮监听压根不上膛，每一发滚轮都原样交回前台应用——就是原版行为。起手键是常规页里录的那一颗，默认右键。";
+"Wheel Gesture up row" = "上滚";
+"Wheel Gesture up hint" = "一格算一次触发：高分辨率滚轮和触控板的惯性会被折成一下，且这一格会被吞掉，页面不会跟着滚。哪一方向配成「无」，那一方向一个事件都不拦。";
+"Wheel Gesture down row" = "下滚";
+"Wheel Gesture up shortcut" = "上滚的快捷键";
+"Wheel Gesture down shortcut" = "下滚的快捷键";
+"Wheel Gesture shortcut hint" = "只有那一方向选了「自定义快捷键」才用得上；录入框空着（点右边的清除）就等于那一方向什么都不做。";
+"Wheel Gesture action none" = "无";
+"Wheel Gesture action tab previous" = "上一个标签页";
+"Wheel Gesture action tab next" = "下一个标签页";
+"Wheel Gesture action volume up" = "音量 +1 档";
+"Wheel Gesture action volume down" = "音量 −1 档";
+"Wheel Gesture action custom shortcut" = "自定义快捷键";
+"Wheel Gesture no action warning" = "两个方向都没有配动作——功能是开着的，但什么都不会发生。";
