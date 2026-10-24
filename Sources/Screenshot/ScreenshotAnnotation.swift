@@ -21,6 +21,7 @@
 
 import AppKit
 import CoreGraphics
+import CoreText
 import Storage
 
 /// 用户在工具条上选的字。
@@ -125,11 +126,93 @@ public struct ScreenshotAnnotation: Equatable {
 
     /// 字号 + 粗斜体 → 字体。单独拆出来是给就地输入框用的：打字时看到的那套字，
     /// 和落笔后烘进成品图的那套必须是同一条式子，否则回车一瞬间字就跳。
+    ///
+    /// 注意这条只管**有斜体脸的那一段**（拉丁、西里尔…）。中文不在这里解决 ——
+    /// 见 `italicStyledText(_:font:color:flipped:)`，那一手才是 issue #73 的修复。
     public static func font(size: CGFloat, bold: Bool, italic: Bool) -> NSFont {
         var font = NSFont.systemFont(ofSize: size)
         if bold { font = NSFontManager.shared.convert(font, toHaveTrait: .boldFontMask) }
         if italic { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
         return font
+    }
+
+    // MARK: - 中文的斜体要自己造（issue #73：beck023「英文可以设置斜体,但是中文设置了不生效」）
+
+    /// 合成斜体（synthesized oblique）的剪切量，就是 tanθ。0.2 ≈ 11.3°，和 SF 真斜体
+    /// 自己的倾角同一档 —— 中文补的这一点斜必须跟旁边英文真斜体看上去是一路的字，
+    /// 再大就成了歪，再小就看不出勾了斜体。
+    public static let italicShear: CGFloat = 0.2
+
+    /// 这张脸到底有没有斜体：把它交给 `NSFontManager` 加一档 italic，名字变了才算真有其脸。
+    /// `.SFNS-RegularItalic` → 还是它（有脸）；`PingFang SC` → 也还是它（**没脸**）。
+    /// 本机取证：`NSFont(name: "PingFang SC Regular")` 加 italic 之后 `fontName` 一个字符都没变，
+    /// 成品图上「中」按这条老路画出来斜差 0.00（同一把尺子量拉丁真斜体是 +4.86）——
+    /// 系统里根本没有中文斜体字面，转换只能原样把正体还回来，这就是「勾了斜体没反应」的
+    /// 全部真相，不是我们把开关接漏了。
+    static func hasItalicFace(_ font: NSFont) -> Bool {
+        NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask).fontName != font.fontName
+    }
+
+    /// 给整张字补一圈剪切矩阵。
+    ///
+    /// 只加 x ← y 这一项：基线（y=0）上的推进量一个像素都不动，所以量宽、底框、命中、
+    /// 选区钳制四条路径全跟着原样，变的只有观感 —— 这是选它而不选「画之前 concatenate 一个
+    /// CTM」的原因，后者要把外框一起重算。
+    ///
+    /// 符号跟设备 y 轴走，而这个**只能量出来、不能推出来**：成品图侧同一条「中」实测
+    /// （48pt，正体斜差 0.00 当原点）—— flipped 上下文里给负号剪切量出 **−4.61，是向左倒**，
+    /// 换正号才和拉丁真斜体同一侧（同一把尺子量「A」＝ +4.86）。三条绘制路径（屏上遮罩、
+    /// 预览、导出）都在 flipped 视图里，所以 flipped 那一档取**正**号。写反不是「看不出来」，
+    /// 是画出一部向左倒的倒斜体 —— 所以这一条交给 `ScreenshotItalicTests` 的数字判据钉住。
+    public static func oblique(_ font: NSFont, flipped: Bool) -> NSFont {
+        var matrix = CGAffineTransform(a: 1, b: 0, c: flipped ? italicShear : -italicShear, d: 1, tx: 0, ty: 0)
+        return CTFontCreateCopyWithAttributes(font, font.pointSize, &matrix, nil) as NSFont
+    }
+
+    /// 一行字按「每个字实际吃到哪张脸」分段排版：真斜体脸在的那段（拉丁）一个字都不动，
+    /// 回退到没斜体脸的那段（中文、日文、emoji…）换成剪切版。
+    ///
+    /// 逐字问 CoreText 要它实际选中的脸，而不是按字符表猜「这段算不算中文」—— 以后系统
+    /// 真给某个字加了斜体字面，`hasItalicFace` 会答 true，这一手自己就退场，不用回来删代码。
+    /// 不勾斜体时原样返回单段正体，正体那条路径的字节数都不变。
+    public static func italicStyledText(_ text: String, font: NSFont, color: NSColor,
+                                        flipped: Bool) -> NSAttributedString {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let traits = NSFontManager.shared.traits(of: font)
+        guard traits.contains(.italicFontMask), !text.isEmpty else {
+            return NSAttributedString(string: text, attributes: attributes)
+        }
+        let string = text as NSString
+        let sheared = oblique(font, flipped: flipped)
+        let result = NSMutableAttributedString()
+        var index = 0
+        while index < string.length {
+            let resolved = face(for: string, at: index, in: font)
+            var end = index + resolved.length
+            // 连续同一张字的片段合成一段：一个字一个 run 会让一行三十个汉字变成三十段。
+            while end < string.length {
+                let next = face(for: string, at: end, in: font)
+                if next.name != resolved.name { break }
+                end += next.length
+            }
+            // 同一张脸内部再分「有没有斜体脸」：正体脸才补剪切，真斜体脸保持原样。
+            let needsShear = resolved.name != font.fontName && !hasItalicFace(resolved.font)
+            result.append(NSAttributedString(
+                string: string.substring(with: NSRange(location: index, length: end - index)),
+                attributes: [.font: needsShear ? sheared : font, .foregroundColor: color]))
+            index = end
+        }
+        return result
+    }
+
+    /// 某个位置上实际吃到的那张脸。代理对（emoji、部分生僻字）整对一起算，
+    /// 不然把一个字符劈成两半，CoreText 会给回一张替代字体的脸，分段就裂了。
+    private static func face(for string: NSString, at index: Int, in font: NSFont)
+        -> (font: NSFont, name: String, length: Int) {
+        let unit = string.character(at: index)
+        let length = (0xD800...0xDBFF).contains(unit) && index + 1 < string.length ? 2 : 1
+        let resolved = CTFontCreateForString(font, string, CFRange(location: index, length: length)) as NSFont
+        return (resolved, resolved.fontName, length)
     }
 
     /// 字本身量出来的大小（不含内边距）。量的是**组合后的字体**，所以勾上粗体/斜体之后
@@ -295,11 +378,17 @@ public struct ScreenshotAnnotation: Equatable {
             outline.lineWidth = textBorderWidth
             outline.stroke()
         }
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: textFont,
-            .foregroundColor: color,
-        ]
-        NSAttributedString(string: text, attributes: attributes).draw(at: start)
+        // 斜体要分段画：拉丁吃真斜体脸、中文那一段补合成剪切（issue #73）。正体仍走单段，
+        // 少一次分段也就少一遍逐字解析。flipped 从**当前上下文**读，三条绘制路径都是 flipped
+        // 视图，兜底给 true 是因为量过的斜向只在 flipped 下成立。
+        let styled = italic
+            ? Self.italicStyledText(text, font: textFont, color: color,
+                                    flipped: NSGraphicsContext.current?.isFlipped ?? true)
+            : NSAttributedString(string: text, attributes: [
+                .font: textFont,
+                .foregroundColor: color,
+            ])
+        styled.draw(at: start)
     }
 
     /// 底和框共用的一条圆角路径：短边不到两倍圆角时把圆角收到短边一半，否则

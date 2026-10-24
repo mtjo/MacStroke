@@ -53,6 +53,10 @@ public struct ScreenshotToolStyle: Equatable {
 
     /// 这套值对应的字体。就地输入框照着它排版，注解自己也算它 —— 两边必须同源，
     /// 否则回车那一瞬间字会跳一下（见 `ScreenshotAnnotation.font(size:bold:italic:)`）。
+    ///
+    /// 「同源」只管到**有斜体脸的那一段**：就地框里中文仍是正的，落笔才斜（issue #73 补的
+    /// 那一手剪切只加在成品图上）。这是取舍不是漏改 —— 输入中途给框重排样式会打断中文
+    /// 输入法的候选串，而那正是这条要服务的人。拉丁两侧都吃同一张真斜体脸，不跳。
     public var textFont: NSFont {
         ScreenshotAnnotation.font(size: fontSize, bold: bold, italic: italic)
     }
