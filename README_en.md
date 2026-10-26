@@ -6,6 +6,7 @@ MacStroke
 ![MacStroke](https://github.com/mtjo/MacStroke/raw/release/logo.png)
 
 ### Configurable global mouse gesture for macOS.
+
 > MacStroke is a gesture-recognition application for macOS. A gesture is a movement you make with the mouse while holding down a specific mouse button. If MacStroke recognizes the stroke, it performs the action attached to it.
 > Today that means: emulate a key or shortcut, type text or a password, run an AppleScript, click at a coordinate, copy text into the clipboard, or open the screenshot capture. On top of the gestures, 3.x adds the clipboard history, phone remote control over the LAN, screenshot / scrolling screenshot / screen recording, Bluetooth proximity lock, and a bubble on selected text. MacStroke tries to provide an intuitive and efficient user interface while remaining highly configurable and offering many advanced features.
 
@@ -85,6 +86,7 @@ brew install --cask mtjo/tap/macstroke
 > To bring the official cask back: move the release build to a Developer ID signature plus notarization, then send homebrew-cask a PR bumping the version and dropping `disable!`. After installing, remember to grant Accessibility by hand (see "Permissions" above).
 
 ### Feedback
+
 [Bugs & suggestions](https://github.com/mtjo/MacStroke/issues)
 
 ### If the software is useful, share it with your friends and family — and a star and a fork help (homebrew has hard requirements about it)
