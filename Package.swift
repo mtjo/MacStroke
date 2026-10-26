@@ -139,7 +139,9 @@ let package = Package(
             dependencies: ["EventCapture"]),
         .testTarget(
             name: "RuleEngineTests",
-            dependencies: ["RuleEngine"]),
+            // Storage 只进**用例**这一侧：`BlackWhiteFilterTests` 要拿注册表那张表和 `StorageKey`
+            // 对键名（issue #76 的契约），而产品侧 RuleEngine 依旧不许依赖 Storage。
+            dependencies: ["RuleEngine", "Storage"]),
         .testTarget(
             name: "StorageTests",
             dependencies: ["Storage", "EventCapture"]),
