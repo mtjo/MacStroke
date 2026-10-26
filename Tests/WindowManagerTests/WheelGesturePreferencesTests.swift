@@ -17,7 +17,8 @@
 //  - **W2** 总开关没把两个录入框一起灰掉（NSView 那侧收不到环境值就是这种坏）
 //  - **W3** 上下两个下拉接成同一份绑定 → 只换上滚 与 只换下滚 必须互不相同，
 //          且**各自动自己那一行**（另一行在带子里必须没动静）
-//  - **W4** 录入框不看自己那一档 / 串没接到自己那格（两条带子左右各钉一头）
+//  - **W4** 录入框不看自己那一档 / 串没接到自己那格（两条带子左右各钉一头）；
+//          另加一条专咬 binding 写串（四个互不相同的键，只改一头看另一头 —— 反向变异 P2）
 //  - **W5** 那句「两个方向都没配动作」的橙字常驻或压根没画
 //  每条都拿「另一档状态」当参照物，不数绝对阈值 —— 这个套路是从 M52 那一回学来的：
 //  当时只看「整页有没有差」，开关自己那一小块的差把「滑杆没灰」整个盖掉，变异跑完全绿。
@@ -278,6 +279,52 @@ final class WheelGesturePreferencesTests: XCTestCase {
                              "把键只写进上格和只写进下格，渲出来一样：两个录入框共用了串")
     }
 
+    /// W3 钉的是「动作下拉」各接各的绑定，这条钉「快捷键录入框」：上滚那格录的键
+    /// 只许落在上滚那一行（反向变异表里 P2 上一轮漏的就是这一条）。
+    ///
+    /// 为什么上面那条 W4 抓不到串线：它两个方向填的是**同一个** keycode，
+    /// `ShortcutRecorder(text: $wheelGestureUpShortcut)` 与 `$wheelGestureDownShortcut` 一旦写串，
+    /// 页面画出来的字还是一模一样 —— 判据看不见任何差别。这条用四个互不相同的键，
+    /// 只改一个方向，要求「自己那一行动、另一行不动」同时成立。
+    /// 坏法发生在 `PreferencesView` 里那两个 `ShortcutRecorder(text:)` 的 binding：
+    /// 用户给上滚录的键存进了下滚那格，issue #75 要的「两条独立触发」当场退化成一条。
+    func testEachDirectionRecorderFollowsItsOwnShortcut() throws {
+        // 两个方向各先钉一个「光杆 ⌘ + 一个字母」，改动版一律加满四个修饰键
+        // （0x100000|0x80000|0x40000|0x20000）：这样那一行的字一定挪位，带子里点数得到。
+        // 只换一个字母（⌘V→⌘X）不算：录入框居中排字，改一个字形采不到 20 个点，自检会假红。
+        let upKey = "keyCode=9, flags=1048576"             // ⌘V
+        let otherUpKey = "keyCode=9, flags=1966080"        // ⌘⌥⌃⇧V
+        let downKey = "keyCode=8, flags=1048576"           // ⌘C
+        let otherDownKey = "keyCode=8, flags=1966080"      // ⌘⌥⌃⇧C
+
+        apply(enabled: true, up: .customShortcut, down: .customShortcut,
+              upShortcut: upKey, downShortcut: downKey)
+        let base = try render(name: "wheel-rec-binding-base")
+
+        apply(enabled: true, up: .customShortcut, down: .customShortcut,
+              upShortcut: otherUpKey, downShortcut: downKey)
+        let upChanged = try render(name: "wheel-rec-binding-up")
+
+        apply(enabled: true, up: .customShortcut, down: .customShortcut,
+              upShortcut: upKey, downShortcut: otherDownKey)
+        let downChanged = try render(name: "wheel-rec-binding-down")
+
+        // 带子自检：先证明这一带里确实有字在动，才拿它去判串没串。
+        XCTAssertGreaterThan(try changedPixels(base, upChanged, name: "上录入带自检",
+                                               band: Self.upShortcutBand).changed, 20,
+                             "改了上滚那格录的键，上滚那一行没动静：录入框没吃到上滚那格的绑定")
+        XCTAssertGreaterThan(try changedPixels(base, downChanged, name: "下录入带自检",
+                                               band: Self.downShortcutBand).changed, 20,
+                             "改了下滚那格录的键，下滚那一行没动静")
+        // 另一行不许跟着动：接串了就是这里红。
+        XCTAssertLessThan(try changedPixels(base, upChanged, name: "只改上滚时下滚行不动",
+                                            band: Self.downShortcutBand).changed, 20,
+                          "只改上滚的键，下滚那一行也改了：两个录入框接的是同一份绑定")
+        XCTAssertLessThan(try changedPixels(base, downChanged, name: "只改下滚时上滚行不动",
+                                            band: Self.upShortcutBand).changed, 20,
+                          "只改下滚的键，上滚那一行也改了")
+    }
+
     // MARK: - W5 那句橙字只在「开着但两档都空」时出现
 
     /// 两档都选「无」是「功能开着却什么都不会发生」的唯一一种配法，界面上必须说破。
@@ -337,14 +384,10 @@ final class WheelGesturePreferencesTests: XCTestCase {
         XCTAssertNotEqual(extras.title, fake.title, "两页同名：侧栏里看不出哪一页是滚轮那一段")
         XCTAssertFalse(extras.title.isEmpty)
         XCTAssertFalse(extras.systemImage.isEmpty)
-        // 段里每一行都要在文案表里（漏一条就把 key 原文画在页面上）。
-        for key in ["Wheel Gesture", "Wheel Gesture master", "Wheel Gesture master hint",
-                    "Wheel Gesture up row", "Wheel Gesture up hint", "Wheel Gesture down row",
-                    "Wheel Gesture up shortcut", "Wheel Gesture down shortcut",
-                    "Wheel Gesture shortcut hint", "Wheel Gesture no action warning",
-                    "Wheel Gesture action none", "Wheel Gesture action tab previous",
-                    "Wheel Gesture action tab next", "Wheel Gesture action volume up",
-                    "Wheel Gesture action volume down", "Wheel Gesture action custom shortcut"] {
+        // 段里每一行都要在文案表里（漏一条就把 key 原文画在页面上）。清单只有一份：
+        // `WheelGestureStringTablesTests.wheelCopyKeys`，两处各列各的迟早漂开。
+        // 注意这一条走 `L()`，桩件里读到的是**英文表**（详见那条双表用例的注释）。
+        for key in WheelGestureStringTablesTests.wheelCopyKeys {
             XCTAssertFalse(L(key).isEmpty, "\(key) 没进文案表")
             XCTAssertNotEqual(L(key), key, "\(key) 查不到，页面上会露出 key 原文")
         }
