@@ -1601,6 +1601,34 @@ struct RightClickMenuTabView: View {
             .padding(.leading, 22)
 
             wheelGestureSection
+
+            strokeTargetSection
+        }
+    }
+
+    // MARK: - 手势归给光标下的窗口（issue #22，移植版新增，原版没有）
+
+    /// 一颗总开关 + 一条「投完还焦」。
+    ///
+    /// 不做成「哪些动作参与」那一排勾选：哪些动作要挪焦点是 `RuleAction.needsCursorAppFocus`
+    /// 按动作类型定的（贴坐标的、写粘贴板的、弹截图遮罩的那几档压根不该跳），
+    /// 铺一行勾选只会让用户以为勾上就能让「复制文本」也去跳焦点。
+    ///
+    /// 两条都画出来、只灰不藏（滚轮那组、划词气泡那页同一条口径）。
+    private var strokeTargetSection: some View {
+        SettingsSection(title: L("Stroke Target")) {
+            SettingsCard {
+                SettingsRow(L("Stroke Target master")) {
+                    TrailingSwitch(isOn: $viewModel.strokeTargetsCursorWindow)
+                }
+                hint(L("Stroke Target master hint"))
+                RowDivider()
+                SettingsRow(L("Stroke Target restore row")) {
+                    TrailingSwitch(isOn: $viewModel.strokeTargetRestoresFocus)
+                        .disabled(!viewModel.strokeTargetsCursorWindow)
+                }
+                hint(L("Stroke Target restore hint"))
+            }
         }
     }
 

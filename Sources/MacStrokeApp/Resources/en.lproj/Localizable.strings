@@ -558,3 +558,10 @@
 "Wheel Gesture action volume down" = "Volume down";
 "Wheel Gesture action custom shortcut" = "Custom shortcut";
 "Wheel Gesture no action warning" = "Neither direction has an action — the feature is on, but nothing will happen.";
+
+/* Stroke targets the window under the cursor (issue #22, port-only, not in the original) */
+"Stroke Target" = "Stroke Targets the Window Under the Cursor";
+"Stroke Target master" = "Attribute the stroke to that window";
+"Stroke Target master hint" = "Off by default, which is the original behaviour: the action goes to whichever app was frontmost when you let go. With it on, the rules are matched against the app whose window sits under the release point and keys and text are posted to it; nothing happens when that window already is the front one. Clicks by coordinate, copy-to-clipboard and the screenshot overlay do not take part — they never depended on who is frontmost.";
+"Stroke Target restore row" = "Give the focus back afterwards";
+"Stroke Target restore hint" = "With this off, drawing a gesture is the same as clicking that window: focus stays on the app under the cursor and everything you type next goes there. With it on the focus returns to the app you released over after roughly 0.6 seconds (a posted key needs 0.2–0.5 seconds before the other side actually acts, so taking the focus back any earlier would steal the keystroke you just sent). If you switch to a third app in the meantime, nothing is taken back.";

@@ -563,3 +563,10 @@
 "Wheel Gesture action volume down" = "音量 −1 档";
 "Wheel Gesture action custom shortcut" = "自定义快捷键";
 "Wheel Gesture no action warning" = "两个方向都没有配动作——功能是开着的，但什么都不会发生。";
+
+/* 手势打到光标下的窗口（issue #22，移植版新增，原版没有） */
+"Stroke Target" = "手势打到光标下的窗口";
+"Stroke Target master" = "归给光标下那扇窗";
+"Stroke Target master hint" = "默认关，就是原来的行为：动作打进抬手那一刻的前台应用。开着时，松手那个点压在谁家的窗上，规则就按那家匹配、快捷键和文本也投给那家；光标下本来就是前台那家则什么都不做。按坐标点击、复制文本、弹出截图这三类动作不参与——它们跟谁是前台无关。";
+"Stroke Target restore row" = "投完把焦点还回去";
+"Stroke Target restore hint" = "关掉它就等于「画一次手势 = 点一下那个窗口」：焦点留在光标下那一家，接下来的打字都打进那里。开着时过约 0.6 秒把焦点还给抬手那一刻那一家（实测键投出去到那边真的动起来要 0.2～0.5 秒，一投完就抢回来会把自己刚发的那一发也抢走）；这期间你自己切到别家了就不抢。";
