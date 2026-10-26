@@ -114,17 +114,30 @@ F06 一开始漏了，原因值得记：`split(separator: "\n")` 默认就跳空
 | --- | --- | --- |
 | 反向对照 | 线上 3.2.2（通用包） | seed 的两条 + 白名单模式，**第一次启动**就变 `filterBlackList = ( )`、`filterIsInWhiteMode = 0`；迁移日志 0 行（那份二进制里没这个标签） |
 | 正向 | 3.2.3（本机 x86_64 包） | 连起两次，两条名单和 `filterIsInWhiteMode = 1` **都在**；两趟迁移日志都 0 行 |
-| 真 2.x 旧值 | 3.2.3 | 第一次启动 **1 行** `[BlockFilterMigration] … 迁进黑名单 2 条`（喂的是 `"com.legacy.a|com.legacy.b |"`，第三段是纯空白，按口径丢掉），`blockFilter` 消失、名单两条、模式落黑名单；第二次启动 **0 行**、名单不动 |
+| 真 2.x 旧值 | 3.2.3（本机 x86_64 包） | 第一次启动 **1 行** `[BlockFilterMigration] … 迁进黑名单 2 条`（喂的是 `"com.legacy.a|com.legacy.b |"`：三段，第二段带尾空格、第三段是空的，按口径出来两条），`blockFilter` 消失、名单两条、模式落黑名单；第二次启动 **0 行**、名单不动 |
+| 换线上包再跑一遍 | 线上 3.2.3（通用包，`diff -rq` 与解压出来的那份逐字节相同、`codesign --verify --deep --strict` 过） | 上面「正向」「真 2.x 旧值」两趟结论**逐条相同**：0 行/0 行保名单保模式；1 行/0 行迁两条删旧键 |
 
 数日志时有两个坑，脚本里已经改好并写了注释：只按 `eventMessage` 过滤会数到 `log` 自己的审计行
 （它把整条命令含谓词里那串 `BlockFilterMigration` 记进了统一日志，等于每数一次先给自己 +1），
-以及 `--last 20m` 是滑动窗口、第二趟会算成负数 —— 现在谓词加 `process == "MacStroke"`、窗口用
-`--start` 钉在本趟开始那一刻。
+以及 `--last 20m` 是滑动窗口会把第二趟的差值算成负数 —— 现在谓词加 `process == "MacStroke"`、
+窗口用 `--start` 钉在本趟开始那一刻。第一版脚本没改之前报的「新增 1 行」就是这个自命中。
+
+装机那一步本机记一条：把线上包放进 `/Applications` 时 `ditto` 被拦（`ditto: …/Contents:
+Operation not permitted`，连 `--noextattr --norsrc` 都一样），`cp -R` 正常 —— 同一台机器同一个
+目标目录，几分钟前从仓库产物 `ditto` 是通的。所以交接清单里别把 `ditto` 写成唯一路径，
+两个都能装，装完都要 `diff -rq` + `codesign --verify` 兜一次。
 
 ## 8. 发版与回复
 
 - 3.2.3（线上是 3.2.2，按规矩 +1）：`build_app.sh` 里 `APP_VERSION` 单源，说明 `Changelog/3.2.3.md`。
-- 发版走一条 `release.yml` workflow_dispatch，`gh api` 核对 tag / release / appcast / tap，不重复发版。
+- 发版走一条 `release.yml` workflow_dispatch（`dry_run=false`），运行
+  [40263762084](https://github.com/mtjo/MacStroke/actions/runs/40263762084) 全绿；核对一律用 `gh api`
+  （raw 有 CDN 缓存）：tag `3.2.3` 指向 `16d74f1`；release 附件 `MacStroke.zip` 5,124,777 字节；
+  release 分支 `AppCast.xml` 第 34 条 `Version3.2.3`，`length` 与附件同值、双签齐、
+  `minimumSystemVersion` 13.0、说明页链接指到 release 分支那份 md。
+- tap 同步当场手工 dispatch（`mtjo/homebrew-tap` 的 `macstroke-sync`，运行 40264096077），
+  之后 `Casks/macstroke.rb` = `version "3.2.3"` / `sha256 3124871a…4b390`，与本机
+  `gh release download` 下来的那串 `shasum -a 256` 逐字符相同 —— 三方对齐。
 - **回复要点**：已经被清掉的找不回来（旧键在第一次误迁时就删了），请重新加一次；之后重启、升级、
   恢复默认都不会再丢。白名单模式以前会被同一步按成黑名单，一并修了。
   「恢复默认设置」这一条是查过的：`Preferences.resetToDefaults()` 只回写原版 plist 带的那些键，
