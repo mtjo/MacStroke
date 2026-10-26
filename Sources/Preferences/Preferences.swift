@@ -212,6 +212,17 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut) }
     }
 
+    // MARK: - 手势归给光标下的窗口（issue #22）
+    // 一颗总开关 + 一条「投完还焦」。判定与挪焦点都在 RuleEngine（CursorTarget / StrokeRouter），
+    // App 层每笔手势现读，所以勾上、取消勾都不用重启。总开关**默认关** = 老行为。
+    @Published public var strokeTargetsCursorWindow: Bool {
+        didSet { storage.setBool(strokeTargetsCursorWindow, forKey: .strokeTargetsCursorWindow) }
+    }
+    /// 只在总开关开着时讲得通：关着的时候压根没有「跳过去」这回事，也就没有「还」。
+    @Published public var strokeTargetRestoresFocus: Bool {
+        didSet { storage.setBool(strokeTargetRestoresFocus, forKey: .strokeTargetRestoresFocus) }
+    }
+
     // MARK: - Updates
     @Published public var autoCheckUpdates: Bool {
         didSet { storage.setBool(autoCheckUpdates, forKey: .autoCheckUpdates) }
@@ -536,6 +547,8 @@ public final class UserPreferences: ObservableObject {
         self.wheelGestureDownAction = storage.getIntOptional(forKey: .wheelGestureDownAction) ?? StorageDefaults.wheelGestureDownAction
         self.wheelGestureUpShortcut = storage.getStringOptional(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
         self.wheelGestureDownShortcut = storage.getStringOptional(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
+        self.strokeTargetsCursorWindow = storage.getBoolOptional(forKey: .strokeTargetsCursorWindow) ?? StorageDefaults.strokeTargetsCursorWindow
+        self.strokeTargetRestoresFocus = storage.getBoolOptional(forKey: .strokeTargetRestoresFocus) ?? StorageDefaults.strokeTargetRestoresFocus
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
         self.clipoardStroageLocal = storage.getBoolOptional(forKey: .clipoardStroageLocal) ?? StorageDefaults.clipoardStroageLocal
         self.historyCilpboardListShortcut = storage.getStringOptional(forKey: .historyCilpboardListShortcut) ?? StorageDefaults.historyCilpboardListShortcut
@@ -652,6 +665,8 @@ public final class UserPreferences: ObservableObject {
         storage.setInt(StorageDefaults.wheelGestureDownAction, forKey: .wheelGestureDownAction)
         storage.setString(StorageDefaults.wheelGestureUpShortcut, forKey: .wheelGestureUpShortcut)
         storage.setString(StorageDefaults.wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut)
+        storage.setBool(StorageDefaults.strokeTargetsCursorWindow, forKey: .strokeTargetsCursorWindow)
+        storage.setBool(StorageDefaults.strokeTargetRestoresFocus, forKey: .strokeTargetRestoresFocus)
         storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
         storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
         storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
@@ -698,6 +713,8 @@ public final class UserPreferences: ObservableObject {
         wheelGestureDownAction = storage.getInt(forKey: .wheelGestureDownAction)
         wheelGestureUpShortcut = storage.getString(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
         wheelGestureDownShortcut = storage.getString(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
+        strokeTargetsCursorWindow = storage.getBool(forKey: .strokeTargetsCursorWindow)
+        strokeTargetRestoresFocus = storage.getBool(forKey: .strokeTargetRestoresFocus)
         userTerminal = storage.getString(forKey: .userTerminal) ?? StorageDefaults.userTerminal
         enableHistoryClipboard = storage.getBool(forKey: .enableHistoryClipboard)
         clipoardStroageLocal = storage.getBool(forKey: .clipoardStroageLocal)

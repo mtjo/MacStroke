@@ -54,6 +54,13 @@ public enum StorageKey: String, CaseIterable {
     case wheelGestureUpShortcut = "wheelGestureUpShortcut"
     case wheelGestureDownShortcut = "wheelGestureDownShortcut"
 
+    // 移植版扩展（issue #22）：手势归给「光标下那扇窗」而不是当前活跃窗。
+    // 总开关**默认关** = 老行为：开着它会改「动作落到哪家」这条所有老规则都依赖的语义，
+    // 还会让人看见焦点跳一下，不能替用户默认打开。
+    // 第二条只在第一条开着时有意义：投完动作要不要把焦点还给抬手那一刻那家。
+    case strokeTargetsCursorWindow = "strokeTargetsCursorWindow"
+    case strokeTargetRestoresFocus = "strokeTargetRestoresFocus"
+
     // Note/Toast
     case noteRetentionTime = "noteRetetionTime"
     case notePosition = "notePostion"
@@ -338,6 +345,12 @@ public enum StorageDefaults {
     public static let wheelGestureUpShortcut: String = ""
     public static let wheelGestureDownShortcut: String = ""
 
+    // 手势归给光标下的窗口（issue #22）—— 关，等于老行为：动作照旧打进抬手那一刻的前台。
+    public static let strokeTargetsCursorWindow: Bool = false
+    /// 开着时投完动作要不要把焦点还给原来那家。默认还 ——
+    /// 不还的话「画一个手势」等价于「点一下那个窗口」，用户接下来的打字会打进被跳过去的 App。
+    public static let strokeTargetRestoresFocus: Bool = true
+
     // Note/Toast
     public static let noteRetentionTime: Int = 1
     public static let notePosition: Int = 1              // 0鼠标 1屏幕中心 2右上...
@@ -502,6 +515,8 @@ public func registerUserDefaultsDefaults() {
         StorageKey.wheelGestureDownAction.rawValue: StorageDefaults.wheelGestureDownAction,
         StorageKey.wheelGestureUpShortcut.rawValue: StorageDefaults.wheelGestureUpShortcut,
         StorageKey.wheelGestureDownShortcut.rawValue: StorageDefaults.wheelGestureDownShortcut,
+        StorageKey.strokeTargetsCursorWindow.rawValue: StorageDefaults.strokeTargetsCursorWindow,
+        StorageKey.strokeTargetRestoresFocus.rawValue: StorageDefaults.strokeTargetRestoresFocus,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,
         StorageKey.notePosition.rawValue: StorageDefaults.notePosition,
         StorageKey.noteBackgroundAlpha.rawValue: StorageDefaults.noteBackgroundAlpha,
