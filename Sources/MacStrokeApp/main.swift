@@ -1048,21 +1048,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
 extension AppDelegate: CanvasManagerDelegate {
     @discardableResult
-    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool {
+    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String,
+                       releasePoint: CGPoint) -> Bool {
         guard let ruleStore = ruleStore else { return false }
+
+        let settings = strokeTargetSettings
+        let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        // 功能没开时连窗口表都不抓：老路径一次 CGWindowList 都不花，抬手响应不变
+        // （识别与响应时间是这条功能的死线，见 issue #43/#68）。
+        let windows = settings.needsWindowProbe ? CursorWindowProbe.onScreenWindows() : []
+        let (attribution, reason) = CursorTarget.attribute(at: releasePoint, windows: windows,
+                                                           frontPID: frontPID,
+                                                           ownPID: ProcessInfo.processInfo.processIdentifier,
+                                                           settings: settings,
+                                                           isAppAllowed: {
+                                                               BlackWhiteFilter.shared.shouldHookMouseEventForApp($0)
+                                                           })
+        if reason.isWorthLogging {
+            NSLog("%@", "[StrokeTarget] \(reason.rawValue)（抬手点 \(Int(releasePoint.x)),\(Int(releasePoint.y))；"
+                + "前台 \(bundleID.isEmpty ? "?" : bundleID)；匹配用 \(CursorTarget.ruleBundleID(attribution, frontBundle: bundleID))）")
+        }
 
         // Match the stroke against all rules, keeping the best-scoring one
         // (mirrors the original setActionIndex, including the global
         // enableGestureMinScore / minScore gate handled inside the engine).
-        guard let (rule, score) = ruleStore.match(stroke: stroke, bundleID: bundleID) else {
+        // 开关关着时 ruleBundle == bundleID == 老行为那一家。
+        guard let (rule, score) = ruleStore.match(stroke: stroke,
+                                                  bundleID: CursorTarget.ruleBundleID(attribution, frontBundle: bundleID)) else {
             return false
         }
         NSLog("%@", "[AppDelegate] Rule matched: \(rule.name) (score: \(score))")
 
-        // Execute the action
+        let route = StrokeRouter.route(attribution: attribution, reason: reason,
+                                       frontPID: frontPID, frontBundle: bundleID,
+                                       settings: settings,
+                                       needsFocus: rule.action.needsCursorAppFocus)
+
+        // Execute the action — 需要的话先挪焦点，投完按 `restoreToPID` 安排还焦。
         let executor = ActionExecutor()
         executor.onScreenshotRequested = { ScreenshotController.shared.toggle() }
-        executor.execute(rule.action, for: rule)
+        StrokeRouter.execute(route, focus: SystemFocusControl.shared, action: {
+            executor.execute(rule.action, for: rule)
+        }, log: { line in
+            NSLog("%@", "[StrokeTarget] \(line)")
+        })
 
         // Show the note toast if enabled (original: showGestureNote key).
         let showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
@@ -1079,6 +1108,17 @@ extension AppDelegate: CanvasManagerDelegate {
         }
 
         return true
+    }
+
+    /// issue #22 那两条偏好，每次抬手现读（口径同别的模块：偏好现读，不缓存，
+    /// 用户在偏好页里改完立刻生效，不用重启也不用重新打开手势）。
+    private var strokeTargetSettings: StrokeTargetSettings {
+        StrokeTargetSettings(
+            enabled: storage.getBoolOptional(forKey: .strokeTargetsCursorWindow)
+                ?? StorageDefaults.strokeTargetsCursorWindow,
+            restoresFocus: storage.getBoolOptional(forKey: .strokeTargetRestoresFocus)
+                ?? StorageDefaults.strokeTargetRestoresFocus
+        )
     }
 }
 

@@ -4,6 +4,7 @@
 //
 
 import XCTest
+import AppKit
 @testable import EventCapture
 @testable import GestureEngine
 
@@ -12,12 +13,15 @@ final class CanvasManagerTests: XCTestCase {
     private final class RecordingDelegate: CanvasManagerDelegate {
         private(set) var completedStrokes: [Stroke] = []
         private(set) var completedBundleIDs: [String] = []
+        private(set) var completedReleasePoints: [CGPoint] = []
         var matchResult = false
 
         @discardableResult
-        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool {
+        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String,
+                           releasePoint: CGPoint) -> Bool {
             completedStrokes.append(stroke)
             completedBundleIDs.append(bundleID)
+            completedReleasePoints.append(releasePoint)
             return matchResult
         }
     }
@@ -448,5 +452,62 @@ final class CanvasManagerTests: XCTestCase {
         // key code 自带的 flags 混不进来。
         XCTAssertEqual(Set(eventFlags: 0x10000).tokenList, "")
         XCTAssertEqual(Set<GestureModifier>().eventFlags, 0)
+    }
+
+    // MARK: - 抬手点翻回窗口服务坐标（issue #22：命中判定必须和 kCGWindowBounds 同一把尺）
+
+    func testReleasePointIsFlippedIntoWindowServerSpace() {
+        // 字面数字钉公式：主屏 1080 高时，AppKit 的 y=200（离屏底 200）= 窗口服务的 y=880
+        // （离屏顶 880）。这一手写坏在界面上和日志里都看不出名堂（只会归到
+        // `noWindowUnderCursor` 那一档），所以只能这样钉。
+        XCTAssertEqual(CanvasManager.windowServerReleasePoint(GesturePoint(x: 300, y: 200),
+                                                             primaryHeight: 1080),
+                       CGPoint(x: 300, y: 880))
+        XCTAssertEqual(CanvasManager.windowServerReleasePoint(GesturePoint(x: 500, y: 1080),
+                                                             primaryHeight: 1080),
+                       CGPoint(x: 500, y: 0), "屏最顶上（AppKit 的 y=屏高）在窗口服务里是 0")
+        XCTAssertEqual(CanvasManager.windowServerReleasePoint(GesturePoint(x: 500, y: 0),
+                                                             primaryHeight: 1080),
+                       CGPoint(x: 500, y: 1080), "屏最底下反过来")
+        XCTAssertNotEqual(CanvasManager.windowServerReleasePoint(GesturePoint(x: 300, y: 200),
+                                                                primaryHeight: 1080).x,
+                          200, "x 压根不该动")
+    }
+
+    func testFlippingTheSamePointTwiceIsTheOriginalPoint() {
+        // 轨迹点是**已经翻过**那一套（`EventCapture` 采集时翻的）。这一手要是被人在
+        // 别处再套一次，点会原地跳回对称位置 —— 「上下颠倒」这种症状最难认，
+        // 所以把「自逆」钉成判据：翻两次 = 没翻。
+        // 用 Double 而不是 CGFloat 比较，免得 32/64 位下的表示差被当成红。
+        let p = GesturePoint(x: 123, y: 456)
+        let once = CanvasManager.windowServerReleasePoint(p, primaryHeight: 1080)
+        XCTAssertEqual(once.x, 123)
+        XCTAssertEqual(once.y, 624)
+        let twice = CanvasManager.windowServerReleasePoint(GesturePoint(x: once.x, y: once.y),
+                                                          primaryHeight: 1080)
+        XCTAssertEqual(twice.x, p.x)
+        XCTAssertEqual(twice.y, p.y)
+    }
+
+    func testTheDelegateReceivesTheFlippedReleasePoint() {
+        // 走完整事件链，断**调用处确实用上了这一翻**（上一组用例钉的是公式本身）。
+        // 期望值不取被测函数，取的是同一个屏高来源 —— 免得函数写错、期望也跟着错。
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        let down = MouseEvent(point: GesturePoint(x: 0, y: 0), button: .right, phase: .down)
+        _ = manager.eventCapture(capture, didReceive: down)
+        for i in 1..<20 {
+            _ = manager.eventCapture(capture,
+                                     didReceive: MouseEvent(point: GesturePoint(x: Double(i),
+                                                                                y: Double(i)),
+                                                            button: .right, phase: .moved))
+        }
+        _ = manager.eventCapture(capture,
+                                 didReceive: MouseEvent(point: GesturePoint(x: 20, y: 40),
+                                                        button: .right, phase: .up))
+
+        XCTAssertEqual(delegate.completedReleasePoints.count, 1)
+        XCTAssertEqual(delegate.completedReleasePoints[0].x, 20)
+        XCTAssertEqual(delegate.completedReleasePoints[0].y, Double(primaryHeight) - 40,
+                       "翻没翻，看的是 delegate 收到的那个 y 是不是 primaryHeight - 40")
     }
 }

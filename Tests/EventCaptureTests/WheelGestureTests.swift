@@ -26,7 +26,8 @@ final class WheelGestureTests: XCTestCase {
         private(set) var completeStrokeCalls = 0
 
         @discardableResult
-        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool {
+        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String,
+                           releasePoint: CGPoint) -> Bool {
             completeStrokeCalls += 1
             return matches
         }

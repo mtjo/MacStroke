@@ -20,7 +20,8 @@ final class UnmatchedGestureTests: XCTestCase {
         private(set) var strokePointCount = 0
 
         @discardableResult
-        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool {
+        func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String,
+                           releasePoint: CGPoint) -> Bool {
             strokePointCount = stroke.count
             return matches
         }

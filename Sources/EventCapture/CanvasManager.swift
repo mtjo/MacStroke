@@ -22,11 +22,43 @@ public protocol CanvasManagerDelegate: AnyObject {
     ///   - manager: The canvas manager
     ///   - stroke: The completed stroke (ready for comparison)
     ///   - bundleID: The bundle ID of the frontmost application (for filtering)
+    ///   - releasePoint: Where the trigger button was let go, in **WindowServer
+    ///     global coordinates** (primary screen's top-left origin, y pointing down) —
+    ///     the same space `kCGWindowBounds` uses, so the app layer can hit-test it
+    ///     against the on-screen window list without another conversion
+    ///     (issue #22: 「动作该打到光标下那一扇」). Note this is *not* the space the
+    ///     stroke points are stored in: `EventCapture` flips y to AppKit's
+    ///     bottom-left origin (`primaryScreenHeight - y`), which is what the canvas
+    ///     and the recogniser use. The capture layer deliberately keeps no opinion
+    ///     about which window the gesture belongs to.
     ///   - Returns: true if a rule matched and the action was handled
     ///             (the right-click is consumed); false if nothing matched
     ///             (the manager will replay the right-click).
     @discardableResult
-    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String) -> Bool
+    func canvasManager(_ manager: CanvasManager, didCompleteStroke stroke: Stroke, bundleID: String,
+                       releasePoint: CGPoint) -> Bool
+}
+
+extension CanvasManager {
+    /// 抬手点的坐标系换算 —— **唯一**一处把轨迹坐标翻回窗口服务坐标的地方（issue #22）。
+    ///
+    /// 两套尺子：轨迹与画布用 AppKit 的**主屏左下原点、y 向上**（`EventCapture.swift:374`
+    /// 在采集时就翻了：`appKitY = primaryScreenHeight - cgY`）；而「光标下那扇窗」的命中判定
+    /// 吃的是 `kCGWindowBounds` 那套 —— **主屏左上原点、y 向下**。差一个 y 就是
+    /// 「明明压在窗上却判成没有窗」，而且只在窗口上/下某一侧出现，装机时看着像时灵时不灵。
+    ///
+    /// 为什么单独拆一个静态函数：这一手写坏时界面上、日志里都看不出名堂（判据只是
+    /// `noWindowUnderCursor` 那一档），所以必须有个能用字面数字钉住的地方 —— 挂在调用处
+    /// 那一句上，桩件里就只有一条「delegate 收到什么」的间接断言，红起来也说不清是哪儿翻的。
+    ///
+    /// `primaryHeight` 要的是**全局原点所在那块屏**的高度：AppKit 里就是 `NSScreen.screens[0]`
+    /// （文档保证它的左下角落在全局坐标 (0,0)），与 `EventCapture` 采集时同一个来源 ——
+    /// 两处互逆，多屏下才对得上。**不许换成 `NSScreen.main`**（那是含指针那块屏，
+    /// 副屏上抬手就会翻错）；这一档离线给不了判据，只有装机多屏那一步能验。
+    static func windowServerReleasePoint(_ appKitPoint: GesturePoint,
+                                        primaryHeight: CGFloat) -> CGPoint {
+        CGPoint(x: appKitPoint.x, y: Double(primaryHeight) - appKitPoint.y)
+    }
 }
 
 /// Manages the gesture drawing canvas.
@@ -315,6 +347,11 @@ public class CanvasManager: EventCaptureDelegate {
         addPointToCanvas(event.point)
 
         let frontBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        // 抬手点交给 App 层去判「这一下归哪一扇窗」（issue #22）。这里唯一做的是把
+        // 轨迹那套 AppKit 坐标（左下原点）翻回窗口服务那套（左上原点）—— 见
+        // `windowServerReleasePoint` 那一段：判中不中必须和 `kCGWindowBounds` 同一把尺。
+        let releasePoint = CanvasManager.windowServerReleasePoint(
+            event.point, primaryHeight: NSScreen.screens.first?.frame.height ?? 0)
         let consumed: Bool
 
         // Rule-recording mode ("Draw Gesture" from preferences).
@@ -325,7 +362,8 @@ public class CanvasManager: EventCaptureDelegate {
         } else if currentPoints.count >= minimumPointsForGesture,
                   let stroke = completedStroke(),
                   let delegate = delegate,
-                  delegate.canvasManager(self, didCompleteStroke: stroke, bundleID: frontBundle) {
+                  delegate.canvasManager(self, didCompleteStroke: stroke, bundleID: frontBundle,
+                                         releasePoint: releasePoint) {
             // A rule matched and its action was executed.
             consumed = true
         } else if shouldSwallowUnmatchedGesture?() == true, drewADeliberateStroke {
