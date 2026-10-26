@@ -309,6 +309,10 @@ public enum StorageDefaults {
     // General
     public static let showIconInStatusBar: Bool = true
     public static let showUIInWhateverApp: Bool = false
+    /// 2.x 那坨旧黑名单的**读回退值**，注意：**不注册**（见 `registerUserDefaultsDefaults` 里
+    /// 那段注释）。issue #76 的根就是它曾被注册成 `""`：注册值对 `string(forKey:)` 可见，
+    /// `removeObject` 又删不掉注册表，于是「旧键有值要迁」每次启动都成立，每次启动把
+    /// 用户自己的 `filterBlackList` 重写成零条。原版 DefaultPreferences.plist 里没有这一键。
     public static let blockFilter: String = ""
     public static let whiteListMode: Bool = false
     public static let whiteList: String = ""
@@ -467,7 +471,7 @@ public enum StorageDefaults {
     /// 代价写在 `SelectionCopyReader` 文件头那四道闸里：只在读不到时动手、动手前后各还原一次、
     /// 粘贴板当前是文件时压根不动手。用户不认这条可以在偏好页那一颗开关上关掉。
     public static let selectionPopupCopyFallback: Bool = true
-    /// 搜索那一格默认走 Google —— 与 3.2.3 之前写死那一家一致，升级完行为不许变。
+    /// 搜索那一格默认走 Google —— 与 3.2.0 之前写死那一家一致，升级完行为不许变。
     public static let selectionPopupSearchEngine: String = "google"
     /// 自选 URL 默认空：空就等于「没配」，实际用哪家由上面那一条决定（见 `searchTemplate` 的退回）。
     public static let selectionPopupSearchCustomURL: String = ""
@@ -491,11 +495,29 @@ public enum StorageDefaults {
 /// `minScore`) — `UserDefaults.bool`/`integer` return false/0 for keys that
 /// were never written, which would otherwise disable the clipboard monitor
 /// and the gesture score gate on a fresh install.
+///
+/// 表本身在 `registeredUserDefaultsValues()` 里，这里只负责注册。
 public func registerUserDefaultsDefaults() {
+    UserDefaults.standard.register(defaults: registeredUserDefaultsValues())
+
+    migrateLegacyPreferenceKeys()
+}
+
+/// 启动时注册进 UserDefaults 的那一整张表（原版 `DefaultPreferences.plist` 的等价物）。
+///
+/// 为什么是一份**取得到的值**而不是只写在函数里的字面量：注册域在一个进程里是**全局**的 ——
+/// 任何一次 `register(defaults:)` 之后，这张表里的值对之后所有 suite 的 `string(forKey:)`
+/// 都可见（本机实测：A suite 注册 `blockFilter = ""`，B suite 与 standard 一起吃到 `""`）。
+/// 于是「这一键到底有没有注册值」在用例里没法靠读 UserDefaults 判，读到的永远是上一条用例的污染。
+/// 判表本身才谈得上判「`blockFilter` 不在表上」—— 见 issue #76 与 BlackWhiteFilterTests。
+public func registeredUserDefaultsValues() -> [String: Any] {
     let defaults: [String: Any] = [
         StorageKey.showIconInStatusBar.rawValue: StorageDefaults.showIconInStatusBar,
         StorageKey.showUIInWhateverApp.rawValue: StorageDefaults.showUIInWhateverApp,
-        StorageKey.blockFilter.rawValue: StorageDefaults.blockFilter,
+        // `blockFilter`（2.x 那坨旧黑名单）故意**不进这张表**：它是迁移的**来源键**，
+        // 一旦注册出值，`BlackWhiteFilter.legacyBlockFilterValue` 就分不出「老机器真有过
+        // 一份名单」和「压根没写过」—— 每启动一次就误迁一次，把用户的名单冲成空的
+        // （issue #76，3.0.0 起每版都这样）。原版 plist 也没有这一键。
         StorageKey.whiteListMode.rawValue: StorageDefaults.whiteListMode,
         StorageKey.whiteList.rawValue: StorageDefaults.whiteList,
         StorageKey.language.rawValue: StorageDefaults.language,
@@ -583,9 +605,7 @@ public func registerUserDefaultsDefaults() {
         StorageKey.showToast.rawValue: StorageDefaults.showToast,
         StorageKey.clipboardHistoryLimit.rawValue: StorageDefaults.clipboardHistoryLimit,
     ]
-    UserDefaults.standard.register(defaults: defaults)
-
-    migrateLegacyPreferenceKeys()
+    return defaults
 }
 
 /// One-time migration of early Swift-port key names to the original MacStroke

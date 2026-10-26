@@ -243,6 +243,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         initAppAtFirstLaunch()
 
         // Migrate legacy blockFilter rules into the black/white list.
+        // 这一步在 `registerUserDefaultsDefaults()` 之后跑，所以旧键一旦有注册值就会被
+        // 当成「有旧数据」—— 那正是 issue #76（名单每重启一次被清一次）；旧键现在不注册，
+        // 且 `legacyBlockFilterValue` 只认真写过的那一份。
         BlackWhiteFilter.shared.compatibleProcedureWithPreviousVersion()
 
         if storage.getBoolOptional(forKey: .openPrefOnStartup) ?? StorageDefaults.openPrefOnStartup {
