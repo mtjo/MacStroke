@@ -27,9 +27,11 @@
   一个能力只给一组控件，没有铺「每个软件一行」。
 
 代码接缝（本轮复述一遍，方便下次不用翻提交）：读数与节流是 `EventCapture/WheelGesture.swift`
-里的纯逻辑（`WheelGestureParser` / `WheelGestureGate`），状态机在 `CanvasManager`，档位查表与
-执行在 `RuleEngine/WheelGestureAction.swift`（`WheelGesturePlan` / `WheelGestureExecutor`），
-App 层只做「读偏好 + 递进去」（`main.swift:192-212`）。
+里的纯逻辑（`WheelGestureParser` / `WheelGestureGate`），状态机在 `CanvasManager`；3.2.1 时档位
+查表与执行在 `RuleEngine/WheelGestureAction.swift`（`WheelGesturePlan` / `WheelGestureExecutor`），
+App 层只做「读偏好 + 递进去」（`main.swift:192-212`）。3.2.4 起这段整并进规则表：查表只剩
+`WheelGestureActionKind.ruleAction`（启动迁移用），执行走规则的 `fireInstantRule` →
+`ActionExecutor`，独立偏好与专用执行器都已删除（见 `docs/wheel-gesture-issue78.md` §3.5）。
 
 ## 二、反向变异：39 条，原跑与本轮重跑
 
@@ -356,12 +358,15 @@ App 层只做「读偏好 + 递进去」（`main.swift:192-212`）。
 ### 4.3 两套方案的结构差异，和那句「理解错了」
 
 同一句需求，两种落法。区别不在「能不能切标签页」——两边都能——在**这件事算不算一条手势**。
+下表记的是 3.2.1 时两边各自的样子；3.2.4 起我们这边也改成进规则表（独立偏好那两档由启动段
+一次性迁成瞬时规则，见 `docs/wheel-gesture-issue78.md` §3.5），「滚轮的身份 / 能配的动作 /
+按应用配」三行如今与他那边同一口径。
 
 | 这一处 | 我们（3.2.1） | 他（impulse 分支） |
 | --- | --- | --- |
-| 滚轮的身份 | 独立的一组偏好（`wheelGestureUp/DownAction` 等 5 个键），不进规则 | 进 `Rule`：新增 `impulse` 字段，和画出来的轨迹并存于同一张 `rules.json` |
-| 能配的动作 | 五档预设 + 一个自定义快捷键录入框 | 规则的全部动作类型（快捷键 / 脚本 / 打开 / 菜单…），还有备注气泡、单条启用、持续触发 |
-| 按应用配 | 不支持（全局两档） | 支持：走规则自带的 `filter`，`match(impulse:bundleID:)` 每次现读 |
+| 滚轮的身份 | 独立的一组偏好（`wheelGestureUp/DownAction` 等 5 个键），不进规则（3.2.4 起作废：改为规则的瞬时手势） | 进 `Rule`：新增 `impulse` 字段，和画出来的轨迹并存于同一张 `rules.json` |
+| 能配的动作 | 五档预设 + 一个自定义快捷键录入框（3.2.4 起作废：规则的全部动作类型） | 规则的全部动作类型（快捷键 / 脚本 / 打开 / 菜单…），还有备注气泡、单条启用、持续触发 |
+| 按应用配 | 不支持（全局两档）（3.2.4 起作废：走规则自带的 `filter`） | 支持：走规则自带的 `filter`，`match(impulse:bundleID:)` 每次现读 |
 | 方向 | 上、下两档 | 上、下、左、右（tilt）四档，另把中键 / 侧键单击也算成手势 |
 | 监听挂在哪 | **另开第二条 tap，只收 `.scrollWheel`，建出来就禁用**，只在按住起手键那段里上膛 | 把 `.scrollWheel` 加进主 tap 的事件掩码，常驻收事件 |
 | 节流 | 够一格 **且** 离上次满 0.09 秒（两道闸，先记账再过闸） | 只累计够一格（`wheelAccumulatorY`），没有时间闸 |
@@ -442,7 +447,7 @@ App 层只做「读偏好 + 递进去」（`main.swift:192-212`）。
 
 issue #22 那套归属判定（`CursorTarget.attribute` → `StrokeRouter.execute` + `SystemFocusControl`）
 在全仓库只有**一个**调用点：`Sources/MacStrokeApp/main.swift:1093`，画轨迹那条路。滚轮这条路
-（`main.swift:200-211`）是 `wheelGestureExecutor.fire(...)` 直接投键，`ActionExecutor` 内部
+（`main.swift:194-201` → `fireInstantRule`）直接 `ActionExecutor.execute`，`ActionExecutor` 内部
 不碰焦点（全文件只有 `:114` 一处提到 focus，且是注释里说的 `typeSting()` 那条打字路径）。
 
 后果是**可复现的口径不一致**：开了「手势打到光标下的窗口」的人，画一笔轨迹的动作会先落到
