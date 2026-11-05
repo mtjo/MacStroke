@@ -43,17 +43,6 @@ public enum StorageKey: String, CaseIterable {
     // 原版是无论匹配没匹配都回放（画错了至少还能弹出右键菜单），所以默认关。
     case swallowUnmatchedGesture = "swallowUnmatchedGesture"
 
-    // 移植版扩展（issue #75）：按住起始键（默认右键）+ 滚轮上/下 = 两个独立触发手势。
-    // 原版没有这一手，所以键名全是新造的。总开关默认关 = 原版行为（滚轮永远只管滚页面）；
-    // 两个方向的动作存的是 `WheelGestureActionKind` 的原始值（1 上一个标签页、2 下一个标签页，
-    // 即「开了开关就先把 issue 里那件最想要的事做掉」）；只有选「自定义快捷键」时
-    // 才读那两条快捷键串（格式同截图那几条：「keyCode=X, flags=Y」）。
-    case wheelGestureEnabled = "wheelGestureEnabled"
-    case wheelGestureUpAction = "wheelGestureUpAction"
-    case wheelGestureDownAction = "wheelGestureDownAction"
-    case wheelGestureUpShortcut = "wheelGestureUpShortcut"
-    case wheelGestureDownShortcut = "wheelGestureDownShortcut"
-
     // 移植版扩展（issue #22）：手势归给「光标下那扇窗」而不是当前活跃窗。
     // 总开关**默认关** = 老行为：开着它会改「动作落到哪家」这条所有老规则都依赖的语义，
     // 还会让人看见焦点跳一下，不能替用户默认打开。
@@ -302,6 +291,21 @@ public struct PreferencesStorage {
     public func synchronize() {
         defaults.synchronize()
     }
+
+    /// 原样取回该键在存储里的对象（不存在返回 nil）。撤销「重置默认值」时
+    /// 要的是快照前的原值，而不是按类型重新推导出来的一份。
+    public func object(forKey key: StorageKey) -> Any? {
+        defaults.object(forKey: key.rawValue)
+    }
+
+    /// 原样写回；`nil` 表示删掉这个键（快照时它本来就没有显式值）。
+    public func setObject(_ value: Any?, forKey key: StorageKey) {
+        if let value {
+            defaults.set(value, forKey: key.rawValue)
+        } else {
+            defaults.removeObject(forKey: key.rawValue)
+        }
+    }
 }
 
 /// Default storage configuration values.
@@ -338,16 +342,6 @@ public enum StorageDefaults {
     // 不匹配时吞掉这次右键 —— 关，等于原版：画错了还把点击交回应用，右键菜单照常弹。
     // 只在「真的画了一条」的前提下才可能生效，纯右键单击永远照常回放（issue #73）。
     public static let swallowUnmatchedGesture: Bool = false
-
-    // 右键 + 滚轮（issue #75）—— 总开关关，等于原版：滚轮只管滚页面，跟手势无关。
-    // 那两个 1 / 2 是 `WheelGestureActionKind.tabPrevious` / `.tabNext`（RuleEngine 里的枚举，
-    // 这一层够不到，所以写死数字并由 `StorageTests` 钉住对应关系）。
-    public static let wheelGestureEnabled: Bool = false
-    public static let wheelGestureUpAction: Int = 1
-    public static let wheelGestureDownAction: Int = 2
-    /// 只有动作档位是「自定义快捷键」时才读；空串 = 没录过键，等于不执行（见 `WheelGesturePlan`）。
-    public static let wheelGestureUpShortcut: String = ""
-    public static let wheelGestureDownShortcut: String = ""
 
     // 手势归给光标下的窗口（issue #22）—— 关，等于老行为：动作照旧打进抬手那一刻的前台。
     public static let strokeTargetsCursorWindow: Bool = false
@@ -532,11 +526,6 @@ public func registeredUserDefaultsValues() -> [String: Any] {
         StorageKey.enableGestureSuppression.rawValue: StorageDefaults.enableGestureSuppression,
         StorageKey.gestureSuppressedModifiers.rawValue: StorageDefaults.gestureSuppressedModifiers,
         StorageKey.swallowUnmatchedGesture.rawValue: StorageDefaults.swallowUnmatchedGesture,
-        StorageKey.wheelGestureEnabled.rawValue: StorageDefaults.wheelGestureEnabled,
-        StorageKey.wheelGestureUpAction.rawValue: StorageDefaults.wheelGestureUpAction,
-        StorageKey.wheelGestureDownAction.rawValue: StorageDefaults.wheelGestureDownAction,
-        StorageKey.wheelGestureUpShortcut.rawValue: StorageDefaults.wheelGestureUpShortcut,
-        StorageKey.wheelGestureDownShortcut.rawValue: StorageDefaults.wheelGestureDownShortcut,
         StorageKey.strokeTargetsCursorWindow.rawValue: StorageDefaults.strokeTargetsCursorWindow,
         StorageKey.strokeTargetRestoresFocus.rawValue: StorageDefaults.strokeTargetRestoresFocus,
         StorageKey.noteRetentionTime.rawValue: StorageDefaults.noteRetentionTime,

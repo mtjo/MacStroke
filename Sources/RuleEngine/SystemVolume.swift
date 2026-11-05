@@ -22,9 +22,9 @@ import CoreAudio
 /// 系统音量读写。全是静态函数：本机只有一个默认输出设备，没必要造对象。
 public enum SystemVolume {
 
-    /// 一格滚轮的默认增减量（0…1 标度）。与 `WheelGesturePlan.volumeStep` 同值，
-    /// 两边各自留一份是为了这层不依赖查表那侧；改档位时改 `WheelGesturePlan`。
-    static let defaultStep: Double = 0.05
+    /// 一档音量（0…1 标度）：规则里的「音量 +1 档 / −1 档」都按这个数走。
+    /// 3.2.3 及以前的滚轮音量档用的也是它，迁移过来的规则因此保持同一档位大小。
+    public static let volumeStep: Double = 0.05
 
     // MARK: - 接缝
 

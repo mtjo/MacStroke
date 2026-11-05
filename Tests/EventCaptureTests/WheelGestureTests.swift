@@ -38,7 +38,11 @@ final class WheelGestureTests: XCTestCase {
     private var capture: EventCapture!
     private var armedLog: [Bool] = []
     private var firedDirections: [WheelGestureDirection] = []
+    private var firedBundles: [String] = []
     private var postedButtons: [CGEventType] = []
+
+    /// 假的前台应用：接缝把它交给 `CanvasManager`，用例可以在「按下起始键之后」换值。
+    private var frontBundle = ""
 
     /// 一次触发所需的间隔之上（`WheelGestureGate.minimumInterval` = 0.09）。
     private static let notch: TimeInterval = 0.2
@@ -53,11 +57,15 @@ final class WheelGestureTests: XCTestCase {
         capture.wheelDelegate = manager
         armedLog = []
         firedDirections = []
+        firedBundles = []
         postedButtons = []
+        frontBundle = ""
         manager.isWheelGestureEnabled = { true }
+        manager.frontBundleReader = { [weak self] in self?.frontBundle ?? "" }
         manager.wheelCaptureArmer = { [weak self] armed in self?.armedLog.append(armed) }
-        manager.onWheelGesture = { [weak self] direction in
+        manager.onWheelGesture = { [weak self] direction, bundleID in
             self?.firedDirections.append(direction)
+            self?.firedBundles.append(bundleID)
             return true
         }
         manager.syntheticEventSink = { [weak self] event, _ in
@@ -67,6 +75,7 @@ final class WheelGestureTests: XCTestCase {
 
     override func tearDown() {
         manager.syntheticEventSink = nil
+        manager.frontBundleReader = nil
         manager.cancelStroke()
         capture.stop()
         delegate = nil
@@ -262,7 +271,7 @@ final class WheelGestureTests: XCTestCase {
     }
 
     func testUnboundDirectionLeavesTheScrollAlone() {
-        manager.onWheelGesture = { _ in false }
+        manager.onWheelGesture = { _, _ in false }
         pressTrigger()
         XCTAssertFalse(scrollUp(),
                        "那一方向配的是「无」/ 动作没做成 —— 页面必须照常滚")
@@ -375,6 +384,48 @@ final class WheelGestureTests: XCTestCase {
                       "窗口结束必须把闸门的账清掉：上一段 20ms 前的 lastFired 不该吃掉这一格")
         releaseTrigger()
         XCTAssertEqual(firedDirections, [.up, .up])
+    }
+
+    // MARK: - 归属：这一格滚轮算给「按下起始键那一刻」的那个应用
+
+    /// issue #78 第 2 条给滚轮规则加了「按应用过滤」：`onWheelGesture` 带出去的 bundle ID
+    /// 必须是按下那一刻记账的那一份。这一手有两处会写错：
+    ///
+    /// 1. 触发时再现读一次前台 —— 画布窗就在这段窗口里浮出来过，动作也可能自己切焦点，
+    ///    现读到的是另一个 App，规则就被匹到别人家去了；更要命的是按下那一刻放行这段窗口的
+    ///    是黑/白名单对**旧值**的判定（`shouldCaptureGesture`），现读等于绕过了那道闸。
+    /// 2. 记账那一手漏了（`gestureBundleID` 一直是 ""）—— 症状是「滚轮规则一按应用过滤就
+    ///    不生效」，而不带过滤的规则照旧好用，用户根本说不清差别在哪。
+    func testWheelCarriesTheBundleRecordedAtTriggerDown() {
+        frontBundle = "com.example.editor"
+        pressTrigger()
+        frontBundle = "com.example.browser"
+
+        XCTAssertTrue(scrollUp())
+        XCTAssertEqual(firedBundles, ["com.example.editor"],
+                       "滚轮那一格带出去的应该是按下起始键那一刻的 com.example.editor，"
+                       + "不是中途换成前台的 com.example.browser")
+
+        releaseTrigger()
+    }
+
+    /// 下一段窗口重新记账：上一段的应用不该带过来（换了个 App 再按右键，规则要跟着换）。
+    ///
+    /// 注意这条咬的是**按下时重新赋值**（`gestureBundleID = frontBundle`），不是复位里那句清空：
+    /// 复位之后到下一次按下之间没有任何读取，清空与否行为相同（变异 W3 是等价变异）。
+    func testNextWindowRecordsTheNewFrontApp() {
+        frontBundle = "com.example.editor"
+        pressTrigger()
+        XCTAssertTrue(scrollUp())
+        releaseTrigger()
+
+        frontBundle = "com.example.browser"
+        pressTrigger()
+        XCTAssertTrue(scrollUp())
+        releaseTrigger()
+
+        XCTAssertEqual(firedBundles, ["com.example.editor", "com.example.browser"],
+                       "两段窗口各记各的：把 gestureBundleID 挪出复位，第二段还是第一段那个 App")
     }
 
     // MARK: - EventCapture 侧的膛态

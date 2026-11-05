@@ -97,9 +97,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var eventCapture: EventCapture?
     private var canvasManager: CanvasManager?
     private var ruleEngine: RuleEngine?
-    /// 「右键 + 滚轮」触发后的那一下（切标签页 / 音量 / 自定义快捷键，issue #75）。
-    /// 与规则动作用同一套投键出口（`ActionExecutor` 的 `.shortcut`），音量走 CoreAudio。
-    private let wheelGestureExecutor = WheelGestureExecutor()
     private var ruleStore: RuleStore?
     private var preferencesWindow: PreferencesWindowController?
     private var historyClipboardWindow: HistoryClipboardListWindowController?
@@ -182,32 +179,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 ?? StorageDefaults.swallowUnmatchedGesture
         }
 
-        // 按住起始键 + 滚轮上/下 = 两条独立触发（issue #75）。
+        // 按住起始键 + 滚轮上/下 = 两条普通规则（3.2.4 起整并进规则表）。
         //
-        // 三件套各读各的偏好，都是「下一次事件就生效」的口径：
-        // - 总开关决定要不要给这段窗口上膛第二条 tap（关 = 压根不建、不发一次 tapEnable）；
-        // - 方向 → 动作的查表在 RuleEngine 的 `WheelGesturePlan`，这里只做「读偏好 + 递进去」；
-        // - 键值串只认 `ShortcutMonitor.parseShortcut` 那一份口径，解析完再递给纯函数
-        //   （再抄一条正则就是第三处会漂移的解析，划词气泡那边已经吃过一次）。
+        // 只回答两件事：
+        // - 规则表里有没有启用的滚轮规则 → 要不要给这段窗口上膛第二条 tap；
+        // - 这一发滚轮命中哪条规则 → 执行它的动作（没命中原样交回前台应用）。
+        // 旧版那套「独立偏好 + 专用执行器」已经删掉，升级时由启动段的迁移写成规则。
         canvas.isWheelGestureEnabled = { [weak self] in
-            guard let self = self else { return false }
-            return self.storage.getBoolOptional(forKey: .wheelGestureEnabled)
-                ?? StorageDefaults.wheelGestureEnabled
+            self?.ruleStore?.hasWheelInstantRule ?? false
         }
         canvas.wheelCaptureArmer = { [weak self] armed in
             self?.eventCapture?.setWheelCaptureArmed(armed)
         }
-        canvas.onWheelGesture = { [weak self] direction in
+        canvas.onWheelGesture = { [weak self] direction, bundleID in
             guard let self = self else { return false }
-            let up = direction == .up
-            let kind = WheelGestureActionKind(preferenceValue: self.storage.getIntOptional(
-                forKey: up ? .wheelGestureUpAction : .wheelGestureDownAction
-            ) ?? (up ? StorageDefaults.wheelGestureUpAction : StorageDefaults.wheelGestureDownAction))
-            let rawShortcut = self.storage.getStringOptional(
-                forKey: up ? .wheelGestureUpShortcut : .wheelGestureDownShortcut
-            ) ?? (up ? StorageDefaults.wheelGestureUpShortcut : StorageDefaults.wheelGestureDownShortcut)
-            let custom = rawShortcut.isEmpty ? nil : ShortcutMonitor.parseShortcut(rawShortcut)
-            return self.wheelGestureExecutor.fire(kind: kind, customShortcut: custom)
+            let instant: InstantGesture = direction == .up ? .wheelUp : .wheelDown
+            guard let rule = self.ruleStore?.match(instant: instant, bundleID: bundleID) else {
+                return false
+            }
+            return self.fireInstantRule(rule, bundleID: bundleID)
+        }
+        // 中键/侧键的一击也走同一张规则表（issue #78 第 2 条扩展）。起手键优先那条
+        // 判定在 CanvasManager 里 —— 同一颗键永远不会走到这个闭包。
+        canvas.onInstantButtonGesture = { [weak self] gesture, bundleID in
+            guard let self = self,
+                  let rule = self.ruleStore?.match(instant: gesture, bundleID: bundleID) else {
+                return false
+            }
+            return self.fireInstantRule(rule, bundleID: bundleID)
         }
         capture.wheelDelegate = canvas
 
@@ -219,6 +218,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // list and replaces it rather than treating it as the user's own work.
         ruleStore = RuleStore.shared
         ruleStore?.importLegacyRulesIfNeeded()
+        // 3.2.4：旧版「右键增强」页那两档滚轮设置整并进规则表。只迁一次，之后旧键不再参与。
+        ruleStore?.importLegacyWheelGesturesIfNeeded(
+            domainName: Bundle.main.bundleIdentifier ?? "net.mtjo.MacStroke",
+            upName: L("Wheel Gesture up row"),
+            downName: L("Wheel Gesture down row"),
+            parseShortcut: { ShortcutMonitor.parseShortcut($0) })
         ruleEngine = RuleEngine()
 
         if capture.start() {
@@ -1088,8 +1093,7 @@ extension AppDelegate: CanvasManagerDelegate {
                                        needsFocus: rule.action.needsCursorAppFocus)
 
         // Execute the action — 需要的话先挪焦点，投完按 `restoreToPID` 安排还焦。
-        let executor = ActionExecutor()
-        executor.onScreenshotRequested = { ScreenshotController.shared.toggle() }
+        let executor = makeActionExecutor()
         StrokeRouter.execute(route, focus: SystemFocusControl.shared, action: {
             executor.execute(rule.action, for: rule)
         }, log: { line in
@@ -1097,20 +1101,46 @@ extension AppDelegate: CanvasManagerDelegate {
         })
 
         // Show the note toast if enabled (original: showGestureNote key).
-        let showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
-        if showGestureNote && !rule.note.isEmpty {
-            let preferences = UserPreferences()
-            let positionIndex = preferences.notePosition
-            let pos = ToastPosition(rawValue: positionIndex) ?? ToastPosition.center
-            let toast = Toast(
-                message: rule.note,
-                duration: TimeInterval(preferences.noteRetentionTime),
-                position: pos
-            )
-            ToastManager.shared.show(toast)
-        }
+        showGestureNote(for: rule)
 
         return true
+    }
+
+    /// 瞬时手势命中规则表之后干什么（滚轮与中键/侧键共用，issue #78 第 2 条）。
+    ///
+    /// 返回 true = 这一发被本功能接住了，该吞（`CanvasManager` 据此决定放不放行，
+    /// 滚轮抬手时不再弹右键菜单、不再拿半条弧线去匹配 —— 都是 3.2.1 定下的口径）。
+    /// 投动作走 session 层那条老路，与轨迹命中同一个执行器；焦点归谁不由这里管：滚轮只
+    /// 在按住起始键的那段窗口里发生，按键那一击也按前台算。
+    private func fireInstantRule(_ rule: Rule, bundleID: String) -> Bool {
+        makeActionExecutor().execute(rule.action, for: rule)
+        showGestureNote(for: rule)
+        NSLog("%@", "[InstantGesture] 规则「\(rule.name)」命中（前台 \(bundleID.isEmpty ? "?" : bundleID)）："
+            + rule.action.description)
+        return true
+    }
+
+    /// 规则动作的执行器。轨迹抬手、滚轮一格与中键/侧键一击共用一份接法：截图那一档要
+    /// 回落到 Screenshot 模块，RuleEngine 够不到，只能在这里接线。
+    private func makeActionExecutor() -> ActionExecutor {
+        let executor = ActionExecutor()
+        executor.onScreenshotRequested = { ScreenshotController.shared.toggle() }
+        return executor
+    }
+
+    /// 命中之后那枚提示（原版 showGestureNote 那一档）。
+    private func showGestureNote(for rule: Rule) {
+        let showGestureNote = storage.getBoolOptional(forKey: .showGestureNote) ?? StorageDefaults.showGestureNote
+        guard showGestureNote, !rule.note.isEmpty else { return }
+        let preferences = UserPreferences()
+        let positionIndex = preferences.notePosition
+        let pos = ToastPosition(rawValue: positionIndex) ?? ToastPosition.center
+        let toast = Toast(
+            message: rule.note,
+            duration: TimeInterval(preferences.noteRetentionTime),
+            position: pos
+        )
+        ToastManager.shared.show(toast)
     }
 
     /// issue #22 那两条偏好，每次抬手现读（口径同别的模块：偏好现读，不缓存，

@@ -1,13 +1,14 @@
-// issue #75 的下半段：滚轮触发之后那「一下」到底投出去什么。
+// 3.2.4 起「右键增强」页那两档滚轮整并进规则表，本文件只剩两头：
 //
-// 三段各自钉住：
-// 1. `WheelGesturePlan` 那张查表 —— 档位与效应的对应、以及「没配 = nil」（nil 时调用方
-//    不许吞事件，这是整套判据的底线）；⌘⇧ 那两个键码写反就是「上滚切下一页」。
-// 2. `WheelGestureExecutor` —— 两条出口都换接缝：数「前台应用收到了什么键」而不必真去
-//    切标签页；音量那条同样喂假写手，测试期间绝不碰本机音量。
-// 3. `SystemVolume` —— 读写与「有没有这一档」全走接缝，于是能钉住三件在真设备上没法
+// 1. 旧 plist 那 0…5 档到 `RuleAction` 的映射（`WheelGestureActionKind.ruleAction`）——
+//    启动迁移只走这一张表。⌘⇧ 那两个键码写反就是「上滚切下一页」；「无」必须映射成
+//    nil（nil 时迁移不生成规则，滚轮原样交给前台应用）。
+// 2. `SystemVolume` —— 读写与「有没有这一档」全走接缝，于是能钉住三件在真设备上没法
 //    反复演的事：Main 档报 unknown property 时逐声道退让、钳位、已经在 0/1 头上时
-//    仍然算「配了动作」（不能因为到底了就退回去滚页面）。
+//    仍然算「做成了」。
+//
+// 迁移本身的用例在 `LegacyWheelGestureImportTests`；规则里音量动作的执行侧在
+// `VolumeRuleActionTests`。
 import XCTest
 import CoreAudio
 @testable import RuleEngine
@@ -22,91 +23,48 @@ final class WheelGestureActionTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - 查表
+    // MARK: - 旧档位 → 规则动作
 
     func testTabDirectionKeys() {
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .tabPrevious, customShortcut: nil),
-                       .shortcut(keyCode: 33, flags: WheelGesturePlan.commandShiftFlags),
+        XCTAssertEqual(WheelGestureActionKind.tabPrevious.ruleAction(),
+                       .shortcut(keyCode: 33, flags: WheelGestureActionKind.commandShiftFlags),
                        "上一个标签页 = ⌘⇧[ （33 是 bracketleft；写反就和下滚对调了）")
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .tabNext, customShortcut: nil),
-                       .shortcut(keyCode: 30, flags: WheelGesturePlan.commandShiftFlags),
+        XCTAssertEqual(WheelGestureActionKind.tabNext.ruleAction(),
+                       .shortcut(keyCode: 30, flags: WheelGestureActionKind.commandShiftFlags),
                        "下一个标签页 = ⌘⇧] （30 是 bracketright）")
-        XCTAssertEqual(WheelGesturePlan.commandShiftFlags, 1_179_648,
+        XCTAssertEqual(WheelGestureActionKind.commandShiftFlags, 1_179_648,
                        "⌘(0x100000)|⇧(0x20000)：少一位就变成按 [ 而不是 ⌘⇧[")
     }
 
-    func testVolumeDirectionsAreOpposite() {
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .volumeUp, customShortcut: nil)?.describe.contains("+5%"), true)
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .volumeUp, customShortcut: nil), .volume(step: 0.05))
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .volumeDown, customShortcut: nil), .volume(step: -0.05),
-                       "上下必须反号，否则上滚下滚都在把音量往同一头推")
+    func testVolumeDirectionsAreDistinct() {
+        XCTAssertEqual(WheelGestureActionKind.volumeUp.ruleAction(), .volumeUp)
+        XCTAssertEqual(WheelGestureActionKind.volumeDown.ruleAction(), .volumeDown,
+                       "上下必须是两个动作，否则上下滚都在把音量往同一头推")
     }
 
-    func testNoneIsNoEffect() {
-        XCTAssertNil(WheelGesturePlan.effect(kind: .none, customShortcut: (0, 0)),
-                     "「无」哪怕带着一条录好的键也不该动 —— 事件要原样交回前台应用")
+    func testNoneIsNoAction() {
+        XCTAssertNil(WheelGestureActionKind.none.ruleAction(customShortcut: (0, 0)),
+                     "「无」哪怕带着一条录好的键也不该生成规则 —— 滚轮要原样交回前台应用")
     }
 
     func testCustomShortcutUsesTheRecordedKey() {
-        XCTAssertEqual(WheelGesturePlan.effect(kind: .customShortcut, customShortcut: (5, 262144)),
+        XCTAssertEqual(WheelGestureActionKind.customShortcut.ruleAction(customShortcut: (5, 262144)),
                        .shortcut(keyCode: 5, flags: 262144))
     }
 
     /// 录了「自定义快捷键」但录入框是空的（或被清除）→ 这一格当没配。
-    func testCustomShortcutWithoutAKeyIsNoEffect() {
-        XCTAssertNil(WheelGesturePlan.effect(kind: .customShortcut, customShortcut: nil),
+    func testCustomShortcutWithoutAKeyIsNoAction() {
+        XCTAssertNil(WheelGestureActionKind.customShortcut.ruleAction(customShortcut: nil),
                      "空快捷键不能退化成「按 0 号键」（0 就是 A），那等于把用户的 A 键全局吞掉")
     }
 
     /// 偏好里存的是裸整数：认不出的数（手改 plist / 将来加新档）一律当「没配」。
+    /// 1/2 是历史默认值（切上/下一个标签页），序号一改老用户设置就全体跑位。
     func testUnknownPreferenceValuesFallBackToNone() {
         XCTAssertEqual(WheelGestureActionKind(preferenceValue: 99), .none)
         XCTAssertEqual(WheelGestureActionKind(preferenceValue: -1), .none)
-        XCTAssertEqual(WheelGestureActionKind(preferenceValue: 1), .tabPrevious,
-                       "StorageDefaults 的 1/2 就是这两档，改了序号就是老用户设置全跑位")
+        XCTAssertEqual(WheelGestureActionKind(preferenceValue: 1), .tabPrevious)
         XCTAssertEqual(WheelGestureActionKind(preferenceValue: 2), .tabNext)
-    }
-
-    // MARK: - 执行：两条出口
-
-    func testExecutorPostsTheShortcutExactlyOnce() {
-        var posted: [(keyCode: UInt16, flags: UInt)] = []
-        let executor = WheelGestureExecutor()
-        executor.shortcutPoster = { keyCode, flags in posted.append((keyCode, flags)) }
-
-        XCTAssertTrue(executor.fire(kind: .tabNext, customShortcut: nil))
-        XCTAssertEqual(posted.count, 1, "一次滚轮只投一条：投两发就是切两页")
-        XCTAssertEqual(posted.first?.keyCode, 30)
-        XCTAssertEqual(posted.first?.flags, WheelGesturePlan.commandShiftFlags)
-    }
-
-    func testExecutorDoesNothingForUnboundDirection() {
-        var posted: [(keyCode: UInt16, flags: UInt)] = []
-        var volumeCalls = 0
-        let executor = WheelGestureExecutor()
-        executor.shortcutPoster = { keyCode, flags in posted.append((keyCode, flags)) }
-        executor.volumeStepper = { _ in volumeCalls += 1; return true }
-
-        XCTAssertFalse(executor.fire(kind: .none, customShortcut: nil),
-                       "返回 false = 这一格没接住，调用方必须把滚轮交回前台应用")
-        XCTAssertTrue(posted.isEmpty)
-        XCTAssertEqual(volumeCalls, 0)
-    }
-
-    /// 音量动不了（没插输出设备）→ false → 页面照常滚，不假装成功。
-    func testExecutorReportsAFailedVolumeStep() {
-        let executor = WheelGestureExecutor()
-        executor.volumeStepper = { _ in false }
-        XCTAssertFalse(executor.fire(kind: .volumeUp, customShortcut: nil))
-    }
-
-    func testExecutorPassesTheSignedStep() {
-        var steps: [Double] = []
-        let executor = WheelGestureExecutor()
-        executor.volumeStepper = { steps.append($0); return true }
-
-        XCTAssertTrue(executor.fire(kind: .volumeDown, customShortcut: nil))
-        XCTAssertEqual(steps, [-0.05])
     }
 
     // MARK: - SystemVolume：档位、钳位、到底了

@@ -189,29 +189,6 @@ public final class UserPreferences: ObservableObject {
         didSet { storage.setString(userTerminal, forKey: .userTerminal) }
     }
 
-    // MARK: - 按住右键 + 滚轮（issue #75）
-    // 配置项就三个：一颗总开关、上下各一个动作档，外加「自定义快捷键」那档用的两条键值。
-    // 与本页其余开关一样只负责存；判定与执行在 EventCapture / RuleEngine，App 层每事件现读，
-    // 所以勾上、换档都不用重启，也不必重建事件 tap。
-    @Published public var wheelGestureEnabled: Bool {
-        didSet { storage.setBool(wheelGestureEnabled, forKey: .wheelGestureEnabled) }
-    }
-    /// 存的是 `WheelGestureActionKind` 的原始值（0…5）。这一层够不到 RuleEngine，
-    /// 所以类型不在这里出现；档位含义与取值范围由 StorageTests 钉住。
-    @Published public var wheelGestureUpAction: Int {
-        didSet { storage.setInt(wheelGestureUpAction, forKey: .wheelGestureUpAction) }
-    }
-    @Published public var wheelGestureDownAction: Int {
-        didSet { storage.setInt(wheelGestureDownAction, forKey: .wheelGestureDownAction) }
-    }
-    /// "keyCode=X, flags=Y" 串，与其它快捷键录制框同一种存法；空串 = 没配。
-    @Published public var wheelGestureUpShortcut: String {
-        didSet { storage.setString(wheelGestureUpShortcut, forKey: .wheelGestureUpShortcut) }
-    }
-    @Published public var wheelGestureDownShortcut: String {
-        didSet { storage.setString(wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut) }
-    }
-
     // MARK: - 手势归给光标下的窗口（issue #22）
     // 一颗总开关 + 一条「投完还焦」。判定与挪焦点都在 RuleEngine（CursorTarget / StrokeRouter），
     // App 层每笔手势现读，所以勾上、取消勾都不用重启。总开关**默认关** = 老行为。
@@ -542,11 +519,6 @@ public final class UserPreferences: ObservableObject {
         self.enableNewFile = storage.getBoolOptional(forKey: .enableNewFile) ?? StorageDefaults.enableNewFile
         self.enableOpenInTerminal = storage.getBoolOptional(forKey: .enableOpenInTerminal) ?? StorageDefaults.enableOpenInTerminal
         self.enableCopyFilePath = storage.getBoolOptional(forKey: .enableCopyFilePath) ?? StorageDefaults.enableCopyFilePath
-        self.wheelGestureEnabled = storage.getBoolOptional(forKey: .wheelGestureEnabled) ?? StorageDefaults.wheelGestureEnabled
-        self.wheelGestureUpAction = storage.getIntOptional(forKey: .wheelGestureUpAction) ?? StorageDefaults.wheelGestureUpAction
-        self.wheelGestureDownAction = storage.getIntOptional(forKey: .wheelGestureDownAction) ?? StorageDefaults.wheelGestureDownAction
-        self.wheelGestureUpShortcut = storage.getStringOptional(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
-        self.wheelGestureDownShortcut = storage.getStringOptional(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
         self.strokeTargetsCursorWindow = storage.getBoolOptional(forKey: .strokeTargetsCursorWindow) ?? StorageDefaults.strokeTargetsCursorWindow
         self.strokeTargetRestoresFocus = storage.getBoolOptional(forKey: .strokeTargetRestoresFocus) ?? StorageDefaults.strokeTargetRestoresFocus
         self.enableHistoryClipboard = storage.getBoolOptional(forKey: .enableHistoryClipboard) ?? true
@@ -623,61 +595,122 @@ public final class UserPreferences: ObservableObject {
         storage.synchronize()
     }
 
+    /// 「重置默认值」要写回的每一项。写入、撤销快照的键、以及撤销时写回的键
+    /// 全部从这一张表来 —— 加一项不必再同步第二处。
+    private enum ResettableDefault {
+        case bool(StorageKey, Bool)
+        case int(StorageKey, Int)
+        case double(StorageKey, Double)
+        case string(StorageKey, String)
+
+        var key: StorageKey {
+            switch self {
+            case let .bool(key, _), let .int(key, _), let .double(key, _), let .string(key, _):
+                return key
+            }
+        }
+
+        func write(to storage: PreferencesStorage) {
+            switch self {
+            case let .bool(key, value): storage.setBool(value, forKey: key)
+            case let .int(key, value): storage.setInt(value, forKey: key)
+            case let .double(key, value): storage.setDouble(value, forKey: key)
+            case let .string(key, value): storage.setString(value, forKey: key)
+            }
+        }
+    }
+
+    private static let resettableDefaults: [ResettableDefault] = [
+        .bool(.showIconInStatusBar, StorageDefaults.showIconInStatusBar),
+        .bool(.showUIInWhateverApp, StorageDefaults.showUIInWhateverApp),
+        .bool(.openPrefOnStartup, StorageDefaults.openPrefOnStartup),
+        .bool(.mergeConsecutiveIdenticalGestures, StorageDefaults.mergeConsecutiveIdenticalGestures),
+        .string(.defaultLineColor, StorageDefaults.defaultLineColor),
+        .string(.defaultNoteColor, StorageDefaults.defaultNoteColor),
+        .double(.minSimilarityScore, StorageDefaults.minSimilarityScore),
+        .bool(.enableGestureMinScore, StorageDefaults.enableGestureMinScore),
+        .bool(.showGestureNote, StorageDefaults.showGestureNote),
+        // 原版没有这几个键，但「恢复默认」要把手势的起手键让回右键、修饰键让位关掉，
+        // 才是用户期待的结果（否则重置后还在用录进去的键，界面却显示为默认值）。
+        .int(.gestureTriggerButton, StorageDefaults.gestureTriggerButton),
+        .bool(.enableGestureSuppression, StorageDefaults.enableGestureSuppression),
+        .string(.gestureSuppressedModifiers, StorageDefaults.gestureSuppressedModifiers),
+        .bool(.swallowUnmatchedGesture, StorageDefaults.swallowUnmatchedGesture),
+        .int(.noteRetentionTime, StorageDefaults.noteRetentionTime),
+        .int(.notePosition, StorageDefaults.notePosition),
+        .double(.noteBackgroundAlpha, StorageDefaults.noteBackgroundAlpha),
+        .string(.noteFontName, StorageDefaults.noteFontName),
+        .double(.noteFontSize, StorageDefaults.noteFontSize),
+        .bool(.showNoteIcon, StorageDefaults.showNoteIcon),
+        // Original MGOptionsDefine resetColors: re-derive the live colors from
+        // the defaultLineColor / defaultNoteColor strings.
+        .string(.lineColorHex, StorageDefaults.defaultLineColor),
+        .bool(.enableRightClickMenu, StorageDefaults.enableRightClickMenu),
+        .bool(.enableNewFile, StorageDefaults.enableNewFile),
+        .bool(.enableOpenInTerminal, StorageDefaults.enableOpenInTerminal),
+        .bool(.enableCopyFilePath, StorageDefaults.enableCopyFilePath),
+        .string(.userTerminal, StorageDefaults.userTerminal),
+        .bool(.strokeTargetsCursorWindow, StorageDefaults.strokeTargetsCursorWindow),
+        .bool(.strokeTargetRestoresFocus, StorageDefaults.strokeTargetRestoresFocus),
+        .bool(.enableHistoryClipboard, StorageDefaults.enableHistoryClipboard),
+        .bool(.clipoardStroageLocal, StorageDefaults.clipoardStroageLocal),
+        .string(.historyCilpboardListShortcut, StorageDefaults.historyCilpboardListShortcut),
+        .bool(.enableLimitTop, StorageDefaults.enableLimitTop),
+        .int(.limitTop, StorageDefaults.limitTop),
+        .bool(.enableLimitTotal, StorageDefaults.enableLimitTotal),
+        .int(.limitTotal, StorageDefaults.limitTotal),
+        .bool(.enableLimitSaveDays, StorageDefaults.enableLimitSaveDays),
+        .int(.limitSaveDays, StorageDefaults.limitSaveDays),
+    ]
+
+    public static var resettableDefaultKeys: [StorageKey] {
+        resettableDefaults.map(\.key)
+    }
+
+    /// 重置前拍一份：键 → 当时存储里的原对象。撤销时原样写回，不按类型重推。
+    public struct DefaultsUndoSnapshot {
+        fileprivate let values: [String: Any?]
+        /// 快照覆盖的项数（撤销条只是提示，不拿它判断有没有改过）。
+        public var count: Int { values.count }
+    }
+
     /// Reset preferences the way the original `resetDefaults:` does — iterate the
     /// keys of `DefaultPreferences.plist` and write each back to UserDefaults.
     /// Keys that plist does not carry are therefore left alone: language, the
     /// black/white filter lists and mode, the login item, the minimum-points
     /// threshold, the mouse-path switch, update settings and the master switch.
     public func resetToDefaults() {
-        storage.setBool(StorageDefaults.showIconInStatusBar, forKey: .showIconInStatusBar)
-        storage.setBool(StorageDefaults.showUIInWhateverApp, forKey: .showUIInWhateverApp)
-        storage.setBool(StorageDefaults.openPrefOnStartup, forKey: .openPrefOnStartup)
-        storage.setBool(StorageDefaults.mergeConsecutiveIdenticalGestures, forKey: .mergeConsecutiveIdenticalGestures)
-        storage.setString(StorageDefaults.defaultLineColor, forKey: .defaultLineColor)
-        storage.setString(StorageDefaults.defaultNoteColor, forKey: .defaultNoteColor)
-        storage.setDouble(StorageDefaults.minSimilarityScore, forKey: .minSimilarityScore)
-        storage.setBool(StorageDefaults.enableGestureMinScore, forKey: .enableGestureMinScore)
-        storage.setBool(StorageDefaults.showGestureNote, forKey: .showGestureNote)
-        // 原版没有这几个键，但「恢复默认」要把手势的起手键让回右键、修饰键让位关掉，
-        // 才是用户期待的结果（否则重置后还在用录进去的键，界面却显示为默认值）。
-        storage.setInt(StorageDefaults.gestureTriggerButton, forKey: .gestureTriggerButton)
-        storage.setBool(StorageDefaults.enableGestureSuppression, forKey: .enableGestureSuppression)
-        storage.setString(StorageDefaults.gestureSuppressedModifiers, forKey: .gestureSuppressedModifiers)
-        storage.setBool(StorageDefaults.swallowUnmatchedGesture, forKey: .swallowUnmatchedGesture)
-        storage.setInt(StorageDefaults.noteRetentionTime, forKey: .noteRetentionTime)
-        storage.setInt(StorageDefaults.notePosition, forKey: .notePosition)
-        storage.setDouble(StorageDefaults.noteBackgroundAlpha, forKey: .noteBackgroundAlpha)
-        storage.setString(StorageDefaults.noteFontName, forKey: .noteFontName)
-        storage.setDouble(StorageDefaults.noteFontSize, forKey: .noteFontSize)
-        storage.setBool(StorageDefaults.showNoteIcon, forKey: .showNoteIcon)
-        // Original MGOptionsDefine resetColors: re-derive the live colors from
-        // the defaultLineColor / defaultNoteColor strings.
-        storage.setString(StorageDefaults.defaultLineColor, forKey: .lineColorHex)
-        storage.setBool(StorageDefaults.enableRightClickMenu, forKey: .enableRightClickMenu)
-        storage.setBool(StorageDefaults.enableNewFile, forKey: .enableNewFile)
-        storage.setBool(StorageDefaults.enableOpenInTerminal, forKey: .enableOpenInTerminal)
-        storage.setBool(StorageDefaults.enableCopyFilePath, forKey: .enableCopyFilePath)
-        storage.setString(StorageDefaults.userTerminal, forKey: .userTerminal)
-        // 「恢复默认」把这功能整个关回原版行为（原版没这功能），两条方向档回到
-        // 上滚=上一个标签页 / 下滚=下一个标签页，自定义键值清空。
-        storage.setBool(StorageDefaults.wheelGestureEnabled, forKey: .wheelGestureEnabled)
-        storage.setInt(StorageDefaults.wheelGestureUpAction, forKey: .wheelGestureUpAction)
-        storage.setInt(StorageDefaults.wheelGestureDownAction, forKey: .wheelGestureDownAction)
-        storage.setString(StorageDefaults.wheelGestureUpShortcut, forKey: .wheelGestureUpShortcut)
-        storage.setString(StorageDefaults.wheelGestureDownShortcut, forKey: .wheelGestureDownShortcut)
-        storage.setBool(StorageDefaults.strokeTargetsCursorWindow, forKey: .strokeTargetsCursorWindow)
-        storage.setBool(StorageDefaults.strokeTargetRestoresFocus, forKey: .strokeTargetRestoresFocus)
-        storage.setBool(StorageDefaults.enableHistoryClipboard, forKey: .enableHistoryClipboard)
-        storage.setBool(StorageDefaults.clipoardStroageLocal, forKey: .clipoardStroageLocal)
-        storage.setString(StorageDefaults.historyCilpboardListShortcut, forKey: .historyCilpboardListShortcut)
-        storage.setBool(StorageDefaults.enableLimitTop, forKey: .enableLimitTop)
-        storage.setInt(StorageDefaults.limitTop, forKey: .limitTop)
-        storage.setBool(StorageDefaults.enableLimitTotal, forKey: .enableLimitTotal)
-        storage.setInt(StorageDefaults.limitTotal, forKey: .limitTotal)
-        storage.setBool(StorageDefaults.enableLimitSaveDays, forKey: .enableLimitSaveDays)
-        storage.setInt(StorageDefaults.limitSaveDays, forKey: .limitSaveDays)
+        for item in Self.resettableDefaults {
+            item.write(to: storage)
+        }
         storage.synchronize()
         reloadResetValues()
+    }
+
+    public func defaultsUndoSnapshot() -> DefaultsUndoSnapshot {
+        var values: [String: Any?] = [:]
+        for key in Self.resettableDefaultKeys {
+            values.updateValue(storage.object(forKey: key), forKey: key.rawValue)
+        }
+        return DefaultsUndoSnapshot(values: values)
+    }
+
+    /// 把「重置默认值」撤销回去，并让页面上的绑定立刻看到旧值。
+    public func restoreDefaults(_ snapshot: DefaultsUndoSnapshot) {
+        for key in Self.resettableDefaultKeys {
+            guard let saved = snapshot.values[key.rawValue] else { continue }
+            storage.setObject(saved, forKey: key)
+        }
+        storage.synchronize()
+        reloadResetValues()
+        // `reloadResetValues()` 把值推回 @Published 属性，而每个属性的 didSet 都会
+        // 再写一次存储 —— 快照时**没有显式值**的键会被按默认值补写进去。再把这几把
+        // 键删掉：页面显示默认值，存储保持「没设过」，以后改默认值才跟着走。
+        for key in Self.resettableDefaultKeys {
+            guard let saved = snapshot.values[key.rawValue] else { continue }
+            if saved == nil { storage.remove(key) }
+        }
+        storage.synchronize()
     }
 
     /// The original refreshes its bound controls automatically through the
@@ -708,11 +741,6 @@ public final class UserPreferences: ObservableObject {
         enableNewFile = storage.getBool(forKey: .enableNewFile)
         enableOpenInTerminal = storage.getBool(forKey: .enableOpenInTerminal)
         enableCopyFilePath = storage.getBool(forKey: .enableCopyFilePath)
-        wheelGestureEnabled = storage.getBool(forKey: .wheelGestureEnabled)
-        wheelGestureUpAction = storage.getInt(forKey: .wheelGestureUpAction)
-        wheelGestureDownAction = storage.getInt(forKey: .wheelGestureDownAction)
-        wheelGestureUpShortcut = storage.getString(forKey: .wheelGestureUpShortcut) ?? StorageDefaults.wheelGestureUpShortcut
-        wheelGestureDownShortcut = storage.getString(forKey: .wheelGestureDownShortcut) ?? StorageDefaults.wheelGestureDownShortcut
         strokeTargetsCursorWindow = storage.getBool(forKey: .strokeTargetsCursorWindow)
         strokeTargetRestoresFocus = storage.getBool(forKey: .strokeTargetRestoresFocus)
         userTerminal = storage.getString(forKey: .userTerminal) ?? StorageDefaults.userTerminal

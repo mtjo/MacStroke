@@ -18,6 +18,10 @@ public final class ActionExecutor {
     /// RuleEngine 自己够不到）。没挂上时保持沉默，不假装执行成功。
     public var onScreenshotRequested: (() -> Void)?
 
+    /// 音量动作的执行接缝。默认 `SystemVolume.step(by:)`；桩件换成计数器就能钉住
+    /// 「+1 档传正数、−1 档传负数、档位大小与滚轮页同一格」。
+    public var volumeStepper: ((Double) -> Bool)?
+
     public init(appleScriptRunner: AppleScriptRunner = AppleScriptRunner()) {
         self.appleScriptRunner = appleScriptRunner
     }
@@ -52,8 +56,22 @@ public final class ActionExecutor {
             typeText(password)
         case .screenshot:
             onScreenshotRequested?()
+        case .volumeUp:
+            stepVolume(SystemVolume.volumeStep)
+        case .volumeDown:
+            stepVolume(-SystemVolume.volumeStep)
         case .none:
             break
+        }
+    }
+
+    /// 档位大小只认 `SystemVolume.volumeStep` 这一个数（3.2.3 及以前滚轮音量档也是它）。
+    /// 读不到默认输出设备（没插扬声器）时留一行日志，动作本身是 fire-and-forget，
+    /// 没有「交回事件」这条退路可走。
+    private func stepVolume(_ delta: Double) {
+        let didStep = volumeStepper?(delta) ?? SystemVolume.step(by: delta)
+        if !didStep {
+            NSLog("%@", "[ActionExecutor] 音量 \(delta > 0 ? "+" : "")\(delta) 没落地（没有默认输出设备？）")
         }
     }
 
@@ -76,8 +94,8 @@ public final class ActionExecutor {
     }
 
     private func pressKey(_ key: String) {
-        // Map common key names to key codes.
-        let keyCode: UInt16? = keyCodeForName(key)
+        // 名→键码用 GestureEngine 那一份共享表（手填快捷键框用的是同一张）。
+        let keyCode: UInt16? = KeyboardKeys.keyCode(for: key)
         guard let keyCode else {
             NSLog("%@", "[ActionExecutor] Unknown key: \(key)")
             return
@@ -131,70 +149,5 @@ public final class ActionExecutor {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-    }
-
-    /// Map a key name to its ANSI virtual key code (HIToolbox/Events.h values).
-    private func keyCodeForName(_ name: String) -> UInt16? {
-        switch name.lowercased() {
-        case "space": return 0x31
-        case "return", "enter": return 0x24
-        case "delete": return 0x33
-        case "tab": return 0x30
-        case "escape": return 0x35
-        case "left", "leftarrow": return 0x7B
-        case "right", "rightarrow": return 0x7C
-        case "down", "downarrow": return 0x7D
-        case "up", "uparrow": return 0x7E
-        case "pageup", "pageupkey": return 0x74
-        case "pagedown", "pagedownkey": return 0x79
-        case "[", "leftbracket": return 0x21
-        case "]", "rightbracket": return 0x1E
-        case "a": return 0x00
-        case "s": return 0x01
-        case "d": return 0x02
-        case "f": return 0x03
-        case "h": return 0x04
-        case "g": return 0x05
-        case "z": return 0x06
-        case "x": return 0x07
-        case "c": return 0x08
-        case "v": return 0x09
-        case "b": return 0x0B
-        case "q": return 0x0C
-        case "w": return 0x0D
-        case "e": return 0x0E
-        case "r": return 0x0F
-        case "y": return 0x10
-        case "t": return 0x11
-        case "1": return 0x12
-        case "2": return 0x13
-        case "3": return 0x14
-        case "4": return 0x15
-        case "5": return 0x17
-        case "6": return 0x16
-        case "7": return 0x1A
-        case "8": return 0x1C
-        case "9": return 0x19
-        case "0": return 0x1D
-        case "o": return 0x1F
-        case "u": return 0x20
-        case "i": return 0x22
-        case "p": return 0x23
-        case "l": return 0x25
-        case "j": return 0x26
-        case "k": return 0x28
-        case "n": return 0x2D
-        case "m": return 0x2E
-        case ",": return 0x2B
-        case ".": return 0x2F
-        case "/": return 0x2C
-        case ";": return 0x29
-        case "'": return 0x27
-        case "\\": return 0x2A
-        case "-": return 0x1B
-        case "=": return 0x18
-        case "`": return 0x32
-        default: return nil
-        }
     }
 }

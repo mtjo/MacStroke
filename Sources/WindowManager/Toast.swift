@@ -49,14 +49,23 @@ public final class ToastManager {
     private var activeToasts: [NSWindow] = []
 
     // CoolToast defaults (ToastWindowController initWithWindowNibName:)
-    private let edgeOffset: CGFloat = 50      // left/top/right/bottom offset
-    private let maxWidth: CGFloat = 826
-    private let minWidth: CGFloat = 320
-    private let minHeight: CGFloat = 80
-    private let cornerRadius: CGFloat = 6
-    private let imageMarginLeft: CGFloat = 15
-    private let labelMargin: CGFloat = 30
-    private let iconWidth: CGFloat = 58       // xib icon width constraint
+    private static let edgeOffset: CGFloat = 50      // left/top/right/bottom offset
+    private static let maxWidth: CGFloat = 826
+    private static let minWidth: CGFloat = 320
+    private static let minHeight: CGFloat = 80
+    private static let cornerRadius: CGFloat = 6
+    private static let imageMarginLeft: CGFloat = 15
+    private static let labelMargin: CGFloat = 30
+    private static let iconWidth: CGFloat = 58       // xib icon width constraint
+    /// 图标与文字之间的缝，同时是文字到框子上下沿的留白。
+    private static let labelGap: CGFloat = 12
+    /// `NSTextField` 的 label cell 左右内边距。
+    ///
+    /// 单行分支按字符串宽定框时必须把它算进去：差这几个点，cell 就会在刚好等于字宽的
+    /// 格子里自己折行，而第二行又被 `行数 × 行高` 的格子高度裁掉 —— 默认字号下
+    /// 「已保存 截图 …png」这条提示的文件名尾部就是这么没的。
+    /// 实测四串（272/313/204/45pt）的折行阈值减字号宽 = 8.35～8.68，取 9 兜住取整。
+    static let labelCellPadding: CGFloat = 9
     private let fadeDuration = 0.3            // showNoteTost: animaterTimeSecond
 
     private init() {}
@@ -119,6 +128,90 @@ public final class ToastManager {
         }
     }
 
+    /// 一次气泡的排版结果：框子多大、图标和文字各占哪一块。
+    public struct ToastMetrics {
+        public let containerSize: NSSize
+        public let iconFrame: NSRect
+        public let labelFrame: NSRect
+        public let lineCount: Int
+    }
+
+    /// 量文字、定框子。**只有一把尺**：折行用的宽度就是 label 真正拿到的宽度，
+    /// 框高就是 `行数 × 行高 + 上下留白`。
+    ///
+    /// 为什么不照抄原版：`ToastWindowController.m` 在这里用了两套口径 —— 数行数按
+    /// `maxWidth-60-73` 折，定框宽却按**不折行**的单行宽加，长消息把框撑过 826 而文字
+    /// 只排一行；框高又只按「超出两行的部分」长（`80 + (lineCount-2) × 行高`），永远比
+    /// 文字少两行高。字号小、消息短时看不出来；截图那条提示带完整文件名（「已保存 截图
+    /// 2026-11-02 at 15.08.47.png」），配上 Monaco 40 就是一行 865pt 的字顶出黑框。
+    public static func metrics(message: String, font: NSFont, iconVisible: Bool) -> ToastMetrics {
+        let lineHeight = NSLayoutManager().defaultLineHeight(for: font)
+        let labelLeft = iconVisible ? imageMarginLeft + iconWidth + labelGap : labelMargin
+        let chrome = labelLeft + labelMargin
+        // 折行预算就是 label 真正拿到的宽度 —— 「一把尺」说的就是这一行。
+        // label cell 左右各吃 2pt，所以要先把这 4pt 让出来。
+        let available = maxWidth - chrome
+        let labelBudget = available - labelCellPadding
+        let singleLine = ceil((message as NSString).size(withAttributes: [.font: font]).width)
+
+        let containerWidth: CGFloat
+        let lineCount: Int
+        if singleLine <= labelBudget {
+            lineCount = 1
+            // Original quirk: icon width is counted even when the icon is hidden
+            let slack: CGFloat = iconVisible ? 0 : imageMarginLeft + iconWidth
+            containerWidth = max(minWidth, singleLine + labelCellPadding + chrome + slack)
+        } else {
+            containerWidth = maxWidth
+            let bounding = (message as NSString).boundingRect(
+                with: CGSize(width: labelBudget, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin], attributes: [.font: font])
+            lineCount = max(1, Int(ceil(bounding.height / lineHeight)))
+        }
+
+        let labelHeight = CGFloat(lineCount) * lineHeight
+        let containerHeight = max(minHeight, labelHeight + labelGap * 2)
+        return ToastMetrics(
+            containerSize: NSSize(width: containerWidth, height: containerHeight),
+            iconFrame: NSRect(x: imageMarginLeft, y: (containerHeight - iconWidth) / 2,
+                              width: iconWidth, height: iconWidth),
+            labelFrame: NSRect(x: labelLeft, y: (containerHeight - labelHeight) / 2,
+                               width: containerWidth - chrome, height: labelHeight),
+            lineCount: lineCount)
+    }
+
+    /// 按 metrics 把深色框、图标、文字装好。`show()` 与离屏取证都走这一手，
+    /// 于是量到的就是真机上那只框（而不是测试里另抄一份布局）。
+    static func makeContainer(message: String, metrics: ToastMetrics, font: NSFont,
+                              textColor: NSColor, backgroundAlpha: CGFloat,
+                              hiddenIcon: Bool) -> NSView {
+        // Container (CTView): dark rounded box, corner radius conerRadius
+        let container = NSView(frame: NSRect(origin: .zero, size: metrics.containerSize))
+        container.wantsLayer = true
+        container.layer?.cornerRadius = cornerRadius
+        container.layer?.backgroundColor = NSColor(red: 0, green: 0, blue: 0,
+                                                   alpha: backgroundAlpha).cgColor
+
+        // Icon: app icon，图标列定宽 58，垂直居中（长消息把框撑高时不跟着放大）。
+        let iconView = NSImageView(frame: metrics.iconFrame)
+        iconView.image = NSApp.applicationIconImage
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.isHidden = hiddenIcon
+        container.addSubview(iconView)
+
+        // Message label: centered text。左沿让开图标那一列，框高按行数给足，
+        // 于是字既不会被压到图标底下，也不会顶出黑框。
+        let label = NSTextField(labelWithString: message)
+        label.alignment = .center
+        label.font = font
+        label.textColor = textColor
+        label.frame = metrics.labelFrame
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        container.addSubview(label)
+        return container
+    }
+
     /// Show a toast notification.
     /// - Parameter toast: The toast to display
     public func show(_ toast: Toast) {
@@ -142,23 +235,10 @@ public final class ToastManager {
             ?? NSScreen.main ?? NSScreen.screens[0]
         let visibleFrame = screen.visibleFrame
 
-        // showCoolToast: measure the text to size the container
-        let attributes: [NSAttributedString.Key: Any] = [.font: font]
-        let labelMaxWidth = maxWidth - labelMargin * 2 - (hiddenIcon ? 0 : iconWidth + imageMarginLeft)
-        let message = toast.message as NSString
-        var labelWidth = message.size(withAttributes: attributes).width
-        let bounding = message.boundingRect(
-            with: CGSize(width: labelMaxWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin], attributes: attributes)
-        let lineCount = Int(ceil(bounding.height / NSLayoutManager().defaultLineHeight(for: font)))
-        var containerHeight = minHeight
-        if lineCount > 2 {
-            containerHeight = minHeight + CGFloat(lineCount - 2) * font.boundingRectForFont.height
-            labelWidth = labelMaxWidth
-        }
-        // Original quirk: icon width is counted even when the icon is hidden
-        var containerWidth = labelWidth + iconWidth + labelMargin * 2 + imageMarginLeft
-        if containerWidth < minWidth { containerWidth = minWidth }
+        // 量文字、定框子（口径只有一把尺，见 metrics 那段注释）
+        let metrics = Self.metrics(message: toast.message, font: font, iconVisible: !hiddenIcon)
+        let containerWidth = metrics.containerSize.width
+        let containerHeight = metrics.containerSize.height
 
         // getContainerPointWithWidth:height: (top-left origin within the window)
         let position = ToastPosition(rawValue: positionIndex) ?? toast.position
@@ -167,7 +247,7 @@ public final class ToastManager {
                                           mouseLocation: mouseLocation,
                                           containerSize: NSSize(width: containerWidth,
                                                                 height: containerHeight),
-                                          edgeOffset: edgeOffset)
+                                          edgeOffset: Self.edgeOffset)
 
         // Window covers the screen (CoolToastWindow): clear bg, no shadow,
         // NSPopUpMenuWindowLevel
@@ -193,36 +273,10 @@ public final class ToastManager {
         window.contentView = contentView
 
         // Container (CTView): dark rounded box, corner radius conerRadius
-        let container = NSView(
-            frame: NSRect(x: origin.x, y: windowSize.height - origin.y - containerHeight,
-                          width: containerWidth, height: containerHeight))
-        container.wantsLayer = true
-        container.layer?.cornerRadius = cornerRadius
-        container.layer?.backgroundColor = NSColor(red: 0, green: 0, blue: 0, alpha: bgAlpha).cgColor
-
-        // Icon: app icon, leading imageMarginLeft, 58 wide, vertical margins 10
-        let iconView = NSImageView(
-            frame: NSRect(x: imageMarginLeft, y: 10,
-                          width: iconWidth, height: containerHeight - 20))
-        iconView.image = NSApp.applicationIconImage
-        iconView.imageScaling = .scaleProportionallyUpOrDown
-        iconView.isHidden = hiddenIcon
-        container.addSubview(iconView)
-
-        // Message label: centered text, leading labelMargin, trailing 5.
-        // The xib gives the label no height constraint (only centerY), so it
-        // keeps its intrinsic font line height — a fixed 40pt frame would clip
-        // large note fonts (e.g. Monaco 40 needs ~48pt).
-        let label = NSTextField(labelWithString: toast.message)
-        label.alignment = .center
-        label.font = font
-        label.textColor = textColor
-        let labelHeight = CGFloat(max(1, lineCount)) * NSLayoutManager().defaultLineHeight(for: font)
-        label.frame = NSRect(x: labelMargin, y: (containerHeight - labelHeight) / 2,
-                             width: containerWidth - labelMargin - 5, height: labelHeight)
-        label.lineBreakMode = .byWordWrapping
-        label.maximumNumberOfLines = 0
-        container.addSubview(label)
+        let container = Self.makeContainer(message: toast.message, metrics: metrics, font: font,
+                                           textColor: textColor, backgroundAlpha: bgAlpha,
+                                           hiddenIcon: hiddenIcon)
+        container.setFrameOrigin(NSPoint(x: origin.x, y: windowSize.height - origin.y - containerHeight))
 
         // Double-click on the container dismisses the toast
         let click = NSClickGestureRecognizer(target: self, action: #selector(toastClicked(_:)))

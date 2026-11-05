@@ -51,6 +51,23 @@ public enum PreferencesTab: String, CaseIterable {
     case selectionBubble
     case about
 
+    /// 侧栏分组。只影响绘制，不改 `allCases` 的顺序 —— 状态栏入口传的是
+    /// `rawValue`，页序用例也按 `allCases` 自上而下断言。
+    struct SidebarGroup {
+        let title: String
+        let tabs: [PreferencesTab]
+    }
+
+    static var sidebarGroups: [SidebarGroup] {
+        [
+            SidebarGroup(title: L("Gestures"),
+                         tabs: [.general, .rules, .filters, .appleScript, .rightClick, .rightClickMenu]),
+            SidebarGroup(title: L("Extensions"),
+                         tabs: [.clipboard, .remoteControl, .screenshot, .proximityLock, .selectionBubble]),
+            SidebarGroup(title: L("Application"), tabs: [.about]),
+        ]
+    }
+
     var title: String {
         switch self {
         case .general: return L("General")
@@ -188,8 +205,9 @@ struct ShortcutRecorder: NSViewRepresentable {
             nsView.drawAppearance = hostAppearance
         }
         // Sync external changes (reset to defaults etc.) into the view
-        // while the user is not actively recording.
-        guard !nsView.isRecording else { return }
+        // while the user is not actively recording, typing one by hand or
+        // picking on the on-screen keyboard.
+        guard !nsView.isRecording, !nsView.isEditingManually, !nsView.isEditingWithKeyboard else { return }
         let parsed = Self.parse(text)
         // 解析不出来就是「已清除」，视图里那份旧值也得跟着抹掉；只认有值的那条分支
         // 会让清除后的框继续显示 ⌘⇧A，而偏好里已经存了空串。
@@ -236,14 +254,23 @@ public struct PreferencesView: View {
 
     public var body: some View {
         HStack(spacing: 0) {
-            // Sidebar (macOS System Settings style)
-            VStack(spacing: 1) {
-                ForEach(PreferencesTab.allCases, id: \.self) { tab in
-                    TabButton(
-                        tab: tab,
-                        isSelected: selectedTab == tab,
-                        action: { selectedTab = tab }
-                    )
+            // Sidebar (macOS System Settings style), grouped so twelve rows read
+            // in three passes instead of one long list.
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(PreferencesTab.sidebarGroups.enumerated()), id: \.offset) { index, group in
+                    Text(group.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 8)
+                        .padding(.top, index == 0 ? 0 : 12)
+                        .padding(.bottom, 3)
+                    ForEach(group.tabs, id: \.self) { tab in
+                        TabButton(
+                            tab: tab,
+                            isSelected: selectedTab == tab,
+                            action: { selectedTab = tab }
+                        )
+                    }
                 }
                 Spacer()
             }
@@ -377,6 +404,10 @@ func sidebarIconImage(_ image: NSImage) -> NSImage {
 struct GeneralTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @StateObject private var launchController = LaunchAtLoginController.shared
+    @StateObject private var ruleStore = RuleStore.shared
+    /// 重置之后 10 秒内的撤销快照；非 nil 时页底显示撤销条。
+    @State private var resetUndo: UserPreferences.DefaultsUndoSnapshot?
+    @State private var undoExpiry: UUID?
 
     var body: some View {
         SettingsPage {
@@ -421,11 +452,11 @@ struct GeneralTabView: View {
                     }
                     RowDivider()
                     SettingsRow(L("Language:")) {
-                        // Original is an editable NSComboBox (width 81) whose
-                        // items are the raw locale codes added in code.
+                        // Items read as language names, not the raw locale codes
+                        // ("en" / "zh-Hans") the original combo box showed.
                         Picker(L("Language"), selection: $viewModel.language) {
-                            Text("en").tag("en")
-                            Text("zh-Hans").tag("zh-Hans")
+                            Text("English").tag("en")
+                            Text("简体中文").tag("zh-Hans")
                         }
                         .labelsHidden()
                         .frame(width: 81)
@@ -439,15 +470,16 @@ struct GeneralTabView: View {
             // MARK: Gesture
             SettingsSection(title: L("Gesture")) {
                 SettingsCard {
-                    SettingsRow(L("Gesture Min Score")) {
+                    SettingsRow(L("Require Minimum Score")) {
                         TrailingSwitch(isOn: $viewModel.enableGestureMinScore)
                     }
                     RowDivider()
-                    SettingsRow(L("Min Score:")) {
+                    SettingsRow(L("Match Score (%):")) {
                         HStack(spacing: 8) {
-                            Text("\(Int(viewModel.minSimilarityScore))")
+                            Text("\(Int(viewModel.minSimilarityScore))%")
+                                .monospacedDigit()
                                 .foregroundColor(.secondary)
-                                .frame(width: 26, alignment: .trailing)
+                                .frame(width: 40, alignment: .trailing)
                             Slider(value: $viewModel.minSimilarityScore, in: 70...99, step: 1)
                                 .frame(width: 210)
                         }
@@ -465,6 +497,25 @@ struct GeneralTabView: View {
                     RowDivider()
                     SettingsRow(L("Gesture Trigger Button")) {
                         MouseButtonRecorder(buttonNumber: $viewModel.gestureTriggerButton)
+                    }
+                    // 同一颗键既是起手键、又被某条启用中的规则配成瞬时手势
+                    // （中键/侧键）：运行时起手键优先，那条规则按不出来。就地提醒，
+                    // 改起手键或去规则页换一档，这一行立刻消失。
+                    if let conflict = ruleStore.instantGestureConflicting(
+                        withTriggerButton: viewModel.gestureTriggerButton) {
+                        RowDivider()
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text(String(format: L("Gesture Trigger Conflicts With Instant Rule"),
+                                        L(conflict.locKey)))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                     }
                     // 按住修饰键时不起手（issue #59）：一个开关配一个只录修饰键的
                     // 快捷键框，录到什么组合就避让什么，含它的组合键同样让位。
@@ -516,7 +567,7 @@ struct GeneralTabView: View {
                         TrailingSwitch(isOn: $viewModel.showNoteIcon)
                     }
                     RowDivider()
-                    SettingsRow(L("Postion:")) {
+                    SettingsRow(L("Position:")) {
                         Picker("", selection: $viewModel.notePosition) {
                             Text(L("Follow The Mouse")).tag(0)
                             Text(L("Center In Screen")).tag(1)
@@ -529,16 +580,23 @@ struct GeneralTabView: View {
                         .frame(width: 170)
                     }
                     RowDivider()
-                    SettingsRow(L("Background Apha:")) {
-                        Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
-                            .frame(width: 210)
+                    SettingsRow(L("Background Alpha:")) {
+                        HStack(spacing: 8) {
+                            Text("\(Int((viewModel.noteBackgroundAlpha * 100).rounded()))%")
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                                .frame(width: 40, alignment: .trailing)
+                            Slider(value: $viewModel.noteBackgroundAlpha, in: 0...0.7, step: 0.05)
+                                .frame(width: 210)
+                        }
                     }
                     RowDivider()
-                    SettingsRow(L("Retention Time:")) {
+                    SettingsRow(L("Retention Time (s):")) {
                         HStack(spacing: 8) {
-                            Text(String(format: "%.0f", viewModel.noteRetentionTime))
+                            Text("\(Int(viewModel.noteRetentionTime)) s")
+                                .monospacedDigit()
                                 .foregroundColor(.secondary)
-                                .frame(width: 26, alignment: .trailing)
+                                .frame(width: 40, alignment: .trailing)
                             Slider(value: Binding(
                                 get: { Double(viewModel.noteRetentionTime) },
                                 set: { viewModel.noteRetentionTime = Int($0) }
@@ -561,6 +619,15 @@ struct GeneralTabView: View {
                 Button(L("Export")) { exportPreferences() }
                 Button(L("Reset Defaults")) { resetDefaults() }
             }
+
+            if resetUndo != nil {
+                UndoBanner(message: L("Settings restored to defaults."),
+                           undoTitle: L("Undo"),
+                           action: undoReset)
+                    .transition(.opacity)
+            }
+
+            SettingsHint(text: L("General page hint"), inset: 2, bottom: 0)
         }
         .onAppear {
             // System Settings can change the login item while we run, so
@@ -653,10 +720,37 @@ struct GeneralTabView: View {
     }
 
     /// Original resetDefaults: only re-applies DefaultPreferences.plist and lets
-    /// the bound rows refresh. No confirmation, and the language, login item and
-    /// black/white filter lists are deliberately untouched.
+    /// the bound rows refresh. The language, login item and black/white filter
+    /// lists are deliberately untouched.
+    ///
+    /// 移植版加了两件事：点下去先问一句（这是不可撤销的批量覆盖），执行后在
+    /// 页底留 10 秒撤销条。快照只覆盖 `resetToDefaults()` 会写的那批键。
     private func resetDefaults() {
+        let alert = NSAlert()
+        alert.messageText = L("Reset Defaults?")
+        alert.informativeText = L("All settings here will return to their defaults. Rules and AppleScripts are not affected.")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L("Reset"))
+        alert.addButton(withTitle: L("Cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let snapshot = viewModel.defaultsUndoSnapshot()
         viewModel.resetToDefaults()
+        withAnimation(.easeOut(duration: 0.15)) { resetUndo = snapshot }
+
+        let token = UUID()
+        undoExpiry = token
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            guard undoExpiry == token else { return }
+            withAnimation(.easeOut(duration: 0.15)) { resetUndo = nil }
+        }
+    }
+
+    private func undoReset() {
+        guard let snapshot = resetUndo else { return }
+        viewModel.restoreDefaults(snapshot)
+        resetUndo = nil
+        undoExpiry = nil
     }
 }
 
@@ -688,6 +782,14 @@ struct RulesTabView: View {
     @ObservedObject var viewModel: UserPreferences
     @ObservedObject var ruleStore: RuleStore
     @State private var selectedRow = -1
+    /// 载入预设 / 清除之后的 10 秒撤销窗口。
+    @State private var rulesUndo: RulesUndo?
+    @State private var undoExpiry: UUID?
+
+    private struct RulesUndo {
+        let rules: [Rule]
+        let message: String
+    }
 
     var body: some View {
         SettingsFillingPage {
@@ -703,10 +805,14 @@ struct RulesTabView: View {
                 Button(action: addRule) {
                     Image(systemName: "plus")
                 }
+                .help(L("Add rule"))
+                .accessibilityLabel(Text(L("Add rule")))
 
                 Button(action: removeRule) {
                     Image(systemName: "minus")
                 }
+                .help(L("Remove rule"))
+                .accessibilityLabel(Text(L("Remove rule")))
 
                 Button(L("Pick a running app")) {
                     guard selectedRow != -1 else { return needRuleSelection() }
@@ -716,25 +822,35 @@ struct RulesTabView: View {
                 Spacer()
 
                 Button(L("Defaults")) {
-                    ruleStore.rules = RuleStore.defaultRules()
-                    ruleStore.save()
+                    confirmAndLoadDefaultRules()
                 }
 
                 Button(L("Clear")) {
                     let alert = NSAlert()
-                    alert.messageText = L("warning!")
+                    alert.messageText = L("Clear all the rules?")
                     alert.informativeText = L("Are you sure you want to clear all the rules?")
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: L("Ok"))
                     alert.addButton(withTitle: L("Cancel"))
                     if alert.runModal() == .alertFirstButtonReturn {
+                        let previous = ruleStore.rules
                         ruleStore.rules.removeAll()
                         ruleStore.save()
                         selectedRow = -1
+                        offerUndo(previous, message: L("All rules cleared."))
                     }
                 }
                 .foregroundColor(.red)
             }
+
+            if let rulesUndo {
+                UndoBanner(message: rulesUndo.message,
+                           undoTitle: L("Undo"),
+                           action: undoRules)
+                    .transition(.opacity)
+            }
+
+            SettingsHint(text: L("Rules page hint"), inset: 2, bottom: 0)
         }
     }
 
@@ -771,9 +887,48 @@ struct RulesTabView: View {
     /// "Draw Gesture!" alert with its preset-gesture combo box
     /// (AppPrefsWindowController.m preSetRuleGestureAtIndex / alertModal…).
     /// Original removeRule:/pickBtnDidClick: guard: a NSUserNotification toast,
-    /// not a disabled button.
+    /// not a disabled button. 原版说的是 “filter”（这一页叫规则），这里连
+    /// 名词和下一步一起说清。
     private func needRuleSelection() {
-        postMacStrokeNotification(L("Select a filter first!"))
+        postMacStrokeNotification(L("Select a rule first, then try again."))
+    }
+
+    /// 「载入预设」和「清除」一样是不可撤销的批量覆盖：先问，再留 10 秒撤销。
+    private func confirmAndLoadDefaultRules() {
+        let alert = NSAlert()
+        alert.messageText = L("Load default rules?")
+        alert.informativeText = L("All current rules will be replaced by the built-in defaults.")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L("Ok"))
+        alert.addButton(withTitle: L("Cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let previous = ruleStore.rules
+        ruleStore.rules = RuleStore.defaultRules()
+        ruleStore.save()
+        selectedRow = -1
+        offerUndo(previous, message: L("Default rules loaded."))
+    }
+
+    private func offerUndo(_ rules: [Rule], message: String) {
+        withAnimation(.easeOut(duration: 0.15)) {
+            rulesUndo = RulesUndo(rules: rules, message: message)
+        }
+        let token = UUID()
+        undoExpiry = token
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            guard undoExpiry == token else { return }
+            withAnimation(.easeOut(duration: 0.15)) { rulesUndo = nil }
+        }
+    }
+
+    private func undoRules() {
+        guard let previous = rulesUndo else { return }
+        ruleStore.rules = previous.rules
+        ruleStore.save()
+        selectedRow = -1
+        rulesUndo = nil
+        undoExpiry = nil
     }
 
     /// The table hands over a row index (original `preSetRuleGestureAtIndex:`);
@@ -864,6 +1019,8 @@ struct AppleScriptTabView: View {
                 .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            SettingsHint(text: L("AppleScript page hint"), inset: 2, bottom: 0)
         }
     }
 
@@ -897,8 +1054,12 @@ struct AppleScriptTabView: View {
         HStack(spacing: 6) {
             Button("+") { createScript() }
                 .disabled(isEditingExternally)
+                .help(L("Add AppleScript"))
+                .accessibilityLabel(Text(L("Add AppleScript")))
             Button("-") { removeSelected() }
                 .disabled(selectedIndex == nil || isEditingExternally)
+                .help(L("Remove AppleScript"))
+                .accessibilityLabel(Text(L("Remove AppleScript")))
             Spacer()
             Menu(L("Load Example")) {
                 ForEach(AppleScriptExample.all) { example in
@@ -954,7 +1115,7 @@ struct AppleScriptTabView: View {
 
         guard let index = selectedIndex else {
             // Original still fires the notification because its button never disables.
-            postMacStrokeNotification(L("Select a AppleScript first!"))
+            postMacStrokeNotification(L("Select an AppleScript first!"))
             return
         }
 
@@ -1225,6 +1386,8 @@ struct FiltersTabView: View {
                 Spacer()
                 Button(L("apply rules")) { applyRules() }
             }
+
+            SettingsHint(text: L("Filters page hint"), inset: 2, bottom: 0)
         }
         .onAppear {
             blackListText = BlackWhiteFilter.shared.blackListText
@@ -1380,9 +1543,13 @@ struct RightClickTabView: View {
                 Button(action: addRow) {
                     Image(systemName: "plus")
                 }
+                .help(L("Add app"))
+                .accessibilityLabel(Text(L("Add app")))
                 Button(action: removeRow) {
                     Image(systemName: "minus")
                 }
+                .help(L("Remove app"))
+                .accessibilityLabel(Text(L("Remove app")))
                 Spacer()
                 Button(L("Pick a running app")) { pickApp() }
             }
@@ -1412,7 +1579,7 @@ struct RightClickTabView: View {
     /// picked app *replaces* that row (`rightClickPickCallback:atIndex:`).
     private func pickApp() {
         guard selectedRow != -1 else {
-            postMacStrokeNotification(L("Select a filter first!"))
+            postMacStrokeNotification(L("Select an app row first, then try again."))
             return
         }
         guard let picked = AppPickerPanel.pick(title: L("Pick a running app"), singleSelection: true),
@@ -1520,15 +1687,12 @@ private struct RightClicksTable: NSViewRepresentable {
 // MARK: - RightClickMenu Tab
 // Original: enable right click menu + item toggles + terminal picker.
 //
-// 页名从原版的「右键菜单」改成「右键增强」（issue #75）：这一页原本只有 Finder 那几项
-// 开关，现在又多了一段「按住右键 + 滚轮」的两条触发 —— 那已经不是 Finder 右键菜单的事了，
-// 继续叫「右键菜单」会让人以为滚轮触发要去 Finder 里找。
-// 另一页 `.rightClick`「模拟右键」（哪些应用转发原生菜单的 bundle ID 名单）保持原名，
-// 两页因此也不会看着像同一件事。
+// 页名从原版的「右键菜单」改成「右键增强」：这一页除了原版那几项 Finder 开关，
+// 还挂着「手势打到光标下的窗口」（issue #22）。另一页 `.rightClick`「模拟右键」
+// （哪些应用转发原生菜单的 bundle ID 名单）保持原名，两页因此也不会看着像同一件事。
 //
-// 滚轮那段为什么放这一页而不是常规页：常规页已经是最满的一页（issue #53 的起手键、
-// issue #59 的修饰键让位都塞在底部），再压五项下去会把导入/导出顶出可视区，
-// 而用户要找「右键+滚轮」本来就会先翻到右键这一页（同一口径见划词气泡独立页）。
+// 3.2.4 起「按住起手键 + 滚轮」不再在这一页：上滚/下滚就是规则页里的两条普通规则，
+// 动作、按应用过滤、备注气泡都跟着规则走。升级时旧版这两档由启动段一次性迁移成规则。
 struct RightClickMenuTabView: View {
     @ObservedObject var viewModel: UserPreferences
 
@@ -1600,8 +1764,6 @@ struct RightClickMenuTabView: View {
             }
             .padding(.leading, 22)
 
-            wheelGestureSection
-
             strokeTargetSection
         }
     }
@@ -1621,127 +1783,15 @@ struct RightClickMenuTabView: View {
                 SettingsRow(L("Stroke Target master")) {
                     TrailingSwitch(isOn: $viewModel.strokeTargetsCursorWindow)
                 }
-                hint(L("Stroke Target master hint"))
+                SettingsHint(text: L("Stroke Target master hint"))
                 RowDivider()
                 SettingsRow(L("Stroke Target restore row")) {
                     TrailingSwitch(isOn: $viewModel.strokeTargetRestoresFocus)
                         .disabled(!viewModel.strokeTargetsCursorWindow)
                 }
-                hint(L("Stroke Target restore hint"))
+                SettingsHint(text: L("Stroke Target restore hint"))
             }
         }
-    }
-
-    // MARK: - 按住起始键 + 滚轮（issue #75，移植版新增，原版没有）
-
-    /// 一颗总开关 + 上下各一条独立触发（各一个动作下拉），自定义那档再给一个录入框。
-    ///
-    /// 两条方向各配一档、不做成「一行里塞两个下拉」：issue #75 要的就是「分别添加」，
-    /// 一行一个方向读起来才是「上滚干什么、下滚干什么」；两档也共用一份候选集，
-    /// 不会出现某一方向少配一个选项（同一口径见 issue #53/#59 的「一个能力一组控件」）。
-    ///
-    /// 所有控件都画出来、只灰不藏：藏掉会让人以为功能少做了两行（划词气泡那页同一条）。
-    private var wheelGestureSection: some View {
-        SettingsSection(title: L("Wheel Gesture")) {
-            SettingsCard {
-                SettingsRow(L("Wheel Gesture master")) {
-                    TrailingSwitch(isOn: $viewModel.wheelGestureEnabled)
-                }
-                hint(L("Wheel Gesture master hint"))
-                RowDivider()
-                SettingsRow(L("Wheel Gesture up row")) {
-                    actionPicker(selection: $viewModel.wheelGestureUpAction)
-                        .disabled(!viewModel.wheelGestureEnabled)
-                }
-                hint(L("Wheel Gesture up hint"))
-                RowDivider()
-                SettingsRow(L("Wheel Gesture down row")) {
-                    actionPicker(selection: $viewModel.wheelGestureDownAction)
-                        .disabled(!viewModel.wheelGestureEnabled)
-                }
-                RowDivider()
-                SettingsRow(L("Wheel Gesture up shortcut")) {
-                    ShortcutRecorder(text: $viewModel.wheelGestureUpShortcut)
-                        .frame(width: 200, height: 28)
-                }
-                .disabled(!canUseUpShortcut)
-                hint(L("Wheel Gesture shortcut hint"))
-                RowDivider()
-                SettingsRow(L("Wheel Gesture down shortcut")) {
-                    ShortcutRecorder(text: $viewModel.wheelGestureDownShortcut)
-                        .frame(width: 200, height: 28)
-                }
-                .disabled(!canUseDownShortcut)
-            }
-
-            // 两档都选了「无」是「功能开着但整件事不会发生」的唯一一种配法，界面上必须说破，
-            // 否则用户只会以为这功能坏了（划词气泡四格全关那条同一个处理）。
-            if viewModel.wheelGestureEnabled && bothDirectionsDoNothing {
-                Text(L("Wheel Gesture no action warning"))
-                    .font(.system(size: 12))
-                    .foregroundColor(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
-            }
-        }
-    }
-
-    private func actionPicker(selection: Binding<Int>) -> some View {
-        Picker("", selection: selection) {
-            ForEach(WheelGestureActionKind.allCases, id: \.self) { kind in
-                Text(L(actionTitleKey(kind))).tag(kind.rawValue)
-            }
-        }
-        .labelsHidden()
-        .fixedSize()
-    }
-
-    /// 下拉里那一行的本地化 key。档位定义在 RuleEngine（那边要拿去执行），显示文案留在这里：
-    /// 让执行层反过来依赖文案层，单元测试就得连字符串一起验。
-    private func actionTitleKey(_ kind: WheelGestureActionKind) -> String {
-        switch kind {
-        case .none: return "Wheel Gesture action none"
-        case .tabPrevious: return "Wheel Gesture action tab previous"
-        case .tabNext: return "Wheel Gesture action tab next"
-        case .volumeUp: return "Wheel Gesture action volume up"
-        case .volumeDown: return "Wheel Gesture action volume down"
-        case .customShortcut: return "Wheel Gesture action custom shortcut"
-        }
-    }
-
-    /// 快捷键录入框只在自己那一档是「自定义快捷键」时才能点。
-    private var canUseUpShortcut: Bool {
-        viewModel.wheelGestureEnabled
-            && viewModel.wheelGestureUpAction == WheelGestureActionKind.customShortcut.rawValue
-    }
-    private var canUseDownShortcut: Bool {
-        viewModel.wheelGestureEnabled
-            && viewModel.wheelGestureDownAction == WheelGestureActionKind.customShortcut.rawValue
-    }
-
-    /// 选了「自定义快捷键」但录入框还是空的 —— 那跟选了「无」一样不会动，一并算进提醒里，
-    /// 免得用户录了个「无」还以为自己配好了。
-    private var bothDirectionsDoNothing: Bool {
-        doesNothing(viewModel.wheelGestureUpAction, viewModel.wheelGestureUpShortcut)
-            && doesNothing(viewModel.wheelGestureDownAction, viewModel.wheelGestureDownShortcut)
-    }
-
-    private func doesNothing(_ action: Int, _ shortcut: String) -> Bool {
-        if action == WheelGestureActionKind.none.rawValue { return true }
-        if action == WheelGestureActionKind.customShortcut.rawValue { return shortcut.isEmpty }
-        return false
-    }
-
-    /// 卡片里那行小字（和截图页、划词气泡页同一个排法）。
-    private func hint(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
     }
 
     /// Original: every toggle on this page re-runs `initRightClickMenu`, which
@@ -1869,6 +1919,8 @@ struct ClipboardTabView: View {
                     .disabled(!featureOn)
                 }
             }
+
+            SettingsHint(text: L("Clipboard page hint"), inset: 2, bottom: 0)
         }
     }
 
@@ -2227,6 +2279,59 @@ struct SettingsActionRow<Content: View>: View {
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 40)
+    }
+}
+
+/// 那行 11pt 说明小字。之前截图页、划词气泡页、近距离解锁页、右键页各抄了一份，
+/// 抄出来的四份连换行策略都不一致 —— 合成一个，参数只留对齐位置。
+///
+/// `inset` 按说明解释的对象取：卡片里的说明对齐卡片正文（14），直接挂在页面上、
+/// 解释整页的说明对齐卡片外沿（2，和组标题的缩进一致）。
+struct SettingsHint: View {
+    let text: String
+    var inset: CGFloat = 14
+    var bottom: CGFloat = 10
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, inset)
+            .padding(.bottom, bottom)
+    }
+}
+
+/// 破坏性操作（清空、载入预设、重置默认值）之后留在页面上的撤销条。
+///
+/// 不走系统通知：勿扰能整个压掉横幅，用户事后就找不到撤销入口了；
+/// 而且通知点撤销时页面可能已经滚走，看不见「撤销了什么」。
+struct UndoBanner: View {
+    let message: String
+    let undoTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.uturn.backward.circle")
+                .foregroundColor(.secondary)
+            Text(message)
+                .font(.system(size: 12))
+            Spacer(minLength: 12)
+            Button(action: action) {
+                Text(undoTitle)
+            }
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 34)
+        .background(SettingsChrome.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: SettingsChrome.cornerRadius, style: .continuous)
+                .strokeBorder(SettingsChrome.cardBorder, lineWidth: 1)
+        )
     }
 }
 

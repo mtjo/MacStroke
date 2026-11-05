@@ -61,14 +61,15 @@ final class ScreenshotWindowProbeTests: XCTestCase {
     /// 走可注入的纯函数，只有抓取那一层留给真桌面烟测。
     func testCandidateRectsDropUnsnappableWindows() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        func window(_ bounds: CGRect, layer: Int = 0, alpha: Double = 1, own: Bool = false) -> ScreenshotProbeWindow {
-            ScreenshotProbeWindow(globalBounds: bounds, layer: layer, alpha: alpha, isOwnProcess: own)
+        func window(_ bounds: CGRect, layer: Int = 0, alpha: Double = 1) -> ScreenshotProbeWindow {
+            ScreenshotProbeWindow(globalBounds: bounds, layer: layer, alpha: alpha,
+                                  isOwnProcess: false, isCapturable: true)
         }
         let windows = [
             window(CGRect(x: 0, y: 0, width: 1920, height: 1080), layer: 20),               // 程序坞：整屏大小的壳
             window(CGRect(x: 1000, y: 0, width: 60, height: 24), layer: 25),                // 菜单栏项
+            window(CGRect(x: 200, y: 200, width: 400, height: 300), layer: 21),             // 别家的浮窗：不吸
             window(CGRect(x: 100, y: 100, width: 400, height: 300)),                        // 正常窗
-            window(CGRect(x: 200, y: 200, width: 400, height: 300), own: true),             // 自家窗
             window(CGRect(x: 300, y: 300, width: 400, height: 300), layer: -1),             // 桌面层
             window(CGRect(x: 400, y: 400, width: 400, height: 300), alpha: 0.5),            // 半透明
             window(CGRect(x: 500, y: 500, width: 4, height: 300)),                          // 太小
@@ -78,10 +79,38 @@ final class ScreenshotWindowProbeTests: XCTestCase {
         let rects = ScreenshotWindowProbe.candidateRects(windows: windows, screenFrame: screen, mainTop: 1080)
         XCTAssertEqual(rects, [CGRect(x: 100, y: 100, width: 400, height: 300),
                                CGRect(x: 0, y: 0, width: 1920, height: 1080)],
-                       "只有普通窗该留下；自家/桌面层/半透明/太小/屏外，以及整屏大的非普通窗（程序坞、菜单栏）都要被滤掉")
+                       "别家只吸普通窗；桌面层/半透明/太小/屏外，以及整屏大的非普通窗（程序坞、菜单栏）都要被滤掉")
         // 顺序即前后：第一条命中就是最前台那个，不能被整屏那条抢走。
         XCTAssertEqual(ScreenshotWindowProbe.rect(containing: CGPoint(x: 150, y: 150), in: rects),
                        CGRect(x: 100, y: 100, width: 400, height: 300))
+    }
+
+    /// 自家窗的吸附口径（2026-11-04 两场实测：「偏好设置不能智能框选」「历史粘贴板
+    /// 弹窗也不吸附」）：
+    /// - 能吸：偏好设置（layer 0）、贴图（3）、历史粘贴板（21）—— 只要有像素进得了
+    ///   冻结帧，就该吸；
+    /// - 不能吸：状态栏项（25）、Toast（101）超出菜单栏门槛；画布/遮罩/描边/气泡
+    ///   虽然层级低，但 `sharingType = .none`，冻结帧里根本没有它们 —— 圈上去只会
+    ///   截到它们背后那层画面。
+    func testOwnWindowsSnapOnlyWhenTheyAppearInTheFrame() {
+        let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        func own(_ bounds: CGRect, layer: Int = 0, capturable: Bool = true) -> ScreenshotProbeWindow {
+            ScreenshotProbeWindow(globalBounds: bounds, layer: layer, alpha: 1,
+                                  isOwnProcess: true, isCapturable: capturable)
+        }
+        let prefs = CGRect(x: 959, y: 25, width: 820, height: 648)
+        let pin = CGRect(x: 100, y: 100, width: 300, height: 200)
+        let clipboard = CGRect(x: 500, y: 200, width: 520, height: 360)
+        let windows = [
+            own(prefs),                                         // 偏好设置
+            own(pin, layer: 3),                                 // 贴图
+            own(clipboard, layer: 21),                          // 历史粘贴板
+            own(CGRect(x: 0, y: 0, width: 1920, height: 1080), layer: 3, capturable: false), // 划词气泡这类 .none 的浮窗
+            own(CGRect(x: 1527, y: 0, width: 32, height: 24), layer: 25),                    // 状态栏项
+        ]
+        let rects = ScreenshotWindowProbe.candidateRects(windows: windows, screenFrame: screen, mainTop: 1080)
+        XCTAssertEqual(rects, [prefs, pin, clipboard],
+                       "自家可采集的窗（含浮窗）必须能吸；不进冻结帧的、菜单栏层的都不吸")
     }
 
     /// 真桌面烟测：这条链只能问 WindowServer，验「问得到、且给的矩形都在本屏内」。

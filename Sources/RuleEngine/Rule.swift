@@ -32,6 +32,10 @@ public enum RuleAction: Codable, Equatable {
     /// 弹出截图选区（移植版新增，超出原版）。动作本身在 App 层执行：
     /// RuleEngine 够不到 Screenshot 模块，反向依赖会把下层拖回 App 层。
     case screenshot
+    /// 系统音量 +1 档（移植版新增，issue #78 第 3 条）。
+    case volumeUp
+    /// 系统音量 −1 档。
+    case volumeDown
     /// No action (for rules that only trigger state changes)
     case none
 
@@ -68,6 +72,10 @@ public enum RuleAction: Codable, Equatable {
             self = .password(p)
         case "screenshot":
             self = .screenshot
+        case "volumeUp":
+            self = .volumeUp
+        case "volumeDown":
+            self = .volumeDown
         case "none":
             self = .none
         default:
@@ -107,6 +115,10 @@ public enum RuleAction: Codable, Equatable {
             try container.encode(p, forKey: .password)
         case .screenshot:
             try container.encode("screenshot", forKey: .type)
+        case .volumeUp:
+            try container.encode("volumeUp", forKey: .type)
+        case .volumeDown:
+            try container.encode("volumeDown", forKey: .type)
         case .none:
             try container.encode("none", forKey: .type)
         }
@@ -131,6 +143,10 @@ public enum RuleAction: Codable, Equatable {
             return "Password: ****"
         case .screenshot:
             return "Screenshot"
+        case .volumeUp:
+            return "Volume +1"
+        case .volumeDown:
+            return "Volume -1"
         case .none:
             return "No action"
         }
@@ -208,6 +224,9 @@ public struct Rule: Codable {
     public let filterType: String
     /// Values typed for the action types this rule does not currently use.
     public var spareActions: RuleSpareActions
+    /// 一个不画轨迹的手势（issue #78 第 2 条）：非 nil 时这条规则靠滚轮那一格触发，
+    /// `template` 里的点一律不参与轨迹匹配。nil = 原版的轨迹规则，与旧 rules.json 同义。
+    public let instantGesture: InstantGesture?
 
     /// Create a new rule.
     /// - Parameters:
@@ -222,6 +241,7 @@ public struct Rule: Codable {
     ///   - filter: Bundle ID filter (wildcard or regex)
     ///   - filterType: "wildcard" or "regex"
     ///   - spareActions: values for the action types this rule does not use
+    ///   - instantGesture: 滚轮那一格（nil = 轨迹规则）
     public init(
         name: String,
         description: String,
@@ -233,7 +253,8 @@ public struct Rule: Codable {
         triggerOnEveryMatch: Bool = false,
         filter: String = "",
         filterType: String = "wildcard",
-        spareActions: RuleSpareActions = .empty
+        spareActions: RuleSpareActions = .empty,
+        instantGesture: InstantGesture? = nil
     ) {
         self.name = name
         self.description = description
@@ -245,6 +266,7 @@ public struct Rule: Codable {
         self.triggerOnEveryMatch = triggerOnEveryMatch
         self.filter = filter
         self.filterType = filterType
+        self.instantGesture = instantGesture
         var spares = spareActions
         spares.seeding(with: action)
         self.spareActions = spares
@@ -255,8 +277,9 @@ public struct Rule: Codable {
     /// Persisted keys mirror the original rule dictionary exactly:
     /// direction / data / filter / filterType / actionType / text / password /
     /// shortcut_code / shortcut_flag / apple_script_id / note /
-    /// trigger_on_every_match. In-memory-only fields (description,
-    /// minSimilarityScore, isEnabled) are not stored.
+    /// trigger_on_every_match, plus `instant_gesture` for the port's wheel rule.
+    /// In-memory-only fields (description, minSimilarityScore, isEnabled) are
+    /// not stored.
     private enum RuleKeys: String, CodingKey {
         case direction, data, filter, filterType, actionType, text, password
         case shortcutCode = "shortcut_code"
@@ -264,6 +287,7 @@ public struct Rule: Codable {
         case appleScriptId = "apple_script_id"
         case note
         case triggerOnEveryMatch = "trigger_on_every_match"
+        case instantGesture = "instant_gesture"
     }
 
     private struct StoredPoint: Codable {
@@ -286,6 +310,14 @@ public struct Rule: Codable {
         minSimilarityScore = 30.0
         isEnabled = true
         triggerOnEveryMatch = try c.decodeIfPresent(Bool.self, forKey: .triggerOnEveryMatch) ?? false
+        // 旧 rules.json 没有这一格，读出来就是 nil = 原版的轨迹规则。认不出的值（手改
+        // 文件 / 将来加的新档）同样当 nil：让它炸掉整份规则文件、连别人的手势一起没，
+        // 比这一条退化成轨迹规则严重得多。
+        if let raw = try c.decodeIfPresent(String.self, forKey: .instantGesture) {
+            instantGesture = InstantGesture(rawValue: raw)
+        } else {
+            instantGesture = nil
+        }
 
         let text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
         let password = try c.decodeIfPresent(String.self, forKey: .password) ?? ""
@@ -308,6 +340,14 @@ public struct Rule: Codable {
             spares.shortcutFlag = flag
         case 4:
             action = .screenshot
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
+        case 5:
+            action = .volumeUp
+            spares.shortcutCode = code
+            spares.shortcutFlag = flag
+        case 6:
+            action = .volumeDown
             spares.shortcutCode = code
             spares.shortcutFlag = flag
         default:
@@ -346,6 +386,10 @@ public struct Rule: Codable {
             flag = Int(flags)
         case .screenshot:
             actionType = 4
+        case .volumeUp:
+            actionType = 5
+        case .volumeDown:
+            actionType = 6
         case .keyPress, .mouseClick, .copyToClipboard, .none:
             actionType = 0
         }
@@ -361,6 +405,10 @@ public struct Rule: Codable {
         try c.encode(note, forKey: .note)
         if triggerOnEveryMatch {
             try c.encode(true, forKey: .triggerOnEveryMatch)
+        }
+        // 只有瞬时规则才写这一格：轨迹规则（含原版那 15 条）导出的 JSON 与改动前逐字节相同。
+        if let instantGesture {
+            try c.encode(instantGesture.rawValue, forKey: .instantGesture)
         }
     }
 }
@@ -396,6 +444,8 @@ public final class RuleEngine {
         normalizedStroke.normalize()
 
         for rule in rules where rule.isEnabled {
+            // 瞬时规则没有轨迹可比（issue #78 第 2 条）。
+            if rule.instantGesture != nil { continue }
             let score = compare(
                 template: rule.template.stroke,
                 candidate: normalizedStroke
@@ -471,9 +521,12 @@ public final class RuleEngine {
         var bestScore: Double = 0.0
 
         for rule in rules where rule.isEnabled {
+            // 瞬时规则没有轨迹可比：让它参与打分，空模板会撞出一条「谁都不该中」的
+            // 高分（issue #78 第 2 条加这一档时必须一并挡住）。
+            if rule.instantGesture != nil { continue }
             // Original: every rule's filter is evaluated, so a rule whose filter
             // matches nothing is skipped even when the filter field is empty.
-            if !matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) {
+            if !Self.matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) {
                 continue
             }
 
@@ -504,9 +557,31 @@ public final class RuleEngine {
     /// may be shown in the given app).
     public func appSuitedRule(bundleID: String) -> Bool {
         for rule in rules where rule.isEnabled {
-            if matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) { return true }
+            if Self.matchesFilter(filter: rule.filter, type: rule.filterType, bundleID: bundleID) { return true }
         }
         return false
+    }
+
+    /// 一次瞬时手势（按住起始键 + 滚轮上/下，issue #78 第 2 条）命中哪条规则。
+    ///
+    /// 与轨迹匹配差两处：
+    /// - 没有分数可比，按**列表顺序取第一条**（规则是插到第 0 行的，所以「后配的赢」，
+    ///   与原版把新规则插在顶上那条一致）；
+    /// - 门槛仍是同一条黑白名单 + 同一条按 App 过滤，所以在过滤页把某个软件拉黑之后，
+    ///   它的滚轮规则跟轨迹规则一起失效，不会出现「黑名单只管一半」。
+    ///
+    /// - Parameters:
+    ///   - gesture: 这一次是哪一档瞬时手势
+    ///   - bundleID: 前台应用的 bundle ID（没有时传 ""，与轨迹匹配同口径）
+    /// - Returns: 命中的规则，一条都没有时 nil —— 调用方据此决定放行还是吞掉这一发滚轮。
+    public func match(instant gesture: InstantGesture, bundleID: String) -> Rule? {
+        if !BlackWhiteFilter.shared.shouldHookMouseEventForApp(bundleID) {
+            return nil
+        }
+        return rules.first {
+            $0.isEnabled && $0.instantGesture == gesture
+                && Self.matchesFilter(filter: $0.filter, type: $0.filterType, bundleID: bundleID)
+        }
     }
 
     /// Check if a bundle ID matches a filter (wildcard or regex).
@@ -515,7 +590,7 @@ public final class RuleEngine {
     /// case-insensitively against the whole bundle ID; regex filters are
     /// case-sensitive substring matches. An empty filter therefore matches
     /// nothing — the original does not treat it as "all apps".
-    private func matchesFilter(filter: String, type: String, bundleID: String) -> Bool {
+    private static func matchesFilter(filter: String, type: String, bundleID: String) -> Bool {
         if type == "regex" {
             guard let regex = try? NSRegularExpression(pattern: filter) else { return false }
             let range = NSRange(location: 0, length: bundleID.utf16.count)

@@ -210,7 +210,8 @@ final class CursorTargetTests: XCTestCase {
             XCTAssertTrue(action.needsCursorAppFocus, "\(action) 是投给活跃 App 的，必须跳")
         }
         for action in [RuleAction.mouseClick(x: 10, y: 10), RuleAction.copyToClipboard("字"),
-                       RuleAction.screenshot, RuleAction.none] {
+                       RuleAction.screenshot, RuleAction.volumeUp, RuleAction.volumeDown,
+                       RuleAction.none] {
             XCTAssertFalse(action.needsCursorAppFocus, "\(action) 不看谁是前台，跳一下纯属白闪")
         }
     }

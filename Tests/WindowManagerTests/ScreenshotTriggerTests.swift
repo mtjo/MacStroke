@@ -93,10 +93,15 @@ final class ScreenshotTriggerTests: XCTestCase {
 
     func testScreenshotIsTheFifthActionTypeInTheRulesTable() throws {
         let titles = RulesTable.Coordinator.typeTitles
-        XCTAssertEqual(titles.count, 5, "动作类型下拉要正好 5 项：截图是新增的第 5 项")
-        XCTAssertEqual(titles.last, L("Screenshot"))
+        XCTAssertEqual(titles.count, 7,
+                       "动作类型下拉现有 7 项：截图是第 5 项，末尾两项是 #78-3b 的音量增/减")
+        XCTAssertEqual(titles[4], L("Screenshot"))
+        XCTAssertEqual(titles[5], L("Volume Up"))
+        XCTAssertEqual(titles[6], L("Volume Down"))
         XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .screenshot), 4,
                        "下标要和持久化的 actionType 对齐，否则切类型会写错格子")
+        XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .volumeUp), 5)
+        XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .volumeDown), 6)
         XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .shortcut(keyCode: 1, flags: 0)), 0)
         XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .applescript("id")), 1)
         XCTAssertEqual(RulesTable.Coordinator.typeIndex(for: .text("t")), 2)

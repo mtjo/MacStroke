@@ -37,13 +37,13 @@ struct ScreenshotTabView: View {
                         ShortcutRecorder(text: $viewModel.screenshotShortcut)
                             .frame(width: 200, height: 28)
                     }
-                    hint(L("Screenshot Shortcut hint"))
+                    SettingsHint(text: L("Screenshot Shortcut hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot Text Shortcut")) {
                         ShortcutRecorder(text: $viewModel.screenshotTextShortcut)
                             .frame(width: 200, height: 28)
                     }
-                    hint(L("Screenshot Text Shortcut hint"))
+                    SettingsHint(text: L("Screenshot Text Shortcut hint"))
                     RowDivider()
                     gestureBlock
                 }
@@ -54,14 +54,14 @@ struct ScreenshotTabView: View {
                     SettingsRow(L("Screenshot auto save")) {
                         TrailingSwitch(isOn: $viewModel.screenshotAutoSave)
                     }
-                    hint(L("Screenshot auto save hint"))
+                    SettingsHint(text: L("Screenshot auto save hint"))
                     RowDivider()
                     directoryBlock
                     RowDivider()
                     SettingsRow(L("Screenshot snap to windows")) {
                         TrailingSwitch(isOn: $viewModel.screenshotSnapToWindows)
                     }
-                    hint(L("Screenshot snap hint"))
+                    SettingsHint(text: L("Screenshot snap hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot default tool")) {
                         Picker("", selection: $viewModel.screenshotDefaultTool) {
@@ -73,12 +73,12 @@ struct ScreenshotTabView: View {
                         .labelsHidden()
                         .frame(width: 150)
                     }
-                    hint(L("Screenshot default tool hint"))
+                    SettingsHint(text: L("Screenshot default tool hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot magnifier")) {
                         TrailingSwitch(isOn: $viewModel.screenshotMagnifier)
                     }
-                    hint(L("Screenshot magnifier hint"))
+                    SettingsHint(text: L("Screenshot magnifier hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot magnifier zoom")) {
                         Picker("", selection: $viewModel.screenshotMagnification) {
@@ -106,13 +106,13 @@ struct ScreenshotTabView: View {
                         intPicker(Options.scrollSteps, selection: $viewModel.screenshotScrollStep,
                                   unit: L("Screenshot Scroll points unit"))
                     }
-                    hint(L("Screenshot Scroll step hint"))
+                    SettingsHint(text: L("Screenshot Scroll step hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot Scroll max screens")) {
                         intPicker(Options.scrollMaxScreens, selection: $viewModel.screenshotScrollMaxScreens,
                                   unit: L("Screenshot Scroll screens unit"))
                     }
-                    hint(L("Screenshot Scroll max screens hint"))
+                    SettingsHint(text: L("Screenshot Scroll max screens hint"))
                 }
             }
 
@@ -122,18 +122,18 @@ struct ScreenshotTabView: View {
                         intPicker(Options.frameRates, selection: $viewModel.screenshotRecordFrameRate,
                                   unit: L("Screenshot Record fps unit"))
                     }
-                    hint(L("Screenshot Record frame rate hint"))
+                    SettingsHint(text: L("Screenshot Record frame rate hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot Record max seconds")) {
                         intPicker(Options.maxSeconds, selection: $viewModel.screenshotRecordMaxSeconds,
                                   unit: L("Screenshot Record minutes unit"), divide: 60)
                     }
-                    hint(L("Screenshot Record max seconds hint"))
+                    SettingsHint(text: L("Screenshot Record max seconds hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot Record cursor")) {
                         TrailingSwitch(isOn: $viewModel.screenshotRecordCursor)
                     }
-                    hint(L("Screenshot Record cursor hint"))
+                    SettingsHint(text: L("Screenshot Record cursor hint"))
                 }
             }
         }
@@ -247,15 +247,6 @@ struct ScreenshotTabView: View {
     private var isStoredLocationGone: Bool {
         let stored = viewModel.screenshotSaveDirectory
         return !stored.isEmpty && !FileManager.default.fileExists(atPath: stored)
-    }
-
-    private func hint(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
     }
 
     private func chooseDirectory() {

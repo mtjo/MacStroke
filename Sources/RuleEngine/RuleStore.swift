@@ -128,6 +128,42 @@ public final class RuleStore: ObservableObject {
         return engine.appSuitedRule(bundleID: bundleID)
     }
 
+    /// 按住起始键 + 滚轮的一格命中哪条规则（issue #78 第 2 条）。
+    ///
+    /// 判据只有一份，在 `RuleEngine.match(instant:bundleID:)` 里：黑白名单 + 按 App
+    /// 过滤 + 列表顺序取第一条，与轨迹匹配共用。
+    public func match(instant gesture: InstantGesture, bundleID: String) -> Rule? {
+        let engine = RuleEngine()
+        engine.add(contentsOf: rules)
+        return engine.match(instant: gesture, bundleID: bundleID)
+    }
+
+    /// 规则表里到底有没有一条启用的**滚轮**瞬时规则。
+    ///
+    /// 滚轮那条二级 tap 平时是建出来就禁用、只在起始键按住期间上膛；上膛条件原本只有
+    /// 「右键增强」那页的总开关（3.2.1）。这一格让「只在规则页配了滚轮」也算开关开着，
+    /// 用户不必再去另一页补勾一次。不看黑白名单：那一条留给真正匹配时判，这里只回答
+    /// 「要不要为这段窗口花一次 tap Enable」。
+    ///
+    /// 中键/侧键不算：它们走主 tap，不需要为滚轮这第二条 tap 上膛。
+    public var hasWheelInstantRule: Bool {
+        rules.contains { $0.isEnabled && $0.instantGesture?.isWheel == true }
+    }
+
+    /// 某一颗鼠标键同时是起手键和一条启用中的瞬时规则时，返回那条瞬时手势。
+    ///
+    /// 运行时**起手键优先**（`CanvasManager` 先判起手键）：这颗键按下去是画手势，
+    /// 那条瞬时规则不会被触发。偏好页据此给出警告，让人知道要换一颗键。
+    /// 滚轮两档没有按键编号，永不与起手键冲突。
+    public func instantGestureConflicting(withTriggerButton number: Int) -> InstantGesture? {
+        for rule in rules where rule.isEnabled {
+            if let gesture = rule.instantGesture, gesture.mouseButtonNumber == number {
+                return gesture
+            }
+        }
+        return nil
+    }
+
     /// Save rules to disk.
     public func save() {
         do {

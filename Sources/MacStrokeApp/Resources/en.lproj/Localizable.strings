@@ -253,6 +253,8 @@
 "Hot Key" = "Hot Key";
 "Apple Script" = "Apple Script";
 "Text" = "Text";
+"Volume Up" = "Volume Up";
+"Volume Down" = "Volume Down";
 "Draw Gesture!" = "Draw Gesture!";
 "Select a filter first!" = "Select a filter first!";
 "You can draw a gesture anywhere on the screen, or select the preset gesture below." = "You can draw a gesture anywhere on the screen, or select the preset gesture below.";
@@ -296,17 +298,15 @@
 "History Clipboard" = "History Clipboard";
 "remove top" = "remove top";
 "top" = "top";
-"Min Score:" = "Min Score:";
-"Gesture Min Score" = "Gesture Min Score";
 "Merge consecutive identical gestures" = "Merge consecutive identical gestures";
 "Open preferences on startup" = "Open preferences on startup";
 "Show Gesture Note" = "Show Gesture Note";
 "Show Icon" = "Show Icon";
 "Font:" = "Font:";
 "Choose" = "Choose";
-"Background Apha:" = "Background Apha:";
-"Retention Time:" = "Retention Time:";
-"Postion:" = "Postion:";
+"Background Alpha:" = "Background Alpha:";
+"Retention Time (s):" = "Retention Time (s):";
+"Position:" = "Position:";
 "Follow The Mouse" = "Follow The Mouse";
 "Center In Screen" = "Center In Screen";
 "Right Top" = "Right Top";
@@ -328,8 +328,20 @@
 "Text to input" = "Text to input";
 
 "Click to Record" = "Click to Record";
-"Recording… press a key (Esc to cancel)" = "Recording… press a key (Esc to cancel)";
-"Recording… hold modifiers (Esc to cancel)" = "Recording… hold modifiers (Esc to cancel)";
+"Recording…" = "Recording…";
+"Press a key (double-click for keyboard, Esc to cancel)" = "Press a key (double-click for keyboard, Esc to cancel)";
+"Hold modifiers (double-click for keyboard, Esc to cancel)" = "Hold modifiers (double-click for keyboard, Esc to cancel)";
+"Click to record · double-click for keyboard" = "Click to record · double-click for keyboard";
+"Pick modifiers, then click a key" = "Pick modifiers, then click a key";
+"Pick the modifiers to hold" = "Pick the modifiers to hold";
+"Shortcut keyboard" = "Shortcut keyboard";
+"Type it instead…" = "Type it instead…";
+"Done" = "Done";
+"Type a shortcut, e.g. ⌘⇧2" = "Type a shortcut, e.g. ⌘⇧2";
+"Type a shortcut first" = "Type a shortcut first";
+"Can’t read “%@” as a key" = "Can’t read “%@” as a key";
+"Add a key, not only modifiers" = "Add a key, not only modifiers";
+"Two keys in one shortcut: %@" = "Two keys in one shortcut: %@";
 
 /* General tab */
 "Show Icon In Status Bar" = "Show Icon In Status Bar";
@@ -541,23 +553,14 @@
 "Selection bubble engine tongyi" = "Tongyi";
 "Selection bubble engine custom" = "Custom";
 
-/* Hold the trigger button + scroll (issue #75, port extension; configured on the right-click page) */
-"Wheel Gesture" = "Hold the trigger button + scroll";
-"Wheel Gesture master" = "Enable scroll triggers";
-"Wheel Gesture master hint" = "The master switch. With it off the scroll listener is never armed, so every wheel tick goes back to the front app untouched — that is the original behaviour. The trigger button is the one recorded on the General page (right button by default).";
+/* Wheel-tier labels (shared by the rules picker and rules migrated from the old preferences) */
 "Wheel Gesture up row" = "Scroll up";
-"Wheel Gesture up hint" = "One notch is one trigger: a high-resolution wheel or a trackpad's inertia is folded into a single action, and that notch is swallowed so the page does not move. A direction set to “None” never swallows anything.";
 "Wheel Gesture down row" = "Scroll down";
-"Wheel Gesture up shortcut" = "Scroll-up shortcut";
-"Wheel Gesture down shortcut" = "Scroll-down shortcut";
-"Wheel Gesture shortcut hint" = "Only used when that direction is set to “Custom shortcut”. An empty recorder means that direction does nothing at all.";
-"Wheel Gesture action none" = "None";
-"Wheel Gesture action tab previous" = "Previous tab";
-"Wheel Gesture action tab next" = "Next tab";
-"Wheel Gesture action volume up" = "Volume up";
-"Wheel Gesture action volume down" = "Volume down";
-"Wheel Gesture action custom shortcut" = "Custom shortcut";
-"Wheel Gesture no action warning" = "Neither direction has an action — the feature is on, but nothing will happen.";
+"Wheel Rule Gesture Header" = "Instant gestures (no drawing)";
+"Wheel Rule Gesture Hint" = "Roll one notch while holding the trigger button, or press the middle or a side button, to run this rule without drawing. The action and the app filter come from this rule. If the same button is also the gesture trigger, the trigger wins.";
+
+/* A button is both the gesture trigger and an enabled instant gesture (issue #78). */
+"Gesture Trigger Conflicts With Instant Rule" = "%@ is both the gesture trigger and an instant gesture. The trigger button wins, so pressing it draws a gesture instead of running that rule. Change the trigger button in General → Gesture Trigger Button, or give that rule another instant gesture.";
 
 /* Stroke targets the window under the cursor (issue #22, port-only, not in the original) */
 "Stroke Target" = "Stroke Targets the Window Under the Cursor";
@@ -565,3 +568,34 @@
 "Stroke Target master hint" = "Off by default, which is the original behaviour: the action goes to whichever app was frontmost when you let go. With it on, the rules are matched against the app whose window sits under the release point and keys and text are posted to it; nothing happens when that window already is the front one. Clicks by coordinate, copy-to-clipboard and the screenshot overlay do not take part — they never depended on who is frontmost.";
 "Stroke Target restore row" = "Give the focus back afterwards";
 "Stroke Target restore hint" = "With this off, drawing a gesture is the same as clicking that window: focus stays on the app under the cursor and everything you type next goes there. With it on the focus returns to the app you released over after roughly 0.6 seconds (a posted key needs 0.2–0.5 seconds before the other side actually acts, so taking the focus back any earlier would steal the keystroke you just sent). If you switch to a third app in the meantime, nothing is taken back.";
+
+/* Preferences review follow-up: sidebar groups, in-page undo, page hints and corrected labels */
+"Gestures" = "Gestures";
+"Extensions" = "Extensions";
+"Application" = "Application";
+"Undo" = "Undo";
+"General page hint" = "Every switch applies the moment you flip it. Import and Export carry the rules and AppleScripts along; Reset Defaults only restores preference switches — rules and AppleScripts stay as they are.";
+"Rules page hint" = "Draw the gesture in the Image column. A rule only fires when its app filter matches; end a filter entry with * to cover every app whose name starts with that prefix.";
+"AppleScript page hint" = "A row is written to disk as soon as you finish editing it. Rules point at a script by ID, so renaming it is safe; deleting one leaves the rules that used it with nothing to run.";
+"Filters page hint" = "One entry per line. Whitelist mode runs the listed apps only; Blacklist mode skips them. Apply writes the list the gesture engine actually matches against.";
+"Clipboard page hint" = "Top records are the ones you pinned in the history list. The total-records and save-days limits apply only while storing on disk. Nothing is uploaded: the history stays on this Mac.";
+"Settings restored to defaults." = "Settings restored to defaults.";
+"Reset Defaults?" = "Reset Defaults?";
+"All settings here will return to their defaults. Rules and AppleScripts are not affected." = "Every setting on this page goes back to its default. Rules and AppleScripts are not affected.";
+"Reset" = "Reset";
+"Clear all the rules?" = "Clear all the rules?";
+"All rules cleared." = "All rules cleared.";
+"Load default rules?" = "Load default rules?";
+"All current rules will be replaced by the built-in defaults." = "Your current rules will be replaced as a whole by the built-in defaults.";
+"Default rules loaded." = "Default rules loaded.";
+"Select a rule first, then try again." = "Select a rule first, then try again.";
+"Select an app row first, then try again." = "Select an app row first, then try again.";
+"Select an AppleScript first!" = "Select an AppleScript first!";
+"Add rule" = "Add rule";
+"Remove rule" = "Remove rule";
+"Add app" = "Add app";
+"Remove app" = "Remove app";
+"Add AppleScript" = "Add AppleScript";
+"Remove AppleScript" = "Remove AppleScript";
+"Require Minimum Score" = "Require a minimum match score";
+"Match Score (%):" = "Match score (%):";

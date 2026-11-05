@@ -140,13 +140,46 @@ public class CanvasManager: EventCaptureDelegate {
 
     /// 一次滚轮触发要干什么：返回 true = 这个方向确实配了动作并做成了，事件该吞掉。
     /// 返回 false（那方向配的是「无」/ 音量动不了）→ 事件原样交回前台应用，页面照常滚。
-    public var onWheelGesture: ((WheelGestureDirection) -> Bool)?
+    ///
+    /// 第二个参数是**按下起始键那一刻**的前台应用 bundle ID（没有时 ""）：规则页那条滚轮
+    /// 规则要按应用过滤（issue #78 第 2 条），而「现在的前台」在这一段窗口里是会变的
+    /// —— 画布浮出来、或动作自己切了焦点，再读一次就把规则匹到别人家去了。
+    public var onWheelGesture: ((WheelGestureDirection, String) -> Bool)?
+
+    /// 一次中键 / 侧键点击要干什么（issue #78 第 2 条扩展）：返回 true = 命中规则并执行了
+    /// 动作，这一击该吞掉；false = 没命中，原样交回前台应用（中键照样开链接、侧键照样
+    /// 后退）。
+    ///
+    /// **起手键优先**：配置成起手键的那颗键根本走不到这里 —— 分发时先判
+    /// `isTriggerAllowed`，命中就进入「画一条」的那条路。同一颗键既当起手键又配了瞬时
+    /// 规则时，用户看到的是画手势，偏好页会给冲突提示。
+    ///
+    /// 第二个参数与滚轮那条同口径：按下那一刻的前台应用 bundle ID（没有时 ""）。
+    public var onInstantButtonGesture: ((InstantGesture, String) -> Bool)?
+
+    /// 读「按下起始键那一刻的前台应用 bundle ID」的接缝。默认 `NSWorkspace`，
+    /// 只挂在 `handleTriggerMouseDown` 那一处 —— 抬手那一下仍按原来的写法现读，
+    /// 归哪一扇窗由 App 层判（issue #22），不在这次改动范围内。
+    ///
+    /// 留这一手是为了能钉住上面那条口径：用例把起始键按下之后把 reader 换成另一个 App，
+    /// 再滚一格，看带出去的是哪一份（见 WheelGestureTests）。桩件进程里 `NSWorkspace`
+    /// 本来就读不到（返回 ""），两头都是空串，那条判据就没法写。
+    public var frontBundleReader: (() -> String)?
+
+    /// 上面那一句的取值：没挂接缝就走 `NSWorkspace`，与原来的读法一字不差。
+    private func currentFrontBundle() -> String {
+        frontBundleReader?() ?? (NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "")
+    }
 
     /// 一次拨动只触发一次的闸门（高分辨率滚轮 / 触控板惯性会把一格拆成几十发）。
     private var wheelGate = WheelGestureGate()
 
     /// 这一段窗口里滚轮已经触发过动作了 —— 抬手时既不再拿轨迹去匹配，也不回放点击。
     private var wheelFired = false
+
+    /// 这一击是中键/侧键瞬时手势吞掉的：down 已经吞了，之后的 dragged/up 也必须跟着吞，
+    /// 否则前台应用会收到一个没有 down 的 up（侧键会莫名其妙后退一次）。
+    private var instantClickButton: MouseButton?
 
     /// Ignore gesture starts for a moment, while preferences are waiting for
     /// the user to press the button they want to bind. Deliberately separate
@@ -183,6 +216,9 @@ public class CanvasManager: EventCaptureDelegate {
     private var downLocation: GesturePoint?
     /// Whether the front app passed the capture filter for the current gesture.
     private var shouldShow = false
+    /// 按下起始键那一刻的前台应用（"" = 读不到）。滚轮那一格要按应用挑规则，用的就是这个
+    /// 值而不是「此刻的前台」：画布浮出来、或上一条动作自己切了焦点，现读会匹到别人家。
+    private var gestureBundleID = ""
 
     // MARK: - Canvas windows
 
@@ -229,11 +265,15 @@ public class CanvasManager: EventCaptureDelegate {
                 // progress, left clicks are swallowed to avoid mis-fires.
                 return shouldShow && isCapturing
             default:
-                guard isTriggerAllowed(event.button) else { return false }
-                return handleTriggerMouseDown(event)
+                // 起手键优先级最高：同一颗键只会走这一条路，不再当瞬时手势。
+                if isTriggerAllowed(event.button) {
+                    return handleTriggerMouseDown(event)
+                }
+                return handleInstantButtonDown(event)
             }
 
         case .moved:
+            if event.button == instantClickButton { return true }
             guard shouldShow, isCapturing, event.button == activeTrigger else { return false }
             // Original AppDelegate.m:332-357 — Synergy hands the pointer to
             // another machine: the point teleports from a screen edge to the
@@ -249,6 +289,10 @@ public class CanvasManager: EventCaptureDelegate {
             return true
 
         case .up:
+            if event.button == instantClickButton {
+                instantClickButton = nil
+                return true
+            }
             guard shouldShow, isCapturing, event.button == activeTrigger else { return false }
             return handleTriggerMouseUp(event)
         }
@@ -271,6 +315,28 @@ public class CanvasManager: EventCaptureDelegate {
         return !suppressed().isDisjoint(with: modifiers)
     }
 
+    /// 非起手键的一击：中键/侧键命中瞬时规则时才吞，没命中就原样交回前台应用。
+    ///
+    /// 返回 true 只代表「这一击已经被动作吃掉」，**不**代表开始画手势：这条路上不入
+    /// 画布、不记轨迹、也不碰起手键那段窗口的滚轮上膛。
+    private func handleInstantButtonDown(_ event: MouseEvent) -> Bool {
+        guard isEnabled, !isSuspended, !isRecordingGesture,
+              let gesture = InstantGesture(mouseButtonNumber: event.button.cgNumber) else {
+            return false
+        }
+        // 与起手键同一套避让：按住指定修饰键期间，按键也不归本功能。
+        if isSuppressedByModifiers(event.modifiers) { return false }
+
+        let frontBundle = currentFrontBundle()
+        if let shouldCapture = shouldCaptureGesture, !shouldCapture(frontBundle) {
+            return false
+        }
+
+        guard onInstantButtonGesture?(gesture, frontBundle) == true else { return false }
+        instantClickButton = event.button
+        return true
+    }
+
     // MARK: - Gesture trigger handling
 
     private func handleTriggerMouseDown(_ event: MouseEvent) -> Bool {
@@ -287,7 +353,7 @@ public class CanvasManager: EventCaptureDelegate {
             return false
         }
 
-        let frontBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let frontBundle = currentFrontBundle()
 
         // Filter gate: black/white list + "show UI in whatever app" / suited rule.
         if let shouldCapture = shouldCaptureGesture, !shouldCapture(frontBundle) {
@@ -309,6 +375,7 @@ public class CanvasManager: EventCaptureDelegate {
         hasDragged = false
         isCapturing = true
         activeTrigger = event.button
+        gestureBundleID = frontBundle
         wheelFired = false
         wheelGate.reset()
 
@@ -324,8 +391,9 @@ public class CanvasManager: EventCaptureDelegate {
 
     /// 要不要给这段窗口上膛滚轮监听。
     ///
-    /// 三条件：总开关开、偏好里那功能开、且不在「绘制手势」录制态 —— 录制态里用户要的是一条
-    /// 轨迹，滚轮掺进来会同时切标签页，那画面没法解释。
+    /// 两个条件：规则表里有启用的滚轮规则、且不在「绘制手势」录制态 —— 录制态里用户要的是
+    /// 一条轨迹，滚轮掺进来会同时执行规则动作，那画面没法解释。规则是每次按下起始键时现查的，
+    /// 所以在偏好里新加/删掉滚轮规则，下一次按下就生效。
     private func armWheelCapture() {
         guard !isRecordingGesture, isWheelGestureEnabled?() == true else { return }
         wheelCaptureArmed = true
@@ -428,6 +496,7 @@ public class CanvasManager: EventCaptureDelegate {
         activeTrigger = nil
         downLocation = nil
         shouldShow = false
+        gestureBundleID = ""
 
         // 窗口结束 = 滚轮监听收膛（issue #75）。闸门账也要清：留着上一段的
         // `lastFired` 会让下一次按下起始键的第一格被节流吃掉，症状是「第一次不灵」。
@@ -665,7 +734,7 @@ extension CanvasManager: WheelGestureDelegate {
         guard shouldShow, isCapturing, isEnabled, !isSuspended else { return false }
         if isSuppressedByModifiers(reading.modifiers) { return false }
         guard wheelGate.accept(reading) else { return false }
-        guard onWheelGesture?(reading.direction) == true else { return false }
+        guard onWheelGesture?(reading.direction, gestureBundleID) == true else { return false }
 
         wheelFired = true
         NSLog("%@", "[CanvasManager] Wheel gesture \(reading.direction == .up ? "up" : "down") fired "

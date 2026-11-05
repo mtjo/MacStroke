@@ -48,7 +48,7 @@ struct ProximityLockTabView: View {
                     SettingsRow(L("Enable proximity lock")) {
                         TrailingSwitch(isOn: $viewModel.enableProximityLock)
                     }
-                    hint(L("Proximity Lock enable hint"))
+                    SettingsHint(text: L("Proximity Lock enable hint"))
                     RowDivider()
                     SettingsRow(L("Status:")) {
                         Text(statusLine)
@@ -56,30 +56,30 @@ struct ProximityLockTabView: View {
                             .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     if let outcome = controller.lastOutcome {
-                        hint(outcomeText(outcome))
+                        SettingsHint(text: outcomeText(outcome))
                     }
                     RowDivider()
                     SettingsRow(L("Proximity unlock threshold")) {
                         rssiSlider($viewModel.proximityUnlockRSSI, in: unlockRange)
                     }
-                    hint(L("Proximity unlock threshold hint"))
+                    SettingsHint(text: L("Proximity unlock threshold hint"))
                     RowDivider()
                     SettingsRow(L("Proximity lock threshold")) {
                         rssiSlider($viewModel.proximityLockRSSI, in: lockRange)
                     }
-                    hint(L("Proximity lock threshold hint"))
+                    SettingsHint(text: L("Proximity lock threshold hint"))
                     RowDivider()
                     SettingsRow(L("Proximity lock delay")) {
                         intPicker(Options.lockDelays, selection: $viewModel.proximityLockDelay,
                                   unit: L("Proximity seconds unit"))
                     }
-                    hint(L("Proximity lock delay hint"))
+                    SettingsHint(text: L("Proximity lock delay hint"))
                     RowDivider()
                     SettingsRow(L("Proximity signal timeout")) {
                         intPicker(Options.signalTimeouts, selection: $viewModel.proximitySignalTimeout,
                                   unit: L("Proximity seconds unit"))
                     }
-                    hint(L("Proximity signal timeout hint"))
+                    SettingsHint(text: L("Proximity signal timeout hint"))
                 }
             }
 
@@ -88,7 +88,7 @@ struct ProximityLockTabView: View {
                     SettingsRow(L("Proximity auto unlock")) {
                         TrailingSwitch(isOn: $viewModel.proximityAutoUnlock)
                     }
-                    hint(L("Proximity auto unlock hint"))
+                    SettingsHint(text: L("Proximity auto unlock hint"))
                     RowDivider()
                     passwordBlock
                     RowDivider()
@@ -348,15 +348,6 @@ struct ProximityLockTabView: View {
         .labelsHidden()
         .frame(width: 150)
         .disabled(!viewModel.enableProximityLock)
-    }
-
-    private func hint(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
     }
 
     private func savePassword() {

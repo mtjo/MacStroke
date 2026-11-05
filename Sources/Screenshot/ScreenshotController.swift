@@ -104,7 +104,11 @@ public final class ScreenshotController {
     }
 
     private func start(mode: ScreenshotMode) {
-        guard window == nil, ensureScreenRecordingPermission() else { return }
+        guard window == nil else { return }
+        // 必须在激活之前记账：`NSApp.activate` 一按，前台就读到的是我们自己，
+        // 该把焦点交还给谁就再也问不出来了（issue #78 第 1 条）。
+        captureFocusOwner()
+        guard ensureScreenRecordingPermission() else { return }
         guard let screen = ScreenshotGrabber.targetScreen(),
               let shot = ScreenshotGrabber.grab(screen: screen) else { return }
 
@@ -157,6 +161,43 @@ public final class ScreenshotController {
         close()
     }
 
+    // MARK: - 焦点归属（issue #78 第 1 条）
+
+    /// 按下快捷键那一刻的前台应用 pid；0 = 这一场不需要交还。
+    ///
+    /// 这一手和下面两个方法都留成模块内可见（不是 private）：桩件里没有 GUI 会话，
+    /// `NSWorkspace.frontmostApplication` 读不到有意义的答案，判据只能从接缝进、
+    /// 由用例直接驱动这两手（见 ScreenshotFocusReturnTests）。
+    var focusOwnerBeforeOverlay: pid_t = 0
+
+    /// 取证接缝：读「现在谁在前台」与「把焦点交给某个 pid」。桩件里
+    /// `NSWorkspace.frontmostApplication` 读不到有意义的答案（那个进程没有 GUI 连接），
+    /// 判据只能从接缝进，不能从被测对象自己取。
+    static var frontmostPIDReader: (() -> pid_t)?
+    static var focusRestorer: ((pid_t) -> Void)?
+
+    func captureFocusOwner() {
+        let mine = ProcessInfo.processInfo.processIdentifier
+        let front = Self.frontmostPIDReader?()
+            ?? (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0)
+        focusOwnerBeforeOverlay = (front == 0 || front == mine) ? 0 : front
+    }
+
+    /// 只在「前台确实是我们」时交还：用户已经自己切走了还硬拉回去，比原来那个缺陷更烦人。
+    func restoreFocus() {
+        let owner = focusOwnerBeforeOverlay
+        guard owner != 0 else { return }
+        let mine = ProcessInfo.processInfo.processIdentifier
+        let front = Self.frontmostPIDReader?()
+            ?? (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0)
+        guard front == 0 || front == mine else { return }
+        if let focusRestorer = Self.focusRestorer {
+            focusRestorer(owner)
+            return
+        }
+        NSRunningApplication(processIdentifier: owner)?.activate(options: [])
+    }
+
     private func close() {
         guard let window else { return }
         self.window = nil
@@ -166,6 +207,7 @@ public final class ScreenshotController {
         window.orderOut(nil)
         window.close()
         onActiveStateChanged?(false)
+        restoreFocus()
     }
 
     // MARK: - 实况采集（滚动截图 / 录屏）
@@ -428,7 +470,10 @@ public final class ScreenshotController {
         alert.alertStyle = .warning
         alert.addButton(withTitle: L("Open System Settings"))
         alert.addButton(withTitle: L("Later"))
-        if alert.runModal() == .alertFirstButtonReturn {
+        let choseSettings = alert.runModal() == .alertFirstButtonReturn
+        // 先交还焦点再跳系统设置：这一场压根没铺遮罩，用户按的那一下快捷键不该留下任何痕迹。
+        restoreFocus()
+        if choseSettings {
             RemoteScreenCapture.openScreenRecordingSettings()
         }
     }
@@ -463,6 +508,9 @@ public final class ScreenshotController {
         panel.nameFieldStringValue = settings.suggestedName() + ".png"
         NSApp.activate(ignoringOtherApps: true)
         panel.begin { [weak self] response in
+            // 交还焦点要走 defer：存盘成功、写失败、用户取消三条路都得走这一手，
+            // 漏掉任何一条都是「截完图前台多一个没图标的 App」。
+            defer { self?.restoreFocus() }
             guard response == .OK, let url = panel.url,
                   let data = Self.pngData(image) else { return }
             guard (try? data.write(to: url)) != nil else {

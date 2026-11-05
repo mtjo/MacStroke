@@ -32,7 +32,7 @@ struct SelectionBubbleTabView: View {
                     SettingsRow(L("Selection Bubble master")) {
                         TrailingSwitch(isOn: $viewModel.enableSelectionPopup)
                     }
-                    hint(L("Selection Bubble master hint"))
+                    SettingsHint(text: L("Selection Bubble master hint"))
                 }
             }
 
@@ -42,20 +42,20 @@ struct SelectionBubbleTabView: View {
                         TrailingSwitch(isOn: $viewModel.selectionPopupAutoPop)
                     }
                     .disabled(!viewModel.enableSelectionPopup)
-                    hint(L("Selection Bubble auto pop hint"))
+                    SettingsHint(text: L("Selection Bubble auto pop hint"))
                     RowDivider()
                     SettingsRow(L("Selection Bubble manual")) {
                         TrailingSwitch(isOn: $viewModel.selectionPopupShortcutEnabled)
                     }
                     .disabled(!viewModel.enableSelectionPopup)
-                    hint(L("Selection Bubble manual hint"))
+                    SettingsHint(text: L("Selection Bubble manual hint"))
                     RowDivider()
                     SettingsRow(L("Selection Bubble shortcut")) {
                         ShortcutRecorder(text: $viewModel.selectionPopupShortcut)
                             .frame(width: 200, height: 28)
                     }
                     .disabled(!canUseShortcutRow)
-                    hint(L("Selection Bubble shortcut hint"))
+                    SettingsHint(text: L("Selection Bubble shortcut hint"))
                 }
             }
 
@@ -67,7 +67,7 @@ struct SelectionBubbleTabView: View {
                             TrailingSwitch(isOn: actionBinding(action))
                         }
                         .disabled(!viewModel.enableSelectionPopup)
-                        hint(L(action.hintKey))
+                        SettingsHint(text: L(action.hintKey))
                     }
                 }
                 // 四格全关是「功能开着但什么都不会发生」的唯一一种配法，界面上必须说破，
@@ -111,7 +111,7 @@ struct SelectionBubbleTabView: View {
                         .frame(width: 170)
                     }
                     .disabled(!canUseEngineRow)
-                    hint(L("Selection Bubble engine hint"))
+                    SettingsHint(text: L("Selection Bubble engine hint"))
                     RowDivider()
                     SettingsRow(L("Selection Bubble custom URL")) {
                         TextField("https://example.com/search?q={query}",
@@ -121,7 +121,7 @@ struct SelectionBubbleTabView: View {
                             .frame(width: 300)
                             .disabled(!canUseCustomURLRow)
                     }
-                    hint(L("Selection Bubble custom URL hint"))
+                    SettingsHint(text: L("Selection Bubble custom URL hint"))
                     RowDivider()
                     // 「自动贴那一下」跟在这一家后面，因为它只对**这一家当下不吃 URL 预填**的那些页有意义。
                     // 摆在引擎区块里而不是「读不到选区时」那一节：那一节管的是**取字**，这一行管的是
@@ -130,7 +130,7 @@ struct SelectionBubbleTabView: View {
                         TrailingSwitch(isOn: $viewModel.selectionPopupAutoPaste)
                     }
                     .disabled(!canUseAutoPasteRow)
-                    hint(L("Selection Bubble auto paste hint"))
+                    SettingsHint(text: L("Selection Bubble auto paste hint"))
                 }
                 // 选了自定义却没填（或填得不像个网址）：消费端会退回默认那一家。
                 // 这一条必须说破 —— 否则用户以为走的是自己写的那条，实际开的是 Google，
@@ -164,7 +164,7 @@ struct SelectionBubbleTabView: View {
                         TrailingSwitch(isOn: $viewModel.selectionPopupCopyFallback)
                     }
                     .disabled(!viewModel.enableSelectionPopup)
-                    hint(L("Selection Bubble copy fallback hint"))
+                    SettingsHint(text: L("Selection Bubble copy fallback hint"))
                 }
                 // 气泡快捷键被录成单纯 ⌘C 时，这一手会被那句纯函数挡掉（见 `canUseCopyFallback` 的注释）。
                 // 界面上必须说破：开关明明开着、却一次都不生效，是「看着能配其实配不动」那类最难查的坏。
@@ -199,7 +199,7 @@ struct SelectionBubbleTabView: View {
                         }
                     }
                     .disabled(!canUseDelayRow)
-                    hint(L("Selection Bubble read delay hint"))
+                    SettingsHint(text: L("Selection Bubble read delay hint"))
                 }
                 // 授权与名单这两件事不体现在任何一格的开关上，却决定了「为什么没弹」，
                 // 所以写在页面最后而不是塞进某一行的小字里。
@@ -321,14 +321,4 @@ struct SelectionBubbleTabView: View {
         })
     }
 
-    /// 行下面那行小字（和截图页同一个排法）：卡片的圆角内，说明紧贴它解释的那一行。
-    private func hint(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
-    }
 }

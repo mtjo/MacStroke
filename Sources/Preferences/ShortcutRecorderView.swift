@@ -11,6 +11,7 @@ import Foundation
 import AppKit
 import Carbon.HIToolbox
 import EventCapture
+import GestureEngine
 import Storage
 
 /// A view that records a keyboard shortcut (key code + modifier flags).
@@ -81,7 +82,12 @@ public final class ShortcutRecorderView: NSView {
             guard oldValue != controlEnabled else { return }
             // 从「能录」变成「不能录」时如果正在录制，得先退出去：录制态靠的是
             // first responder + keyDown，界面上灰了还在吃键就是「看不见却在生效」。
-            if !controlEnabled, isRecording { cancelRecording() }
+            // 手填的那个文本框同理 —— 它是这一格里唯一还能打字的东西。
+            if !controlEnabled {
+                if isRecording { cancelRecording() }
+                cancelManualEntry()
+                closeKeyboard()
+            }
             needsDisplay = true
         }
     }
@@ -108,7 +114,10 @@ public final class ShortcutRecorderView: NSView {
     /// 只有录好了才出现；录制中的那一格显示的是提示文字，没有东西可清。
     /// 这一格不可用时连这把叉一起撤掉：叉是「点我就能清空」的抓手，留着点不动就是在骗人
     /// （撤掉不引起重排 —— 它定在框的右端，不占文字流）。
-    private var isClearVisible: Bool { showsClearButton && !isRecording && hasRecordedValue && controlEnabled }
+    private var isClearVisible: Bool {
+        showsClearButton && !isRecording && !isEditingManually && !isEditingWithKeyboard
+            && hasRecordedValue && controlEnabled
+    }
 
     /// 清掉当前值并重绘。回调给宿主去持久化。
     public func clear() {
@@ -117,6 +126,256 @@ public final class ShortcutRecorderView: NSView {
         needsDisplay = true
         onClear?()
     }
+
+    // MARK: - 屏幕键盘（双击入口）
+
+    /// 双击时弹着的那块键盘。
+    ///
+    /// 不再默认进手写：⌘⇧2 这种串要求用户先知道符号怎么写，而多数人只是想把
+    /// 眼前那几个键点出来 —— 先点修饰键（可多选、再点取消），再点主键即可。
+    /// 手写仍留在面板左下角的「改成手写…」，给键盘表里没有的键（F13 以上、小键盘）。
+    public private(set) var isEditingWithKeyboard = false {
+        didSet { needsDisplay = true }
+    }
+
+    private var keyboardPanel: ShortcutKeyboardView?
+    private var keyboardPopover: NSPopover?
+
+    /// 用例读装配结果；界面上没有这条路径。
+    var keyboardPanelForTesting: ShortcutKeyboardView? { keyboardPanel }
+
+    /// 双击入口：把键盘面板放进 popover。窗口不是 key 时那一下点击还没完成激活，
+    /// 和手写框同一条口径 —— 留给用户再点一次。
+    public func presentShortcutKeyboard() {
+        guard controlEnabled, !isEditingWithKeyboard else { return }
+        guard let window, window.isKeyWindow else { return }
+        if isRecording { cancelRecording() }
+        if isEditingManually { cancelManualEntry() }
+        let panel = makeKeyboardPanel()
+        let popover = makeKeyboardPopover(for: panel, in: window)
+        keyboardPopover = popover
+        popover.show(relativeTo: bounds, of: self, preferredEdge: .maxY)
+        // Esc 要落在这块面板上；popover 有自己的一扇窗口，得冲它要 first responder。
+        panel.window?.makeFirstResponder(panel)
+    }
+
+    /// 气泡外壳（不显示）：明暗、尺寸与「点外面就收」都挂在这几行上。
+    func makeKeyboardPopover(for panel: ShortcutKeyboardView, in window: NSWindow) -> NSPopover {
+        let controller = NSViewController()
+        controller.view = panel
+        let popover = NSPopover()
+        popover.behavior = .transient
+        // SwiftUI 给的那套 appearance 跟着系统设置，偏好页自己的明暗要靠它带进来
+        // （同 `drawAppearance` 那段）。popover 换了外观，里面每颗键帽才跟着对。
+        popover.appearance = drawAppearance ?? window.effectiveAppearance
+        popover.contentSize = panel.preferredSize
+        popover.contentViewController = controller
+        popover.delegate = self
+        return popover
+    }
+
+    /// 面板装配（popover 之外的部分）。用例走这一条验接线，不必真开一扇气泡。
+    func makeKeyboardPanel() -> ShortcutKeyboardView {
+        if isRecording { cancelRecording() }
+        let panel = ShortcutKeyboardView(modifiersOnly: modifiersOnly)
+        panel.onCommit = { [weak self] code, flags in
+            self?.commitKeyboardShortcut(keyCode: code, flags: flags)
+        }
+        panel.onCancel = { [weak self] in self?.closeKeyboard() }
+        panel.onTypeInstead = { [weak self] in self?.switchToManualEntry() }
+        keyboardPanel = panel
+        isEditingWithKeyboard = true
+        return panel
+    }
+
+    /// 键盘选好的一份绑定，和录制、手写走同一条落库路径：改模型 + 恰好一次回调。
+    private func commitKeyboardShortcut(keyCode: UInt16, flags: UInt) {
+        closeKeyboard()
+        manualDraft = nil
+        manualFailure = nil
+        self.keyCode = keyCode
+        self.flags = flags
+        onShortcutChanged?(keyCode, flags)
+    }
+
+    private func closeKeyboard() {
+        guard keyboardPanel != nil || keyboardPopover != nil else { return }
+        keyboardPopover?.delegate = nil
+        keyboardPopover?.close()
+        keyboardPopover = nil
+        keyboardPanel = nil
+        isEditingWithKeyboard = false
+        needsDisplay = true
+    }
+
+    /// 收起屏幕键盘（Esc / 点外面 / 宿主禁用这一格）：旧值原样留着，一次回调都不发。
+    public func cancelKeyboardEntry() {
+        closeKeyboard()
+    }
+
+    /// 收起键盘、进原来的文本编辑态。popover 关掉之后主窗口可能还没拿回 key，
+    /// 所以第一下没起来时再等一拍重试 —— 用户点的是「改成手写」，不该看见没反应。
+    private func switchToManualEntry() {
+        closeKeyboard()
+        startManualEntry()
+        guard !isEditingManually else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.isEditingManually else { return }
+            self.startManualEntry()
+        }
+    }
+
+    // MARK: - 手填（issue #78 第 3 条）
+
+    /// 双击进入的文本编辑态。
+    ///
+    /// 为什么需要：有些组合键根本走不到这只录制框 —— ⌃↑（切桌面）、⌘⇧2（系统截图）
+    /// 这类被系统或前台应用先吃掉了，`keyDown` 收不到那一下，框里点破了也录不进。
+    /// 手填让人把 "⌘⇧2" / "cmd+shift+2" 直接写出来。
+    public private(set) var isEditingManually = false {
+        didSet { needsDisplay = true }
+    }
+
+    /// 手填框里的初始串：显示串解得回同一个 (keyCode, flags) 就直接用它，解不回的那几处
+    /// （小键盘 0–9 显示成主键盘数字、两种回车都显示成 ↩）换成名字写法。
+    ///
+    /// 不这么办的坏法很隐蔽：双击进去、一个字没改、回车 —— 用户以为什么都没发生，
+    /// 实际把小键盘的 5 换成了主键盘的 5（`keypad5` ≠ 19，投出去的键是另一个）。
+    private var manualEntrySeed: String {
+        let shown = displayString
+        let current = ShortcutText.Parsed(keyCode: keyCode, flags: flags)
+        if ShortcutText.parse(shown, requiresKey: !modifiersOnly) == current { return shown }
+        guard let name = KeyboardKeys.name(for: keyCode) else { return shown }
+        return Self.modifierSymbols(flags) + name
+    }
+
+    /// 上一次被拒的原文与拒因：红字留在框里、原因进 tooltip。
+    ///
+    /// 认不出的串绝不写进模型（写进去就是给规则塞一个用户没打算绑的键），但也不能
+    /// 静默吃掉 —— 点了回车却什么都没变，最容易被读成「这功能坏了」。
+    private var manualDraft: String?
+    private var manualFailure: ShortcutText.Failure?
+    private var manualField: ManualEntryField?
+
+    /// 编辑到底起来过没有。
+    ///
+    /// 为什么要单独记：`controlTextDidEndEditing` 可能在你根本没编辑过的时候送到委托里
+    /// —— 窗口不是 key 时（从别的 App 双击过来，本视图 `acceptsFirstMouse` 返回 true，
+    /// 那一下不会先把窗口变 key）编辑会话起不来。送上来的是预填的旧值、不是用户打的，
+    /// 当成提交等于「双击一下就把当前快捷键重新写了一次」。
+    /// 入口已经先挡掉非 key 窗口，这一位是第二道保险：字段编辑器真的挂上才允许结束编辑走提交。
+    private var manualEditingBegan = false
+
+    /// 双击 = 进手填；单击仍是原版那一下切换录制。
+    /// 不可用时和录制一样进不去（`controlEnabled`），不给点不动却已经在吃的抓手。
+    public func startManualEntry() {
+        guard controlEnabled, !isEditingManually else { return }
+        // 窗口不是 key 时那一下点击还没完成激活（本视图 `acceptsFirstMouse` 返回 true，
+        // 从别的 App 点过来的头一下不会先把窗口变 key）：留给用户再双击一次，不在这里
+        // 挂一个打不了字、收起时还会把预填旧值当成用户提交的框（§10.2）。
+        guard window?.isKeyWindow == true else { return }
+        if isRecording { cancelRecording() }
+        manualDraft = nil
+        manualFailure = nil
+        manualEditingBegan = false
+        let field = ManualEntryField(frame: bounds.insetBy(dx: 6, dy: 2))
+        field.font = NSFont.systemFont(ofSize: 12)
+        field.alignment = .center
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.placeholderString = L("Type a shortcut, e.g. ⌘⇧2")
+        field.delegate = self
+        // 空值时不能直接抄 displayString：normal 档 keyCode 0 显示出来是「A」，
+        // 那等于替用户预填了一个键。
+        field.stringValue = hasRecordedValue ? manualEntrySeed : ""
+        field.onCancel = { [weak self] in self?.cancelManualEntry() }
+        addSubview(field)
+        manualField = field
+        isEditingManually = true
+        let focused = window?.makeFirstResponder(field) ?? false
+        guard focused, let editor = field.currentEditor() else {
+            cancelManualEntry()
+            return
+        }
+        // 全选只能经由字段编辑器做：`field.selectText(nil)` 会把刚挂上的会话当场结束掉 ——
+        // 真机实测 `controlTextDidEndEditing` 2 ms 后送到委托、而 `controlTextDidBeginEditing`
+        // 一次都没来，闸门据此判「编辑没起来」，3.2.4 装机版的双击手填就此整个哑掉。
+        manualEditingBegan = true
+        editor.selectedRange = NSRange(location: 0, length: (field.stringValue as NSString).length)
+    }
+
+    /// 收起手填框。必须**先摘委托再拆视图**：拆掉正持字段编辑器的那个视图会让 AppKit
+    /// 再发一次 `controlTextDidEndEditing`，那一次会把预填旧值当成第二次提交
+    /// （提交成功的那次会被它用旧值盖回去，被拒的那次会被它清掉红字）。
+    private func tearDownManualField() {
+        guard let field = manualField else { return }
+        field.delegate = nil
+        // 编辑起来后 first responder 是那块字段编辑器（NSTextView），不是文本框本身。
+        if let editor = field.currentEditor(), window?.firstResponder === editor {
+            window?.makeFirstResponder(nil)
+        }
+        field.removeFromSuperview()
+        manualField = nil
+        manualEditingBegan = false
+        isEditingManually = false
+        needsDisplay = true
+    }
+
+    /// 放弃手填（Esc / 编程调用）：旧值原样留着，一次回调都不发。
+    public func cancelManualEntry() {
+        guard isEditingManually else { return }
+        tearDownManualField()
+    }
+
+    /// 交回内容：认得出才写回并通知宿主，认不出把原文留在框里标红。
+    @discardableResult
+    func commitManualEntry(_ raw: String) -> Bool {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        tearDownManualField()
+        guard !text.isEmpty else {
+            // 清空文本框不等于「清除快捷键」：那一手是右端那把叉的职责，它写的必须是
+            // 空串，而这里落下的是「什么都没改」。
+            return false
+        }
+        switch ShortcutText.evaluate(text, requiresKey: !modifiersOnly) {
+        case .success(let parsed):
+            manualDraft = nil
+            manualFailure = nil
+            keyCode = parsed.keyCode
+            flags = parsed.flags
+            onShortcutChanged?(parsed.keyCode, parsed.flags)
+            return true
+        case .failure(let failure):
+            manualDraft = text
+            manualFailure = failure
+            return false
+        }
+    }
+
+    /// 拒因写成一句人话（tooltip 用）。
+    static func failureMessage(_ failure: ShortcutText.Failure) -> String {
+        switch failure {
+        case .empty:
+            return L("Type a shortcut first")
+        case .unknownToken(let token):
+            return String(format: L("Can’t read “%@” as a key"), token)
+        case .missingKey:
+            return L("Add a key, not only modifiers")
+        case .moreThanOneKey(let token):
+            return String(format: L("Two keys in one shortcut: %@"), token)
+        }
+    }
+
+    /// 框里那行字的墨色：被拒的原文用红，禁用态用系统的禁用色，其余用正文色。
+    private func textColor(isRejection: Bool) -> NSColor {
+        if isRejection, controlEnabled { return .systemRed }
+        return controlEnabled ? .labelColor : .disabledControlTextColor
+    }
+
+    /// 框子闲时给的一句提示（单击录制 / 双击键盘）。
+    static var manualHint: String { L("Click to record · double-click for keyboard") }
 
     public override var isFlipped: Bool { true }
 
@@ -166,6 +425,25 @@ public final class ShortcutRecorderView: NSView {
             }
     }
 
+    /// 框里现在画的那串字。录制中的完整提示在上方气泡里（见 `presentRecordingHint`），
+    /// 框内只留短句。用例直接断言这一串，不必离屏去数像素。
+    var displayedText: String {
+        if isEditingManually {
+            // 文本字段自己铺在框里，这里再画一层会和它对不齐。
+            return ""
+        }
+        if let draft = manualDraft { return draft }
+        if isRecording {
+            // 框里只放短句：完整提示漫出小格会盖住旁边的列（装机实测），挪到上方气泡里。
+            // 按住修饰键时给即时回显 —— 那串符号短，放得下，也是原版 SRRecorderControl 的行为。
+            return pressedFlags != 0
+                ? Self.modifierSymbols(pressedFlags) + "…"
+                : L("Recording…")
+        }
+        if !hasRecordedValue { return L("Click to Record") }
+        return displayString
+    }
+
     private func drawContent() {
         // Painted here instead of via layer.backgroundColor: a CGColor is frozen
         // to whichever appearance was current when it was captured, so a recorder
@@ -174,22 +452,20 @@ public final class ShortcutRecorderView: NSView {
         let box = NSBezierPath(roundedRect: frame, xRadius: 4, yRadius: 4)
         NSColor.controlBackgroundColor.setFill()
         box.fill()
-        (isRecording ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
+        // 被拒的那串还挂在框上时描红：文字已经缩回旧值，只剩框色说得出「你刚才填的没收」。
+        let stroke: NSColor
+        if manualDraft != nil && !isEditingManually {
+            stroke = .systemRed
+        } else {
+            stroke = isRecording || isEditingManually || isEditingWithKeyboard
+                ? .controlAccentColor : .separatorColor
+        }
+        stroke.setStroke()
         box.lineWidth = 1
         box.stroke()
 
-        let text: String
-        if isRecording {
-            text = pressedFlags != 0
-                ? Self.modifierSymbols(pressedFlags) + "…"
-                : L(modifiersOnly
-                    ? "Recording… hold modifiers (Esc to cancel)"
-                    : "Recording… press a key (Esc to cancel)")
-        } else if !hasRecordedValue {
-            text = L("Click to Record")
-        } else {
-            text = displayString
-        }
+        let text = displayedText
+        let isRejection = manualDraft != nil && !isEditingManually
 
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
@@ -198,13 +474,15 @@ public final class ShortcutRecorderView: NSView {
             .font: NSFont.systemFont(ofSize: 12),
             // 灰的时候用系统那一份「禁用控件墨色」，不自己调 alpha：明暗两档各是多少
             // 由系统定，用户看到的「这格不能点」才和别的页一致。
-            .foregroundColor: controlEnabled ? NSColor.labelColor : NSColor.disabledControlTextColor,
+            .foregroundColor: textColor(isRejection: isRejection),
             .paragraphStyle: paragraphStyle
         ]
-        if !isRecording, hasRecordedValue {
-            toolTip = String(format: "keyCode=%d, flags=%d", keyCode, flags)
+        if let manualFailure {
+            toolTip = Self.failureMessage(manualFailure) + "\n" + Self.manualHint
+        } else if !isRecording, hasRecordedValue {
+            toolTip = String(format: "keyCode=%d, flags=%d", keyCode, flags) + "\n" + Self.manualHint
         } else {
-            toolTip = nil
+            toolTip = Self.manualHint
         }
 
         let clearRect = isClearVisible ? Self.clearButtonRect(for: bounds) : nil
@@ -256,20 +534,28 @@ public final class ShortcutRecorderView: NSView {
 
     /// 不可用时连 first responder 都不接：录制靠的是「成为焦点 + 吃 keyDown」，
     /// 光挡鼠标点击的话 Tab 键还能把焦点挪进来，那一格灰着却把你的下一个键吞掉。
-    public override var acceptsFirstResponder: Bool { controlEnabled }
+    public override var acceptsFirstResponder: Bool {
+        controlEnabled && !isEditingManually && !isEditingWithKeyboard
+    }
 
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     public override func mouseDown(with event: NSEvent) {
-        click(at: convert(event.locationInWindow, from: nil))
+        click(at: convert(event.locationInWindow, from: nil), clickCount: event.clickCount)
     }
 
-    /// 按落点分流：命中右端那一叉就置空，否则照原版那样点一下切换录制。
+    /// 按落点分流：命中右端那一叉就置空，双击弹屏幕键盘，否则照原版那样点一下切换录制。
     /// 视图是 flipped 的，这个点和 `clearButtonRect()` 在同一个坐标空间里。
-    public func click(at point: NSPoint) {
+    public func click(at point: NSPoint, clickCount: Int = 1) {
         guard controlEnabled else { return }
+        // 编辑态 / 键盘态里那一下归面板自己（选词、挪光标、点键），这里不去切录制。
+        if isEditingManually || isEditingWithKeyboard { return }
         if isClearVisible, clearButtonRect().contains(point) {
             clear()
+            return
+        }
+        if clickCount >= 2 {
+            presentShortcutKeyboard()
             return
         }
         window?.makeFirstResponder(self)
@@ -361,10 +647,14 @@ public final class ShortcutRecorderView: NSView {
     ///   test that inherits a stuck ⌘ settles a shortcut nobody pressed.
     public func startRecording(currentlyHeld: UInt? = nil) {
         guard !isRecording, controlEnabled else { return }
+        // 重新去录制 = 上一次那串被拒的作废，红字提示不该还挂在框上。
+        manualDraft = nil
+        manualFailure = nil
         let current = currentlyHeld
             ?? UInt(NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue)
         pressedFlags = modifiersOnly ? Self.modeledFlags(current) : current
         isRecording = true
+        presentRecordingHint()
     }
 
     /// Stops listening and reports the recorded shortcut.
@@ -372,6 +662,7 @@ public final class ShortcutRecorderView: NSView {
         guard isRecording else { return }
         isRecording = false
         pressedFlags = 0
+        dismissRecordingHint()
         onShortcutChanged?(keyCode, flags)
     }
 
@@ -380,7 +671,66 @@ public final class ShortcutRecorderView: NSView {
         guard isRecording else { return }
         isRecording = false
         pressedFlags = 0
+        dismissRecordingHint()
         needsDisplay = true
+    }
+
+    // MARK: - 录制提示气泡
+
+    /// 录制中挂在框上方的那句完整提示。框里只留得下「录制中…」，长句塞回小格
+    /// 会重新漫出去盖住旁边的列（装机实测）—— 气泡不受表格单元格宽度限制。
+    private var recordingHintPopover: NSPopover?
+
+    /// 用例读装配结果；界面上没有这条路径。
+    var recordingHintPopoverForTesting: NSPopover? { recordingHintPopover }
+
+    private var recordingHintText: String {
+        // 「双击打开键盘」必须写进气泡：双击是屏幕键盘的唯一入口，悬停 tooltip 没人看得到。
+        L(modifiersOnly
+            ? "Hold modifiers (double-click for keyboard, Esc to cancel)"
+            : "Press a key (double-click for keyboard, Esc to cancel)")
+    }
+
+    /// 气泡外壳（不显示）：与屏幕键盘同一套口径 —— 明暗跟偏好页、尺寸贴着文案。
+    /// 行为是 applicationDefined：点外面不收，气泡的生死只跟录制态走，
+    /// 不然点一下旁边列，提示没了、录制还开着，框里剩一句看不懂的「录制中…」。
+    func makeRecordingHintPopover(in window: NSWindow) -> NSPopover {
+        let label = NSTextField(labelWithString: recordingHintText)
+        label.font = NSFont.systemFont(ofSize: 12)
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        let container = NSView(frame: .zero)
+        container.addSubview(label)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 7),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -7)
+        ])
+        container.frame = NSRect(origin: .zero, size: container.fittingSize)
+        let controller = NSViewController()
+        controller.view = container
+        let popover = NSPopover()
+        popover.behavior = .applicationDefined
+        popover.appearance = drawAppearance ?? window.effectiveAppearance
+        popover.contentSize = container.frame.size
+        popover.contentViewController = controller
+        popover.delegate = self
+        return popover
+    }
+
+    private func presentRecordingHint() {
+        guard recordingHintPopover == nil, let window, window.isKeyWindow else { return }
+        let popover = makeRecordingHintPopover(in: window)
+        recordingHintPopover = popover
+        popover.show(relativeTo: bounds, of: self, preferredEdge: .maxY)
+    }
+
+    private func dismissRecordingHint() {
+        guard recordingHintPopover != nil else { return }
+        recordingHintPopover?.delegate = nil
+        recordingHintPopover?.close()
+        recordingHintPopover = nil
     }
 
     // MARK: - Key naming
@@ -491,4 +841,54 @@ public final class ShortcutRecorderView: NSView {
         kVK_ANSI_KeypadClear: "⌧", kVK_ANSI_KeypadDivide: "/",
         kVK_ANSI_KeypadMinus: "-", kVK_ANSI_KeypadEquals: "=",
     ]
+}
+
+extension ShortcutRecorderView: NSPopoverDelegate {
+    /// 点面板外面（transient 气泡自己收掉）时把状态清干净：没有提交，也没有半开的 editor。
+    public func popoverDidClose(_ notification: Notification) {
+        guard let popover = notification.object as? NSPopover else { return }
+        if popover === recordingHintPopover {
+            // 窗口整个关掉时系统会代劳收气泡；录制态已被一并收掉，这里只清引用。
+            recordingHintPopover = nil
+            return
+        }
+        guard popover === keyboardPopover else { return }
+        keyboardPopover = nil
+        keyboardPanel = nil
+        isEditingWithKeyboard = false
+        needsDisplay = true
+    }
+}
+
+/// 手填用的文本框。
+///
+/// Esc 必须自己接：默认那一下只会响一声、既不交还焦点也不通知宿主，用户按了 Esc
+/// 却看见框子还亮着，比录不进去更难解释。
+private final class ManualEntryField: NSTextField {
+    var onCancel: (() -> Void)?
+
+    override func cancelOperation(_ sender: Any?) {
+        onCancel?()
+    }
+}
+
+extension ShortcutRecorderView: NSTextFieldDelegate {
+    /// 编辑真的起来了（field editor 挂上这只框）才允许后面那次「结束」当提交。
+    public func controlTextDidBeginEditing(_ obj: Notification) {
+        guard let field = obj.object as? NSTextField, field === manualField else { return }
+        manualEditingBegan = true
+    }
+
+    /// 回车和「点别处」都走这一手：交回内容 → 解析 → 认得出才写库。
+    /// 认不出时框子缩回旧值、原文标红，一次回调都不发。
+    public func controlTextDidEndEditing(_ obj: Notification) {
+        guard let field = obj.object as? NSTextField, field === manualField else { return }
+        guard manualEditingBegan else {
+            // 编辑压根没起来（见 `manualEditingBegan` 那段）：框里的串是预填的旧值，
+            // 不是用户打的。这里干净退出 —— 旧值留着、一次回调都不发，用户点第二下就能真编辑。
+            cancelManualEntry()
+            return
+        }
+        commitManualEntry(field.stringValue)
+    }
 }

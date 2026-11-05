@@ -181,12 +181,13 @@ public extension RuleAction {
     /// - `copyToClipboard`：只写粘贴板，与谁是前台无关。
     /// - `screenshot`：**必须不跳**。这一档弹的是我们自己的全屏遮罩，遮罩正摊开时
     ///   延迟还焦那一手会把焦点从截图窗抢走；而且它压根不是「打进隔壁窗口」的动作。
+    /// - `volumeUp` / `volumeDown`：改的是 CoreAudio 的默认输出设备，与谁是前台无关。
     /// - `none`：没有动作。
     var needsCursorAppFocus: Bool {
         switch self {
         case .keyPress, .shortcut, .text, .password, .applescript:
             return true
-        case .mouseClick, .copyToClipboard, .screenshot, .none:
+        case .mouseClick, .copyToClipboard, .screenshot, .volumeUp, .volumeDown, .none:
             return false
         }
     }
