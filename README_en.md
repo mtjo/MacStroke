@@ -8,13 +8,13 @@ MacStroke
 ### Configurable global mouse gesture for macOS.
 
 > MacStroke is a gesture-recognition application for macOS. A gesture is a movement you make with the mouse while holding down a specific mouse button. If MacStroke recognizes the stroke, it performs the action attached to it.
-> Today that means: emulate a key or shortcut, type text or a password, run an AppleScript, click at a coordinate, copy text into the clipboard, or open the screenshot capture. On top of the gestures, 3.x adds the clipboard history, phone remote control over the LAN, screenshot / scrolling screenshot / screen recording, Bluetooth proximity lock, and a bubble on selected text. MacStroke tries to provide an intuitive and efficient user interface while remaining highly configurable and offering many advanced features.
+> Today that means: emulate a key or shortcut, type text or a password, run an AppleScript, click at a coordinate, copy text into the clipboard, open the screenshot capture, or step the system volume up and down. On top of the gestures, 3.x adds the clipboard history, phone remote control over the LAN, screenshot / scrolling screenshot / screen recording, Bluetooth proximity lock, and a bubble on selected text. MacStroke tries to provide an intuitive and efficient user interface while remaining highly configurable and offering many advanced features.
 
 ## Versions and system support
 
 | Version | Source branch | Requirement | Status |
 | --- | --- | --- | --- |
-| **3.0.0 and later** (current **3.2.3**) | [`main`](https://github.com/mtjo/MacStroke/tree/main) (Swift rewrite) | **macOS 13 Ventura or later** | Maintained line. Universal binary (native Apple Silicon + Intel); the interface and the interactions stay the same as the original |
+| **3.0.0 and later** (current **3.2.4**) | [`main`](https://github.com/mtjo/MacStroke/tree/main) (Swift rewrite) | **macOS 13 Ventura or later** | Maintained line. Universal binary (native Apple Silicon + Intel); the interface and the interactions stay the same as the original |
 | 2.0.5 and earlier | [`master`](https://github.com/mtjo/MacStroke/tree/master) / `release` (Objective-C) | macOS 10.10 or later | No longer maintained; kept only as a fallback for old systems |
 
 - **Upgrading from the old build works in place:** 2.0.5 and earlier find 3.0.0 through "Check for Updates" inside the app, because the update feed is shared (every entry carries both the Sparkle 1.x DSA signature and the Sparkle 2 EdDSA signature). Rules, AppleScripts and the clipboard history are read from the same storage, so nothing has to be migrated.
@@ -55,19 +55,23 @@ The eight pages from the original keep their behavior and layout as they are. Th
 | Page | What it controls | Since |
 | --- | --- | --- |
 | General | Trigger button (right by default; middle, side or a custom button also work), sensitivity, release response, "Hold Modifiers To Skip Gesture" (gestures pause while the chosen modifiers are held, so keyboard shortcuts do not fire by accident), gesture note (show note icon, note color), import/export, reset to defaults | 3.0.0, 3.1.x |
-| Rules | One action per gesture: shortcut, key/text/password input, AppleScript, click at coordinate, copy to clipboard, open screenshot; per-app rules (filter); pick the shape from the preset gesture icon grid | 3.0.0 |
+| Rules | One action per gesture: shortcut, key/text/password input, AppleScript, click at coordinate, copy to clipboard, open screenshot, volume up/down one step; per-app rules (filter); pick the shape from the preset gesture icon grid. Double-click the shortcut cell to bring up an on-screen Mac keyboard — click the modifiers, then the key. Anything the panel doesn't carry can be typed instead via "Type it instead…" (modifiers plus a key name, `key(105)` for keys with no name). "Draw Gesture" now has an "Instant gestures (no drawing)" band at the bottom — wheel up/down (one notch with the trigger held), middle click, back and forward are gestures of their own, so no template is drawn; if the same button is also the trigger, the trigger wins and the preferences page says so | 3.0.0, 3.2.4 |
 | Filters | Blacklist / whitelist, one app per line — which apps don't get gestures at all | 3.0.0, fixed in 3.2.3 (lists were lost on restart) |
 | AppleScript | Script list and migration, `sdef` so external scripts can call it (`openPreferences` etc.) | 3.0.0 |
 | RightClick | The original page: a column of bundle IDs, `*` wildcards supported (e.g. `com.jetbrains.*`). In an app on this list, a trigger-button press with no drag that matches no rule makes MacStroke synthesize Ctrl+left-click so the app shows its own context menu; apps not on the list just get the button replayed | 3.0.0 |
-| Right-click extras | Master switch plus three sub-switches (new text file, open in terminal — Terminal/iTerm —, copy file path); the bundled Finder Sync extension reads exactly this. Two sections hang below it: "trigger button + wheel" (up and down each get one action: previous/next tab, volume ±1 step, custom shortcut. One notch counts as one trigger and that notch is swallowed, so the page doesn't scroll with it; once the wheel fired, releasing no longer opens the menu and the half-arc you drew along the way is not fed to the matcher) and "gesture lands on the window under the cursor" (3.2.2, off by default; on, the app owning the window under your release point gets the rule match and the keystrokes, with an option to hand focus back afterwards; off, the on-screen window list is never captured at all) | 3.0.0, 3.2.1, 3.2.2 |
+| Right-click extras | Master switch plus three sub-switches (new text file, open in terminal — Terminal/iTerm —, copy file path); the bundled Finder Sync extension reads exactly this. One section hangs below it: "gesture lands on the window under the cursor" (3.2.2, off by default; on, the app owning the window under your release point gets the rule match and the keystrokes, with an option to hand focus back afterwards; off, the on-screen window list is never captured at all). The old "trigger button + wheel" section is gone in 3.2.4: the wheel moved into the rules table — give wheel up/down (or middle/back/forward) an action in the "Instant gestures" band on the Rules page, scoped per app if you like and able to run an AppleScript. On upgrade, if the old two slots were actually switched on, they become two wheel rules once; after that the old settings no longer take part in matching. With no wheel rule configured the notch goes to the frontmost app as before — nothing is swallowed | 3.0.0, 3.2.1, 3.2.2, 3.2.4 |
 | Clipboard | History entries (images and file entries included), dedup and pinning, retention count and cleanup | 3.0.0, 3.1.x |
 | Remote Control | Drive this Mac from a phone on the same LAN: the mini program's live desktop thumbnail, taps and drags, keyboard and shortcuts, wheel. The page shows the local address, the pairing QR code and the mini-program code | 3.1.0–3.1.3 |
-| Screenshot / Record | Save location, default shortcut (⌘⇧A), magnifier zoom, the four mode-bar positions (screenshot / scrolling screenshot / record / extract text), annotation tools with in-place editing, Vision text recognition | 3.1.4–3.1.9 |
+| Screenshot / Record | Save location, default shortcut (⌘⇧A), magnifier zoom, the four mode-bar positions (screenshot / scrolling screenshot / record / extract text), annotation tools with in-place editing, Vision text recognition. Since 3.2.4, closing the mask (or the save panel) hands focus back to whatever app was frontmost when you pressed the shortcut, so the main program no longer sits in the foreground; the same release fixes the toast layout — a long "Saved 截图 …png" message with the full file name no longer spills its glyphs above the dark box (the box never exceeds the width cap, the wrapping budget is exactly the width the text actually gets, and the height grows with the line count) | 3.1.4–3.1.9, 3.2.4 |
 | Proximity Lock | The Bluetooth device you wear is the key: the screen locks when you walk away and can unlock itself when you come back (the password lives in this Mac's keychain; off by default). Presence is decided with a two-threshold hysteresis, and the gap, the dwell seconds and the lost-device timeout are all tunable | 3.1.7 |
 | Selection Bubble | Selecting text pops a four-cell pill: copy, search, translate, read aloud. Two triggers — release after a left-drag selection, or ⌃⌘B (default), which asks the focused element for its current selection; "which engine to search with" is configurable (6 engines + 8 web AIs + a custom URL template); apps with no accessibility outlet (Mail bodies) can have ⌘C pressed for you once; pages that won't take the query in the URL can turn on "paste ⌘V once after opening" | 3.2.0 |
 | About | Version, update check cadence and the gentle reminder, "skipped versions" and restoring the reminder | 3.0.0, 3.1.2–3.1.3, fixed in 3.2.1 |
 
 The status bar menu is: Preferences, Clipboard (opens the history panel directly, not the preferences window), Screenshot / Record (opens the mask directly), Remote Control (lands on that page), Check for Updates, Quit. When a new version has been found in the background there is an extra "Update Available: x.y.z" on top, and clicking it is what brings the update window forward. The Clipboard, Screenshot / Record, Remote Control and Check for Updates items are all port additions — the original menu had Preferences and Quit only. Finder's menu entries come from the bundled Finder Sync extension, which reads the switches on the "Right-click extras" page. Updates run on Sparkle, and every feed entry carries both DSA and EdDSA signatures, which is how 2.0.5 can still receive 3.x.
+
+## Thanks
+
+All four changes in 3.2.4 came from concrete suggestions in [issue #78](https://github.com/mtjo/MacStroke/issues/78) — the screenshot should not pull the main program to the foreground, the wheel should be configurable like a drawn gesture, shortcuts the recorder cannot capture should still be enterable, and the volume steps belong in the rule actions. Thank you [@lqscript](https://github.com/lqscript). The wheel part continues [issue #75](https://github.com/mtjo/MacStroke/issues/75) ("right button + wheel"), so thank you [@DemoJameson](https://github.com/DemoJameson) too — both for the request and for the list of pitfalls in your fork (the case-by-case comparison is in [docs/wheel-gesture-issue75.md](docs/wheel-gesture-issue75.md)). The same release also fixes two things found while testing: the toast pushed its own glyphs above the dark box once the message carried a full file name, and double-clicking the shortcut cell from another app (before that window became key) silently rewrote the shortcut that was already there.
 
 ## Download & Install
 
@@ -107,15 +111,17 @@ Power by [![mtjo](https://github.com/mtjo/MacStroke/raw/release/logo-mtjo.png)](
 ```bash
 swift build            # compile
 swift test             # unit tests (each module has a same-named *Tests target; needs a toolchain with XCTest)
+python3 tools/xctstub/xct.py regress   # this Mac's toolchain has shipped without XCTest since 2026-10-22 — run all 11 suites through this harness
+python3 tools/mutation/mutate.py tools/mutation/issue78.json   # mutation testing: put each breakage back into the sources and see whether the assertions bite
 ./build_app.sh         # produce MacStroke.app (universal binary + embedded Sparkle + Finder extension)
 ./make_release.sh      # produce the release zip and the dual-signed appcast entry (release_out/)
 ```
 
 ```
 Sources/
-  GestureEngine/       # Stroke / GesturePoint / GestureMatcher (DTW) / preset gestures
+  GestureEngine/       # Stroke / GesturePoint / GestureMatcher (DTW) / preset gestures / InstantGesture (the two wheel notches) / KeyboardShortcutText (shortcut string <-> key code)
   EventCapture/        # CGEventTap global capture, wheel reading and throttling
-  RuleEngine/          # Rule / RuleAction / ActionExecutor / wheel action lookup
+  RuleEngine/          # Rule / RuleAction / ActionExecutor / instant-gesture matching / legacy wheel settings import
   Storage/             # PreferencesStorage / HistoryClipboard / localization
   Preferences/         # SwiftUI preference pages
   WindowManager/       # ToastManager / WindowManager / shortcut recorder
@@ -128,7 +134,9 @@ Sources/
   FinderSyncExtension/ # Finder right-click extension
   MacStrokeApp/        # app entry point and wiring
 Tests/                 # per-module unit tests
-docs/                  # release and evidence ledgers (signing, issues #22/#75/#76, selection bubble, proximity-lock handoff)
+tools/xctstub/         # offline test runner: the Command Line Tools on this Mac have shipped without XCTest since 2026-10-22, so cases run through this harness
+tools/mutation/        # mutation-testing runner and the per-round tables (which kind of breakage the assertions fail to catch is recorded in docs/)
+docs/                  # release and evidence ledgers (signing, issues #22/#75/#76/#78, selection bubble, proximity-lock handoff)
 ```
 
 Notes on local development and the self-signed certificate: [docs/signing.md](docs/signing.md) (Chinese).

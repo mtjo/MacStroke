@@ -11,12 +11,13 @@ APP_DIR="./${APP_NAME}.app"
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
 #
 # **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view --json tagName` 拿到的那串）
-# 是 3.2.2（2026-10-26 发的，issue #22 那一轮），这一轮要发的就是 3.2.3（issue #76 黑名单不落盘）。
+# 是 3.2.3（2026-10-26 发的，issue #76 那一轮），这一轮要发的就是 3.2.4（issue #78 的五条建议
+# 加两处实测修复）。
 # 早先本机装过 3.2.1/3.2.2/3.2.3 那几号，是「每改一轮就加一个」加出来的，不是三个版本 ——
 # 一轮里改坏了重打一次包也加一号，用户手上就成了「版本号涨了但功能没变」。
 # 规矩：一轮功能 = 一号，装机调试期间反复覆盖同一个号，验收通过才由 release.yml 真发。
-# 3.2.3 这一号是 issue #76 那一轮的；同装机调试期间再改再包，**还是这一号**。
-APP_VERSION="3.2.3"
+# 3.2.4 这一号是 issue #78 那一轮的；同装机调试期间再改再包，**还是这一号**。
+APP_VERSION="3.2.4"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
@@ -149,6 +150,19 @@ fi
 # 不是随手写的文案 —— 真要改它得连那三处一起改。
 if ! grep -aq "BlockFilterMigration" "${BUILD_DIR}/MacStrokeApp"; then
     echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 BlockFilterMigration 这个日志标签，说明这个二进制不含「旧键幻影迁移」的修复（issue #76）"
+    exit 1
+fi
+# 3.2.4 这一轮加的是 issue #78 的滚轮规则。哨兵取 `instant_gesture`：它是 Rule 编解码
+# rules.json 的键名（CodingKeys 的 rawValue），纯字面量必然在二进制里；3.2.3 及以前没有这个键。
+if ! grep -aq "instant_gesture" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 instant_gesture 这个键，说明这个二进制不含滚轮规则（issue #78）"
+    exit 1
+fi
+# 3.2.4 的第二批是偏好页修整（可撤销重置、侧栏分组、窄窗列宽）。版本号同号，
+# 12:08 装的那份 3.2.4 没有这一批 —— 哨兵取公开类型 `DefaultsUndoSnapshot`，
+# 类型描述符里是纯字面量，能把两趟构建分开。
+if ! grep -aq "DefaultsUndoSnapshot" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 DefaultsUndoSnapshot，说明这个二进制不含偏好页修整（可撤销重置）那一批"
     exit 1
 fi
 # .build/release 可能是个符号链接；后面的 find 默认不跟进符号链接（-P），
