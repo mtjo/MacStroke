@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "xctstub 的套件清单。name = Tests/ 下的目录名，target = Package.swift 里的测试目标名",
+    "（依赖闭包从 .build/debug/description.json 的 targetDependencyMap 反查，这里不用手写依赖）。",
+    "files 为空 = 该目录全部 .swift；in_regress=false 的不进 `xct.py regress` 默认列表。",
+    "link 是给需要额外系统库的套件留的口子。"
+  ],
+  "suites": [
+    { "name": "GestureEngineTests", "target": "GestureEngineTests" },
+    { "name": "EventCaptureTests", "target": "EventCaptureTests" },
+    { "name": "RuleEngineTests", "target": "RuleEngineTests" },
+    { "name": "StorageTests", "target": "StorageTests" },
+    { "name": "AppleScriptRunnerTests", "target": "AppleScriptRunnerTests" },
+    { "name": "RightClickMenuTests", "target": "RightClickMenuTests" },
+    { "name": "WindowManagerTests", "target": "WindowManagerTests" },
+    { "name": "ScreenshotTests", "target": "ScreenshotTests" },
+    { "name": "SelectionPopupTests", "target": "SelectionPopupTests" },
+    { "name": "ProximityLockTests", "target": "ProximityLockTests" },
+    {
+      "name": "RemoteControlTests",
+      "target": "RemoteControlTests",
+      "note": "E2E 那套连跑必偶发红 1–2 条（端口/真 socket），单跑即绿 —— 红了先单跑复现再定性"
+    }
+  ]
+}

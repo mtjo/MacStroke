@@ -1,0 +1,1356 @@
+{
+ "_comment": [
+  "issue #78 这一轮（滚轮档规则 / 音量动作 / 快捷键手填 / 截图后交还焦点）的反向变异表。",
+  "跑法：python3 tools/mutation/mutate.py tools/mutation/issue78.json（--list 只看表，--only R1,W2 挑着跑）。",
+  "expect=false 的那几条是明知离线咬不住（模态面板、真 GUI 会话、App 层接线、两张表的同义串），",
+  "留在表里是为了把「哪一处只能靠装机清单兜」记进 docs 台账，不是漏写判据。",
+  "结论必须抄进 docs/wheel-gesture-issue78.md，别只留 .build/mutation。",
+  "KB 组是屏幕键盘（双击默认入口）的坏法：布局表/面板语义/popover 壳/录制框接线各几条。"
+ ],
+ "cases": [
+  {
+   "id": "W1",
+   "bad": "按下起始键那一刻的前台应用没记账（gestureBundleID 恒为空）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        gestureBundleID = frontBundle",
+   "replace": "        gestureBundleID = \"\"",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/WheelGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "W2",
+   "bad": "滚轮触发时现读前台应用，而不是用按下那一刻记的那一份",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        guard onWheelGesture?(reading.direction, gestureBundleID) == true else { return false }",
+   "replace": "        guard onWheelGesture?(reading.direction, currentFrontBundle()) == true else { return false }",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/WheelGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "W3",
+   "bad": "手势结束不清归属，下一段窗口沿用上一段那个 App",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        shouldShow = false\n        gestureBundleID = \"\"",
+   "replace": "        shouldShow = false\n        // 坏法：不清这一格",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/WheelGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R1",
+   "bad": "编码时不写 instant_gesture 键（滚轮档存不下去）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        if let instantGesture {\n            try c.encode(instantGesture.rawValue, forKey: .instantGesture)\n        }",
+   "replace": "        // 坏法：这一格不写进 JSON",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R2",
+   "bad": "所有规则都写 instant_gesture（轨迹规则导出的 JSON 变了样）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        if let instantGesture {\n            try c.encode(instantGesture.rawValue, forKey: .instantGesture)\n        }",
+   "replace": "        try c.encode(instantGesture?.rawValue ?? \"\", forKey: .instantGesture)",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R3",
+   "bad": "读不出的 instant_gesture 取值退成上滚，而不是当轨迹规则",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "            instantGesture = InstantGesture(rawValue: raw)",
+   "replace": "            instantGesture = InstantGesture(rawValue: raw) ?? .wheelUp",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R4",
+   "bad": "旧 rules.json（没有这一格）被读成滚轮规则",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        } else {\n            instantGesture = nil\n        }",
+   "replace": "        } else {\n            instantGesture = .wheelDown\n        }",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R5",
+   "bad": "截图动作持久化成 actionType 5（与音量 +1 撞车）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        case .screenshot:\n            actionType = 4",
+   "replace": "        case .screenshot:\n            actionType = 5",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/ScreenshotRuleTests.swift",
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R6",
+   "bad": "actionType 5 读回来不是音量 +1（退成快捷键）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        case 5:\n            action = .volumeUp",
+   "replace": "        case 5:\n            action = .shortcut(keyCode: UInt16(truncatingIfNeeded: code), flags: UInt(truncatingIfNeeded: flag))",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R7",
+   "bad": "瞬时匹配不看规则启不启用",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "            $0.isEnabled && $0.instantGesture == gesture",
+   "replace": "            $0.instantGesture == gesture",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R8",
+   "bad": "瞬时匹配取列表最后一条而不是第一条（后配的赢变先配的赢）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "        return rules.first {\n            $0.isEnabled && $0.instantGesture == gesture",
+   "replace": "        return rules.last {\n            $0.isEnabled && $0.instantGesture == gesture",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R9",
+   "bad": "轨迹匹配没挡瞬时规则（match(stroke:) 里空模板也参与打分）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "            if rule.instantGesture != nil { continue }\n            let score = compare(",
+   "replace": "            let score = compare(",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R10",
+   "bad": "按 App 的轨迹匹配没挡瞬时规则（match(stroke:bundleID:) 那一份）",
+   "file": "Sources/RuleEngine/Rule.swift",
+   "anchor": "            if rule.instantGesture != nil { continue }\n            // Original: every rule's filter is evaluated",
+   "replace": "            // Original: every rule's filter is evaluated",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R11",
+   "bad": "上膛条件把停用的滚轮规则、以及中键/侧键规则都算进去",
+   "file": "Sources/RuleEngine/RuleStore.swift",
+   "anchor": "        rules.contains { $0.isEnabled && $0.instantGesture?.isWheel == true }",
+   "replace": "        rules.contains { $0.isEnabled && $0.instantGesture != nil }",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "R12",
+   "bad": "RuleStore 的瞬时匹配没把当前名单交给引擎（永远匹不到）",
+   "file": "Sources/RuleEngine/RuleStore.swift",
+   "anchor": "        let engine = RuleEngine()\n        engine.add(contentsOf: rules)\n        return engine.match(instant: gesture, bundleID: bundleID)",
+   "replace": "        let engine = RuleEngine()\n        return engine.match(instant: gesture, bundleID: bundleID)",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "P1",
+   "bad": "选滚轮档时把按应用过滤丢了",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "            template: GestureTemplate(points: [], name: gesture.displayName),\n            minSimilarityScore: old.minSimilarityScore,\n            action: old.action,\n            note: old.note,\n            isEnabled: old.isEnabled,\n            triggerOnEveryMatch: old.triggerOnEveryMatch,\n            filter: old.filter,\n            filterType: old.filterType,",
+   "replace": "            template: GestureTemplate(points: [], name: gesture.displayName),\n            minSimilarityScore: old.minSimilarityScore,\n            action: old.action,\n            note: old.note,\n            isEnabled: old.isEnabled,\n            triggerOnEveryMatch: old.triggerOnEveryMatch,\n            filter: \"\",\n            filterType: \"wildcard\",",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "P2",
+   "bad": "选滚轮档时把动作顶成了「无」",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "            template: GestureTemplate(points: [], name: gesture.displayName),\n            minSimilarityScore: old.minSimilarityScore,\n            action: old.action,",
+   "replace": "            template: GestureTemplate(points: [], name: gesture.displayName),\n            minSimilarityScore: old.minSimilarityScore,\n            action: .none,",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "P3",
+   "bad": "选滚轮档时没清旧轨迹点（哪天键被删，轨迹静默复活）",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "            template: GestureTemplate(points: [], name: gesture.displayName),",
+   "replace": "            template: old.template,",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "P4",
+   "bad": "面板交出的档位被写死成上滚（下滚那格也变成上滚）",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "            spareActions: old.spareActions,\n            instantGesture: gesture\n        )\n        ruleStore.update(newRule)",
+   "replace": "            spareActions: old.spareActions,\n            instantGesture: .wheelUp\n        )\n        ruleStore.update(newRule)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "P5",
+   "bad": "换档后不发名单变更通知（规则页屏幕上还是老样子）",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "            instantGesture: gesture\n        )\n        ruleStore.update(newRule)\n        NotificationCenter.default.post(name: .macStrokeRuleStoreDidChange, object: nil)",
+   "replace": "            instantGesture: gesture\n        )\n        ruleStore.update(newRule)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "B1",
+   "bad": "规则页滚轮档不再渲图标，退回「Draw Gesture」按钮",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": "            if let instant = rule.instantGesture {\n                let thumb = InstantGestureThumbView(",
+   "replace": "            if let instant = rule.instantGesture, rule.name.isEmpty {\n                let thumb = InstantGestureThumbView(",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "B2",
+   "bad": "行签名少算 instantGesture（库里换了档，表格不重建）",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": " + \"\\(spare.text)\\u{1}\\(spare.password)\\u{1}\\(spare.appleScriptId)\\u{1}\"\n                    + \"\\(rule.instantGesture?.rawValue ?? \"\")\"",
+   "replace": " + \"\\(spare.text)\\u{1}\\(spare.password)\\u{1}\\(spare.appleScriptId)\"",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "B3",
+   "bad": "下拉里选「音量 +1」实际换成 −1（两档互换）",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": "        case 5: action = .volumeUp\n        case 6: action = .volumeDown",
+   "replace": "        case 5: action = .volumeDown\n        case 6: action = .volumeUp",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift",
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotTriggerTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "B4",
+   "bad": "typeIndex 与持久化的 actionType 串线（音量两档互换）",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": "            case .volumeUp: return 5\n            case .volumeDown: return 6",
+   "replace": "            case .volumeUp: return 6\n            case .volumeDown: return 5",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotTriggerTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "B5",
+   "bad": "图标格单击就弹面板（双击才该弹，单击是给选行的）",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": "        WheelGestureGlyph.draw(gesture, in: WheelGestureGlyph.cellGlyphRect(in: bounds))\n    }\n\n    override func mouseDown(with event: NSEvent) {\n        if event.clickCount == 2 { onDoubleClick?() }",
+   "replace": "        WheelGestureGlyph.draw(gesture, in: WheelGestureGlyph.cellGlyphRect(in: bounds))\n    }\n\n    override func mouseDown(with event: NSEvent) {\n        if event.clickCount >= 1 { onDoubleClick?() }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift",
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G1",
+   "bad": "滚轮箭尖 y 的上下两半互换（判方向没画反的那把尺子本身反了）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        case .wheelUp: return capsule.maxY - verticalInset\n        case .wheelDown: return capsule.minY + verticalInset",
+   "replace": "        case .wheelUp: return capsule.minY + verticalInset\n        case .wheelDown: return capsule.maxY - verticalInset",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G2",
+   "bad": "画法里滚轮箭尖指向下半（图标真画反）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        let tipY = up ? shaftTop : shaftBottom",
+   "replace": "        let tipY = up ? shaftBottom : shaftTop",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G3",
+   "bad": "规则页图标画死成上滚（两档渲成同一个图标）",
+   "file": "Sources/Preferences/RulesTable.swift",
+   "anchor": "        WheelGestureGlyph.draw(gesture, in: WheelGestureGlyph.cellGlyphRect(in: bounds))",
+   "replace": "        WheelGestureGlyph.draw(.wheelUp, in: WheelGestureGlyph.cellGlyphRect(in: bounds))",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G4",
+   "bad": "两档借用的文案 key 互换（上滚那格写着下滚）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        case .wheelUp: return \"Wheel Gesture up row\"\n        case .wheelDown: return \"Wheel Gesture down row\"",
+   "replace": "        case .wheelUp: return \"Wheel Gesture down row\"\n        case .wheelDown: return \"Wheel Gesture up row\"",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G5",
+   "bad": "滚轮那一栏的位置写死，把预设网格顶出窗口",
+   "file": "Sources/Preferences/PresetGesturePickerPanel.swift",
+   "anchor": "        let grid = FlippedGrid(frame: NSRect(x: 10, y: gridBottom, width: gridWidth, height: gridHeight))",
+   "replace": "        let grid = FlippedGrid(frame: NSRect(x: 10, y: 46, width: gridWidth, height: gridHeight))",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G6",
+   "bad": "底部那一栏少了中键与侧键（只剩滚轮两档）",
+   "file": "Sources/Preferences/PresetGesturePickerPanel.swift",
+   "anchor": "    static let instantGestures: [InstantGesture] = [\n        .wheelUp, .wheelDown, .middleClick, .backClick, .forwardClick,\n    ]",
+   "replace": "    static let instantGestures: [InstantGesture] = [.wheelUp, .wheelDown]",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G7",
+   "bad": "点滚轮格交出的档位写死成上滚（格子建对了、点下去串线）",
+   "file": "Sources/Preferences/PresetGesturePickerPanel.swift",
+   "anchor": "        choice = Choice(name: L(sender.gesture.locKey), stroke: nil, instant: sender.gesture)",
+   "replace": "        choice = Choice(name: L(sender.gesture.locKey), stroke: nil, instant: .wheelUp)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G8",
+   "bad": "图标格建的时候档位串线（都拿第一档）",
+   "file": "Sources/Preferences/PresetGesturePickerPanel.swift",
+   "anchor": "            let cell = InstantGestureCell(\n                gesture: gesture,",
+   "replace": "            let cell = InstantGestureCell(\n                gesture: Self.instantGestures[0],",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K1",
+   "bad": "名→键码表漏了 o 与 u（老规则 keyPress(\"o\") 静默变 Unknown key）",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "        \"o\": UInt16(kVK_ANSI_O), \"u\": UInt16(kVK_ANSI_U),",
+   "replace": "        // 坏法：这两格没进表",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K2",
+   "bad": "↑ 这个显示字形映射到下箭头键",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "        \"up\": UInt16(kVK_UpArrow), \"uparrow\": UInt16(kVK_UpArrow), \"↑\": UInt16(kVK_UpArrow),",
+   "replace": "        \"up\": UInt16(kVK_UpArrow), \"uparrow\": UInt16(kVK_UpArrow), \"↑\": UInt16(kVK_DownArrow),",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K3",
+   "bad": "key(N) 超出 UInt16 时截断成别的键，而不是拒绝",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "        guard let value = Int(body), (0...Int(UInt16.max)).contains(value) else { return nil }\n        return UInt16(value)",
+   "replace": "        guard let value = Int(body) else { return nil }\n        return UInt16(truncatingIfNeeded: value)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K4",
+   "bad": "⌘ 这个符号映射成 ⌥ 的修饰位",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "        \"⌘\": commandFlag, \"cmd\": commandFlag, \"command\": commandFlag,",
+   "replace": "        \"⌘\": optionFlag, \"cmd\": commandFlag, \"command\": commandFlag,",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K5",
+   "bad": "一串里出现两个键时不拒，取最后那个",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "            guard keyCode == nil else { return .failure(.moreThanOneKey(token)) }\n            keyCode = code",
+   "replace": "            keyCode = code",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K6",
+   "bad": "普通录制框接受「只有修饰键」（写成 keyCode 0 = 键盘上的 A）",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "            if requiresKey { return .failure(.missingKey) }",
+   "replace": "            if false { return .failure(.missingKey) }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "K7",
+   "bad": "连写的 ⌃ 不再单独成段（\"⌃↑\" 变成一个认不出的 token）",
+   "file": "Sources/GestureEngine/KeyboardShortcutText.swift",
+   "anchor": "        character == \"⌘\" || character == \"⌥\" || character == \"⌃\" || character == \"⇧\"",
+   "replace": "        character == \"⌘\" || character == \"⌥\" || character == \"⇧\"",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "V1",
+   "bad": "规则里的音量档位改成 0.5（与 SystemVolume 那一格脱钩）",
+   "file": "Sources/RuleEngine/SystemVolume.swift",
+   "anchor": "    public static let volumeStep: Double = 0.05",
+   "replace": "    public static let volumeStep: Double = 0.5",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "V2",
+   "bad": "音量加减两档传的符号互换",
+   "file": "Sources/RuleEngine/ActionExecutor.swift",
+   "anchor": "        case .volumeUp:\n            stepVolume(SystemVolume.volumeStep)\n        case .volumeDown:\n            stepVolume(-SystemVolume.volumeStep)",
+   "replace": "        case .volumeUp:\n            stepVolume(-SystemVolume.volumeStep)\n        case .volumeDown:\n            stepVolume(SystemVolume.volumeStep)",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "V3",
+   "bad": "一次触发把音量推两下",
+   "file": "Sources/RuleEngine/ActionExecutor.swift",
+   "anchor": "        case .volumeUp:\n            stepVolume(SystemVolume.volumeStep)",
+   "replace": "        case .volumeUp:\n            stepVolume(SystemVolume.volumeStep)\n            stepVolume(SystemVolume.volumeStep)",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "V4",
+   "bad": "音量执行绕过接缝直接动默认输出设备",
+   "file": "Sources/RuleEngine/ActionExecutor.swift",
+   "anchor": "        let didStep = volumeStepper?(delta) ?? SystemVolume.step(by: delta)",
+   "replace": "        volumeStepper?(delta)\n        let didStep = SystemVolume.step(by: delta)",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/VolumeRuleActionTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "V5",
+   "bad": "音量动作被算成「需要先把焦点挪到光标下那扇窗」",
+   "file": "Sources/RuleEngine/FocusMover.swift",
+   "anchor": "        case .mouseClick, .copyToClipboard, .screenshot, .volumeUp, .volumeDown, .none:\n            return false",
+   "replace": "        case .volumeUp, .volumeDown:\n            return true\n        case .mouseClick, .copyToClipboard, .screenshot, .none:\n            return false",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/CursorTargetTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RC1",
+   "bad": "双击不进手填（那两种录不到的组合键就没入口）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        if clickCount >= 2 {\n            startManualEntry()\n            return\n        }",
+   "replace": "        // 坏法：双击不认",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RC2",
+   "bad": "手填框清空被当成「清除快捷键」（该是那把叉的职责）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        guard !text.isEmpty else {",
+   "replace": "        if text.isEmpty {\n            keyCode = 0\n            flags = 0\n            onShortcutChanged?(0, 0)\n            return true\n        }\n        guard !text.isEmpty else {",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RC3",
+   "bad": "Esc 交还焦点前没摘掉委托（Esc 变成「提交」）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        manualField?.delegate = nil\n        if window?.firstResponder is ManualEntryField {",
+   "replace": "        if window?.firstResponder is ManualEntryField {",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": false,
+   "note": "离线咬不住：桩件进程 `NSApp.isActive` 恒 false（探针实测），窗口成不了 key，field editor 挂不上 → `controlTextDidEndEditing` 那条路根本走不到，删掉「摘委托」看不见。改由验收清单「真窗口双击→打字→Esc」那一步覆盖。"
+  },
+  {
+   "id": "RC4",
+   "bad": "手填初始串直接抄显示串（小键盘 5 会被换成主键盘 5）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        field.stringValue = hasRecordedValue ? manualEntrySeed : \"\"",
+   "replace": "        field.stringValue = displayString",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RC5",
+   "bad": "灰掉的录制框也允许进手填（看不见却在生效的抓手）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        guard controlEnabled, !isEditingManually else { return }\n        if isRecording { cancelRecording() }",
+   "replace": "        guard !isEditingManually else { return }\n        if isRecording { cancelRecording() }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SF1",
+   "bad": "记账排到权限弹窗/抓屏之后（真链路上激活已把前台变成我们自己）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        captureFocusOwner()\n        guard ensureScreenRecordingPermission() else { return }",
+   "replace": "        guard ensureScreenRecordingPermission() else { return }\n        captureFocusOwner()",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotFocusReturnTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "SF2",
+   "bad": "记账不区分「前台是我们自己 / 读不到前台」，一律记下来",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        focusOwnerBeforeOverlay = (front == 0 || front == mine) ? 0 : front",
+   "replace": "        focusOwnerBeforeOverlay = front",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotFocusReturnTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SF3",
+   "bad": "交还时不看「记到的是不是 0」（凭空甩一次焦点）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        let owner = focusOwnerBeforeOverlay\n        guard owner != 0 else { return }",
+   "replace": "        let owner = focusOwnerBeforeOverlay",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotFocusReturnTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SF4",
+   "bad": "交还不看「前台还是不是我们」（用户已自己切走还硬拉回来）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        guard front == 0 || front == mine else { return }",
+   "replace": "        // 坏法：这一道闸去掉",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotFocusReturnTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SF5",
+   "bad": "收遮罩时不交还焦点（issue #78 第 1 条的缺陷复活）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        onActiveStateChanged?(false)\n        restoreFocus()",
+   "replace": "        onActiveStateChanged?(false)",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotFocusReturnTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "S1",
+   "bad": "中文表里瞬时手势那一栏的标题抄了英文（中文界面这一格变回英文）",
+   "file": "Sources/MacStrokeApp/Resources/zh-Hans.lproj/Localizable.strings",
+   "anchor": "\"Wheel Rule Gesture Header\" = \"瞬时手势（不用画）\";",
+   "replace": "\"Wheel Rule Gesture Header\" = \"Instant gestures (no drawing)\";",
+   "build": false,
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelGestureStringTablesTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "S2",
+   "bad": "英文表少了「音量 −1 档」这一条（页面上露出 key 原文）",
+   "file": "Sources/MacStrokeApp/Resources/en.lproj/Localizable.strings",
+   "anchor": "\"Volume Down\" = \"Volume Down\";",
+   "replace": "// 坏法：这一条没进表",
+   "build": false,
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelGestureStringTablesTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "S3",
+   "bad": "英文表里音量两档填成同一个词（下拉里分不出来）",
+   "file": "Sources/MacStrokeApp/Resources/en.lproj/Localizable.strings",
+   "anchor": "\"Volume Up\" = \"Volume Up\";",
+   "replace": "\"Volume Up\" = \"Volume Down\";",
+   "build": false,
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelGestureStringTablesTests.swift",
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotTriggerTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "M1",
+   "bad": "上膛条件恒为 false（规则表里配了滚轮规则也不上膛）",
+   "file": "Sources/MacStrokeApp/main.swift",
+   "anchor": "            self?.ruleStore?.hasWheelInstantRule ?? false",
+   "replace": "            false",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "M2",
+   "bad": "滚轮命中时不去查规则表（配了规则也不动作）",
+   "file": "Sources/MacStrokeApp/main.swift",
+   "anchor": "            guard let rule = self.ruleStore?.match(instant: instant, bundleID: bundleID) else {\n                return false\n            }\n            return self.fireInstantRule(rule, bundleID: bundleID)",
+   "replace": "            _ = instant\n            _ = bundleID\n            return false",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "M3",
+   "bad": "App 层把归属传成空串（按应用过滤的滚轮规则永远匹不到）",
+   "file": "Sources/MacStrokeApp/main.swift",
+   "anchor": "            guard let rule = self.ruleStore?.match(instant: instant, bundleID: bundleID) else {",
+   "replace": "            guard let rule = self.ruleStore?.match(instant: instant, bundleID: \"\") else {",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "T1",
+   "bad": "框高写死成 80（旧口径只按「超出两行的部分」长，两行字整个顶出黑框 —— 用户截图那条）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "        let containerHeight = max(minHeight, labelHeight + labelGap * 2)",
+   "replace": "        let containerHeight = minHeight",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T2",
+   "bad": "数行数用的尺和 label 真正拿到的宽度不一致（原版两套口径）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "                with: CGSize(width: labelBudget, height: .greatestFiniteMagnitude),",
+   "replace": "                with: CGSize(width: maxWidth - labelMargin * 2 - imageMarginLeft - iconWidth,\n                             height: .greatestFiniteMagnitude),",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true,
+   "note": "锚点随 labelCellPadding 改动更新（原锚点是 available）"
+  },
+  {
+   "id": "T3",
+   "bad": "折行了还把框宽按不折行的单行宽加（框冲出 826）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            containerWidth = maxWidth",
+   "replace": "            containerWidth = max(minWidth, singleLine + chrome)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T4",
+   "bad": "文字左沿不让开图标那一列（长消息把字压到图标下面）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "        let labelLeft = iconVisible ? imageMarginLeft + iconWidth + labelGap : labelMargin",
+   "replace": "        let labelLeft = labelMargin",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T5",
+   "bad": "关掉图标就不再预留图标列（原版会预留，这条怪癖得有账）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            let slack: CGFloat = iconVisible ? 0 : imageMarginLeft + iconWidth",
+   "replace": "            let slack: CGFloat = 0",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T6",
+   "bad": "短消息不再按内容收缩，一律铺到 maxWidth",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            containerWidth = max(minWidth, singleLine + labelCellPadding + chrome + slack)",
+   "replace": "            containerWidth = maxWidth",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true,
+   "note": "锚点随 labelCellPadding 改动更新"
+  },
+  {
+   "id": "T7",
+   "bad": "文字格顶到框子上沿（不居中，下沿贴死）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            labelFrame: NSRect(x: labelLeft, y: (containerHeight - labelHeight) / 2,",
+   "replace": "            labelFrame: NSRect(x: labelLeft, y: containerHeight - labelHeight,",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T8",
+   "bad": "图标沉到框底（不垂直居中）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            iconFrame: NSRect(x: imageMarginLeft, y: (containerHeight - iconWidth) / 2,",
+   "replace": "            iconFrame: NSRect(x: imageMarginLeft, y: 0,",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "T9",
+   "bad": "单行框宽不付 label cell 的内边距（格子刚好等于字宽，真机折行后尾部被裁）",
+   "file": "Sources/WindowManager/Toast.swift",
+   "anchor": "            containerWidth = max(minWidth, singleLine + labelCellPadding + chrome + slack)",
+   "replace": "            containerWidth = max(minWidth, singleLine + chrome + slack)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ToastLayoutTests.swift"
+   ],
+   "expect": true,
+   "note": "离屏 PNG 先看出来的那条：15pt 下整串只在 281pt 以上格子画得全"
+  },
+  {
+   "id": "RC6",
+   "bad": "编辑没起来那次也当提交（从别的 App 双击一下就把当前快捷键重写了一遍）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        guard manualEditingBegan else {",
+   "replace": "        guard true else {",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N1",
+   "bad": "迁移判据读 object(forKey:)（注册域里的默认值被当成用户设置，全新安装凭空多两条规则）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "        guard storedBool(LegacyWheelKey.enabled, in: stored) else { return false }",
+   "replace": "        guard defaults.bool(forKey: LegacyWheelKey.enabled) else { return false }",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N2",
+   "bad": "迁移后不关总开关（每次启动都把旧两档再迁一遍）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "        defaults.set(false, forKey: LegacyWheelKey.enabled)",
+   "replace": "        // 坏法：不关闸",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N3",
+   "bad": "迁移不查同方向已有瞬时规则（和用户后来手配的那条撞车）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "            guard !rules.contains(where: { $0.instantGesture == direction.gesture }) else { continue }",
+   "replace": "            // 坏法：不查同方向已有规则",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N4",
+   "bad": "上滚那一档写成 wheelDown（上滚迁移出来的是下滚规则）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "            (.wheelUp,",
+   "replace": "            (.wheelDown,",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N5",
+   "bad": "旧版两档的缺省动作互换（没写过键的用户迁出来上下对调）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "        static let upActionDefault = 1\n        static let downActionDefault = 2",
+   "replace": "        static let upActionDefault = 2\n        static let downActionDefault = 1",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N6",
+   "bad": "迁移出来的规则默认不启用（规则表里有、hasInstantRule 却看不见）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "                isEnabled: true,",
+   "replace": "                isEnabled: false,",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "N7",
+   "bad": "迁移规则只对 Safari 生效（老用户在其他 App 里滚轮凭空失效）",
+   "file": "Sources/RuleEngine/LegacyWheelGestureImport.swift",
+   "anchor": "                filter: \"*\",",
+   "replace": "                filter: \"com.apple.Safari\",",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/LegacyWheelGestureImportTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E1",
+   "bad": "中键/侧键鼠标编号接反（3 后退、4 前进互换）",
+   "file": "Sources/GestureEngine/InstantGesture.swift",
+   "anchor": "        case 3: self = .backClick\n        case 4: self = .forwardClick",
+   "replace": "        case 3: self = .forwardClick\n        case 4: self = .backClick",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift",
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E2",
+   "bad": "瞬时按键先于起手键判定（同一颗键配了两头时，画画那一路被抢掉）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "                if isTriggerAllowed(event.button) {\n                    return handleTriggerMouseDown(event)\n                }\n                return handleInstantButtonDown(event)",
+   "replace": "                if handleInstantButtonDown(event) {\n                    return true\n                }\n                if isTriggerAllowed(event.button) {\n                    return handleTriggerMouseDown(event)\n                }\n                return false",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E3",
+   "bad": "命中瞬时规则后 up 不吞（前台应用收到一个没有 down 的 up，侧键乱后退）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "            if event.button == instantClickButton {\n                instantClickButton = nil\n                return true\n            }\n            guard shouldShow, isCapturing, event.button == activeTrigger else { return false }\n            return handleTriggerMouseUp(event)",
+   "replace": "            if event.button == instantClickButton {\n                instantClickButton = nil\n                return false\n            }\n            guard shouldShow, isCapturing, event.button == activeTrigger else { return false }\n            return handleTriggerMouseUp(event)",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E4",
+   "bad": "命中瞬时规则后 dragged 不吞（前台应用看到半套拖拽）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "            if event.button == instantClickButton { return true }",
+   "replace": "            if event.button == instantClickButton { return false }",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E5",
+   "bad": "冲突查询把停用的规则也算进来（停用的那条也弹提醒/挡路）",
+   "file": "Sources/RuleEngine/RuleStore.swift",
+   "anchor": "        for rule in rules where rule.isEnabled {\n            if let gesture = rule.instantGesture, gesture.mouseButtonNumber == number {",
+   "replace": "        for rule in rules {\n            if let gesture = rule.instantGesture, gesture.mouseButtonNumber == number {",
+   "tests": [
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E6",
+   "bad": "选了与起手键相同的瞬时档却不提醒（规则配了也按不出来）",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "        warnIfConflicting(gesture)\n        return true",
+   "replace": "        return true",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E7",
+   "bad": "每选一档都提醒，不管撞没撞起手键（提醒变成噪音）",
+   "file": "Sources/Preferences/GestureRecordFlow.swift",
+   "anchor": "        guard let number = gesture.mouseButtonNumber,\n              triggerButtonNumber() == number else { return }",
+   "replace": "        guard let number = gesture.mouseButtonNumber else { return }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureFlowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E8",
+   "bad": "录制态里按中键也执行瞬时规则（「画手势」那一下顺手做掉了别的事）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        guard isEnabled, !isSuspended, !isRecordingGesture,\n              let gesture = InstantGesture(mouseButtonNumber: event.button.cgNumber) else {",
+   "replace": "        guard isEnabled, !isSuspended,\n              let gesture = InstantGesture(mouseButtonNumber: event.button.cgNumber) else {",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E9",
+   "bad": "瞬时按键不判修饰键让位（按住 ⌘ 点中键也开不了链接）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        if isSuppressedByModifiers(event.modifiers) { return false }",
+   "replace": "        // 坏法：瞬时按键这一路不判修饰键",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E10",
+   "bad": "瞬时按键不看过滤结果（黑白名单里拉黑了也照做）",
+   "file": "Sources/EventCapture/CanvasManager.swift",
+   "anchor": "        if let shouldCapture = shouldCaptureGesture, !shouldCapture(frontBundle) {\n            return false\n        }\n\n        guard onInstantButtonGesture?(gesture, frontBundle) == true else { return false }",
+   "replace": "        guard onInstantButtonGesture?(gesture, frontBundle) == true else { return false }",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "E11",
+   "bad": "编号 5 以上的鼠标键也被当成前进（用户的额外键被抢）",
+   "file": "Sources/GestureEngine/InstantGesture.swift",
+   "anchor": "        case 4: self = .forwardClick\n        default: return nil",
+   "replace": "        case 4: self = .forwardClick\n        default: self = .forwardClick",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/InstantButtonGestureTests.swift",
+    "RuleEngineTests:/Users/mtjo/work/MacStroke-Swift/Tests/RuleEngineTests/InstantGestureRuleTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G9",
+   "bad": "侧键箭尖 x 的左右互换（后退图标指右、前进指左）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        case .backClick: return capsule.minX + horizontalInset\n        case .forwardClick: return capsule.maxX - horizontalInset",
+   "replace": "        case .backClick: return capsule.maxX - horizontalInset\n        case .forwardClick: return capsule.minX + horizontalInset",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G10",
+   "bad": "水平箭头的两撇画反（箭尖方向与图标含义相反）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        let wings: CGFloat = left ? 4 : -4",
+   "replace": "        let wings: CGFloat = left ? -4 : 4",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "G11",
+   "bad": "中键画成上滚的竖直箭头（三档看着一样、按下才知道）",
+   "file": "Sources/Preferences/WheelGestureGlyph.swift",
+   "anchor": "        NSColor.labelColor.setFill()\n        NSBezierPath(roundedRect: pill, xRadius: width / 2, yRadius: width / 2).fill()",
+   "replace": "        drawVerticalArrow(up: true, in: capsule)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/WheelRuleGestureGlyphTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB1",
+   "bad": "双击被吞成单击：单击直接把键盘弹出来，录制入口消失",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        if clickCount >= 2 {\n            presentShortcutKeyboard()\n            return\n        }",
+   "replace": "        if clickCount >= 1 {\n            presentShortcutKeyboard()\n            return\n        }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutManualEntryTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB2",
+   "bad": "修饰键模式把主键也收进去（弹着一排修饰键，点 A 却提交了 ⌘A）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        guard !modifiersOnly else { return }\n        onCommit?(keyCode, selectedFlags)",
+   "replace": "        onCommit?(keyCode, selectedFlags)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB3",
+   "bad": "一个修饰键都没选，「完成」也能提交一份空绑定",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        guard modifiersOnly, selectedFlags != 0 else { return }",
+   "replace": "        guard modifiersOnly else { return }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB4",
+   "bad": "修饰键只能选不能取消（再点一下还是选中）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        selectedFlags = selectedFlags & flag == 0 ? selectedFlags | flag : selectedFlags & ~flag",
+   "replace": "        selectedFlags = selectedFlags | flag",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB5",
+   "bad": "点主键提交时把选好的修饰键丢了（只落下一个裸键）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        onCommit?(keyCode, selectedFlags)\n    }",
+   "replace": "        onCommit?(keyCode, 0)\n    }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB6",
+   "bad": "一次点击提交两遍（宿主写两次模型、发两次回调）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        onCommit?(keyCode, selectedFlags)\n    }",
+   "replace": "        onCommit?(keyCode, selectedFlags)\n        onCommit?(keyCode, selectedFlags)\n    }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB7",
+   "bad": "取消也顺手提交了一份空绑定",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "    func cancel() {\n        onCancel?()\n    }",
+   "replace": "    func cancel() {\n        onCommit?(0, 0)\n        onCancel?()\n    }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB8",
+   "bad": "宿主禁用这一格时，已经开着的键盘不收（看得见却已经没意义）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "                cancelManualEntry()\n                closeKeyboard()",
+   "replace": "                cancelManualEntry()",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB9",
+   "bad": "灰着的录制框双击仍会弹出键盘",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        guard controlEnabled else { return }\n        // 编辑态 / 键盘态里那一下归面板自己",
+   "replace": "        // 编辑态 / 键盘态里那一下归面板自己",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB10",
+   "bad": "↑/↓ 摆反了（↓ 在上、↑ 在下，同一列还叠在一起）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        let up = makeButton(ShortcutKeyboardLayout.upArrow)\n        up.frame = NSRect(x: startX + column, y: y, width: unit, height: halfHeight)",
+   "replace": "        let up = makeButton(ShortcutKeyboardLayout.upArrow)\n        up.frame = NSRect(x: startX + column, y: y + halfHeight + ShortcutKeyboardLayout.keyGap, width: unit, height: halfHeight)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB11",
+   "bad": "方向键那组整体左挪一格，没贴住右沿",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "            + (ShortcutKeyboardLayout.mainRowUnits - 3) * (unit + ShortcutKeyboardLayout.keyGap)",
+   "replace": "            + (ShortcutKeyboardLayout.mainRowUnits - 4) * (unit + ShortcutKeyboardLayout.keyGap)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB12",
+   "bad": "↑ 用了 ↓ 的键码（名字自洽，点下去绑的是另一颗）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "    static let upArrow = key(kVK_UpArrow, \"↑\", name: \"Up Arrow\")",
+   "replace": "    static let upArrow = key(kVK_DownArrow, \"↑\", name: \"Up Arrow\")",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB13",
+   "bad": "数字行末尾短半格（delete 变窄，行尾留个洞）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        key(kVK_Delete, \"⌫\", 1.5, name: \"Delete\"),",
+   "replace": "        key(kVK_Delete, \"⌫\", 1.0, name: \"Delete\"),",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB14",
+   "bad": "⇪ 摆成能点的键（模型里没有这一位，点了却以为录上了）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        inert(\"⇪\", 1.5, name: \"Caps Lock\"),",
+   "replace": "        key(kVK_CapsLock, \"⇪\", 1.5, name: \"Caps Lock\"),",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB15",
+   "bad": "气泡没跟着偏好页明暗（深色页里弹出一块浅色键盘）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        popover.appearance = drawAppearance ?? window.effectiveAppearance",
+   "replace": "        popover.appearance = nil",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB16",
+   "bad": "气泡不是「点外面就收」（transient → semitransient）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        popover.behavior = .transient",
+   "replace": "        popover.behavior = .semitransient",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB17",
+   "bad": "气泡尺寸和面板不一致（键帽被裁掉一截）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        popover.contentSize = panel.preferredSize",
+   "replace": "        popover.contentSize = NSSize(width: 300, height: 200)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB18",
+   "bad": "「改成手写…」只是把键盘收了，不给兜底入口",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        panel.onTypeInstead = { [weak self] in self?.switchToManualEntry() }",
+   "replace": "        panel.onTypeInstead = { [weak self] in self?.closeKeyboard() }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB19",
+   "bad": "键盘收了但「正在编辑」态还挂着（框画成禁用色、点不进录制）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        keyboardPopover?.delegate = nil\n        keyboardPopover?.close()\n        keyboardPopover = nil\n        keyboardPanel = nil\n        isEditingWithKeyboard = false",
+   "replace": "        keyboardPopover?.delegate = nil\n        keyboardPopover?.close()\n        keyboardPopover = nil\n        keyboardPanel = nil\n        isEditingWithKeyboard = true",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB20",
+   "bad": "顶部读数永远是空的（用户看不出自己选了哪几颗修饰键）",
+   "file": "Sources/Preferences/ShortcutKeyboardView.swift",
+   "anchor": "        let symbols = ShortcutRecorderView.modifierSymbols(selectedFlags)",
+   "replace": "        let symbols = ShortcutRecorderView.modifierSymbols(0)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB21",
+   "bad": "双击开键盘时没收掉背后还在进行的录制",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "    func makeKeyboardPanel() -> ShortcutKeyboardView {\n        if isRecording { cancelRecording() }",
+   "replace": "    func makeKeyboardPanel() -> ShortcutKeyboardView {",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB9b",
+   "bad": "双击入口自己不看灰态（去掉 presentShortcutKeyboard 那道 controlEnabled）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        guard controlEnabled, !isEditingWithKeyboard else { return }",
+   "replace": "        guard !isEditingWithKeyboard else { return }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB23",
+   "bad": "开始录制不挂提示气泡（长句没处放，用户看不见该按什么）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        isRecording = true\n        presentRecordingHint()\n    }",
+   "replace": "        isRecording = true\n    }",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB24",
+   "bad": "框内文案换回长句（漫出格子盖住旁边列，装机实测的那一面）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "            return pressedFlags != 0\n                ? Self.modifierSymbols(pressedFlags) + \"…\"\n                : L(\"Recording…\")",
+   "replace": "            return pressedFlags != 0\n                ? Self.modifierSymbols(pressedFlags) + \"…\"\n                : L(\"Press a key (Esc to cancel)\")",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB25",
+   "bad": "提示气泡改成点外面就收（transient：点一下旁边列提示没了，录制还开着）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        popover.behavior = .applicationDefined",
+   "replace": "        popover.behavior = .transient",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB26",
+   "bad": "取消录制不收气泡（录制早退了，提示还浮在框上）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        isRecording = false\n        pressedFlags = 0\n        dismissRecordingHint()\n        needsDisplay = true",
+   "replace": "        isRecording = false\n        pressedFlags = 0\n        needsDisplay = true",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB27",
+   "bad": "修饰键档的气泡文案串成普通档（「修饰键暂停手势」那一格提示按主键）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        L(modifiersOnly\n            ? \"Hold modifiers (double-click for keyboard, Esc to cancel)\"\n            : \"Press a key (double-click for keyboard, Esc to cancel)\")",
+   "replace": "        L(modifiersOnly\n            ? \"Press a key (double-click for keyboard, Esc to cancel)\"\n            : \"Hold modifiers (double-click for keyboard, Esc to cancel)\")",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB28",
+   "bad": "普通档气泡退回没有双击入口的旧句（用户不知道双击能开屏幕键盘）",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        L(modifiersOnly\n            ? \"Hold modifiers (double-click for keyboard, Esc to cancel)\"\n            : \"Press a key (double-click for keyboard, Esc to cancel)\")",
+   "replace": "        L(modifiersOnly\n            ? \"Hold modifiers (double-click for keyboard, Esc to cancel)\"\n            : \"Press a key (Esc to cancel)\")",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "KB29",
+   "bad": "修饰键档气泡退回没有双击入口的旧句",
+   "file": "Sources/Preferences/ShortcutRecorderView.swift",
+   "anchor": "        L(modifiersOnly\n            ? \"Hold modifiers (double-click for keyboard, Esc to cancel)\"\n            : \"Press a key (double-click for keyboard, Esc to cancel)\")",
+   "replace": "        L(modifiersOnly\n            ? \"Hold modifiers (Esc to cancel)\"\n            : \"Press a key (double-click for keyboard, Esc to cancel)\")",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ShortcutKeyboardTests.swift"
+   ],
+   "expect": true
+  }
+ ]
+}
