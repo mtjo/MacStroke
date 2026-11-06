@@ -14,7 +14,7 @@ MacStroke
 
 | Version | Source branch | Requirement | Status |
 | --- | --- | --- | --- |
-| **3.0.0 and later** (current **3.2.4**) | [`main`](https://github.com/mtjo/MacStroke/tree/main) (Swift rewrite) | **macOS 13 Ventura or later** | Maintained line. Universal binary (native Apple Silicon + Intel); the interface and the interactions stay the same as the original |
+| **3.0.0 and later** (current **3.2.5**) | [`main`](https://github.com/mtjo/MacStroke/tree/main) (Swift rewrite) | **macOS 13 Ventura or later** | Maintained line. Universal binary (native Apple Silicon + Intel); the interface and the interactions stay the same as the original |
 | 2.0.5 and earlier | [`master`](https://github.com/mtjo/MacStroke/tree/master) / `release` (Objective-C) | macOS 10.10 or later | No longer maintained; kept only as a fallback for old systems |
 
 - **Upgrading from the old build works in place:** 2.0.5 and earlier find 3.0.0 through "Check for Updates" inside the app, because the update feed is shared (every entry carries both the Sparkle 1.x DSA signature and the Sparkle 2 EdDSA signature). Rules, AppleScripts and the clipboard history are read from the same storage, so nothing has to be migrated.
@@ -62,7 +62,7 @@ The eight pages from the original keep their behavior and layout as they are. Th
 | Right-click extras | Master switch plus three sub-switches (new text file, open in terminal — Terminal/iTerm —, copy file path); the bundled Finder Sync extension reads exactly this. One section hangs below it: "gesture lands on the window under the cursor" (3.2.2, off by default; on, the app owning the window under your release point gets the rule match and the keystrokes, with an option to hand focus back afterwards; off, the on-screen window list is never captured at all). The old "trigger button + wheel" section is gone in 3.2.4: the wheel moved into the rules table — give wheel up/down (or middle/back/forward) an action in the "Instant gestures" band on the Rules page, scoped per app if you like and able to run an AppleScript. On upgrade, if the old two slots were actually switched on, they become two wheel rules once; after that the old settings no longer take part in matching. With no wheel rule configured the notch goes to the frontmost app as before — nothing is swallowed | 3.0.0, 3.2.1, 3.2.2, 3.2.4 |
 | Clipboard | History entries (images and file entries included), dedup and pinning, retention count and cleanup | 3.0.0, 3.1.x |
 | Remote Control | Drive this Mac from a phone on the same LAN: the mini program's live desktop thumbnail, taps and drags, keyboard and shortcuts, wheel. The page shows the local address, the pairing QR code and the mini-program code | 3.1.0–3.1.3 |
-| Screenshot / Record | Save location, default shortcut (⌘⇧A), magnifier zoom, the four mode-bar positions (screenshot / scrolling screenshot / record / extract text), annotation tools with in-place editing, Vision text recognition. Since 3.2.4, closing the mask (or the save panel) hands focus back to whatever app was frontmost when you pressed the shortcut, so the main program no longer sits in the foreground; the same release fixes the toast layout — a long "Saved 截图 …png" message with the full file name no longer spills its glyphs above the dark box (the box never exceeds the width cap, the wrapping budget is exactly the width the text actually gets, and the height grows with the line count) | 3.1.4–3.1.9, 3.2.4 |
+| Screenshot / Record | Save location, default shortcut (⌘⇧A), magnifier zoom, the four mode-bar positions (screenshot / scrolling screenshot / record / extract text), annotation tools with in-place editing, Vision text recognition. Since 3.2.4, closing the mask (or the save panel) hands focus back to whatever app was frontmost when you pressed the shortcut, so the main program no longer sits in the foreground; the same release fixes the toast layout — a long "Saved 截图 …png" message with the full file name no longer spills its glyphs above the dark box (the box never exceeds the width cap, the wrapping budget is exactly the width the text actually gets, and the height grows with the line count). Since 3.2.5, snapping can raise the window under the pointer before the screen freezes and capture the frame again (off by default; the raise borrows the foreground only for the moment of capture and the mask takes the keyboard back right away) | 3.1.4–3.1.9, 3.2.4, 3.2.5 |
 | Proximity Lock | The Bluetooth device you wear is the key: the screen locks when you walk away and can unlock itself when you come back (the password lives in this Mac's keychain; off by default). Presence is decided with a two-threshold hysteresis, and the gap, the dwell seconds and the lost-device timeout are all tunable | 3.1.7 |
 | Selection Bubble | Selecting text pops a four-cell pill: copy, search, translate, read aloud. Two triggers — release after a left-drag selection, or ⌃⌘B (default), which asks the focused element for its current selection; "which engine to search with" is configurable (6 engines + 8 web AIs + a custom URL template); apps with no accessibility outlet (Mail bodies) can have ⌘C pressed for you once; pages that won't take the query in the URL can turn on "paste ⌘V once after opening" | 3.2.0 |
 | About | Version, update check cadence and the gentle reminder, "skipped versions" and restoring the reminder | 3.0.0, 3.1.2–3.1.3, fixed in 3.2.1 |
@@ -72,6 +72,8 @@ The status bar menu is: Preferences, Clipboard (opens the history panel directly
 ## Thanks
 
 All four changes in 3.2.4 came from concrete suggestions in [issue #78](https://github.com/mtjo/MacStroke/issues/78) — the screenshot should not pull the main program to the foreground, the wheel should be configurable like a drawn gesture, shortcuts the recorder cannot capture should still be enterable, and the volume steps belong in the rule actions. Thank you [@lqscript](https://github.com/lqscript). The wheel part continues [issue #75](https://github.com/mtjo/MacStroke/issues/75) ("right button + wheel"), so thank you [@DemoJameson](https://github.com/DemoJameson) too — both for the request and for the list of pitfalls in your fork (the case-by-case comparison is in [docs/wheel-gesture-issue75.md](docs/wheel-gesture-issue75.md)). The same release also fixes two things found while testing: the toast pushed its own glyphs above the dark box once the message carried a full file name, and double-clicking the shortcut cell from another app (before that window became key) silently rewrote the shortcut that was already there.
+
+The raise-on-snap in 3.2.5 also came out of testing: with snapping on, a window covered by others could only be captured as the half that showed. This release makes it follow the snap box — land on a window, that window is raised and the frame is captured again — and after sign-off the switch defaults to off at the user's request (raising switches the frontmost app for a moment, so new installs are not opted in). Full accounting: [docs/screenshot-raise-window.md](docs/screenshot-raise-window.md) (Chinese).
 
 ## Download & Install
 
@@ -127,7 +129,7 @@ Sources/
   WindowManager/       # ToastManager / WindowManager / shortcut recorder
   AppleScriptRunner/   # AppleScript execution and script list
   RemoteControl/       # LAN TCP service, click/keyboard/wheel synthesis, screen capture streaming
-  Screenshot/          # frozen-frame capture, selection mask, annotation model and compositing, scrolling capture, recording, OCR
+  Screenshot/          # frozen-frame capture, selection mask, annotation model and compositing, scrolling capture, recording, OCR, raise-on-snap
   ProximityLock/       # Bluetooth presence state machine, lock and injected unlock
   SelectionPopup/      # reading the selected text (Accessibility, with several fallbacks), the four-cell bubble
   RightClickMenu/      # context menu construction
@@ -136,7 +138,7 @@ Sources/
 Tests/                 # per-module unit tests
 tools/xctstub/         # offline test runner: the Command Line Tools on this Mac have shipped without XCTest since 2026-10-22, so cases run through this harness
 tools/mutation/        # mutation-testing runner and the per-round tables (which kind of breakage the assertions fail to catch is recorded in docs/)
-docs/                  # release and evidence ledgers (signing, issues #22/#75/#76/#78, selection bubble, proximity-lock handoff)
+docs/                  # release and evidence ledgers (signing, issues #22/#75/#76/#78, raise-on-snap, selection bubble, proximity-lock handoff)
 ```
 
 Notes on local development and the self-signed certificate: [docs/signing.md](docs/signing.md) (Chinese).

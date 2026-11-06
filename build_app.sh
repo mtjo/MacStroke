@@ -11,13 +11,12 @@ APP_DIR="./${APP_NAME}.app"
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
 #
 # **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view --json tagName` 拿到的那串）
-# 是 3.2.3（2026-10-26 发的，issue #76 那一轮），这一轮要发的就是 3.2.4（issue #78 的五条建议
-# 加两处实测修复）。
+# 是 3.2.4（2026-11-05 发的，issue #78 那一轮），这一轮是 3.2.5（智能吸附时定格前提窗）。
 # 早先本机装过 3.2.1/3.2.2/3.2.3 那几号，是「每改一轮就加一个」加出来的，不是三个版本 ——
 # 一轮里改坏了重打一次包也加一号，用户手上就成了「版本号涨了但功能没变」。
 # 规矩：一轮功能 = 一号，装机调试期间反复覆盖同一个号，验收通过才由 release.yml 真发。
-# 3.2.4 这一号是 issue #78 那一轮的；同装机调试期间再改再包，**还是这一号**。
-APP_VERSION="3.2.4"
+# 3.2.5 这一号是提窗那一轮的；同装机调试期间再改再包，**还是这一号**。
+APP_VERSION="3.2.5"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
@@ -163,6 +162,12 @@ fi
 # 类型描述符里是纯字面量，能把两趟构建分开。
 if ! grep -aq "DefaultsUndoSnapshot" "${BUILD_DIR}/MacStrokeApp"; then
     echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 DefaultsUndoSnapshot，说明这个二进制不含偏好页修整（可撤销重置）那一批"
+    exit 1
+fi
+# 3.2.5 这一轮是截图吸附时提窗。哨兵取偏好键名 `screenshotRaiseWindowBeforeCapture`：
+# StorageKey 的 rawValue 是纯字面量，必然在二进制里；3.2.4 及以前没有这个键。
+if ! grep -aq "screenshotRaiseWindowBeforeCapture" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 screenshotRaiseWindowBeforeCapture 这个键，说明这个二进制不含截图吸附提窗（3.2.5）"
     exit 1
 fi
 # .build/release 可能是个符号链接；后面的 find 默认不跟进符号链接（-P），
