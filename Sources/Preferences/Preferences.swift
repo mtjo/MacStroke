@@ -277,6 +277,14 @@ public final class UserPreferences: ObservableObject {
     @Published public var screenshotSnapToWindows: Bool {
         didSet { storage.setBool(screenshotSnapToWindows, forKey: .screenshotSnapToWindows) }
     }
+    /// 智能吸附时，定格前先把光标下那扇被压住的窗提到最前。默认开；吸附关掉时
+    /// 页面上这一行跟着禁用 —— 没有吸附就无所谓「光标下是哪扇窗」。
+    @Published public var screenshotRaiseWindowBeforeCapture: Bool {
+        didSet {
+            storage.setBool(screenshotRaiseWindowBeforeCapture,
+                            forKey: .screenshotRaiseWindowBeforeCapture)
+        }
+    }
     /// 选区阶段跟光的放大镜。关掉就是纯靠光标尖卡边界（老手感）。
     @Published public var screenshotMagnifier: Bool {
         didSet { storage.setBool(screenshotMagnifier, forKey: .screenshotMagnifier) }
@@ -544,6 +552,7 @@ public final class UserPreferences: ObservableObject {
         self.screenshotAutoSave = storage.getBoolOptional(forKey: .screenshotAutoSave) ?? StorageDefaults.screenshotAutoSave
         self.screenshotSaveDirectory = storage.getStringOptional(forKey: .screenshotSaveDirectory) ?? StorageDefaults.screenshotSaveDirectory
         self.screenshotSnapToWindows = storage.getBoolOptional(forKey: .screenshotSnapToWindows) ?? StorageDefaults.screenshotSnapToWindows
+        self.screenshotRaiseWindowBeforeCapture = storage.getBoolOptional(forKey: .screenshotRaiseWindowBeforeCapture) ?? StorageDefaults.screenshotRaiseWindowBeforeCapture
         self.screenshotMagnifier = storage.getBoolOptional(forKey: .screenshotMagnifier) ?? StorageDefaults.screenshotMagnifier
         self.screenshotMagnification = storage.getIntOptional(forKey: .screenshotMagnification) ?? StorageDefaults.screenshotMagnification
         self.screenshotDefaultTool = storage.getIntOptional(forKey: .screenshotDefaultTool) ?? StorageDefaults.screenshotDefaultTool

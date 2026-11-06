@@ -1,0 +1,260 @@
+{
+ "_comment": [
+  "「截图前把光标下的窗口提到最前」（2026-11-05，默认开）的反向变异表。",
+  "跑法：python3 tools/mutation/mutate.py tools/mutation/screenshot-raise.json（--list 只看表，--only RS1,RS4 挑着跑）。",
+  "RS1～RS12、RS16～RS22 是离线该抓的坏法：两道偏好闸、够格条件、压住判定、默认值、读库、页面绑定与禁用、提窗成功判据；",
+  "RS18～RS22 覆盖 2026-11-05 晚间的新口径「吸附到哪扇就提哪扇」—— 悬停回调、重拍换帧与遮罩不进采集。",
+  "RS13/RS14/RS15 是明知离线咬不住的（真 AX 会话、提窗相对抓帧的次序），留在表里是为了把",
+  "「哪一处只能靠装机清单兜」记进 docs/screenshot-raise-window.md，不是漏写判据。",
+  "结论必须抄进 docs/screenshot-raise-window.md，别只留 .build/mutation。"
+ ],
+ "cases": [
+  {
+   "id": "RS1",
+   "bad": "吸附关掉时仍去提窗（用户关的是整条智能吸附）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        settings.snapToWindows && settings.raiseWindowBeforeCapture",
+   "replace": "        settings.raiseWindowBeforeCapture",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift",
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS2",
+   "bad": "提窗偏好关掉时仍去提（关不掉那一档）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        settings.snapToWindows && settings.raiseWindowBeforeCapture",
+   "replace": "        settings.snapToWindows",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift",
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS3",
+   "bad": "够格条件不再看 isCapturable（不进冻结帧的浮窗也当成目标）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        guard window.isCapturable, window.alpha >= 0.99 else { return false }",
+   "replace": "        guard window.alpha >= 0.99 else { return false }",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS4",
+   "bad": "没被压住也提窗（白白切前台，画面还一模一样）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        return covered ? target : nil",
+   "replace": "        return target",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift",
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS5",
+   "bad": "压住的判定不看同层（更高层浮窗压出来的那块也要提）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        let covered = windows[..<index].contains {\n            isSnapCandidate($0) && $0.layer == target.layer\n                && $0.globalBounds.intersects(target.globalBounds)\n        }\n        return covered ? target : nil",
+   "replace": "        let covered = windows[..<index].contains {\n            isSnapCandidate($0)\n                && $0.globalBounds.intersects(target.globalBounds)\n        }\n        return covered ? target : nil",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS6",
+   "bad": "验「到没到最前」时不看光标落在哪扇窗（答成表里第一扇）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        windows.first { isSnapCandidate($0) && $0.globalBounds.contains(point) }",
+   "replace": "        windows.first { isSnapCandidate($0) }",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS7",
+   "bad": "默认值翻成开（用户验收后要求默认关）",
+   "file": "Sources/Storage/Storage.swift",
+   "anchor": "    public static let screenshotRaiseWindowBeforeCapture: Bool = false",
+   "replace": "    public static let screenshotRaiseWindowBeforeCapture: Bool = true",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSettingsTests.swift",
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotPreferencesTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS8",
+   "bad": "截图会话现读设置时无视库里关掉的提窗",
+   "file": "Sources/Screenshot/ScreenshotSettings.swift",
+   "anchor": "            raiseWindowBeforeCapture: storage.getBoolOptional(forKey: .screenshotRaiseWindowBeforeCapture)\n                ?? StorageDefaults.screenshotRaiseWindowBeforeCapture,",
+   "replace": "            raiseWindowBeforeCapture: true,",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSettingsTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS9",
+   "bad": "吸附关掉时提窗那一格没画成禁用（用户以为还能点）",
+   "file": "Sources/Preferences/ScreenshotTabView.swift",
+   "anchor": "                        TrailingSwitch(isOn: $viewModel.screenshotRaiseWindowBeforeCapture)\n                            .disabled(!viewModel.screenshotSnapToWindows)",
+   "replace": "                        TrailingSwitch(isOn: $viewModel.screenshotRaiseWindowBeforeCapture)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotRaiseRowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS10",
+   "bad": "新增那一行绑到了吸附的开关（提窗那一格点不动）",
+   "file": "Sources/Preferences/ScreenshotTabView.swift",
+   "anchor": "                        TrailingSwitch(isOn: $viewModel.screenshotRaiseWindowBeforeCapture)",
+   "replace": "                        TrailingSwitch(isOn: $viewModel.screenshotSnapToWindows)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotRaiseRowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS11",
+   "bad": "关提窗时写进了吸附那一格（两格串键）",
+   "file": "Sources/Preferences/Preferences.swift",
+   "anchor": "            storage.setBool(screenshotRaiseWindowBeforeCapture,\n                            forKey: .screenshotRaiseWindowBeforeCapture)",
+   "replace": "            storage.setBool(screenshotRaiseWindowBeforeCapture,\n                            forKey: .screenshotSnapToWindows)",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotPreferencesTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS12",
+   "bad": "启动时从吸附那一格读提窗（开关显示跟着吸附走）",
+   "file": "Sources/Preferences/Preferences.swift",
+   "anchor": "        self.screenshotRaiseWindowBeforeCapture = storage.getBoolOptional(forKey: .screenshotRaiseWindowBeforeCapture) ?? StorageDefaults.screenshotRaiseWindowBeforeCapture",
+   "replace": "        self.screenshotRaiseWindowBeforeCapture = storage.getBoolOptional(forKey: .screenshotSnapToWindows) ?? StorageDefaults.screenshotRaiseWindowBeforeCapture",
+   "tests": [
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotPreferencesTests.swift",
+    "WindowManagerTests:/Users/mtjo/work/MacStroke-Swift/Tests/WindowManagerTests/ScreenshotRaiseRowTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS13",
+   "bad": "提窗挪到抓帧之后（冻结帧已经拍完，画面不会跟着变）",
+   "file": "Sources/Screenshot/ScreenshotController.swift",
+   "anchor": "        raiseWindowUnderPointerIfNeeded(settings: settings)\n        guard let shot = ScreenshotGrabber.grab(screen: screen) else { return }",
+   "replace": "        guard let shot = ScreenshotGrabber.grab(screen: screen) else { return }\n        raiseWindowUnderPointerIfNeeded(settings: settings)",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "RS14",
+   "bad": "只 AXRaise 不写 AXFrontmost（实测改不了前台）",
+   "file": "Sources/Screenshot/ScreenshotWindowRaiser.swift",
+   "anchor": "        let front = AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)",
+   "replace": "        let front: AXError = .success",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "RS15",
+   "bad": "提完不等窗口服务落位（抓帧抢在前面前后顺序还没换）",
+   "file": "Sources/Screenshot/ScreenshotWindowRaiser.swift",
+   "anchor": "        return waitUntilFront(target, pointer: pointer)",
+   "replace": "        return true",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotRaiseWindowTests.swift"
+   ],
+   "expect": false
+  },
+  {
+   "id": "RS16",
+   "bad": "提窗成功的判据不比前后的窗（回到「光标下第一个就是它」的自证假绿）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        return !windows[..<index].contains {\n            isSnapCandidate($0) && $0.layer == target.layer\n                && $0.globalBounds.intersects(target.globalBounds)\n        }",
+   "replace": "        _ = index\n        return true",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS17",
+   "bad": "成功判据不看同层（更高层浮窗挡着也永远等不到）",
+   "file": "Sources/Screenshot/ScreenshotWindowProbe.swift",
+   "anchor": "        return !windows[..<index].contains {\n            isSnapCandidate($0) && $0.layer == target.layer\n                && $0.globalBounds.intersects(target.globalBounds)\n        }",
+   "replace": "        return !windows[..<index].contains {\n            isSnapCandidate($0)\n                && $0.globalBounds.intersects(target.globalBounds)\n        }",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotWindowProbeTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS18",
+   "bad": "每动一下就报一次吸附窗（120ms 去抖形同虚设，扫过一排窗会来回翻前台）",
+   "file": "Sources/Screenshot/ScreenshotOverlay.swift",
+   "anchor": "        if next != hover {",
+   "replace": "        if true {",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS19",
+   "bad": "悬停回调报到别的窗上（吸到右边却报左边那扇）",
+   "file": "Sources/Screenshot/ScreenshotOverlay.swift",
+   "anchor": "                onSnapWindow?(snapTargets[index])",
+   "replace": "                onSnapWindow?(snapTargets[0])",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS20",
+   "bad": "重拍之后候选表不换（还圈着提窗前那张表的矩形）",
+   "file": "Sources/Screenshot/ScreenshotOverlay.swift",
+   "anchor": "        shot = frame\n        self.windows = windows\n        self.snapTargets = snapTargets",
+   "replace": "        shot = frame\n        self.snapTargets = snapTargets",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS21",
+   "bad": "重拍之后放大镜还用旧帧（取景和色值与底图错开）",
+   "file": "Sources/Screenshot/ScreenshotOverlay.swift",
+   "anchor": "        magnifierView?.replaceShot(frame)\n",
+   "replace": "",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "RS22",
+   "bad": "遮罩自己进了采集（重拍把暗底和高亮拍进底图）",
+   "file": "Sources/Screenshot/ScreenshotOverlay.swift",
+   "anchor": "        sharingType = .none",
+   "replace": "        sharingType = .readOnly",
+   "tests": [
+    "ScreenshotTests:/Users/mtjo/work/MacStroke-Swift/Tests/ScreenshotTests/ScreenshotSnapRaiseTests.swift"
+   ],
+   "expect": true
+  }
+ ]
+}

@@ -51,6 +51,8 @@ final class ScreenshotPreferencesTests: XCTestCase {
         let prefs = makePrefs()
         XCTAssertFalse(prefs.screenshotAutoSave, "默认不能往硬盘写：静默生成文件是打扰")
         XCTAssertTrue(prefs.screenshotSnapToWindows, "吸附是遮罩一直以来的行为")
+        XCTAssertFalse(prefs.screenshotRaiseWindowBeforeCapture,
+                       "定格前提窗默认关：提窗会切前台，新装不替用户做这一手")
         XCTAssertTrue(prefs.screenshotMagnifier, "放大镜默认开：Retina 上不数像素格根本卡不准边")
         XCTAssertEqual(prefs.screenshotMagnification, 8, "默认 8 倍：4 倍太糊、16 倍只能看到指甲盖大一块")
         XCTAssertTrue(prefs.screenshotSaveDirectory.isEmpty)
@@ -116,6 +118,7 @@ final class ScreenshotPreferencesTests: XCTestCase {
         prefs.screenshotAutoSave = true
         prefs.screenshotSaveDirectory = directory
         prefs.screenshotSnapToWindows = false
+        prefs.screenshotRaiseWindowBeforeCapture = true
         prefs.screenshotMagnifier = false
         prefs.screenshotMagnification = 16
 
@@ -124,10 +127,28 @@ final class ScreenshotPreferencesTests: XCTestCase {
         XCTAssertTrue(reloaded.screenshotAutoSave)
         XCTAssertEqual(reloaded.screenshotSaveDirectory, directory)
         XCTAssertFalse(reloaded.screenshotSnapToWindows)
+        XCTAssertTrue(reloaded.screenshotRaiseWindowBeforeCapture,
+                      "打开提窗要落库：下一张图才会把被压住的那扇提起来")
         XCTAssertFalse(reloaded.screenshotMagnifier)
         XCTAssertEqual(reloaded.screenshotMagnification, 16)
         XCTAssertEqual(isolatedSuite().integer(forKey: StorageKey.screenshotMagnification.rawValue), 16,
                        "下拉框选完就得写进库，否则放大镜下次还是默认档")
+    }
+
+    /// 提窗和吸附是两格，各自落自己那一格：把吸附关掉、提窗打开，读回来不能互相顶掉
+    /// （反着设才有分辨力 —— 默认关时「关提窗」读回关，串没串键都看不出来）。
+    func testRaiseWindowPreferenceIsReadBackIndependentlyOfSnapping() {
+        let prefs = makePrefs()
+        prefs.screenshotSnapToWindows = false
+        prefs.screenshotRaiseWindowBeforeCapture = true
+        XCTAssertFalse(prefs.screenshotSnapToWindows)
+        XCTAssertTrue(prefs.screenshotRaiseWindowBeforeCapture)
+
+        let reloaded = makePrefs()
+        XCTAssertTrue(reloaded.screenshotRaiseWindowBeforeCapture,
+                      "读的键串了：打开的提窗又缩回去")
+        XCTAssertFalse(reloaded.screenshotSnapToWindows,
+                       "写提窗顺手把吸附改了")
     }
 
     /// 配置备份（issue #69）导出的是整个 domain 的键值，路径为空串也得照样写进去：

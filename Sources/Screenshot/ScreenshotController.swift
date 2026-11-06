@@ -2,8 +2,8 @@
 //  ScreenshotController.swift
 //  MacStroke
 //
-//  截图会话的总控：权限门 → 定格一帧 + 抓一份窗口表 → 铺遮罩让用户选区、下注解 →
-//  把成品写进系统剪贴板或存成 PNG。
+//  截图会话的总控：权限门 →（智能吸附时先把光标下被压住的窗提到最前）→ 定格一帧 +
+//  抓一份窗口表 → 铺遮罩让用户选区、下注解 → 把成品写进系统剪贴板或存成 PNG。
 //
 //  选和改都在遮罩这一层做完（QQ/微信那条路）：注解条浮在选区下沿，出口是选区内双击、
 //  回车或条子上的图标。曾经试过「选完收遮罩、另开编辑窗改」，实测多一次窗口的代价是
@@ -60,6 +60,8 @@ public final class ScreenshotController {
     public var onOutcome: ((ScreenshotOutcome) -> Void)?
 
     private var window: ScreenshotOverlayWindow?
+    /// 悬停吸附排下的那一次提窗。换窗/收遮罩要能撤掉，否则光标已经走了还会去翻前台。
+    private var snapRaiseWork: DispatchWorkItem?
 
     public var isActive: Bool { window != nil }
 
@@ -106,22 +108,27 @@ public final class ScreenshotController {
     private func start(mode: ScreenshotMode) {
         guard window == nil else { return }
         // 必须在激活之前记账：`NSApp.activate` 一按，前台就读到的是我们自己，
-        // 该把焦点交还给谁就再也问不出来了（issue #78 第 1 条）。
+        // 该把焦点交还给谁就再也问不出来了（issue #78 第 1 条）。提窗也会换前台，
+        // 所以同样要排在它前面。
         captureFocusOwner()
         guard ensureScreenRecordingPermission() else { return }
-        guard let screen = ScreenshotGrabber.targetScreen(),
-              let shot = ScreenshotGrabber.grab(screen: screen) else { return }
+        guard let screen = ScreenshotGrabber.targetScreen() else { return }
+        // 偏好在提窗之前取一份快照：这一场后面全用这一份，中途改偏好不影响它。
+        let settings = ScreenshotSettings.current()
+        // 智能吸附 + 定格前提窗：被别的窗压住的那一扇先提到最前，抓帧才拍得全。
+        // 必须在 `grab` 之前 —— 冻结帧拍的是这一刻的屏幕，之后提窗不会改变画面。
+        raiseWindowUnderPointerIfNeeded(settings: settings)
+        guard let shot = ScreenshotGrabber.grab(screen: screen) else { return }
 
         let view = ScreenshotSelectionView(shot: shot)
         // 先摆档再摆条：`showModeBar()` 里的 `sync(mode:)` 和屏上那句按键说明读的都是
         // 这个值，晚一步就是一条「亮着截图、说的却是提取文字」的错档提示。
         view.mode = mode
         // 窗口表和帧一起取：吸附预览圈的就是「这一帧里的这些窗」，隔几秒再查就会
-        // 圈到一个已经关掉或已经挪走的窗。必须在建遮罩窗之前取完。
+        // 圈到一个已经关掉或已经挪走的窗。必须在建遮罩窗之前取完。提窗之后顺序变了，
+        // 所以这里现取一张，不能沿用提窗前那张。
         // 偏好里关了吸附就不查（也不铺候选），拖选完全交给用户的手。
-        let settings = ScreenshotSettings.current()
-        view.windows = settings.snapToWindows
-            ? ScreenshotWindowProbe.candidateRects(screenFrame: screen.frame) : []
+        applySnapCandidates(to: view, screen: screen, settings: settings)
         view.magnifierEnabled = settings.magnifier
         view.magnification = ScreenshotMagnification(stored: settings.magnification)
         view.defaultTool = settings.defaultTool
@@ -141,6 +148,11 @@ public final class ScreenshotController {
             self?.beginLive(mode: mode, viewRect: viewRect, screenRect: screenRect,
                             screen: screen, settings: settings)
         }
+        // 吸附到哪扇就提哪扇：遮罩里悬停换了一扇窗就排一次提窗（用户 2026-11-05 口径，
+        // 不是只在快捷键那一刻判一次）。提完把整块屏重拍一张换给遮罩，选区里才是提完的画面。
+        view.onSnapWindow = { [weak self] target in
+            self?.scheduleRaiseForSnappedWindow(target, settings: settings, screen: screen)
+        }
 
         let window = ScreenshotOverlayWindow(screenFrame: screen.frame)
         window.contentView = view
@@ -159,6 +171,125 @@ public final class ScreenshotController {
     public func cancel() {
         if isLiveCapturing { cancelLive(); return }
         close()
+    }
+
+    // MARK: - 定格前提窗（智能吸附）
+
+    /// 悬停吸附换窗之后稍等再提：快速扫过一排窗不该把桌面来回翻个遍。
+    /// 120ms 比一次悬停停顿短，光标停在某扇上就会走到；扫过去时下一次换窗会撤掉它。
+    static let snapRaiseDelay: TimeInterval = 0.12
+
+    /// 只把候选表塞给视图：矩形给绘制，窗记录留给悬停回调认「吸到的是哪一扇」。
+    private func applySnapCandidates(to view: ScreenshotSelectionView, screen: NSScreen,
+                                     settings: ScreenshotSettings) {
+        guard settings.snapToWindows else {
+            view.windows = []
+            view.snapTargets = []
+            return
+        }
+        let pairs = ScreenshotWindowProbe.candidates(
+            screenFrame: screen.frame, mainTop: CGDisplayBounds(CGMainDisplayID()).height)
+        view.windows = pairs.map(\.rect)
+        view.snapTargets = pairs.map(\.window)
+    }
+
+    /// 悬停换了窗：排一次提窗。两道偏好闸在这里也过一遍，关掉就一下都不碰。
+    private func scheduleRaiseForSnappedWindow(_ target: ScreenshotProbeWindow,
+                                               settings: ScreenshotSettings, screen: NSScreen) {
+        guard Self.shouldRaiseOnSnap(settings) else { return }
+        snapRaiseWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.raiseSnappedWindow(target, screen: screen)
+        }
+        snapRaiseWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.snapRaiseDelay, execute: work)
+    }
+
+    /// 吸附到的那扇被同层窗压着就提它，提成了把整块屏重拍一帧换给遮罩。
+    ///
+    /// 顺序有讲究：**先抓帧、再收回 key**。提窗之后目标 App 成了前台，抓的这一刻
+    /// 它才是激活态（标题栏不灰）；抓完立刻 `NSApp.activate` 把 key 收回遮罩，
+    /// 否则 Esc/回车/打字全落到被提的那个 App 上。失败那两档也一样要收 ——
+    /// 自家窗那条走的是 `makeKeyAndOrderFront`，验没验成都已经换了 key。
+    private func raiseSnappedWindow(_ target: ScreenshotProbeWindow, screen: NSScreen) {
+        snapRaiseWork = nil
+        guard let window, let view = window.contentView as? ScreenshotSelectionView,
+              view.phase == .picking else { return }
+        let mainTop = CGDisplayBounds(CGMainDisplayID()).height
+        let pointer = Self.globalPoint(fromAppKit: NSEvent.mouseLocation, mainTop: mainTop)
+        // 120ms 里光标可能已经离开这扇（包括落到桌面上）：不在里面就不提。
+        guard target.globalBounds.contains(pointer) else { return }
+        let windows = ScreenshotWindowProbe.snapshot()
+        guard let current = windows.first(where: { $0.windowNumber == target.windowNumber }),
+              !ScreenshotWindowProbe.isAheadOfSameLayerCovers(current, in: windows) else {
+            return
+        }
+        let raised = ScreenshotWindowRaiser.raise(current, pointer: pointer)
+        guard raised else {
+            restoreOverlayFocus(window: window, view: view)
+            NSLog("%@", "[Screenshot] 吸附提窗：pid \(current.pid) 窗 \(current.windowNumber) 没提起来")
+            return
+        }
+        let shot = ScreenshotGrabber.grab(screen: screen)
+        restoreOverlayFocus(window: window, view: view)
+        guard let shot else { return }
+        let pairs = ScreenshotWindowProbe.candidates(screenFrame: screen.frame, mainTop: mainTop)
+        view.replaceCapture(shot, windows: pairs.map(\.rect), snapTargets: pairs.map(\.window))
+        NSLog("%@", "[Screenshot] 吸附提窗：pid \(current.pid) 窗 \(current.windowNumber) 已到最前")
+    }
+
+    /// 把 key 收回遮罩：提窗那条路会把前台换走，不收的话 Esc/回车落到别人家。
+    private func restoreOverlayFocus(window: NSWindow, view: ScreenshotSelectionView) {
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(view)
+    }
+
+    /// 鼠标位置换算成 CGWindowList 的全局坐标：AppKit 用主屏左下原点，窗口服务用
+    /// 主屏左上原点。副屏在主屏上方时 AppKit 给的是大于主屏高度的 y，翻过来正好为负，
+    /// 与 CGWindowList 的取值一致。
+    static func globalPoint(fromAppKit point: CGPoint, mainTop: CGFloat) -> CGPoint {
+        CGPoint(x: point.x, y: mainTop - point.y)
+    }
+
+    /// 两道偏好闸：关了吸附就没有候选窗，关了提窗连前台都不切。留成静态函数是为了
+    /// 让「关掉就一下都不碰」能被单测驱动 —— 悬停那条真链路离线跑不起来。
+    static func shouldRaiseOnSnap(_ settings: ScreenshotSettings) -> Bool {
+        settings.snapToWindows && settings.raiseWindowBeforeCapture
+    }
+
+    /// 两道偏好闸 + 目标判定。留成静态函数是为了让「关了吸附 / 关了提窗就一下都不碰」
+    /// 能被单测驱动 —— 真提窗要 GUI 会话，桩件里没有。
+    @discardableResult
+    static func raiseWindowUnderPointer(settings: ScreenshotSettings, pointer: CGPoint,
+                                        windows: [ScreenshotProbeWindow],
+                                        raise: (ScreenshotProbeWindow) -> Void) -> ScreenshotProbeWindow? {
+        guard shouldRaiseOnSnap(settings),
+              let target = ScreenshotWindowProbe.raiseTarget(windows: windows, point: pointer)
+        else { return nil }
+        raise(target)
+        return target
+    }
+
+    /// 真链路：取表 → 判定 → 提窗等落位。必须在 `ScreenshotGrabber.grab` 之前调用。
+    private func raiseWindowUnderPointerIfNeeded(settings: ScreenshotSettings) {
+        guard Self.shouldRaiseOnSnap(settings) else { return }
+        let pointer = Self.globalPoint(fromAppKit: NSEvent.mouseLocation,
+                                       mainTop: CGDisplayBounds(CGMainDisplayID()).height)
+        // 判据和吸附共用同一张表、同一套够格条件：会吸的那批窗才会参与提窗。
+        let windows = ScreenshotWindowProbe.snapshot()
+        let target = Self.raiseWindowUnderPointer(settings: settings, pointer: pointer,
+                                                  windows: windows) { target in
+            let raised = ScreenshotWindowRaiser.raise(target, pointer: pointer)
+            NSLog("%@", "[Screenshot] 定格前提窗：pid \(target.pid) 窗 \(target.windowNumber) "
+                  + (raised ? "已到最前" : "没到最前，按原样拍"))
+        }
+        if target == nil,
+           ScreenshotWindowProbe.frontmostCandidate(at: pointer, in: windows) != nil {
+            // 「开关开了却没反应」最常见的一档：光标下那扇本来就在最前。留一行归因，
+            // 免得又只能靠猜；光标压根不在窗上时不记，省得每张截图都写一行。
+            NSLog("%@", "[Screenshot] 定格前提窗：光标下的窗本来就在最前，跳过")
+        }
     }
 
     // MARK: - 焦点归属（issue #78 第 1 条）
@@ -199,6 +330,8 @@ public final class ScreenshotController {
     }
 
     private func close() {
+        snapRaiseWork?.cancel()
+        snapRaiseWork = nil
         guard let window else { return }
         self.window = nil
         // 取色面板（点调色板最后一格那枚彩色块弹的）挂在比遮罩还高的层上：遮罩收了

@@ -14,9 +14,13 @@
 //  副屏的 frame.origin 可正可负、还可能在主屏上方，所以既要减屏偏移、也要补主屏
 //  高度差，见 viewRect(fromGlobalBounds:)。
 //
-//  抓取和筛选分成两层：`snapshotWindows()` 只负责问 WindowServer，`candidateRects`
+//  抓取和筛选分成两层：`snapshot()` 只负责问 WindowServer，`candidateRects`
 //  是纯函数。筛选条件（桌面层、半透明、太小的）要能被确定地取证 —— 真桌面上
 //  「那个位置恰好有个别人的窗」会让断言变成误报。
+//
+//  同一张表还用来判「定格前要不要把那扇窗提到最前」：`raiseTarget` 是纯函数，
+//  真动手在 ScreenshotWindowRaiser（AX）。两张判据共用 `isSnapCandidate`，所以
+//  「能吸的窗」和「会提的窗」永远是同一批。
 //
 //  两条与自家关的规矩（2026-11-04 用户实测「偏好设置不能智能框选」「历史粘贴板
 //  弹窗也不吸附」）：
@@ -41,33 +45,98 @@ struct ScreenshotProbeWindow {
     /// 这扇窗会不会出现在冻结帧里。别家的窗一律视为可见；自家窗按
     /// `NSWindow.sharingType != .none` 判定（见文件头）。
     let isCapturable: Bool
+    /// 提窗要按 pid 找应用、按编号在自家 `NSApplication.windows` 里认窗。
+    let pid: pid_t
+    let windowNumber: Int
 }
 
 public enum ScreenshotWindowProbe {
+    /// 一条吸附候选：绘制要的视图矩形 + 提窗要的窗记录（编号/pid/全局矩形）。
+    /// 两者必须成对发出去 —— 只给矩形的话，悬停时没法回答「吸到的是哪一扇」。
+    struct SnapCandidate {
+        let window: ScreenshotProbeWindow
+        let rect: CGRect
+    }
+
     /// 目标屏上可吸附的窗口，按**遮罩视图坐标**给出，顺序从最前台往后。
     public static func candidateRects(screenFrame: NSRect) -> [CGRect] {
-        candidateRects(windows: snapshotWindows(), screenFrame: screenFrame,
-                       mainTop: CGDisplayBounds(CGMainDisplayID()).height)
+        candidates(screenFrame: screenFrame,
+                   mainTop: CGDisplayBounds(CGMainDisplayID()).height).map(\.rect)
     }
 
     static func candidateRects(windows: [ScreenshotProbeWindow], screenFrame: NSRect,
                                mainTop: CGFloat) -> [CGRect] {
+        candidates(windows: windows, screenFrame: screenFrame, mainTop: mainTop).map(\.rect)
+    }
+
+    /// 带窗记录的候选表。悬停吸附要用它回答「吸到的是哪一扇」，提窗链路据此找编号。
+    static func candidates(screenFrame: NSRect, mainTop: CGFloat) -> [SnapCandidate] {
+        candidates(windows: snapshot(), screenFrame: screenFrame, mainTop: mainTop)
+    }
+
+    static func candidates(windows: [ScreenshotProbeWindow], screenFrame: NSRect,
+                           mainTop: CGFloat) -> [SnapCandidate] {
         let visible = CGRect(origin: .zero, size: screenFrame.size)
-        return windows.compactMap { window -> CGRect? in
-            // 冻结帧里没有的窗不能吸：自家画布/遮罩/描边/气泡是 `.none`，
-            // 圈上去只会截到它们背后那层画面。
-            guard window.isCapturable, window.alpha >= 0.99 else { return nil }
-            // 层级门槛：别家只吸普通窗（layer 0）。实测本机 24 条在屏记录里：
-            // 菜单栏项 25、菜单栏本体 24、程序坞 20 —— 而程序坞那条是 1920×1080 的
-            // **整屏**矩形，排在所有普通窗前面，留着就等于「鼠标停哪都吸附整屏」。
-            // 自家放宽到菜单栏之下：偏好设置 0、贴图 3、历史粘贴板 21 都要能吸；
-            // 状态栏项 25、Toast 101 不吸。
-            guard window.layer == 0 || (window.isOwnProcess && window.layer < 25) else { return nil }
+        return windows.compactMap { window -> SnapCandidate? in
+            guard isSnapCandidate(window) else { return nil }
             let rect = viewRect(fromGlobalBounds: window.globalBounds, screenFrame: screenFrame,
                                 mainTop: mainTop)
-            // 8px 以下的多半是阴影层、拖拽残影这类没内容的壳。
-            guard rect.width >= 8, rect.height >= 8, rect.intersects(visible) else { return nil }
-            return rect
+            guard rect.intersects(visible) else { return nil }
+            return SnapCandidate(window: window, rect: rect)
+        }
+    }
+
+    /// 一扇窗够不够格进吸附表/参与提窗。**不**看它在哪块屏上、鼠标在不在里面 ——
+    /// 那两件事由调用方补。冻结帧里没有的窗不能吸：自家画布/遮罩/描边/气泡是 `.none`，
+    /// 圈上去只会截到它们背后那层画面。层级门槛见候选过滤的注释。
+    static func isSnapCandidate(_ window: ScreenshotProbeWindow) -> Bool {
+        guard window.isCapturable, window.alpha >= 0.99 else { return false }
+        // 别家只吸普通窗（layer 0）。实测本机 24 条在屏记录里：菜单栏项 25、菜单栏本体 24、
+        // 程序坞 20 —— 而程序坞那条是 1920×1080 的**整屏**矩形，排在所有普通窗前面，
+        // 留着就等于「鼠标停哪都吸附整屏」。自家放宽到菜单栏之下：偏好设置 0、贴图 3、
+        // 历史粘贴板 21 都要能吸；状态栏项 25、Toast 101 不吸。
+        guard window.layer == 0 || (window.isOwnProcess && window.layer < 25) else { return false }
+        // 8px 以下的多半是阴影层、拖拽残影这类没内容的壳。
+        return window.globalBounds.width >= 8 && window.globalBounds.height >= 8
+    }
+
+    /// 光标下最前台的那扇**够格的**窗。没有就 nil（桌面、菜单栏、只在别的层上的浮层）。
+    static func frontmostCandidate(at point: CGPoint, in windows: [ScreenshotProbeWindow]) -> ScreenshotProbeWindow? {
+        windows.first { isSnapCandidate($0) && $0.globalBounds.contains(point) }
+    }
+
+    /// 定格**之前**该把哪扇窗提到最前；nil = 不动。
+    ///
+    /// 只看「光标下最前台的那一扇」，并且只在它被**同一层**的窗压住时才动：
+    /// - 更前的那扇窗层级更高（贴图、面板这类浮窗）时，把普通窗提上来也压不过它 ——
+    ///   那一帧里照样是浮窗在上，白切一次前台。
+    /// - 自己没被压住时提窗只会把前台 App 无缘无故换一家，冻结帧一模一样。
+    /// 坐标用 CGWindowList 的全局左上原点；调用方把 AppKit 的鼠标位置换算过来。
+    static func raiseTarget(windows: [ScreenshotProbeWindow], point: CGPoint) -> ScreenshotProbeWindow? {
+        guard let index = windows.firstIndex(where: {
+            isSnapCandidate($0) && $0.globalBounds.contains(point)
+        }) else { return nil }
+        let target = windows[index]
+        let covered = windows[..<index].contains {
+            isSnapCandidate($0) && $0.layer == target.layer
+                && $0.globalBounds.intersects(target.globalBounds)
+        }
+        return covered ? target : nil
+    }
+
+    /// 提窗之后这条才算数：目标前面不再有**同层**且与它相交的候选窗。
+    ///
+    /// 别拿「光标下第一个够格的窗是不是它」当成功判据 —— `raiseTarget` 挑中它的那一
+    /// 刻这句就成立（压着它的那扇并不含光标点），提窗完全失败也照样成立，是自证的
+    /// 假绿。2026-11-05 装机实测就是这么把「AX 没提起来」报成「已到最前」的。
+    static func isAheadOfSameLayerCovers(_ target: ScreenshotProbeWindow,
+                                         in windows: [ScreenshotProbeWindow]) -> Bool {
+        guard let index = windows.firstIndex(where: {
+            $0.windowNumber == target.windowNumber
+        }) else { return false }
+        return !windows[..<index].contains {
+            isSnapCandidate($0) && $0.layer == target.layer
+                && $0.globalBounds.intersects(target.globalBounds)
         }
     }
 
@@ -88,7 +157,7 @@ public enum ScreenshotWindowProbe {
 
     /// 在屏窗口的原始记录。顺序即前后顺序（CGWindowList 保证从最前台往后排）。
     /// 必须在遮罩开窗**之前**调用，否则这张表里会混进自家那层全屏遮罩。
-    private static func snapshotWindows() -> [ScreenshotProbeWindow] {
+    static func snapshot() -> [ScreenshotProbeWindow] {
         let infos = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
                                                  kCGNullWindowID) as? [[String: Any]]) ?? []
         let ownPID = ProcessInfo.processInfo.processIdentifier
@@ -107,7 +176,8 @@ public enum ScreenshotWindowProbe {
             let isOwn = pid == ownPID
             return ScreenshotProbeWindow(globalBounds: bounds, layer: layer, alpha: alpha,
                                          isOwnProcess: isOwn,
-                                         isCapturable: !(isOwn && uncapturable.contains(number)))
+                                         isCapturable: !(isOwn && uncapturable.contains(number)),
+                                         pid: pid, windowNumber: number)
         }
     }
 }

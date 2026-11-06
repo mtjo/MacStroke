@@ -3,7 +3,7 @@
 //  MacStroke
 //
 //  截图/录屏偏好页（移植版新增，原版没有）：四段 —— 怎么触发（截图、提取文字两条快捷键
-//  + 手势）、静态图出图之后怎么落地（自动保存、保存位置、吸附、预装工具、放大镜）、
+//  + 手势）、静态图出图之后怎么落地（自动保存、保存位置、吸附、定格前提窗、预装工具、放大镜）、
 //  滚动截图（步长、最多接几屏）、录屏（帧率、最长时长、带不带指针）。
 //
 //  快捷键和其余几项只管写库（UserPreferences 的 didSet 已经写穿到 UserDefaults）：
@@ -62,6 +62,13 @@ struct ScreenshotTabView: View {
                         TrailingSwitch(isOn: $viewModel.screenshotSnapToWindows)
                     }
                     SettingsHint(text: L("Screenshot snap hint"))
+                    RowDivider()
+                    SettingsRow(L("Screenshot raise window")) {
+                        // 吸附关掉时这一档无从谈起：光标下是哪扇窗都不再看，提窗更没目标。
+                        TrailingSwitch(isOn: $viewModel.screenshotRaiseWindowBeforeCapture)
+                            .disabled(!viewModel.screenshotSnapToWindows)
+                    }
+                    SettingsHint(text: L("Screenshot raise window hint"))
                     RowDivider()
                     SettingsRow(L("Screenshot default tool")) {
                         Picker("", selection: $viewModel.screenshotDefaultTool) {

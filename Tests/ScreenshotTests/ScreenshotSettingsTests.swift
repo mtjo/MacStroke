@@ -44,10 +44,20 @@ final class ScreenshotSettingsTests: XCTestCase {
         let current = settings()
         XCTAssertFalse(current.autoSave, "自动保存默认必须关：默默往桌面写文件是打扰")
         XCTAssertTrue(current.snapToWindows, "吸附是遮罩的原有行为，不该默认关掉")
+        XCTAssertFalse(current.raiseWindowBeforeCapture,
+                       "定格前提窗默认关：提窗会切前台，新装不替用户做这一手")
         XCTAssertTrue(current.magnifier, "放大镜默认开：Retina 上不看像素格根本卡不准边")
         XCTAssertEqual(current.magnification, 8, "默认 8 倍：4 倍糊、16 倍只能看到指甲盖大一块")
         XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotSaveDirectory.rawValue),
                      "没打开过这一页就不该往库里写路径")
+        XCTAssertNil(isolatedSuite().object(forKey: StorageKey.screenshotRaiseWindowBeforeCapture.rawValue),
+                     "没动过这一档就不该往库里写提窗开关")
+    }
+
+    /// 打开提窗那一档要读得回来：默认关只是默认，用户打开之后下一张图就得按提窗走。
+    func testStoredRaiseWindowPreferenceIsReadBack() {
+        isolatedSuite().set(true, forKey: StorageKey.screenshotRaiseWindowBeforeCapture.rawValue)
+        XCTAssertTrue(settings().raiseWindowBeforeCapture)
     }
 
     func testStoredValuesAreReadBack() {

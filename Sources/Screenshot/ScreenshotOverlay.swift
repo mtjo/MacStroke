@@ -59,6 +59,10 @@ final class ScreenshotOverlayWindow: NSWindow {
         isReleasedWhenClosed = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         ignoresMouseEvents = false
+        // 悬停提窗之后要在这块遮罩还在屏上时重拍一帧（见 controller 的吸附提窗），
+        // 不排除自己的话重拍会把遮罩的暗底和高亮一起拍进去。和录屏描边/胶囊同一条
+        // 规矩：自家的辅助层不进采集。
+        sharingType = .none
     }
 
     override var canBecomeKey: Bool { true }
@@ -125,15 +129,18 @@ public final class ScreenshotSelectionView: NSView {
     var onLiveCapture: ((ScreenshotMode, CGRect, NSRect) -> Void)?
 
     /// 定格的那一帧。名字避开 `frame` —— NSView 已经占了这个名字。
-    private let shot: ScreenshotFrame
-    /// 底图按**点**尺寸包装，draw(in:) 才会 1:1 铺满；原图像素比这大，Retina 下
-    /// 就是原生清晰度。
-    private let backdrop: NSImage
+    /// 悬停吸附提出一扇窗之后会被整帧换掉（见 `replaceCapture`），所以不是 let。
+    private(set) var shot: ScreenshotFrame
 
-    /// 吸附候选：本屏上各窗口在本视图坐标里的矩形，由上层在**定格那一刻**取好后
-    /// 塞进来（顺序从最前台往后）。视图自己不查 CGWindowList：底图是静止的，
-    /// 边划边查会圈住早就关掉的窗。
+    /// 吸附候选：本屏上各窗口在本视图坐标里的矩形，由上层取好后塞进来（顺序从最前台
+    /// 往后）。视图自己不查 CGWindowList：底图是静止的，边划边查会圈住早就关掉的窗。
+    /// 悬停提窗之后由控制器整张换新（见 `replaceCapture`）。
     var windows: [CGRect] = []
+    /// 与 `windows` 一一对应的窗记录。悬停回调把它交回控制器：光有矩形答不出
+    /// 「吸到的是哪一扇、按编号/pid 去提哪一扇」。
+    var snapTargets: [ScreenshotProbeWindow] = []
+    /// 悬停吸附换了窗时回调（只报真窗；落到桌面那条整屏兜底不报）。
+    var onSnapWindow: ((ScreenshotProbeWindow) -> Void)?
 
     // MARK: 会话状态（internal：单测要能把视图摆到指定状态再离屏渲染取证）
 
@@ -255,7 +262,6 @@ public final class ScreenshotSelectionView: NSView {
 
     public init(shot: ScreenshotFrame) {
         self.shot = shot
-        self.backdrop = NSImage(cgImage: shot.image, size: shot.pointSize)
         super.init(frame: NSRect(origin: .zero, size: shot.pointSize))
     }
 
@@ -315,7 +321,9 @@ public final class ScreenshotSelectionView: NSView {
     // MARK: - 绘制
 
     public override func draw(_ dirtyRect: NSRect) {
-        backdrop.draw(in: bounds)
+        // 每帧现包 NSImage：底图会被悬停提窗整帧换掉，存一份就多一处要同步的真相
+        // （换 shot 忘了换包好的图，屏幕上还是旧画面）。包装只是给位图套个壳。
+        NSImage(cgImage: shot.image, size: shot.pointSize).draw(in: bounds)
 
         guard let focus = focusRect?.intersection(bounds), !focus.isEmpty else {
             dimColor.setFill()
@@ -881,12 +889,30 @@ public final class ScreenshotSelectionView: NSView {
         // 落到桌面上（包括菜单栏、程序坞那两条不属于任何普通窗的边）就吸**整块屏**：
         // 候选表只收 layer == 0 的普通窗，不给这条兜底，用户永远点不出一张全屏截图，
         // 只能手拖到四个角 —— 而 QQ/微信在这里都是整屏高亮。
-        let next = ScreenshotWindowProbe.rect(containing: point, in: windows) ?? bounds
+        let hit = ScreenshotWindowProbe.rect(containing: point, in: windows)
+        let next = hit ?? bounds
         if next != hover {
             hover = next
             needsDisplay = true
+            // 落到桌面那条整屏兜底不报：那不是一扇能提的窗。
+            if let hit, let index = windows.firstIndex(of: hit), snapTargets.indices.contains(index) {
+                onSnapWindow?(snapTargets[index])
+            }
         }
         followMagnifier(at: point)
+    }
+
+    /// 悬停吸附提出一扇窗之后，把整块屏重拍的一帧铺回来，候选表一起换。
+    ///
+    /// 选区、注解、悬停高亮都不动：屏幕没挪，只是那扇窗的前后顺序变了。底图只认
+    /// `shot` 这一份（绘制时现包 NSImage），放大镜自己攥着一张副本，两处都要换。
+    func replaceCapture(_ frame: ScreenshotFrame, windows: [CGRect],
+                        snapTargets: [ScreenshotProbeWindow]) {
+        shot = frame
+        self.windows = windows
+        self.snapTargets = snapTargets
+        magnifierView?.replaceShot(frame)
+        needsDisplay = true
     }
 
     // MARK: - 编辑已画的注解（用户 2026-10-19：「添加的注释方向方框等要支持编辑」）

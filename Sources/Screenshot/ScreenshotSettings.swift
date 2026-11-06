@@ -3,7 +3,8 @@
 //  MacStroke
 //
 //  截图偏好的读取口（对齐 RemoteControlSettings 的做法：模块自己读库，App 层只负责
-//  在偏好页里改）。八件事：出图后要不要直接落盘、落到哪、拖选时吸不吸附窗口边界、
+//  在偏好页里改）。八件事：出图后要不要直接落盘、落到哪、拖选时吸不吸附窗口边界
+//  （含定格前要不要把光标下那扇被压住的窗提到最前）、
 //  选区阶段开不开放大镜（含倍率）、选区落定后预先装上哪个注解工具，外加录屏的帧率、
 //  时长上限、带不带指针，和长截图的滚动步长、最多接几屏。
 //
@@ -24,6 +25,8 @@ public struct ScreenshotSettings: Equatable {
     public var autoSave: Bool
     public var directory: URL
     public var snapToWindows: Bool
+    /// 智能吸附时，定格前先把光标下那扇被压住的窗提到最前。只在吸附开着时有意义。
+    public var raiseWindowBeforeCapture: Bool
     /// 选区阶段跟光的放大镜，和它的倍率（一个像素放大成几pt）。
     public var magnifier: Bool
     public var magnification: Int
@@ -39,6 +42,7 @@ public struct ScreenshotSettings: Equatable {
     public var scrollMaxScreens: Int
 
     public init(autoSave: Bool, directory: URL, snapToWindows: Bool,
+                raiseWindowBeforeCapture: Bool = StorageDefaults.screenshotRaiseWindowBeforeCapture,
                 magnifier: Bool, magnification: Int, defaultTool: ScreenshotTool?,
                 recordFrameRate: Int = StorageDefaults.screenshotRecordFrameRate,
                 recordMaxSeconds: Int = StorageDefaults.screenshotRecordMaxSeconds,
@@ -48,6 +52,7 @@ public struct ScreenshotSettings: Equatable {
         self.autoSave = autoSave
         self.directory = directory
         self.snapToWindows = snapToWindows
+        self.raiseWindowBeforeCapture = raiseWindowBeforeCapture
         self.magnifier = magnifier
         self.magnification = magnification
         self.defaultTool = defaultTool
@@ -65,6 +70,8 @@ public struct ScreenshotSettings: Equatable {
                                  ?? StorageDefaults.screenshotSaveDirectory),
             snapToWindows: storage.getBoolOptional(forKey: .screenshotSnapToWindows)
                 ?? StorageDefaults.screenshotSnapToWindows,
+            raiseWindowBeforeCapture: storage.getBoolOptional(forKey: .screenshotRaiseWindowBeforeCapture)
+                ?? StorageDefaults.screenshotRaiseWindowBeforeCapture,
             magnifier: storage.getBoolOptional(forKey: .screenshotMagnifier)
                 ?? StorageDefaults.screenshotMagnifier,
             magnification: storage.getIntOptional(forKey: .screenshotMagnification)

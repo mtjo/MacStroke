@@ -80,7 +80,10 @@ final class ScreenshotMagnifierView: NSView {
     /// 「已复制」停留多久。
     static let copiedFlash: TimeInterval = 1.2
 
-    private let shot: ScreenshotFrame
+    /// 底帧可换：吸附提窗之后遮罩要重拍一帧（`ScreenshotController.raiseSnappedWindow`）。
+    /// 放大镜必须跟着换，否则取景和色值还是提窗之前那张 —— 和底图错开，正是这一块
+    /// 最不能出错的地方。
+    private var shot: ScreenshotFrame
     /// 目标点：遮罩视图（整屏 flipped）坐标。
     private var target: CGPoint = .zero
     private var magnification: ScreenshotMagnification = .medium
@@ -101,6 +104,12 @@ final class ScreenshotMagnifierView: NSView {
 
     /// 此刻那一点的色值，给 ⌘C 用（和面板上显示的是同一个来源，不会说一套复制一套）。
     var colorText: String? { shot.hexColor(for: target) }
+
+    /// 换底帧（提窗重拍之后）。对准的那个点不变，取景和读数全部改成新图上的。
+    func replaceShot(_ frame: ScreenshotFrame) {
+        shot = frame
+        needsDisplay = true
+    }
 
     /// 光标走到哪、放大多少倍，一次算完并把面板摆好。
     func follow(point: NSPoint, magnification: ScreenshotMagnification, in bounds: CGRect) {

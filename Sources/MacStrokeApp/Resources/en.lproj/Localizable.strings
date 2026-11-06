@@ -115,6 +115,8 @@
 "Screenshot location missing" = "This folder no longer exists, so shots go to the Desktop.";
 "Screenshot snap to windows" = "Snap selection to window edges";
 "Screenshot snap hint" = "Turn it off to draw the frame freely when what you want is not a window (web overlays, split grids).";
+"Screenshot raise window" = "Bring the window under the pointer to the front";
+"Screenshot raise window hint" = "Before the screen freezes, the window under the pointer is raised, so one covered by other windows is captured in full. It only moves when that window is actually covered; without Accessibility permission this step is skipped.";
 "Screenshot default tool" = "Tool armed after selecting";
 "Screenshot default tool off" = "Off";
 "Screenshot default tool hint" = "Once the frame lands, that tool is already picked up — the first mark needs no extra click. While it is armed, dragging inside the frame draws instead of moving it; click the same icon again to get moving back, or pick Off to keep the old behaviour.";

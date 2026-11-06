@@ -122,6 +122,10 @@ public enum StorageKey: String, CaseIterable {
     /// 拖选时是否吸附窗口边界。关掉就是纯手动画框，适合边框不是窗口的场景
     /// （网页里的浮层、分屏网格）。
     case screenshotSnapToWindows = "screenshotSnapToWindows"
+    /// 智能吸附时，定格**之前**先把光标下那扇被压住的窗提到最前。默认开：被别的窗
+    /// 遮掉半截的那一扇，冻结帧里就只有半扇，吸附框再准也截不全。吸附关掉时这一条
+    /// 无从谈起，`ScreenshotController` 会跟着吸附一起跳过。
+    case screenshotRaiseWindowBeforeCapture = "screenshotRaiseWindowBeforeCapture"
     /// 截图的全局快捷键，跟粘贴板那条一样存成 "keyCode=X, flags=Y"。手势触发不在
     /// 这里，它是一条规则（规则表才是手势的存放处）。
     case screenshotShortcut = "screenshotShortcut"
@@ -401,6 +405,10 @@ public enum StorageDefaults {
     /// 空串 = 用户没选过，落盘位置由 ScreenshotSettings 现取桌面。
     public static let screenshotSaveDirectory: String = ""
     public static let screenshotSnapToWindows: Bool = true
+    /// 默认关：要截的那扇窗被别的窗压住时，先把它提到最前再定格，否则截出来只有
+    /// 露着的那半扇。提窗会切一下前台（外部可见的副作用），新装按关处理；
+    /// 用户验收过功能后要求默认关，想要的人在偏好页自己打开。
+    public static let screenshotRaiseWindowBeforeCapture: Bool = false
     /// ⌘⇧A：A 的 Carbon 键码就是 0，修饰键 ⌘(0x100000)|⇧(0x20000)。
     public static let screenshotShortcut: String = "keyCode=0, flags=1179648"
     /// ⌥⇧A：键码同样是 0，修饰键 ⌥(0x80000)|⇧(0x20000)。
@@ -560,6 +568,8 @@ public func registeredUserDefaultsValues() -> [String: Any] {
         StorageKey.screenshotAutoSave.rawValue: StorageDefaults.screenshotAutoSave,
         StorageKey.screenshotSaveDirectory.rawValue: StorageDefaults.screenshotSaveDirectory,
         StorageKey.screenshotSnapToWindows.rawValue: StorageDefaults.screenshotSnapToWindows,
+        StorageKey.screenshotRaiseWindowBeforeCapture.rawValue:
+            StorageDefaults.screenshotRaiseWindowBeforeCapture,
         StorageKey.screenshotShortcut.rawValue: StorageDefaults.screenshotShortcut,
         StorageKey.screenshotTextShortcut.rawValue: StorageDefaults.screenshotTextShortcut,
         StorageKey.screenshotMagnifier.rawValue: StorageDefaults.screenshotMagnifier,

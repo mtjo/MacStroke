@@ -117,6 +117,8 @@
 "Screenshot location missing" = "这个位置已经不存在，截图会存到桌面。";
 "Screenshot snap to windows" = "拖选时吸附窗口边界";
 "Screenshot snap hint" = "关掉后只能纯手动画框，适合要框的不是窗口（网页浮层、分屏网格）的场景。";
+"Screenshot raise window" = "截图前把光标下的窗口提到最前";
+"Screenshot raise window hint" = "定格之前先把光标下那扇被压住的窗提到最前，截出来才是整扇窗。只有真被挡住时才会动它；没有辅助功能权限时这一步会静默跳过。";
 "Screenshot default tool" = "框选后预先装上的工具";
 "Screenshot default tool off" = "关闭";
 "Screenshot default tool hint" = "选区一落定就替你把这一格拿好，第一笔不用再点一下条子。装着的这段时间，在选区里拖动是画东西而不是平移整块 —— 想平移就再点一次同一个图标把工具摘掉，或者干脆选「关闭」保持原来的手感。";
