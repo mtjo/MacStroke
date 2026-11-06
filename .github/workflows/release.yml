@@ -42,7 +42,10 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-14
+    # macOS 14 的托管镜像已于 2026-11-02 全量退役，dispatch 会在排队阶段被直接
+    # 取消（check run 注解：configuration 'macos-14-arm64-us-default' is not supported）。
+    # 2026-11 起 GitHub 推荐迁到 macos-15 / macos-latest（macos-26）。
+    runs-on: macos-15
     env:
       OWNER: mtjo
 
