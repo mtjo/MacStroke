@@ -13,6 +13,7 @@ import AppKit
 public final class ShortcutMonitor {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var healthTimer: Timer?
     private var monitoring = false
 
     /// Whether the monitor is currently active.
@@ -79,6 +80,7 @@ public final class ShortcutMonitor {
 
         CGEvent.tapEnable(tap: eventTap, enable: true)
         monitoring = true
+        startHealthTimer()
         NSLog("%@", "[ShortcutMonitor] Started monitoring keyCode=\(keyCode.map(String.init) ?? "any") flags=\(flags)")
         return true
     }
@@ -86,6 +88,9 @@ public final class ShortcutMonitor {
     /// Stop monitoring.
     public func stop() {
         guard monitoring else { return }
+
+        healthTimer?.invalidate()
+        healthTimer = nil
 
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
@@ -99,6 +104,61 @@ public final class ShortcutMonitor {
         runLoopSource = nil
         monitoring = false
         NSLog("%@", "[ShortcutMonitor] Stopped")
+    }
+
+    // MARK: - 健康巡检
+
+    private static let healthInterval: TimeInterval = 2
+
+    /// 系统停用 tap 时只在回调里发一个伪事件，靠它在当场重新上膛。主线程正忙的那
+    /// 一下伪事件可能排不上队，tap 就停在「isMonitoring 还是 true、但一个键都收不到」
+    /// 的状态里，而 `start()` 见到 monitoring 就不会重建 —— 用户只能重启 App。
+    /// 这里按固定节拍查一次：关着的打开，端口废了的整只重建。
+    private func startHealthTimer() {
+        healthTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.healthInterval, repeats: true) { [weak self] _ in
+            self?.checkHealth()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        healthTimer = timer
+    }
+
+    /// 巡检结论：健康 / 只是被系统关掉（打开就行）/ 端口已废（整只重建）。
+    enum HealthAction: Equatable {
+        case ok
+        case reEnable
+        case rebuild
+    }
+
+    /// 判定单独拿出来：拔掉真 tap 也能把整张表逐格打完。
+    static func healthAction(hasTap: Bool, portIsValid: Bool, tapIsEnabled: Bool) -> HealthAction {
+        guard hasTap, portIsValid else { return .rebuild }
+        return tapIsEnabled ? .ok : .reEnable
+    }
+
+    /// 用例直接调这一条，不必等计时器。
+    func checkHealth() {
+        guard monitoring else { return }
+        let label = keyCode.map(String.init) ?? "any"
+        let tap = eventTap
+        let action = Self.healthAction(
+            hasTap: tap != nil,
+            portIsValid: tap.map(CFMachPortIsValid) ?? false,
+            tapIsEnabled: tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false
+        )
+        switch action {
+        case .ok:
+            return
+        case .reEnable:
+            if let tap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            NSLog("%@", "[ShortcutMonitor] Health: tap was disabled keyCode=\(label), re-enabled")
+        case .rebuild:
+            NSLog("%@", "[ShortcutMonitor] Health: tap missing or port invalid keyCode=\(label), rebuilding")
+            stop()
+            _ = start()
+        }
     }
 
     /// Update the shortcut to monitor.
@@ -143,7 +203,8 @@ public final class ShortcutMonitor {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
-            NSLog("%@", "[ShortcutMonitor] Tap disabled by system, re-armed")
+            let reason = type == .tapDisabledByTimeout ? "timeout" : "user input"
+            NSLog("%@", "[ShortcutMonitor] Tap disabled by system (\(reason)), re-armed keyCode=\(keyCode.map(String.init) ?? "any")")
             return nil
         }
         guard type == .keyDown else { return Unmanaged.passRetained(event) }

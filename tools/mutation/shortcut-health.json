@@ -1,0 +1,55 @@
+{
+ "_comment": [
+  "全局快捷键 tap 健康巡检（2026-11-25）的反向变异表。",
+  "跑法：python3 tools/mutation/mutate.py tools/mutation/shortcut-health.json（--list 只看表，--only SH1,SH3 挑着跑）。",
+  "SH1～SH4 都打在 ShortcutMonitor.healthAction 这张判定表上：本机测试进程没有输入监控权限，",
+  "建不出真 tap，所以判据只能押判定表，不能靠「真把 tap 关掉再巡检」那一档。",
+  "结论必须抄进 docs/clipboard-shortcut-investigation.md，别只留 .build/mutation。"
+ ],
+ "cases": [
+  {
+   "id": "SH1",
+   "bad": "端口废了也当成「还活着」（丢掉 portIsValid 这一道）",
+   "file": "Sources/EventCapture/ShortcutMonitor.swift",
+   "anchor": "        guard hasTap, portIsValid else { return .rebuild }",
+   "replace": "        guard hasTap else { return .rebuild }",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/ShortcutMonitorHealthTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SH2",
+   "bad": "没拿到 tap 也当成还能救（丢掉 hasTap 这一道）",
+   "file": "Sources/EventCapture/ShortcutMonitor.swift",
+   "anchor": "        guard hasTap, portIsValid else { return .rebuild }",
+   "replace": "        guard portIsValid else { return .rebuild }",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/ShortcutMonitorHealthTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SH3",
+   "bad": "系统关掉的 tap 巡检也不去打开（永远是 ok）",
+   "file": "Sources/EventCapture/ShortcutMonitor.swift",
+   "anchor": "        return tapIsEnabled ? .ok : .reEnable",
+   "replace": "        return .ok",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/ShortcutMonitorHealthTests.swift"
+   ],
+   "expect": true
+  },
+  {
+   "id": "SH4",
+   "bad": "健康与停用判反：好好的 tap 每 2 秒被打开一次、关掉的反而不管",
+   "file": "Sources/EventCapture/ShortcutMonitor.swift",
+   "anchor": "        return tapIsEnabled ? .ok : .reEnable",
+   "replace": "        return tapIsEnabled ? .reEnable : .ok",
+   "tests": [
+    "EventCaptureTests:/Users/mtjo/work/MacStroke-Swift/Tests/EventCaptureTests/ShortcutMonitorHealthTests.swift"
+   ],
+   "expect": true
+  }
+ ]
+}
