@@ -11,12 +11,12 @@ APP_DIR="./${APP_NAME}.app"
 # CFBundleVersion 与 MARKETING 同值，沿用原版 project.pbxproj 的做法。
 #
 # **只跟着线上版本走，别在装机来回之间一路加**：线上（`gh release view --json tagName` 拿到的那串）
-# 是 3.2.4（2026-11-05 发的，issue #78 那一轮），这一轮是 3.2.5（智能吸附时定格前提窗）。
+# 是 3.2.5（2026-11-06 发的，截图提窗那一轮），这一轮是 3.2.6（粘贴板快捷键 tap 的巡检兜底）。
 # 早先本机装过 3.2.1/3.2.2/3.2.3 那几号，是「每改一轮就加一个」加出来的，不是三个版本 ——
 # 一轮里改坏了重打一次包也加一号，用户手上就成了「版本号涨了但功能没变」。
 # 规矩：一轮功能 = 一号，装机调试期间反复覆盖同一个号，验收通过才由 release.yml 真发。
-# 3.2.5 这一号是提窗那一轮的；同装机调试期间再改再包，**还是这一号**。
-APP_VERSION="3.2.5"
+# 3.2.6 这一号是快捷键巡检那一轮的；同装机调试期间再改再包，**还是这一号**。
+APP_VERSION="3.2.6"
 
 # 最低系统：Package.swift 的部署目标是 .macOS(.v13)，二进制 minos 就是 13.0。
 # 必须同时写进 Info.plist 和 appcast 的 sparkle:minimumSystemVersion，否则低于 13 的
@@ -168,6 +168,12 @@ fi
 # StorageKey 的 rawValue 是纯字面量，必然在二进制里；3.2.4 及以前没有这个键。
 if ! grep -aq "screenshotRaiseWindowBeforeCapture" "${BUILD_DIR}/MacStrokeApp"; then
     echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 screenshotRaiseWindowBeforeCapture 这个键，说明这个二进制不含截图吸附提窗（3.2.5）"
+    exit 1
+fi
+# 3.2.6 这一轮是快捷键 tap 的健康巡检。哨兵取巡检日志的字面前缀
+# `[ShortcutMonitor] Health`：它只出现在巡检那三条 NSLog 里，3.2.5 及以前没有。
+if ! grep -aq "ShortcutMonitor] Health" "${BUILD_DIR}/MacStrokeApp"; then
+    echo "❌ ${BUILD_DIR}/MacStrokeApp 里没有 ShortcutMonitor Health 日志，说明这个二进制不含快捷键巡检（3.2.6）"
     exit 1
 fi
 # .build/release 可能是个符号链接；后面的 find 默认不跟进符号链接（-P），
